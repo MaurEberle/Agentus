@@ -1,15 +1,49 @@
 # Dashboard
 
-Die Startseite zeigt, ob die Umgebung bereit ist und welches Netz aktiv ist.
+Die Startseite. Sie fasst Einrichtung, aktives Netz und letzte Läufe zusammen. Sie ist **kein** Live-Monitoring und **kein** Archiv — dafür gibt es eigene Seiten.
 
-## Setup-Karte
+## Einrichtung
 
-Fehlt Ollama, ein Modell oder WebView2, weist die Karte darauf hin. Der Installer kann Modelle mitziehen; zur Laufzeit zieht die App **keine** Modelle still nach.
+Die Karte **Einrichtung** erscheint, wenn etwas für den ersten Lauf fehlt, zum Beispiel:
 
-## Status und Runtime
+- Ollama nicht erreichbar → Link **Runtime prüfen**
+- Hilfe-Profil ohne Provider oder Modell → **Hilfe konfigurieren**
+- Noch kein Netz → **Neues Netz** oder **Netz importieren**
 
-Karten für Dienststatus (gestoppt / läuft), letzte Läufe und die aktive Umgebung. Runtime-Ping und Modellliste kommen aus **Einstellungen → Runtime**.
+Ist die Umgebung vollständig, bleibt die Karte aus. Fehlende optionale Modelle nach einem stillen Setup ohne Pull sind kein zweiter Assistent: Runtime-Ping oder der Hilfe-Chat zeigen den Fehler.
 
-## Daten
+## Status
 
-App-Daten liegen unter dem lokalen App-Ordner (`Agentus-Network`), nicht im Programmordner. Der Datenordner ist in **Einstellungen → Daten** sichtbar. Portable-Zip: Daten neben der EXE.
+Zeigt, ob der Dienst **gestoppt**, **startet**, **läuft** oder **stoppt**, plus das aktive Netz. Bei laufendem Netz: Link **Monitoring** und optional „läuft seit …“. Ohne Schnellwahl: Hinweis und Link zur **Verwaltung**.
+
+Start und Stopp bleiben in der **Kopfzeile**, nicht auf dieser Karte.
+
+## Aktives Netz
+
+Name, Knoten-/Kantenzahl, Gültig/Ungültig, wann zuletzt geändert. Aktionen: **Bearbeiten** (Editor), **Bibliothek**, **Neues Netz**.
+
+Ungültig heißt: Validierung im Editor schlägt fehl (zum Beispiel fehlendes Modell an einem LLM-Knoten). Solche Netze solltest du nicht starten.
+
+## Zuletzt verwendet
+
+Kurze Liste gespeicherter Netze nach letzter Nutzung. Klick öffnet den Editor. Leer: noch keine Netze.
+
+## Letzte Läufe
+
+Die jüngsten Einträge aus der Historie (Erfolg, Fehler, Abbruch, Timeout, oder noch laufend). Ein laufender Eintrag führt ins **Monitoring**, abgeschlossene in die **Historie**. Ist der Historie-Store defekt, erscheint ein Hinweis mit Link **Daten**.
+
+## Letzte 7 Tage
+
+Kleine Statistik: Anzahl Läufe, erfolgreich, fehlgeschlagen. Link **Historie** für Filter und Diagramme. Das ist eine Kurzfassung, kein zweites Archiv.
+
+## Umgebung
+
+- Ollama erreichbar oder nicht, grobe Modellanzahl
+- Store-Probleme (Einstellungen, Hilfe, Workspace, Historie)
+- **Sparmodus**, wenn die Hilfe auf das Fallback-Modell ausgewichen ist
+
+Links: **Daten**, Runtime.
+
+## Schnellzugriff
+
+**Neues Netz**, **Import** (Verwaltung), **Runtime**. Dieselben Aktionen erreichst du über Navigation und Einstellungen.

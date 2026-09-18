@@ -1,8 +1,7 @@
 # Agentus Network
 
-Lokale Desktop-App, mit der sich **Agentennetze** aus LLMs, Tools und Wissen auf dem eigenen PC bauen, starten und auswerten lassen. Oberfläche, HTTP-API, Persistenz, Hilfe-Chat, MCP-Supervisor und Netz-Laufzeit laufen in **einem** Windows-Prozess. Die UI kommt über Loopback in einem **WebView2**-Fenster, nicht aus Chrome und nicht als `file://`.
+Lokale Desktop-App, mit der sich **Agentennetze** aus LLMs, Tools und Wissen auf dem eigenen PC bauen, starten und auswerten lassen. Oberfläche, HTTP-API, Persistenz, Hilfe-Chat, MCP-Supervisor und Netz-Laufzeit laufen in **einem** Windows-Prozess. Die UI kommt über Loopback in einem **WebView2**-Fenster.
 
-Ollama bleibt ein **eigener** Daemon. Dieser Prozess beendet Ollama nicht.
 
 Version: `0.1.0` (eine Quelle: `backend/pyproject.toml`).
 
@@ -17,7 +16,7 @@ Version: `0.1.0` (eine Quelle: `backend/pyproject.toml`).
 | Historie | `/history`, `/history/:runId` | Archiv und Statistik |
 | Einstellungen | `/settings` | Runtime, Zugänge, Hilfe-Chat, MCP, Datenort, About |
 
-Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App und zum Graphen. Er ist nicht der Chat des laufenden Netzes (`chat_input` im Monitoring).
+Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App und zum Graphen.
 
 Sprachen: Deutsch (Default) und Englisch.
 
