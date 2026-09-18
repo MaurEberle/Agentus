@@ -9,8 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 # Router module that owns the path once that coding prompt lands.
-# ``meta`` / ``settings`` / ``session`` / ``credentials`` / ``data_location`` /
-# ``runtime`` are live. The rest are skipped by include_all until their files exist.
+# Live owners: meta, settings, session, credentials, data_location, runtime, tools.
+# MCP, networks, run, runs, help_chat wait for their coding prompts.
 
 META = "meta"
 SESSION = "session"
