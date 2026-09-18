@@ -53,6 +53,16 @@ def persist_status(message_key: str) -> int:
         return 400
     if message_key.startswith("mcp.") or message_key.startswith("graph.mcp."):
         return 404 if message_key.endswith("notFound") else 400
+    if message_key in {
+        "run.busy",
+        "run.noActiveNetwork",
+        "run.invalidNetwork",
+        "run.knowledge.failed",
+        "dataDir.busy",
+    }:
+        return 409
+    if message_key.startswith("graph.") or message_key.startswith("run."):
+        return 409 if message_key in {"run.busy"} else 400
     return 500
 
 
