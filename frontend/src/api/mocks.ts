@@ -1,10 +1,6 @@
 import type { NetworkOption, SessionDto } from '@/api/types';
+import { mockListEditorNetworks } from '@/modules/network/mocks';
 import type { ServiceStatus } from '@/store/session';
-
-export const mockNetworks: NetworkOption[] = [
-  { id: 'net-demo', name: 'Demo-Netz' },
-  { id: 'net-support', name: 'Support-Netz' },
-];
 
 const mockSession: SessionDto = {
   activeNetworkId: 'net-demo',
@@ -26,15 +22,27 @@ export async function mockGetSession(): Promise<SessionDto> {
 }
 
 export async function mockListNetworks(): Promise<{ items: NetworkOption[] }> {
-  await delay(40);
-  return { items: [...mockNetworks] };
+  const { items } = await mockListEditorNetworks();
+  return { items: items.map((item) => ({ id: item.id, name: item.name })) };
 }
 
 export async function mockSetActiveNetwork(networkId: string | null): Promise<SessionDto> {
   await delay(40);
-  const network = mockNetworks.find((item) => item.id === networkId) ?? null;
-  mockSession.activeNetworkId = network?.id ?? null;
-  mockSession.activeNetworkName = network?.name;
+  if (!networkId) {
+    mockSession.activeNetworkId = null;
+    mockSession.activeNetworkName = undefined;
+    return { ...mockSession };
+  }
+  const { items } = await mockListEditorNetworks();
+  const network = items.find((item) => item.id === networkId);
+  if (!network) {
+    const error = new Error('missing') as Error & { status: number; messageKey: string };
+    error.status = 404;
+    error.messageKey = 'networks.error.missing';
+    throw error;
+  }
+  mockSession.activeNetworkId = network.id;
+  mockSession.activeNetworkName = network.name;
   return { ...mockSession };
 }
 

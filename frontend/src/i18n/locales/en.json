@@ -686,5 +686,122 @@
     "catalog": {
       "firstParty": "First-party"
     }
+  },
+  "networks": {
+    "title": "Library",
+    "copySuffix": "(Copy)",
+    "ribbon": {
+      "new": "New",
+      "open": "Open",
+      "duplicate": "Duplicate",
+      "rename": "Rename",
+      "tags": "Add tags",
+      "activate": "Set active",
+      "delete": "Delete",
+      "import": "Import",
+      "export": "Export",
+      "refresh": "Refresh",
+      "more": "More actions",
+      "needOne": "Select exactly one network.",
+      "needSome": "Select at least one network.",
+      "needValid": "Only a valid network can become active.",
+      "alreadyActive": "This network is already active.",
+      "runningBlocked": "A running network cannot be deleted."
+    },
+    "filter": {
+      "search": "Search name, description, tags",
+      "sort": {
+        "name": "Name",
+        "updatedAt": "Updated",
+        "lastUsedAt": "Last used"
+      },
+      "direction": "Sort direction",
+      "tags": "Tags",
+      "tagsHint": "Multiple tags: OR",
+      "noTags": "No tags",
+      "onlyValid": "Valid only",
+      "onlyActive": "Active only"
+    },
+    "list": {
+      "selectAll": "Select all visible",
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "graph": "Graph",
+      "updated": "Updated",
+      "lastUsed": "Last used",
+      "counts": "{{nodes}} nodes · {{edges}} edges"
+    },
+    "badge": {
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "unknown": "Unknown",
+      "active": "Active",
+      "running": "Running",
+      "credentialMissing": "Credential missing"
+    },
+    "detail": {
+      "title": "Details",
+      "none": "No network selected.",
+      "multi": "{{count}} selected",
+      "noDescription": "No description.",
+      "lastRun": "Last run"
+    },
+    "empty": {
+      "library": "No saved networks yet.",
+      "filter": "No matches for these filters.",
+      "clearFilters": "Clear filters"
+    },
+    "error": {
+      "title": "List failed",
+      "body": "The library could not be loaded.",
+      "missing": "Network not found",
+      "running": "A running network cannot be deleted."
+    },
+    "dialog": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "rename": {
+      "title": "Rename",
+      "body": "Name and description only; the graph is unchanged.",
+      "name": "Name",
+      "description": "Description"
+    },
+    "tags": {
+      "title": "Add tags",
+      "body": "Tags are added to {{count}} networks. Existing tags stay.",
+      "label": "Tags",
+      "placeholder": "ops, prod",
+      "add": "Add"
+    },
+    "delete": {
+      "title": "Delete networks",
+      "body": "The workspace index for this network is removed. Source files on disk stay. The help store and history runs are untouched.",
+      "none": "No network can be deleted.",
+      "runningSkipped": "Running and skipped: {{names}}",
+      "activeWarning": "An active network is included. Quick select will be cleared."
+    },
+    "import": {
+      "unreadable": "Some files could not be read.",
+      "unreadableNames": "{{names}}",
+      "schema": "Unsupported schemaVersion.",
+      "secrets": "Secrets in import files were discarded.",
+      "collisionTitle": "Name already used",
+      "collisionBody": "Rename or skip the file. Cancel applies only to these files.",
+      "skip": "Skip this file",
+      "include": "Import anyway",
+      "continue": "Import"
+    },
+    "notify": {
+      "error": "Action failed",
+      "duplicated": "Copy added to the library",
+      "renamed": "Metadata saved",
+      "tagged": "Tags added",
+      "deleted": "Networks deleted",
+      "imported": "{{count}} networks imported",
+      "exported": "Export started"
+    }
   }
 }

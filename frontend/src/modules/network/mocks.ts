@@ -2,6 +2,7 @@ import { ApiError } from '@/api/client';
 import type { NetworkListItem } from '@/modules/dashboard/model';
 import type { AgentNetworkDocument, ToolCatalogGroup } from '@/modules/network/model/document';
 import { cloneDocument } from '@/modules/network/model/document';
+import { exportDocument } from '@/modules/network/model/serialize';
 import { validateDocument } from '@/modules/network/validation/validate';
 import { mockGetDataLocation, mockListMcpServers } from '@/modules/settings/mocks';
 import { useAppStore } from '@/store';
@@ -97,7 +98,99 @@ const support: AgentNetworkDocument = {
   ],
 };
 
-let documents: AgentNetworkDocument[] = [structuredClone(demo), structuredClone(support)];
+const ops: AgentNetworkDocument = {
+  schemaVersion: 1,
+  id: 'net-ops',
+  name: 'Ops-Netz',
+  description: 'Betrieb, Alerts und interne Abläufe.',
+  tags: ['ops', 'prod'],
+  updatedAt: hoursAgo(8),
+  viewport: { x: 0, y: 0, zoom: 1 },
+  nodes: [
+    {
+      id: 'chat-1',
+      type: 'chat_input',
+      position: { x: 0, y: 160 },
+      data: { displayName: 'Eingabe', requireInput: false },
+    },
+    {
+      id: 'llm-1',
+      type: 'llm',
+      position: { x: 0, y: 0 },
+      data: { displayName: 'Lokal', provider: 'ollama', model: 'llama3.2:1b' },
+    },
+    {
+      id: 'agent-1',
+      type: 'agent',
+      position: { x: 320, y: 120 },
+      data: { displayName: 'Ops', systemPrompt: 'Du hilfst im Betrieb.' },
+    },
+    {
+      id: 'end-1',
+      type: 'end',
+      position: { x: 640, y: 160 },
+      data: { displayName: 'Ende' },
+    },
+  ],
+  edges: [
+    { id: 'e-1', source: 'chat-1', sourceHandle: 'message', target: 'agent-1', targetHandle: 'message' },
+    { id: 'e-2', source: 'llm-1', sourceHandle: 'llm', target: 'agent-1', targetHandle: 'llm' },
+    { id: 'e-3', source: 'agent-1', sourceHandle: 'message', target: 'end-1', targetHandle: 'message' },
+  ],
+};
+
+const searchNet: AgentNetworkDocument = {
+  schemaVersion: 1,
+  id: 'net-search',
+  name: 'Suche-Netz',
+  description: 'Websuche ohne hinterlegten Cloud-Zugang.',
+  tags: ['search'],
+  updatedAt: hoursAgo(12),
+  viewport: { x: 0, y: 0, zoom: 1 },
+  nodes: [
+    {
+      id: 'chat-1',
+      type: 'chat_input',
+      position: { x: 0, y: 160 },
+      data: { displayName: 'Eingabe', requireInput: false },
+    },
+    {
+      id: 'llm-1',
+      type: 'llm',
+      position: { x: 0, y: 0 },
+      data: { displayName: 'Cloud', provider: 'xai', model: 'grok-3' },
+    },
+    {
+      id: 'agent-1',
+      type: 'agent',
+      position: { x: 320, y: 120 },
+      data: { displayName: 'Suche', systemPrompt: '' },
+    },
+    {
+      id: 'end-1',
+      type: 'end',
+      position: { x: 640, y: 160 },
+      data: { displayName: 'Ende' },
+    },
+  ],
+  edges: [
+    { id: 'e-1', source: 'chat-1', sourceHandle: 'message', target: 'agent-1', targetHandle: 'message' },
+    { id: 'e-2', source: 'llm-1', sourceHandle: 'llm', target: 'agent-1', targetHandle: 'llm' },
+    { id: 'e-3', source: 'agent-1', sourceHandle: 'message', target: 'end-1', targetHandle: 'message' },
+  ],
+};
+
+const extras: Record<string, { lastUsedAt?: string; lastRunId?: string }> = {
+  'net-demo': { lastUsedAt: hoursAgo(2), lastRunId: 'run-succeeded' },
+  'net-ops': { lastUsedAt: hoursAgo(8), lastRunId: 'run-ops-1' },
+};
+
+let documents: AgentNetworkDocument[] = [
+  structuredClone(demo),
+  structuredClone(support),
+  structuredClone(ops),
+  structuredClone(searchNet),
+];
 
 function delay(ms = 40) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -116,8 +209,11 @@ export function toListItem(doc: AgentNetworkDocument): NetworkListItem {
     nodeCount: doc.nodes.length,
     edgeCount: doc.edges.length,
     validationStatus: issues.length ? 'invalid' : 'valid',
+    credentialMissing: issues.some((issue) => issue.messageKey === 'network.validation.credentialRequired'),
     isActive: doc.id === activeNetworkId,
     isRunning: running && doc.id === activeNetworkId,
+    lastUsedAt: extras[doc.id as string]?.lastUsedAt,
+    lastRunId: extras[doc.id as string]?.lastRunId,
     validationErrors: issues.map((issue) => ({ nodeId: issue.nodeId, messageKey: issue.messageKey })),
   };
 }
@@ -229,4 +325,59 @@ export async function mockReindexKnowledge(networkId: string, nodeId: string) {
   void networkId;
   void nodeId;
   return { state: 'ready' as const };
+}
+
+export async function mockDeleteNetworks(ids: string[]): Promise<void> {
+  await delay();
+  const unique = [...new Set(ids)];
+  const found = unique.map((id) => documents.find((doc) => doc.id === id));
+  if (found.some((doc) => !doc)) throw new ApiError(404, 'networks.error.missing');
+  if (found.some((doc) => doc && toListItem(doc).isRunning)) throw new ApiError(409, 'networks.error.running');
+  documents = documents.filter((doc) => !unique.includes(doc.id as string));
+  for (const id of unique) delete extras[id];
+}
+
+export async function mockRenameNetwork(
+  id: string,
+  patch: { name?: string; description?: string },
+): Promise<NetworkListItem> {
+  await delay();
+  const index = documents.findIndex((item) => item.id === id);
+  if (index < 0) throw new ApiError(404, 'networks.error.missing');
+  const current = documents[index];
+  const updated: AgentNetworkDocument = {
+    ...current,
+    name: patch.name?.trim() ? patch.name.trim() : current.name,
+    description: patch.description === undefined ? current.description : patch.description,
+    updatedAt: new Date().toISOString(),
+  };
+  documents[index] = updated;
+  return toListItem(updated);
+}
+
+export async function mockAddTags(ids: string[], tags: string[]): Promise<{ items: NetworkListItem[] }> {
+  await delay();
+  const cleaned = [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
+  if (cleaned.length === 0) {
+    return { items: documents.filter((doc) => ids.includes(doc.id as string)).map(toListItem) };
+  }
+  for (const id of ids) {
+    const index = documents.findIndex((item) => item.id === id);
+    if (index < 0) throw new ApiError(404, 'networks.error.missing');
+    const current = documents[index];
+    const nextTags = [...new Set([...(current.tags ?? []), ...cleaned])];
+    documents[index] = { ...current, tags: nextTags, updatedAt: new Date().toISOString() };
+  }
+  return { items: documents.filter((doc) => ids.includes(doc.id as string)).map(toListItem) };
+}
+
+export async function mockExportNetwork(id: string): Promise<AgentNetworkDocument & { exportedAt: string }> {
+  await delay();
+  const doc = documents.find((item) => item.id === id);
+  if (!doc) throw new ApiError(404, 'networks.error.missing');
+  return exportDocument(doc);
+}
+
+export async function mockImportNetwork(document: AgentNetworkDocument): Promise<AgentNetworkDocument> {
+  return mockCreateNetwork(document);
 }

@@ -686,5 +686,122 @@
     "catalog": {
       "firstParty": "First-Party"
     }
+  },
+  "networks": {
+    "title": "Verwaltung",
+    "copySuffix": "(Kopie)",
+    "ribbon": {
+      "new": "Neu",
+      "open": "Öffnen",
+      "duplicate": "Duplizieren",
+      "rename": "Umbenennen",
+      "tags": "Tags setzen",
+      "activate": "Als aktiv setzen",
+      "delete": "Löschen",
+      "import": "Importieren",
+      "export": "Exportieren",
+      "refresh": "Aktualisieren",
+      "more": "Weitere Aktionen",
+      "needOne": "Genau ein Netz wählen.",
+      "needSome": "Mindestens ein Netz wählen.",
+      "needValid": "Nur ein gültiges Netz kann aktiv werden.",
+      "alreadyActive": "Dieses Netz ist schon aktiv.",
+      "runningBlocked": "Ein laufendes Netz kann nicht gelöscht werden."
+    },
+    "filter": {
+      "search": "Suche nach Name, Beschreibung, Tags",
+      "sort": {
+        "name": "Name",
+        "updatedAt": "Geändert",
+        "lastUsedAt": "Zuletzt verwendet"
+      },
+      "direction": "Sortierreihenfolge",
+      "tags": "Tags",
+      "tagsHint": "Mehrere Tags: ODER",
+      "noTags": "Keine Tags",
+      "onlyValid": "Nur gültige",
+      "onlyActive": "Nur aktive"
+    },
+    "list": {
+      "selectAll": "Alle sichtbaren auswählen",
+      "name": "Name",
+      "description": "Beschreibung",
+      "status": "Status",
+      "graph": "Graph",
+      "updated": "Geändert",
+      "lastUsed": "Zuletzt verwendet",
+      "counts": "{{nodes}} Knoten · {{edges}} Kanten"
+    },
+    "badge": {
+      "valid": "Gültig",
+      "invalid": "Ungültig",
+      "unknown": "Unbekannt",
+      "active": "Aktiv",
+      "running": "Läuft",
+      "credentialMissing": "Credential fehlt"
+    },
+    "detail": {
+      "title": "Details",
+      "none": "Kein Netz ausgewählt.",
+      "multi": "{{count}} ausgewählt",
+      "noDescription": "Keine Beschreibung.",
+      "lastRun": "Letzter Lauf"
+    },
+    "empty": {
+      "library": "Noch keine gespeicherten Netze.",
+      "filter": "Keine Treffer für diese Filter.",
+      "clearFilters": "Filter lösen"
+    },
+    "error": {
+      "title": "Liste nicht geladen",
+      "body": "Die Bibliothek konnte nicht geladen werden.",
+      "missing": "Netz nicht gefunden",
+      "running": "Ein laufendes Netz kann nicht gelöscht werden."
+    },
+    "dialog": {
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "save": "Speichern"
+    },
+    "rename": {
+      "title": "Umbenennen",
+      "body": "Name und Beschreibung, ohne den Graph zu ändern.",
+      "name": "Name",
+      "description": "Beschreibung"
+    },
+    "tags": {
+      "title": "Tags hinzufügen",
+      "body": "Die Tags werden zu {{count}} Netzen hinzugefügt, bestehende bleiben.",
+      "label": "Tags",
+      "placeholder": "ops, prod",
+      "add": "Hinzufügen"
+    },
+    "delete": {
+      "title": "Netze löschen",
+      "body": "Der Workspace-Index dieses Netzes wird mitgelöscht. Quelldateien auf dem Datenträger bleiben. Der Hilfe-Store und Historie-Läufe bleiben unberührt.",
+      "none": "Kein Netz kann gelöscht werden.",
+      "runningSkipped": "Läuft und wird nicht gelöscht: {{names}}",
+      "activeWarning": "Mindestens ein aktives Netz ist dabei. Die Schnellwahl wird geleert."
+    },
+    "import": {
+      "unreadable": "Einige Dateien waren unlesbar.",
+      "unreadableNames": "{{names}}",
+      "schema": "schemaVersion wird nicht unterstützt.",
+      "secrets": "Geheimnisse in Importdateien wurden verworfen.",
+      "collisionTitle": "Name schon vergeben",
+      "collisionBody": "Benenne um oder überspringe die Datei. Abbrechen gilt nur für diese Dateien.",
+      "skip": "Diese Datei überspringen",
+      "include": "Doch importieren",
+      "continue": "Importieren"
+    },
+    "notify": {
+      "error": "Aktion fehlgeschlagen",
+      "duplicated": "Kopie in der Bibliothek angelegt",
+      "renamed": "Metadaten gespeichert",
+      "tagged": "Tags hinzugefügt",
+      "deleted": "Netze gelöscht",
+      "imported": "{{count}} Netze importiert",
+      "exported": "Export gestartet"
+    }
   }
 }
