@@ -567,6 +567,8 @@
         "pingOk": "Modell antwortet",
         "pingFail": "Prüfung fehlgeschlagen",
         "advanced": "Erweitert",
+        "noModels": "Keine Modelle geladen.",
+        "useModel": "„{{name}}“ verwenden",
         "temperature": "Temperature",
         "maxTokens": "Max. Tokens"
       },
