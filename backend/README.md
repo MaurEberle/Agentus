@@ -56,7 +56,7 @@ npm run dev
 
 UI: `http://localhost:5173`. API: `http://127.0.0.1:8765/api`.
 
-`GET /api/health` kommt mit der HTTP-Schicht (`python_backend_http.md`), nach der Persistenz. Bis dahin startet `python -m app.main` mit einem Hinweis und beendet.
+`python -m app.main` bindet nur Loopback und serviert `GET /api/health`. OpenAPI `/docs` nur mit `AGENTUS_NETWORK_DEV=1`. `0.0.0.0` startet nicht.
 
 Tests:
 
@@ -101,7 +101,7 @@ Ein Konzept einmal. Fachmodule importieren, klonen nicht.
 | Provider-/Store-Literals | `app/common/types.py` |
 | Secret-Maskierung | `app/common/secrets.py` (`mask_text`, `mask_obj`) |
 | `httpx.Client` | `app/common/http.py` `client()` |
-| `messageKey`-Fehler | `app/http/errors.py` (HTTP-Prompt) |
+| `messageKey`-Fehler | `app/http/errors.py` (`AppError`) |
 | Vault | `app/db/vault.py` — Windows: `keyring` (Credential Manager), Target `Agentus-Network` / `credential/{id}`. Tests: `AGENTUS_NETWORK_VAULT=memory` |
 | Completions / Embeddings | `app/runtime/` (Runtime-Prompt) |
 | Tool-Katalog | `app/tools/catalog.py` (Tools-Prompt) |
