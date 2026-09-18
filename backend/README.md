@@ -10,7 +10,7 @@ Dieses Paket ist der Rahmen (`python_backend.md`). Fachmodule hängen Code in `a
 - FastAPI + Uvicorn (ASGI)
 - Pydantic v2
 - ein `httpx`-Client (`app.common.http.client`)
-- vier SQLite-Dateien (Persistenz-Prompt), Secrets im OS-Tresor
+- vier SQLite-Dateien (`settings`, `help`, `workspace`, `history`), Secrets nur im Tresor
 - pytest
 
 Provider: `ollama` | `xai` | `openai_compat` — kein `lmstudio`.
@@ -65,7 +65,7 @@ cd backend
 pytest
 ```
 
-Tests nutzen `AGENTUS_NETWORK_HOME` (tmp) und `AGENTUS_NETWORK_VAULT=memory`, sobald die Persistenz existiert. CI braucht kein Display und kein Ollama.
+Tests nutzen `AGENTUS_NETWORK_HOME` (tmp) und `AGENTUS_NETWORK_VAULT=memory`. CI braucht kein Display und kein Ollama.
 
 ## Prod (Host + `frontend/dist`)
 
@@ -102,6 +102,6 @@ Ein Konzept einmal. Fachmodule importieren, klonen nicht.
 | Secret-Maskierung | `app/common/secrets.py` (`mask_text`, `mask_obj`) |
 | `httpx.Client` | `app/common/http.py` `client()` |
 | `messageKey`-Fehler | `app/http/errors.py` (HTTP-Prompt) |
-| Vault | `app/db/vault.py` (Persistenz-Prompt) |
+| Vault | `app/db/vault.py` — Windows: `keyring` (Credential Manager), Target `Agentus-Network` / `credential/{id}`. Tests: `AGENTUS_NETWORK_VAULT=memory` |
 | Completions / Embeddings | `app/runtime/` (Runtime-Prompt) |
 | Tool-Katalog | `app/tools/catalog.py` (Tools-Prompt) |
