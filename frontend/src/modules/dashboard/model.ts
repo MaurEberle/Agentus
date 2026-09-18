@@ -18,6 +18,7 @@ export type NetworkListItem = {
   isActive: boolean;
   isRunning: boolean;
   lastRunId?: string;
+  validationErrors?: NetworkValidationError[];
 };
 
 export type NetworkValidationError = {

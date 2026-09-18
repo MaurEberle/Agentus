@@ -468,5 +468,194 @@
       "runs": "Runs could not be loaded.",
       "networkMissing": "Network not found"
     }
+  },
+  "network": {
+    "untitled": "Untitled network",
+    "copySuffix": "(Copy)",
+    "badge": {
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "active": "Active",
+      "running": "Running"
+    },
+    "ribbon": {
+      "new": "New",
+      "save": "Save",
+      "saveAs": "Save as",
+      "load": "Open",
+      "duplicate": "Duplicate",
+      "export": "Export",
+      "validate": "Validate",
+      "undo": "Undo",
+      "redo": "Redo",
+      "library": "Library",
+      "view": "View"
+    },
+    "view": {
+      "fit": "Fit",
+      "snap": "Snap",
+      "grid": "Grid",
+      "minimap": "Minimap"
+    },
+    "palette": {
+      "title": "Palette",
+      "search": "Search nodes",
+      "chat_input": "Chat input",
+      "chat_inputHint": "At most one. Start text and required input for the run.",
+      "llm": "LLM",
+      "llmHint": "Model and provider. Edge to the agent llm port.",
+      "agent": "Agent",
+      "agentHint": "System prompt. LLM, message, tools and knowledge via edges.",
+      "tool": "Tool",
+      "toolHint": "Catalog kind, optional MCP.",
+      "knowledge": "Knowledge",
+      "knowledgeHint": "Source folder, only to the agent knowledge port.",
+      "router": "Router",
+      "routerHint": "Branches messages by condition.",
+      "end": "End",
+      "endHint": "At least one. Finishes the run."
+    },
+    "inspector": {
+      "title": "Inspector",
+      "displayName": "Display name",
+      "multi": "{{count}} nodes selected",
+      "graph": {
+        "title": "Network",
+        "name": "Name",
+        "description": "Description",
+        "tags": "Tags",
+        "stats": "{{nodes}} nodes · {{edges}} edges",
+        "noIssues": "No validation issues."
+      },
+      "llm": {
+        "provider": "Provider",
+        "openaiCompat": "OpenAI-compatible",
+        "model": "Model",
+        "credential": "Credential",
+        "credentialEmpty": "No credential",
+        "baseUrl": "Base URL",
+        "ping": "Test connection",
+        "pingOk": "Model responded",
+        "pingFail": "Test failed",
+        "advanced": "Advanced",
+        "temperature": "Temperature",
+        "maxTokens": "Max tokens"
+      },
+      "agent": {
+        "hint": "LLM, tools and knowledge come from edges, not fields.",
+        "systemPrompt": "System prompt"
+      },
+      "tool": {
+        "kind": "Kind",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "Web search",
+          "datetime": "Date/time",
+          "calculator": "Calculator",
+          "mcp": "MCP"
+        },
+        "method": "Method",
+        "url": "URL",
+        "credential": "Credential",
+        "mcpServer": "MCP server",
+        "mcpEmpty": "No server",
+        "mcpHint": "Default: all tools of the server. Create servers in Settings.",
+        "mcpSettings": "MCP settings"
+      },
+      "knowledge": {
+        "path": "Source folder",
+        "pick": "Folder",
+        "topK": "topK",
+        "score": "Score threshold",
+        "reindex": "Rebuild index",
+        "reindexOk": "Index rebuilt",
+        "reindexFail": "Index failed"
+      },
+      "router": {
+        "branches": "Branches",
+        "branchName": "Name",
+        "condition": "Condition",
+        "add": "Add branch"
+      },
+      "chat": {
+        "placeholder": "Placeholder",
+        "startMessage": "Start message",
+        "requireInput": "Input required"
+      }
+    },
+    "load": {
+      "title": "Open network",
+      "body": "Choose one saved network. Bulk, delete and import live in the library.",
+      "search": "Search",
+      "sortUpdated": "Updated",
+      "sortName": "Name",
+      "sortUsed": "Last used",
+      "open": "Open",
+      "preview": "{{nodes}} nodes · {{edges}} edges"
+    },
+    "empty": {
+      "body": "Drag a node from the palette onto the canvas or open a saved network.",
+      "insert": "Palette"
+    },
+    "context": {
+      "insert": "Insert",
+      "fit": "Fit",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "dialog": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "nameTitle": "Name the network"
+    },
+    "dirty": {
+      "title": "Unsaved changes",
+      "body": "The open network has changes. Save, discard, or cancel?",
+      "save": "Save",
+      "discard": "Discard",
+      "cancel": "Cancel"
+    },
+    "readonly": {
+      "title": "Read-only",
+      "body": "This network is running. Stop it in the header before editing."
+    },
+    "validation": {
+      "nameRequired": "Name cannot be empty.",
+      "tooManyChatInputs": "At most one chat input.",
+      "endRequired": "At least one end node.",
+      "danglingEdge": "Edge points to a missing node.",
+      "edgeType": "This connection is not type-compatible.",
+      "agentLlm": "Each agent needs exactly one LLM edge.",
+      "agentMessage": "Each agent needs an incoming message.",
+      "modelRequired": "Model is required.",
+      "credentialRequired": "Cloud provider needs a credential.",
+      "toolKind": "Tool kind is missing.",
+      "mcpServer": "Choose an enabled MCP server.",
+      "mcpRoot": "This MCP server needs a root path in Settings.",
+      "knowledgePath": "Source folder is required.",
+      "knowledgeRoot": "Drive or system root is not allowed.",
+      "knowledgeSandbox": "Path must be under the data folder.",
+      "knowledgeHelpCorpus": "The help corpus is not network knowledge.",
+      "knowledgeTarget": "Connect knowledge only to the agent knowledge port.",
+      "cycle": "Cycles are not allowed.",
+      "knowledge": {
+        "missing": "Index is missing.",
+        "stale": "Index is stale.",
+        "error": "Index error."
+      }
+    },
+    "notify": {
+      "saved": "Network saved",
+      "saveError": "Save failed",
+      "duplicated": "Copy opened",
+      "valid": "Network is valid",
+      "invalid": "Network has validation issues"
+    },
+    "error": {
+      "missing": "Network not found"
+    },
+    "catalog": {
+      "firstParty": "First-party"
+    }
   }
 }

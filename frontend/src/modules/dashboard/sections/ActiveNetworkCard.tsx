@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRelative } from '@/lib/relativeTime';
-import { useNetworkQuery } from '@/modules/dashboard/api';
 import { validationBadgeVariant, type NetworkListItem } from '@/modules/dashboard/model';
 import { useAppStore } from '@/store';
 
@@ -18,11 +17,10 @@ export function ActiveNetworkCard({
 }) {
   const { t, i18n } = useTranslation();
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
-  const detail = useNetworkQuery(activeNetworkId);
-  const network = detail.data ?? item;
-  const errors = detail.data?.validationErrors ?? [];
+  const network = item;
+  const errors = item?.validationErrors ?? [];
 
-  if (loading || (activeNetworkId && detail.isLoading && !network)) {
+  if (loading) {
     return (
       <Card>
         <CardHeader>

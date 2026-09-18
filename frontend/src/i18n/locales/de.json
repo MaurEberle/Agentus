@@ -468,5 +468,194 @@
       "runs": "Läufe konnten nicht geladen werden.",
       "networkMissing": "Netz nicht gefunden"
     }
+  },
+  "network": {
+    "untitled": "Unbenanntes Netz",
+    "copySuffix": "(Kopie)",
+    "badge": {
+      "valid": "Gültig",
+      "invalid": "Ungültig",
+      "active": "Aktiv",
+      "running": "Läuft"
+    },
+    "ribbon": {
+      "new": "Neu",
+      "save": "Speichern",
+      "saveAs": "Speichern unter",
+      "load": "Laden",
+      "duplicate": "Duplizieren",
+      "export": "Export",
+      "validate": "Validieren",
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "library": "Zur Verwaltung",
+      "view": "Ansicht"
+    },
+    "view": {
+      "fit": "Einpassen",
+      "snap": "Rasterfang",
+      "grid": "Raster",
+      "minimap": "Minikarte"
+    },
+    "palette": {
+      "title": "Palette",
+      "search": "Knoten suchen",
+      "chat_input": "Chat-Eingabe",
+      "chat_inputHint": "Höchstens eine. Starttext und Pflichtfeld für den Lauf.",
+      "llm": "LLM",
+      "llmHint": "Modell und Provider. Kante zum Agenten-Port llm.",
+      "agent": "Agent",
+      "agentHint": "Systemprompt. LLM, Nachricht, Tools und Wissen per Kanten.",
+      "tool": "Werkzeug",
+      "toolHint": "Katalog-Art, optional MCP.",
+      "knowledge": "Wissen",
+      "knowledgeHint": "Quellenordner, nur zum Agenten-Port knowledge.",
+      "router": "Router",
+      "routerHint": "Verzweigt Nachrichten nach Bedingungen.",
+      "end": "Ende",
+      "endHint": "Mindestens eines. Abschluss des Laufs."
+    },
+    "inspector": {
+      "title": "Inspector",
+      "displayName": "Anzeigename",
+      "multi": "{{count}} Knoten ausgewählt",
+      "graph": {
+        "title": "Netz",
+        "name": "Name",
+        "description": "Beschreibung",
+        "tags": "Tags",
+        "stats": "{{nodes}} Knoten · {{edges}} Kanten",
+        "noIssues": "Keine Validierungsfehler."
+      },
+      "llm": {
+        "provider": "Provider",
+        "openaiCompat": "OpenAI-kompatibel",
+        "model": "Modell",
+        "credential": "Zugang",
+        "credentialEmpty": "Kein Zugang",
+        "baseUrl": "Basis-URL",
+        "ping": "Verbindung prüfen",
+        "pingOk": "Modell antwortet",
+        "pingFail": "Prüfung fehlgeschlagen",
+        "advanced": "Erweitert",
+        "temperature": "Temperature",
+        "maxTokens": "Max. Tokens"
+      },
+      "agent": {
+        "hint": "LLM, Tools und Wissen kommen über Kanten, nicht als Felder.",
+        "systemPrompt": "Systemprompt"
+      },
+      "tool": {
+        "kind": "Art",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "Websuche",
+          "datetime": "Datum/Zeit",
+          "calculator": "Rechner",
+          "mcp": "MCP"
+        },
+        "method": "Methode",
+        "url": "URL",
+        "credential": "Zugang",
+        "mcpServer": "MCP-Server",
+        "mcpEmpty": "Kein Server",
+        "mcpHint": "Standard: alle Tools des Servers. Server anlegen unter Einstellungen.",
+        "mcpSettings": "Zu MCP-Einstellungen"
+      },
+      "knowledge": {
+        "path": "Quellenordner",
+        "pick": "Ordner",
+        "topK": "topK",
+        "score": "Score-Schwelle",
+        "reindex": "Index neu",
+        "reindexOk": "Index neu aufgebaut",
+        "reindexFail": "Index fehlgeschlagen"
+      },
+      "router": {
+        "branches": "Zweige",
+        "branchName": "Name",
+        "condition": "Bedingung",
+        "add": "Zweig hinzufügen"
+      },
+      "chat": {
+        "placeholder": "Platzhalter",
+        "startMessage": "Starttext",
+        "requireInput": "Eingabe nötig"
+      }
+    },
+    "load": {
+      "title": "Netz laden",
+      "body": "Wähle ein gespeichertes Netz. Bulk, Löschen und Import liegen in der Verwaltung.",
+      "search": "Suchen",
+      "sortUpdated": "Geändert",
+      "sortName": "Name",
+      "sortUsed": "Zuletzt verwendet",
+      "open": "Öffnen",
+      "preview": "{{nodes}} Knoten · {{edges}} Kanten"
+    },
+    "empty": {
+      "body": "Zieh einen Knoten aus der Palette auf die Fläche oder öffne ein gespeichertes Netz.",
+      "insert": "Palette"
+    },
+    "context": {
+      "insert": "Einfügen",
+      "fit": "Einpassen",
+      "duplicate": "Duplizieren",
+      "delete": "Löschen"
+    },
+    "dialog": {
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "nameTitle": "Netz benennen"
+    },
+    "dirty": {
+      "title": "Ungespeicherte Änderungen",
+      "body": "Das offene Netz ist geändert. Speichern, verwerfen oder abbrechen?",
+      "save": "Speichern",
+      "discard": "Verwerfen",
+      "cancel": "Abbrechen"
+    },
+    "readonly": {
+      "title": "Schreibgeschützt",
+      "body": "Dieses Netz läuft. Stoppe es in der Kopfzeile, bevor du bearbeitest."
+    },
+    "validation": {
+      "nameRequired": "Name darf nicht leer sein.",
+      "tooManyChatInputs": "Höchstens eine Chat-Eingabe.",
+      "endRequired": "Mindestens ein Ende-Knoten.",
+      "danglingEdge": "Kante verweist auf einen fehlenden Knoten.",
+      "edgeType": "Diese Verbindung ist typunverträglich.",
+      "agentLlm": "Jeder Agent braucht genau eine LLM-Kante.",
+      "agentMessage": "Jeder Agent braucht eine eingehende Nachricht.",
+      "modelRequired": "Modell ist Pflicht.",
+      "credentialRequired": "Cloud-Provider braucht einen Zugang.",
+      "toolKind": "Werkzeug-Art fehlt.",
+      "mcpServer": "Aktiven MCP-Server wählen.",
+      "mcpRoot": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "knowledgePath": "Quellenordner ist Pflicht.",
+      "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "knowledgeSandbox": "Pfad muss unter dem Datenordner liegen.",
+      "knowledgeHelpCorpus": "Der Hilfe-Korpus ist kein Netz-Wissen.",
+      "knowledgeTarget": "Wissen nur mit dem Agenten-Port knowledge verbinden.",
+      "cycle": "Zyklen sind nicht erlaubt.",
+      "knowledge": {
+        "missing": "Index fehlt.",
+        "stale": "Index ist veraltet.",
+        "error": "Indexfehler."
+      }
+    },
+    "notify": {
+      "saved": "Netz gespeichert",
+      "saveError": "Speichern fehlgeschlagen",
+      "duplicated": "Kopie geöffnet",
+      "valid": "Netz ist gültig",
+      "invalid": "Netz hat Validierungsfehler"
+    },
+    "error": {
+      "missing": "Netz nicht gefunden"
+    },
+    "catalog": {
+      "firstParty": "First-Party"
+    }
   }
 }

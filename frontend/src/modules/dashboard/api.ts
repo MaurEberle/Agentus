@@ -1,30 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, USE_MOCKS } from '@/api/client';
 import { useHelpChatStatusQuery } from '@/components/help-chat/api';
-import {
-  mockGetNetwork,
-  mockListDashboardNetworks,
-  mockListRuns,
-} from '@/modules/dashboard/mocks';
+import { mockListRuns } from '@/modules/dashboard/mocks';
 import {
   isHistoryStoreOk,
   weekAgoIso,
-  type NetworkDetail,
-  type NetworkListItem,
   type RunListFilter,
   type RunSummary,
 } from '@/modules/dashboard/model';
+import { listNetworkSummaries } from '@/modules/network/api';
 import { pingRuntime, useRuntimeModelsQuery, useStoresQuery } from '@/modules/settings/api';
 
-export async function listNetworkSummaries(): Promise<{ items: NetworkListItem[] }> {
-  if (USE_MOCKS) return mockListDashboardNetworks();
-  return apiFetch<{ items: NetworkListItem[] }>('/networks');
-}
-
-export async function getNetwork(id: string): Promise<NetworkDetail> {
-  if (USE_MOCKS) return mockGetNetwork(id);
-  return apiFetch<NetworkDetail>(`/networks/${id}`);
-}
+export { listNetworkSummaries };
 
 export async function listRuns(filter: RunListFilter = {}): Promise<{ items: RunSummary[]; total: number }> {
   if (USE_MOCKS) return mockListRuns(filter);
@@ -39,14 +26,6 @@ export function useNetworksQuery() {
   return useQuery({
     queryKey: ['networks'],
     queryFn: listNetworkSummaries,
-  });
-}
-
-export function useNetworkQuery(id: string | null) {
-  return useQuery({
-    queryKey: ['networks', id],
-    queryFn: () => getNetwork(id as string),
-    enabled: Boolean(id),
   });
 }
 

@@ -1,20 +1,12 @@
 import { ApiError } from '@/api/client';
 import { peekMockSession } from '@/api/mocks';
-import {
-  type NetworkDetail,
-  type NetworkListItem,
-  type RunListFilter,
-  type RunSummary,
-} from '@/modules/dashboard/model';
+import { type RunListFilter, type RunSummary } from '@/modules/dashboard/model';
+import { mockListEditorNetworks } from '@/modules/network/mocks';
 import { mockGetDataLocation } from '@/modules/settings/mocks';
 import { useAppStore } from '@/store';
 
 /** Fresh workspace: no networks and no runs. Populated scenario is the default. */
 export const DASHBOARD_EMPTY_MOCK = false;
-
-function hoursAgo(hours: number): string {
-  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-}
 
 function at(hoursAgoValue: number, durationMs: number): { startedAt: string; endedAt: string } {
   const ended = Date.now() - hoursAgoValue * 60 * 60 * 1000;
@@ -23,36 +15,6 @@ function at(hoursAgoValue: number, durationMs: number): { startedAt: string; end
     endedAt: new Date(ended).toISOString(),
   };
 }
-
-const populatedNetworks: NetworkListItem[] = [
-  {
-    id: 'net-demo',
-    name: 'Demo-Netz',
-    description: 'Beispielnetz für den lokalen Lauf.',
-    tags: ['demo'],
-    updatedAt: hoursAgo(2),
-    lastUsedAt: hoursAgo(2),
-    nodeCount: 5,
-    edgeCount: 4,
-    validationStatus: 'valid',
-    isActive: true,
-    isRunning: false,
-    lastRunId: 'run-succeeded',
-  },
-  {
-    id: 'net-support',
-    name: 'Support-Netz',
-    description: 'Zweitnetz mit fehlendem Modell am LLM-Knoten.',
-    updatedAt: hoursAgo(30),
-    lastUsedAt: hoursAgo(26),
-    nodeCount: 3,
-    edgeCount: 2,
-    validationStatus: 'invalid',
-    isActive: false,
-    isRunning: false,
-    lastRunId: 'run-failed',
-  },
-];
 
 const populatedRuns: RunSummary[] = [
   {
@@ -90,41 +52,13 @@ const populatedRuns: RunSummary[] = [
   },
 ];
 
-const validationById: Record<string, NetworkDetail['validationErrors']> = {
-  'net-support': [{ nodeId: 'llm-1', messageKey: 'dashboard.validation.missingModel' }],
-};
-
 function delay(ms = 40) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function withSessionFlags(items: NetworkListItem[]): NetworkListItem[] {
-  const { activeNetworkId, serviceStatus } = useAppStore.getState();
-  const running = serviceStatus === 'starting' || serviceStatus === 'running';
-  return items.map((item) => ({
-    ...item,
-    isActive: item.id === activeNetworkId,
-    isRunning: running && item.id === activeNetworkId,
-  }));
-}
-
-export async function mockListDashboardNetworks(): Promise<{ items: NetworkListItem[] }> {
-  await delay();
+export async function mockListDashboardNetworks() {
   if (DASHBOARD_EMPTY_MOCK) return { items: [] };
-  return { items: withSessionFlags(populatedNetworks) };
-}
-
-export async function mockGetNetwork(id: string): Promise<NetworkDetail> {
-  await delay();
-  const items = withSessionFlags(DASHBOARD_EMPTY_MOCK ? [] : populatedNetworks);
-  const item = items.find((entry) => entry.id === id);
-  if (!item) {
-    throw new ApiError(404, 'dashboard.error.networkMissing');
-  }
-  return {
-    ...item,
-    validationErrors: validationById[id] ? [...(validationById[id] ?? [])] : undefined,
-  };
+  return mockListEditorNetworks();
 }
 
 export async function mockListRuns(filter: RunListFilter): Promise<{ items: RunSummary[]; total: number }> {
