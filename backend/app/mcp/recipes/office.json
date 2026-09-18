@@ -1,0 +1,11 @@
+{
+  "id": "office",
+  "titleKey": "mcp.recipe.office",
+  "transport": "stdio",
+  "runtime": "uvx",
+  "command": "uvx",
+  "args": ["office-mcp"],
+  "needsRoot": true,
+  "appendRoot": true,
+  "notes": "Bundled Office MCP; not COM/Win32."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "powerpoint",
+  "titleKey": "mcp.recipe.powerpoint",
+  "transport": "stdio",
+  "runtime": "uvx",
+  "command": "uvx",
+  "args": ["office-powerpoint-mcp"],
+  "needsRoot": true,
+  "appendRoot": true
+}

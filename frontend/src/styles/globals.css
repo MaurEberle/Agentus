@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 20% 98%;
+    --foreground: 240 10% 8%;
+    --card: 40 25% 99%;
+    --card-foreground: 240 10% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 8%;
+    --primary: 168 70% 28%;
+    --primary-foreground: 150 30% 98%;
+    --secondary: 40 14% 93%;
+    --secondary-foreground: 240 8% 20%;
+    --muted: 40 12% 93%;
+    --muted-foreground: 240 6% 42%;
+    --accent: 168 30% 92%;
+    --accent-foreground: 168 50% 18%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 32 80% 12%;
+    --border: 40 12% 86%;
+    --input: 40 12% 86%;
+    --ring: 168 70% 28%;
+    --radius: 0.65rem;
+  }
+
+  .dark {
+    --background: 230 16% 7%;
+    --foreground: 40 20% 96%;
+    --card: 230 14% 9%;
+    --card-foreground: 40 20% 96%;
+    --popover: 230 14% 10%;
+    --popover-foreground: 40 20% 96%;
+    --primary: 168 55% 48%;
+    --primary-foreground: 168 40% 8%;
+    --secondary: 230 12% 14%;
+    --secondary-foreground: 40 15% 92%;
+    --muted: 230 12% 14%;
+    --muted-foreground: 230 8% 64%;
+    --accent: 168 20% 16%;
+    --accent-foreground: 168 40% 82%;
+    --destructive: 0 62% 46%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 38 90% 48%;
+    --warning-foreground: 38 90% 8%;
+    --border: 230 10% 18%;
+    --input: 230 10% 18%;
+    --ring: 168 55% 48%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      'Segoe UI',
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      sans-serif;
+  }
+}
+
+@layer utilities {
+  .app-drag {
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+
+  .app-no-drag {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+}
+
+/* Unlayered so it wins over @xyflow/react/dist/style.css (also unlayered). */
+.network-flow .react-flow__pane,
+.network-flow .react-flow__pane.draggable,
+.network-flow .react-flow__pane.dragging,
+.network-flow .react-flow__pane.selection,
+.network-flow .react-flow__node,
+.network-flow .react-flow__node.selectable,
+.network-flow .react-flow__node.draggable,
+.network-flow .react-flow__node.draggable.dragging,
+.network-flow .react-flow__handle,
+.network-flow .react-flow__handle.connectionindicator,
+.network-flow .react-flow__edge.selectable,
+.network-flow .react-flow__nodesselection-rect,
+.network-flow .react-flow__selection {
+  cursor: default !important;
+}
+
+.monitoring-flow .react-flow__pane,
+.monitoring-flow .react-flow__pane.draggable,
+.monitoring-flow .react-flow__pane.dragging,
+.monitoring-flow .react-flow__pane.selection,
+.monitoring-flow .react-flow__node,
+.monitoring-flow .react-flow__node.selectable,
+.monitoring-flow .react-flow__node.draggable,
+.monitoring-flow .react-flow__handle,
+.monitoring-flow .react-flow__edge.selectable,
+.monitoring-flow .react-flow__nodesselection-rect,
+.monitoring-flow .react-flow__selection {
+  cursor: default !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

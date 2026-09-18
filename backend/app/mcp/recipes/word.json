@@ -1,0 +1,10 @@
+{
+  "id": "word",
+  "titleKey": "mcp.recipe.word",
+  "transport": "stdio",
+  "runtime": "uvx",
+  "command": "uvx",
+  "args": ["office-word-mcp"],
+  "needsRoot": true,
+  "appendRoot": true
+}

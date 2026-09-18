@@ -1,0 +1,10 @@
+{
+  "id": "git",
+  "titleKey": "mcp.recipe.git",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "mcp-server-git@2025.1.14"],
+  "needsRoot": true,
+  "appendRoot": true
+}

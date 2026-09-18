@@ -1,0 +1,11 @@
+{
+  "id": "gitlab",
+  "titleKey": "mcp.recipe.gitlab",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-gitlab@0.6.2"],
+  "credentialKinds": ["gitlab"],
+  "envFromKind": { "gitlab": "GITLAB_PERSONAL_ACCESS_TOKEN" },
+  "needsRoot": false
+}

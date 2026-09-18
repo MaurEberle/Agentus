@@ -1,0 +1,13 @@
+{
+  "webview2_bootstrapper": {
+    "name": "MicrosoftEdgeWebview2Setup.exe",
+    "url": "https://go.microsoft.com/fwlink/p/?LinkId=2124703",
+    "sha256": "83004a28553bcf2f932bf03564fbab407b8e1f59cd265f8dc99cc53d028e459c"
+  },
+  "ollama_setup": {
+    "name": "OllamaSetup.exe",
+    "url": "https://github.com/ollama/ollama/releases/download/v0.34.2/OllamaSetup.exe",
+    "sha256": "8c9eb7ba71f3c6a62df4c7d204cc4739d90c335e1cbeb07c99fd471544066a8b",
+    "comment": "Ollama v0.34.2 official Windows setup. Update hash in a dedicated commit when bumping."
+  }
+}

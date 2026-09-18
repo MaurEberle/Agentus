@@ -100,3 +100,8 @@ $RECYCLE.BIN/
 # Local tool caches
 .cache/
 .grok/
+
+
+# Prompts
+
+prompts/

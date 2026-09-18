@@ -1,0 +1,9 @@
+{
+  "id": "linear",
+  "titleKey": "mcp.recipe.linear",
+  "transport": "http",
+  "runtime": "none",
+  "url": "https://mcp.linear.app/mcp",
+  "credentialKinds": ["linear"],
+  "needsRoot": false
+}

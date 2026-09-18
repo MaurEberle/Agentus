@@ -1,0 +1,11 @@
+{
+  "id": "atlassian",
+  "titleKey": "mcp.recipe.atlassian",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "mcp-remote@0.1.13"],
+  "credentialKinds": ["atlassian"],
+  "envFromKind": { "atlassian": "ATLASSIAN_API_TOKEN" },
+  "needsRoot": false
+}

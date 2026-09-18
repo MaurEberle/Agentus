@@ -1,0 +1,220 @@
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
+import type { ServiceStatus } from '@/store/session';
+import { setDevScenario, useLiveMonitoring } from '@/modules/monitoring/live/adapter';
+import { hasChatInput } from '@/modules/monitoring/model/graph';
+import { MOCK_SCENARIOS } from '@/modules/monitoring/model/types';
+import { ActivityPanel } from '@/modules/monitoring/activity/ActivityPanel';
+import { NetworkChat } from '@/modules/monitoring/chat/NetworkChat';
+import { MiniGraph } from '@/modules/monitoring/graph/MiniGraph';
+import { LogPanel } from '@/modules/monitoring/log/LogPanel';
+import { ResourcesPanel } from '@/modules/monitoring/resources/ResourcesPanel';
+import { RunHeader } from '@/modules/monitoring/run-header/RunHeader';
+import { useMonitoringStore } from '@/modules/monitoring/store';
+
+export function MonitoringModule() {
+  const { t } = useTranslation();
+  const [params] = useSearchParams();
+  useLiveMonitoring(params.get('mock'));
+
+  const serviceStatus = useAppStore((state) => state.serviceStatus);
+  const activeNetworkName = useAppStore((state) => state.activeNetworkName);
+  const activeNetworkId = useAppStore((state) => state.activeNetworkId);
+  const run = useMonitoringStore((state) => state.run);
+  const resources = useMonitoringStore((state) => state.resources);
+  const tab = useMonitoringStore((state) => state.tab);
+  const setTab = useMonitoringStore((state) => state.setTab);
+  const adapterErrorKey = useMonitoringStore((state) => state.adapterErrorKey);
+  const lastErrorMessage = useMonitoringStore((state) => state.lastErrorMessage);
+  const setSelectedNodeId = useMonitoringStore((state) => state.setSelectedNodeId);
+  const setSelectedLogId = useMonitoringStore((state) => state.setSelectedLogId);
+  const clearLogFilter = useMonitoringStore((state) => state.clearLogFilter);
+
+  const chat = hasChatInput(run?.graph);
+  const stopped = serviceStatus === 'stopped' || (!run && serviceStatus !== 'disconnected' && serviceStatus !== 'error');
+  const dimmed = serviceStatus === 'disconnected' || serviceStatus === 'starting' || serviceStatus === 'stopping';
+
+  useEffect(() => {
+    if (!chat && tab === 'chat') setTab('log');
+  }, [chat, setTab, tab]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      setSelectedNodeId(null);
+      setSelectedLogId(null);
+      clearLogFilter();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [clearLogFilter, setSelectedLogId, setSelectedNodeId]);
+
+  return (
+    <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
+      <h1 className="text-xl font-semibold tracking-tight">{t('monitoring.title')}</h1>
+      {import.meta.env.DEV ? <DevBar /> : null}
+      <StatusBanner
+        status={serviceStatus}
+        errorMessage={lastErrorMessage}
+        adapterErrorKey={adapterErrorKey}
+      />
+      {stopped ? (
+        <Card>
+          <CardContent className="space-y-2 p-6">
+            <p className="font-medium">{t('monitoring.empty.stoppedTitle')}</p>
+            <p className="text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</p>
+            {activeNetworkId ? (
+              <p className="text-sm">
+                {t('monitoring.empty.stoppedActive', { name: activeNetworkName ?? activeNetworkId })}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('monitoring.empty.stoppedNoNetwork')}</p>
+            )}
+          </CardContent>
+        </Card>
+      ) : run ? (
+        <>
+          <RunHeader run={run} serviceStatus={serviceStatus} />
+          <ResourcesPanel resources={resources} dimmed={dimmed} />
+          <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
+            <div className="order-2 min-h-0 md:order-1">
+              <MiniGraph run={run} dimmed={dimmed} />
+            </div>
+            <div className="order-1 md:order-2">
+              <ActivityPanel run={run} dimmed={dimmed} />
+            </div>
+          </div>
+          <Card className="flex min-h-[320px] flex-col">
+            <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.log')}>
+              {chat ? (
+                <TabButton active={tab === 'chat'} onClick={() => setTab('chat')}>
+                  {t('monitoring.tabs.chat')}
+                </TabButton>
+              ) : null}
+              <TabButton active={tab === 'log' || !chat} onClick={() => setTab('log')}>
+                {t('monitoring.tabs.log')}
+              </TabButton>
+            </div>
+            <CardContent className="flex min-h-0 flex-1 flex-col pt-4">
+              {chat && tab === 'chat' ? (
+                <NetworkChat run={run} serviceStatus={serviceStatus} />
+              ) : (
+                <LogPanel run={run} />
+              )}
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      className={cn(
+        'rounded-t-md px-3 py-2 text-sm font-medium',
+        active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+      )}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatusBanner({
+  status,
+  errorMessage,
+  adapterErrorKey,
+}: {
+  status: ServiceStatus;
+  errorMessage: string | null;
+  adapterErrorKey: string | null;
+}) {
+  const { t } = useTranslation();
+  if (status === 'stopped' || status === 'running') {
+    if (adapterErrorKey && status === 'running') {
+      return (
+        <Alert>
+          <AlertTitle>{t(adapterErrorKey)}</AlertTitle>
+        </Alert>
+      );
+    }
+    return null;
+  }
+  if (status === 'disconnected') {
+    return (
+      <Alert>
+        <AlertTitle>{t('monitoring.empty.disconnectedTitle')}</AlertTitle>
+        <AlertDescription>{t('monitoring.empty.disconnectedBody')}</AlertDescription>
+      </Alert>
+    );
+  }
+  if (status === 'starting') {
+    return (
+      <Alert>
+        <AlertTitle>{t('monitoring.empty.startingTitle')}</AlertTitle>
+      </Alert>
+    );
+  }
+  if (status === 'stopping') {
+    return (
+      <Alert>
+        <AlertTitle>{t('monitoring.empty.stoppingTitle')}</AlertTitle>
+      </Alert>
+    );
+  }
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>{t('monitoring.empty.errorTitle')}</AlertTitle>
+      {errorMessage ? <AlertDescription>{errorMessage}</AlertDescription> : null}
+    </Alert>
+  );
+}
+
+function DevBar() {
+  const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
+  const current = params.get('mock');
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2">
+      <span className="text-xs text-muted-foreground">{t('monitoring.dev.label')}</span>
+      {MOCK_SCENARIOS.map((id) => (
+        <Button
+          key={id}
+          type="button"
+          size="sm"
+          variant={current === id ? 'default' : 'outline'}
+          onClick={() => {
+            setDevScenario(id);
+            setParams({ mock: id }, { replace: true });
+          }}
+        >
+          {t(`monitoring.dev.${id}`)}
+        </Button>
+      ))}
+    </div>
+  );
+}

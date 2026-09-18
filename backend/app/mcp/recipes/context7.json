@@ -1,0 +1,9 @@
+{
+  "id": "context7",
+  "titleKey": "mcp.recipe.context7",
+  "transport": "http",
+  "runtime": "none",
+  "url": "https://mcp.context7.com/mcp",
+  "credentialKinds": ["token"],
+  "needsRoot": false
+}

@@ -1,0 +1,11 @@
+{
+  "id": "azure",
+  "titleKey": "mcp.recipe.azure",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@azure/mcp@0.5.4"],
+  "credentialKinds": ["azure"],
+  "envFromKind": { "azure": "AZURE_TOKEN" },
+  "needsRoot": false
+}

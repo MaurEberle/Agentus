@@ -1,0 +1,10 @@
+{
+  "id": "filesystem",
+  "titleKey": "mcp.recipe.filesystem",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem@2025.3.28", "{{rootPath}}"],
+  "needsRoot": true,
+  "appendRoot": false
+}

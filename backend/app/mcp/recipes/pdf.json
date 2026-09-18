@@ -1,0 +1,10 @@
+{
+  "id": "pdf",
+  "titleKey": "mcp.recipe.pdf",
+  "transport": "stdio",
+  "runtime": "uvx",
+  "command": "uvx",
+  "args": ["mcp-server-pdf"],
+  "needsRoot": true,
+  "appendRoot": true
+}

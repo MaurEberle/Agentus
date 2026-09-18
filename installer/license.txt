@@ -1,0 +1,16 @@
+Agentus Network
+
+Copyright. All rights reserved.
+
+This software is provided for use on this computer. You may install one copy
+per user profile. Redistribution of the installer or the application files
+requires permission from the publisher.
+
+Third-party components (Ollama, WebView2, MCP servers, models) remain under
+their own licenses. This setup may download the official Ollama Windows
+installer and the Microsoft WebView2 Evergreen bootstrapper.
+
+No warranty. Use at your own risk.
+
+Optional OpenAI-compatible endpoints (including LM Studio) are configured by
+you under Settings; they are not installed by this setup.

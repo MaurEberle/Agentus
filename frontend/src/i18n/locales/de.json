@@ -1,0 +1,1160 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "Zum Inhalt springen"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "network": "Netzwerk",
+    "networks": "Verwaltung",
+    "monitoring": "Monitoring",
+    "history": "Historie",
+    "settings": "Einstellungen",
+    "openMenu": "Navigation öffnen",
+    "closeMenu": "Navigation schließen",
+    "collapse": "Seitenleiste einklappen",
+    "expand": "Seitenleiste ausklappen",
+    "main": "Hauptnavigation"
+  },
+  "shell": {
+    "start": "Start",
+    "stop": "Stopp",
+    "quickSelect": "Schnellwahl",
+    "quickSelectPlaceholder": "Netzwerk wählen",
+    "noNetwork": "Kein Netzwerk",
+    "settings": "Einstellungen",
+    "theme": "Darstellung",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "themeSystem": "System",
+    "language": "Sprache",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "window": {
+      "minimize": "Minimieren",
+      "maximize": "Maximieren",
+      "restore": "Wiederherstellen",
+      "close": "Schließen"
+    }
+  },
+  "status": {
+    "stopped": "Gestoppt",
+    "starting": "Startet",
+    "running": "Läuft",
+    "stopping": "Stoppt",
+    "disconnected": "Getrennt",
+    "error": "Fehler"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "empty": "Keine Benachrichtigungen",
+    "markRead": "Als gelesen markieren",
+    "markAllRead": "Alle als gelesen",
+    "clear": "Leeren",
+    "open": "Benachrichtigungen öffnen",
+    "unreadCount": "{{count}} ungelesen"
+  },
+  "folderPicker": {
+    "title": "Ordner wählen",
+    "description": "Wähle einen Ordner auf diesem Computer. Der vollständige Pfad wird übernommen.",
+    "select": "Auswählen",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "up": "Übergeordneter Ordner",
+    "empty": "Keine Unterordner",
+    "error": "Ordner konnte nicht gelesen werden.",
+    "unavailable": "Dateisystem ist in dieser Sitzung nicht erreichbar.",
+    "loading": "Ordner werden geladen…",
+    "path": "Pfad",
+    "places": {
+      "home": "Benutzerordner",
+      "desktop": "Desktop",
+      "documents": "Dokumente",
+      "downloads": "Downloads"
+    }
+  },
+  "notify": {
+    "welcome": {
+      "title": "Willkommen bei Agentus Network",
+      "desc": "Wähle ein Netzwerk und starte einen Lauf über die Kopfzeile."
+    },
+    "runStarting": {
+      "title": "Lauf wird gestartet",
+      "desc": "Das aktive Netzwerk startet."
+    },
+    "runRunning": {
+      "title": "Netzwerk läuft",
+      "desc": "{{name}} ist aktiv."
+    },
+    "runStopping": {
+      "title": "Lauf wird beendet",
+      "desc": "Das Netzwerk wird gestoppt."
+    },
+    "runStopped": {
+      "title": "Lauf beendet",
+      "desc": "Das Netzwerk wurde gestoppt."
+    },
+    "runConflict": {
+      "title": "Start nicht möglich",
+      "desc": "Es läuft bereits ein Netzwerk."
+    },
+    "runError": {
+      "title": "Lauf fehlgeschlagen",
+      "desc": "Der Start oder Stopp ist fehlgeschlagen."
+    },
+    "noNetwork": {
+      "title": "Kein Netzwerk gewählt",
+      "desc": "Wähle zuerst ein Netzwerk in der Schnellwahl."
+    },
+    "networkSelected": {
+      "title": "Aktives Netzwerk",
+      "desc": "{{name}} ist ausgewählt."
+    },
+    "networkCleared": {
+      "title": "Kein aktives Netzwerk",
+      "desc": "Die Schnellwahl wurde geleert."
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "Dieses Modul wird im nächsten Schritt implementiert."
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "body": "Dieser Pfad existiert nicht.",
+    "back": "Zum Dashboard"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "unsaved": {
+      "title": "Ungespeicherte Änderungen",
+      "body": "Einige Felder sind noch nicht gespeichert. Verwerfen und fortfahren?",
+      "stay": "Bleiben",
+      "leave": "Verwerfen"
+    },
+    "common": {
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "close": "Schließen",
+      "actions": "Aktionen"
+    },
+    "nav": {
+      "appearance": "Darstellung",
+      "credentials": "Zugänge",
+      "runtime": "Runtime",
+      "help-chat": "Hilfe-Chatbot",
+      "mcp": "MCP-Server",
+      "data": "Daten",
+      "about": "Über"
+    },
+    "appearance": {
+      "lead": "Farbe und Sprache gelten überall in der App, inklusive Kopfzeile.",
+      "fab": "Hilfe-Schaltfläche",
+      "fabHint": "Zeigt das Hilfe-Widget unten rechts. Die Konfiguration bleibt unter Hilfe-Chatbot."
+    },
+    "credentials": {
+      "lead": "Benannte Zugänge für Cloud-Modelle, Websuche und MCP. Nach dem Speichern bleibt nur eine Maske sichtbar.",
+      "create": "Zugang anlegen",
+      "createTitle": "Zugang anlegen",
+      "editTitle": "Zugang ersetzen",
+      "empty": "Noch keine Zugänge.",
+      "name": "Name",
+      "kind": "Art",
+      "mask": "Maske",
+      "secret": "Geheimnis",
+      "secretHint": "Das Geheimnis wird nur einmal gesendet. Die Liste zeigt danach nur die Maske.",
+      "secretUnchanged": "Leer lassen, um das Geheimnis nicht zu ändern",
+      "deleteTitle": "Zugang löschen?",
+      "deleteBody": "„{{name}}“ wird entfernt. Das Geheimnis ist danach nicht mehr verfügbar.",
+      "inUseTitle": "Zugang wird verwendet",
+      "inUseBody": "„{{name}}“ ist noch einem Hilfe-Profil, Netz oder MCP-Server zugeordnet und kann nicht gelöscht werden.",
+      "kindName": {
+        "xai": "xAI",
+        "openai_compat": "OpenAI-kompatibel",
+        "web_search": "Websuche",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "Token"
+      }
+    },
+    "runtime": {
+      "lead": "Lokale Ollama-URL. Prüfung und Modellliste laufen über die App-API, nicht direkt aus dem Browser.",
+      "ollamaUrl": "Ollama-Basis-URL",
+      "openaiCompatUrl": "OpenAI-kompatible Basis-URL",
+      "ping": "Verbindung prüfen",
+      "pingOk": "Runtime erreichbar",
+      "pingFail": "Runtime nicht erreichbar",
+      "models": "Installierte Modelle",
+      "modelsEmpty": "Keine Modelle oder Runtime nicht erreichbar.",
+      "modelName": "Modell",
+      "modelSize": "Größe",
+      "status": {
+        "unknown": "Unbekannt",
+        "ok": "OK",
+        "error": "Fehler"
+      }
+    },
+    "helpChat": {
+      "lead": "Einzige Konfiguration für das Hilfe-Widget. Unvollständig, wenn Provider oder Modell fehlen.",
+      "configured": "Konfiguriert",
+      "incomplete": "Unvollständig",
+      "provider": "Chat-Provider",
+      "providerEmpty": "Nicht gesetzt",
+      "openaiCompat": "OpenAI-kompatibel",
+      "model": "Chat-Modell",
+      "credential": "Zugang",
+      "credentialEmpty": "Keinen Zugang wählen",
+      "embedProvider": "Embedding-Provider",
+      "embedModel": "Embedding-Modell",
+      "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen.",
+      "webSearch": "Websuche",
+      "webSearchHint": "Optional. Ohne Such-Zugang bleibt der Chat konfiguriert, die Suche ist dann deaktiviert.",
+      "webSearchCredential": "Such-Zugang",
+      "webSearchMissing": "Zugang fehlt — lege unter Zugänge einen Eintrag der Art Websuche an.",
+      "fallback": "Spar-Modell (optional)",
+      "ping": "Verbindung prüfen",
+      "pingOk": "Hilfe-Chat erreichbar",
+      "pingFail": "Hilfe-Chat nicht erreichbar",
+      "clear": "Verlauf löschen",
+      "clearTitle": "Hilfe-Verlauf löschen?",
+      "clearBody": "Alle Nachrichten im Hilfe-Chat werden entfernt. Das Profil bleibt erhalten.",
+      "reindex": "Index neu aufbauen",
+      "resetOnboarding": "Onboarding erneut zeigen"
+    },
+    "mcp": {
+      "lead": "Rezepte und eigene Server. Standard: inaktiv. Die Hilfe nutzt diese Server nicht.",
+      "recipes": "Rezepte",
+      "servers": "Konfigurierte Server",
+      "empty": "Noch keine MCP-Server.",
+      "enable": "Aktivieren",
+      "added": "Vorhanden",
+      "custom": "Benutzerdefiniert",
+      "customCreate": "Eigener Server",
+      "transport": "Transport",
+      "enabled": "Aktiv",
+      "status": "Status",
+      "probe": "Probe",
+      "presetHint": "Zugänge und optionaler Wurzelpfad laut Rezept. Speichern legt den Server sofort an.",
+      "officeHint": "Office bündelt PDF und Office-Formate. Einzel-Presets parallel nur bei Bedarf aktivieren.",
+      "rootPath": "Wurzelpfad",
+      "untrusted": "Ein unbekannter Prozess wird mit den angegebenen Rechten gestartet. Nur vertrauenswürdige Befehle verwenden.",
+      "command": "Befehl",
+      "args": "Argumente",
+      "url": "URL",
+      "deleteTitle": "Server löschen?",
+      "deleteBody": "Die Konfiguration dieses eigenen Servers wird entfernt.",
+      "pingOk": "MCP-Server antwortet",
+      "pingError": "MCP-Probe fehlgeschlagen",
+      "runtimeMissing": "Runtime fehlt (Node, npx, Docker oder uvx).",
+      "statusName": {
+        "unknown": "Unbekannt",
+        "ok": "OK",
+        "error": "Fehler",
+        "runtime_missing": "Runtime fehlt"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "Dateisystem",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "Datenordner und Store-Status. Kein SQL-Browser, keine Secrets.",
+      "dir": "Datenordner",
+      "pick": "Ordner wählen",
+      "busy": "Ordnerwechsel ist gesperrt, solange ein Netz startet, läuft oder stoppt.",
+      "invalidRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "stores": "Stores",
+      "storeName": "Store",
+      "fileName": "Datei",
+      "retentionLabel": "Aufbewahrung der Historie",
+      "copy": "Inhalt in den neuen Ordner kopieren",
+      "confirmTitle": "Datenordner wechseln",
+      "confirmBody": "Der alte Ordner bleibt erhalten. Ziel leer anlegen oder vorhandene Store-Dateien nutzen.",
+      "source": {
+        "env": "Der Ordner kommt aus einer Umgebungsvariable und ist schreibgeschützt.",
+        "portable": "Portabler Modus: der Datenordner ist fest und schreibgeschützt."
+      },
+      "store": {
+        "settings": "Einstellungen",
+        "help": "Hilfe",
+        "workspace": "Workspace",
+        "history": "Historie"
+      },
+      "storeState": {
+        "ok": "OK",
+        "missing": "Fehlt",
+        "error": "Fehler"
+      },
+      "retention": {
+        "30": "30 Tage",
+        "90": "90 Tage",
+        "365": "365 Tage",
+        "unlimited": "Unbegrenzt"
+      }
+    },
+    "about": {
+      "lead": "Versionen und Kurzstatus ohne Secrets.",
+      "uiVersion": "UI-Version",
+      "apiVersion": "API-Version",
+      "runtime": "Ollama",
+      "dataFolder": "Datenordner",
+      "storesOk": "Stores erreichbar"
+    },
+    "notify": {
+      "saved": "Einstellungen gespeichert",
+      "saveError": "Speichern fehlgeschlagen",
+      "credentialCreated": "Zugang angelegt",
+      "credentialUpdated": "Zugang aktualisiert",
+      "credentialDeleted": "Zugang gelöscht",
+      "credentialInUse": "Zugang wird noch verwendet",
+      "helpCleared": "Hilfe-Verlauf gelöscht",
+      "reindexed": "Hilfe-Index neu aufgebaut",
+      "onboardingReset": "Onboarding wird beim nächsten Öffnen wieder gezeigt",
+      "mcpSaved": "MCP-Server gespeichert",
+      "mcpDeleted": "MCP-Server gelöscht",
+      "dataDirOk": "Datenordner aktualisiert"
+    }
+  },
+  "helpChat": {
+    "title": "Hilfe",
+    "fab": {
+      "open": "Hilfe öffnen",
+      "close": "Hilfe schließen"
+    },
+    "onboarding": {
+      "title": "Hilfe zur Anwendung",
+      "body": "Dieser Chat erklärt die App und das Einrichten von Graphen. Er spricht nicht mit einem laufenden Agentennetz. Die Konfiguration liegt unter Einstellungen.",
+      "configure": "Jetzt konfigurieren",
+      "later": "Später"
+    },
+    "status": {
+      "unconfigured": "Deaktiviert",
+      "ready": "Bereit",
+      "degraded": "Sparmodus",
+      "generating": "Antwortet",
+      "error": "Fehler"
+    },
+    "action": {
+      "send": "Senden",
+      "stop": "Stop",
+      "settings": "Einstellungen für die Hilfe",
+      "close": "Hilfe schließen"
+    },
+    "input": {
+      "placeholder": "Frage zur App oder zum Graphen…"
+    },
+    "empty": "Noch keine Nachrichten. Frag etwas zur Bedienung.",
+    "unconfigured": {
+      "body": "Die Hilfe ist noch nicht konfiguriert. Provider und Modell setzt du unter Einstellungen.",
+      "cta": "Zu den Einstellungen"
+    },
+    "sources": {
+      "rag": "Dokument",
+      "web": "Web"
+    },
+    "error": {
+      "generic": "Die Hilfe-Antwort ist fehlgeschlagen."
+    },
+    "resize": {
+      "width": "Breite ändern",
+      "height": "Höhe ändern"
+    },
+    "mock": {
+      "reply": "Das ist eine **Beispielantwort** der Hilfe. Sie erklärt die App, nicht das laufende Netz. Unter `Einstellungen` konfigurierst du Provider und Modell.",
+      "ragTitle": "Kurzanleitung",
+      "ragSection": "Hilfe-Chatbot",
+      "webTitle": "Ollama-Dokumentation"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "status": {
+      "title": "Status",
+      "noNetwork": "Kein aktives Netz",
+      "openLibrary": "Zur Verwaltung",
+      "runningSince": "Läuft seit {{time}}",
+      "openMonitoring": "Monitoring"
+    },
+    "helpHint": {
+      "title": "Hilfe zur Anwendung",
+      "body": "Die Hilfe erklärt die Anwendung und das Einrichten von Graphen. Sie spricht nicht mit dem Agentennetz. Die Schaltfläche findest du unten rechts.",
+      "open": "Hilfe öffnen",
+      "dismiss": "Verstanden"
+    },
+    "setup": {
+      "title": "Einrichtung",
+      "ollama": "Ollama ist nicht erreichbar",
+      "help": "Hilfe-Profil ist unvollständig",
+      "networks": "Noch kein Netz vorhanden",
+      "runtimeLink": "Runtime prüfen",
+      "helpLink": "Hilfe konfigurieren",
+      "createNetwork": "Neues Netz",
+      "importNetwork": "Netz importieren"
+    },
+    "active": {
+      "title": "Aktives Netz",
+      "empty": "Kein aktives Netz gewählt.",
+      "edit": "Bearbeiten",
+      "library": "Bibliothek",
+      "create": "Neues Netz",
+      "stats": "{{nodes}} Knoten · {{edges}} Kanten",
+      "updated": "Geändert {{time}}"
+    },
+    "validationStatus": {
+      "valid": "Gültig",
+      "invalid": "Ungültig",
+      "unknown": "Unbekannt"
+    },
+    "validation": {
+      "missingModel": "Mindestens ein LLM-Knoten braucht ein Modell."
+    },
+    "recent": {
+      "title": "Zuletzt verwendet",
+      "empty": "Noch keine Netze.",
+      "create": "Neues Netz"
+    },
+    "runs": {
+      "title": "Letzte Läufe",
+      "empty": "Noch keine Läufe.",
+      "storeError": "Der Historie-Store ist nicht verfügbar.",
+      "openData": "Daten prüfen"
+    },
+    "outcome": {
+      "running": "Läuft",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "cancelled": "Abbruch",
+      "timeout": "Timeout"
+    },
+    "week": {
+      "title": "Letzte 7 Tage",
+      "runs": "Läufe",
+      "succeeded": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "openHistory": "Historie"
+    },
+    "environment": {
+      "title": "Umgebung",
+      "ollamaOk": "Ollama erreichbar",
+      "ollamaFail": "Ollama nicht erreichbar",
+      "models_one": "{{count}} Modell",
+      "models_other": "{{count}} Modelle",
+      "storeIssue": "{{store}} ist nicht in Ordnung.",
+      "openData": "Daten",
+      "degraded": "Sparmodus"
+    },
+    "quick": {
+      "title": "Schnellzugriff",
+      "create": "Neues Netz",
+      "import": "Import",
+      "runtime": "Runtime"
+    },
+    "duration": {
+      "seconds": "{{count}} s",
+      "minutes": "{{minutes}} min {{seconds}} s",
+      "hours": "{{hours}} h {{minutes}} min"
+    },
+    "error": {
+      "load": "Dashboard-Daten konnten nicht geladen werden.",
+      "networks": "Netze konnten nicht geladen werden.",
+      "runs": "Läufe konnten nicht geladen werden.",
+      "networkMissing": "Netz nicht gefunden"
+    }
+  },
+  "network": {
+    "untitled": "Unbenanntes Netz",
+    "copySuffix": "(Kopie)",
+    "badge": {
+      "valid": "Gültig",
+      "invalid": "Ungültig",
+      "active": "Aktiv",
+      "running": "Läuft"
+    },
+    "ribbon": {
+      "new": "Neu",
+      "save": "Speichern",
+      "saveAs": "Speichern unter",
+      "load": "Laden",
+      "duplicate": "Duplizieren",
+      "export": "Export",
+      "validate": "Validieren",
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "library": "Zur Verwaltung",
+      "view": "Ansicht"
+    },
+    "view": {
+      "fit": "Einpassen",
+      "snap": "Rasterfang",
+      "grid": "Raster",
+      "minimap": "Minikarte"
+    },
+    "palette": {
+      "title": "Palette",
+      "search": "Knoten suchen",
+      "chat_input": "Chat-Eingabe",
+      "chat_inputHint": "Höchstens eine. Starttext und Pflichtfeld für den Lauf.",
+      "llm": "LLM",
+      "llmHint": "Modell und Provider. Kante zum Agenten-Port llm.",
+      "agent": "Agent",
+      "agentHint": "Systemprompt. LLM, Nachricht, Tools und Wissen per Kanten.",
+      "tool": "Werkzeug",
+      "toolHint": "Katalog-Art, optional MCP.",
+      "knowledge": "Wissen",
+      "knowledgeHint": "Quellenordner, nur zum Agenten-Port knowledge.",
+      "router": "Router",
+      "routerHint": "Verzweigt Nachrichten nach Bedingungen.",
+      "end": "Ende",
+      "endHint": "Mindestens eines. Abschluss des Laufs."
+    },
+    "ports": {
+      "message": "Nachricht",
+      "llm": "LLM",
+      "tool": "Werkzeug",
+      "knowledge": "Wissen",
+      "handoff": "Übergabe",
+      "default": "Standard",
+      "in": "Eingang",
+      "out": "Ausgang"
+    },
+    "inspector": {
+      "title": "Inspector",
+      "displayName": "Anzeigename",
+      "multi": "{{count}} Knoten ausgewählt",
+      "graph": {
+        "title": "Netz",
+        "name": "Name",
+        "description": "Beschreibung",
+        "tags": "Tags",
+        "stats": "{{nodes}} Knoten · {{edges}} Kanten",
+        "noIssues": "Keine Validierungsfehler."
+      },
+      "llm": {
+        "provider": "Provider",
+        "openaiCompat": "OpenAI-kompatibel",
+        "model": "Modell",
+        "credential": "Zugang",
+        "credentialEmpty": "Kein Zugang",
+        "baseUrl": "Basis-URL",
+        "ping": "Verbindung prüfen",
+        "pingOk": "Modell antwortet",
+        "pingFail": "Prüfung fehlgeschlagen",
+        "advanced": "Erweitert",
+        "noModels": "Keine Modelle geladen.",
+        "useModel": "„{{name}}“ verwenden",
+        "temperature": "Temperature",
+        "maxTokens": "Max. Tokens"
+      },
+      "agent": {
+        "hint": "LLM, Tools und Wissen kommen über Kanten, nicht als Felder.",
+        "systemPrompt": "Systemprompt"
+      },
+      "tool": {
+        "kind": "Art",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "Websuche",
+          "datetime": "Datum/Zeit",
+          "calculator": "Rechner",
+          "mcp": "MCP"
+        },
+        "method": "Methode",
+        "url": "URL",
+        "credential": "Zugang",
+        "mcpServer": "MCP-Server",
+        "mcpEmpty": "Kein Server",
+        "mcpHint": "Standard: alle Tools des Servers. Server anlegen unter Einstellungen.",
+        "mcpSettings": "Zu MCP-Einstellungen"
+      },
+      "knowledge": {
+        "path": "Quellenordner",
+        "pick": "Ordner",
+        "topK": "topK",
+        "score": "Score-Schwelle",
+        "reindex": "Index neu",
+        "reindexOk": "Index neu aufgebaut",
+        "reindexFail": "Index fehlgeschlagen"
+      },
+      "router": {
+        "branches": "Zweige",
+        "branchName": "Name",
+        "condition": "Bedingung",
+        "add": "Zweig hinzufügen"
+      },
+      "chat": {
+        "placeholder": "Platzhalter",
+        "startMessage": "Starttext",
+        "requireInput": "Eingabe nötig"
+      }
+    },
+    "load": {
+      "title": "Netz laden",
+      "body": "Wähle ein gespeichertes Netz. Bulk, Löschen und Import liegen in der Verwaltung.",
+      "search": "Suchen",
+      "sortUpdated": "Geändert",
+      "sortName": "Name",
+      "sortUsed": "Zuletzt verwendet",
+      "open": "Öffnen",
+      "preview": "{{nodes}} Knoten · {{edges}} Kanten"
+    },
+    "empty": {
+      "body": "Zieh einen Knoten aus der Palette auf die Fläche oder öffne ein gespeichertes Netz.",
+      "insert": "Palette"
+    },
+    "context": {
+      "insert": "Einfügen",
+      "fit": "Einpassen",
+      "duplicate": "Duplizieren",
+      "delete": "Löschen"
+    },
+    "dialog": {
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "nameTitle": "Netz benennen"
+    },
+    "dirty": {
+      "title": "Ungespeicherte Änderungen",
+      "body": "Das offene Netz ist geändert. Speichern, verwerfen oder abbrechen?",
+      "save": "Speichern",
+      "discard": "Verwerfen",
+      "cancel": "Abbrechen"
+    },
+    "readonly": {
+      "title": "Schreibgeschützt",
+      "body": "Dieses Netz läuft. Stoppe es in der Kopfzeile, bevor du bearbeitest."
+    },
+    "validation": {
+      "nameRequired": "Name darf nicht leer sein.",
+      "tooManyChatInputs": "Höchstens eine Chat-Eingabe.",
+      "endRequired": "Mindestens ein Ende-Knoten.",
+      "danglingEdge": "Kante verweist auf einen fehlenden Knoten.",
+      "edgeType": "Diese Verbindung ist typunverträglich.",
+      "agentLlm": "Jeder Agent braucht genau eine LLM-Kante.",
+      "agentMessage": "Jeder Agent braucht eine eingehende Nachricht.",
+      "modelRequired": "Modell ist Pflicht.",
+      "credentialRequired": "Cloud-Provider braucht einen Zugang.",
+      "toolKind": "Werkzeug-Art fehlt.",
+      "mcpServer": "Aktiven MCP-Server wählen.",
+      "mcpRoot": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "knowledgePath": "Quellenordner ist Pflicht.",
+      "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "knowledgeSandbox": "Pfad muss unter dem Datenordner liegen.",
+      "knowledgeHelpCorpus": "Der Hilfe-Korpus ist kein Netz-Wissen.",
+      "knowledgeTarget": "Wissen nur mit dem Agenten-Port knowledge verbinden.",
+      "cycle": "Zyklen sind nicht erlaubt.",
+      "knowledge": {
+        "missing": "Index fehlt.",
+        "stale": "Index ist veraltet.",
+        "error": "Indexfehler."
+      }
+    },
+    "notify": {
+      "saved": "Netz gespeichert",
+      "saveError": "Speichern fehlgeschlagen",
+      "duplicated": "Kopie geöffnet",
+      "valid": "Netz ist gültig",
+      "invalid": "Netz hat Validierungsfehler"
+    },
+    "error": {
+      "missing": "Netz nicht gefunden"
+    },
+    "catalog": {
+      "firstParty": "First-Party"
+    }
+  },
+  "networks": {
+    "title": "Verwaltung",
+    "copySuffix": "(Kopie)",
+    "ribbon": {
+      "new": "Neu",
+      "open": "Öffnen",
+      "duplicate": "Duplizieren",
+      "rename": "Umbenennen",
+      "tags": "Tags setzen",
+      "activate": "Als aktiv setzen",
+      "delete": "Löschen",
+      "import": "Importieren",
+      "export": "Exportieren",
+      "refresh": "Aktualisieren",
+      "more": "Weitere Aktionen",
+      "needOne": "Genau ein Netz wählen.",
+      "needSome": "Mindestens ein Netz wählen.",
+      "needValid": "Nur ein gültiges Netz kann aktiv werden.",
+      "alreadyActive": "Dieses Netz ist schon aktiv.",
+      "runningBlocked": "Ein laufendes Netz kann nicht gelöscht werden."
+    },
+    "filter": {
+      "search": "Suche nach Name, Beschreibung, Tags",
+      "sort": {
+        "name": "Name",
+        "updatedAt": "Geändert",
+        "lastUsedAt": "Zuletzt verwendet"
+      },
+      "direction": "Sortierreihenfolge",
+      "tags": "Tags",
+      "tagsHint": "Mehrere Tags: ODER",
+      "noTags": "Keine Tags",
+      "onlyValid": "Nur gültige",
+      "onlyActive": "Nur aktive"
+    },
+    "list": {
+      "selectAll": "Alle sichtbaren auswählen",
+      "name": "Name",
+      "description": "Beschreibung",
+      "status": "Status",
+      "graph": "Graph",
+      "updated": "Geändert",
+      "lastUsed": "Zuletzt verwendet",
+      "counts": "{{nodes}} Knoten · {{edges}} Kanten"
+    },
+    "badge": {
+      "valid": "Gültig",
+      "invalid": "Ungültig",
+      "unknown": "Unbekannt",
+      "active": "Aktiv",
+      "running": "Läuft",
+      "credentialMissing": "Credential fehlt"
+    },
+    "detail": {
+      "title": "Details",
+      "none": "Kein Netz ausgewählt.",
+      "multi": "{{count}} ausgewählt",
+      "noDescription": "Keine Beschreibung.",
+      "lastRun": "Letzter Lauf"
+    },
+    "empty": {
+      "library": "Noch keine gespeicherten Netze.",
+      "filter": "Keine Treffer für diese Filter.",
+      "clearFilters": "Filter lösen"
+    },
+    "error": {
+      "title": "Liste nicht geladen",
+      "body": "Die Bibliothek konnte nicht geladen werden.",
+      "missing": "Netz nicht gefunden",
+      "running": "Ein laufendes Netz kann nicht gelöscht werden."
+    },
+    "dialog": {
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "save": "Speichern"
+    },
+    "rename": {
+      "title": "Umbenennen",
+      "body": "Name und Beschreibung, ohne den Graph zu ändern.",
+      "name": "Name",
+      "description": "Beschreibung"
+    },
+    "tags": {
+      "title": "Tags hinzufügen",
+      "body": "Die Tags werden zu {{count}} Netzen hinzugefügt, bestehende bleiben.",
+      "label": "Tags",
+      "placeholder": "ops, prod",
+      "add": "Hinzufügen"
+    },
+    "delete": {
+      "title": "Netze löschen",
+      "body": "Der Workspace-Index dieses Netzes wird mitgelöscht. Quelldateien auf dem Datenträger bleiben. Der Hilfe-Store und Historie-Läufe bleiben unberührt.",
+      "none": "Kein Netz kann gelöscht werden.",
+      "runningSkipped": "Läuft und wird nicht gelöscht: {{names}}",
+      "activeWarning": "Mindestens ein aktives Netz ist dabei. Die Schnellwahl wird geleert."
+    },
+    "import": {
+      "unreadable": "Einige Dateien waren unlesbar.",
+      "unreadableNames": "{{names}}",
+      "schema": "schemaVersion wird nicht unterstützt.",
+      "secrets": "Geheimnisse in Importdateien wurden verworfen.",
+      "collisionTitle": "Name schon vergeben",
+      "collisionBody": "Benenne um oder überspringe die Datei. Abbrechen gilt nur für diese Dateien.",
+      "skip": "Diese Datei überspringen",
+      "include": "Doch importieren",
+      "continue": "Importieren"
+    },
+    "notify": {
+      "error": "Aktion fehlgeschlagen",
+      "duplicated": "Kopie in der Bibliothek angelegt",
+      "renamed": "Metadaten gespeichert",
+      "tagged": "Tags hinzugefügt",
+      "deleted": "Netze gelöscht",
+      "imported": "{{count}} Netze importiert",
+      "exported": "Export gestartet"
+    }
+  },
+  "monitoring": {
+    "title": "Monitoring",
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "empty": {
+      "stoppedTitle": "Kein Lauf",
+      "stoppedBody": "Starte den Dienst über die Kopfzeile.",
+      "stoppedActive": "Aktives Netz: {{name}}",
+      "stoppedNoNetwork": "Kein Netz in der Schnellwahl.",
+      "disconnectedTitle": "Getrennt vom Dienst",
+      "disconnectedBody": "Die Verbindung wird erneut aufgebaut. Letzte Werte sind ausgegraut.",
+      "startingTitle": "Dienst startet",
+      "stoppingTitle": "Dienst stoppt",
+      "errorTitle": "Dienstfehler",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "runId": "Lauf-ID",
+      "started": "Start",
+      "duration": "Dauer",
+      "step": "Schritt",
+      "runningCount": "{{count}} laufend",
+      "noLlm": "Kein LLM aktiv",
+      "activeLlms": "Aktive LLMs",
+      "otherNodes": "Weitere Knoten",
+      "local": "lokal",
+      "cloud": "Cloud"
+    },
+    "resources": {
+      "title": "Host-Ressourcen",
+      "hostHint": "Systemwerte dieses Rechners, nicht nur der App-Prozess.",
+      "cpu": "CPU",
+      "cpuCores": "Kerne",
+      "ram": "Arbeitsspeicher",
+      "gpu": "GPU",
+      "vram": "VRAM",
+      "noGpu": "Keine GPU",
+      "noGpuHint": "Kein lokaler Beschleuniger erkannt. Bei Cloud-Läufen ist das normal.",
+      "usedOf": "{{used}} von {{total}}"
+    },
+    "graph": {
+      "title": "Netz (nur Lesen)",
+      "fit": "Einpassen",
+      "filterChip": "Knoten {{name}}",
+      "clearFilter": "Filter lösen",
+      "detailTitle": "Knotendetail",
+      "role": "Rolle",
+      "status": "Status",
+      "wait": "Wartet auf",
+      "lastMessage": "Letzte Meldung",
+      "error": "Fehler",
+      "model": "Modell",
+      "provider": "Anbieter",
+      "tokens": "Token"
+    },
+    "nodeType": {
+      "chat_input": "Eingabe",
+      "llm": "LLM",
+      "agent": "Agent",
+      "tool": "Werkzeug",
+      "knowledge": "Wissen",
+      "router": "Router",
+      "end": "Ende"
+    },
+    "nodeStatus": {
+      "idle": "Leerlauf",
+      "waiting": "Wartend",
+      "running": "Läuft",
+      "done": "Fertig",
+      "error": "Fehler"
+    },
+    "wait": {
+      "none": "Kein Warten",
+      "llm": "LLM",
+      "tool": "Werkzeug",
+      "human": "Eingabe"
+    },
+    "activity": {
+      "title": "Aktivität",
+      "current": "Aktuelle Knoten",
+      "none": "Kein Knoten aktiv",
+      "dag": "Schritt {{completed}} von {{total}}",
+      "pending": "Offen",
+      "stepError": "Fehler im Schritt",
+      "tokensIn": "Eingabe",
+      "tokensOut": "Ausgabe",
+      "perSecond": "{{value}} Token/s",
+      "context": "Kontext {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "Chat",
+      "log": "Log"
+    },
+    "chat": {
+      "placeholder": "Nachricht…",
+      "send": "Senden",
+      "stop": "Generierung stoppen",
+      "waitInput": "Erste Nachricht schreiben. Der Graph wartet auf Eingabe.",
+      "empty": "Noch keine Nachrichten in diesem Lauf.",
+      "disabled": "Chat nur während eines Laufs."
+    },
+    "log": {
+      "pause": "Halten",
+      "resume": "Weiter",
+      "jumpLatest": "Zu neuesten",
+      "newCount": "{{count}} neu",
+      "search": "Log durchsuchen",
+      "level": "Level",
+      "levelFrom": "ab {{level}}",
+      "node": "Knoten",
+      "allNodes": "Alle Knoten",
+      "errorsOnly": "Nur Fehler",
+      "export": "Export",
+      "empty": "Keine Logzeilen für diesen Filter.",
+      "detailTitle": "Log-Detail",
+      "payload": "Payload",
+      "stack": "Stack",
+      "message": "Meldung",
+      "copyLine": "Zeile kopieren",
+      "copyPayload": "Payload kopieren"
+    },
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warnung",
+      "error": "Fehler"
+    },
+    "notify": {
+      "runStarted": "Lauf gestartet",
+      "runStopped": "Lauf beendet",
+      "stepFailed": "Schritt fehlgeschlagen",
+      "disconnected": "Dienst nicht erreichbar"
+    },
+    "dev": {
+      "label": "Mock-Szenario",
+      "stopped": "Gestoppt",
+      "disconnected": "Getrennt",
+      "starting": "Startet",
+      "stopping": "Stoppt",
+      "running": "Läuft (Chat)",
+      "nochat": "Läuft (ohne Chat)",
+      "cloud": "Cloud / keine GPU",
+      "error": "Fehler",
+      "wait": "Wartet auf Eingabe"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "OpenAI-kompatibel"
+    },
+    "mock": {
+      "userLine": "Fasse den letzten Lauf kurz zusammen.",
+      "chatReply": "Der Lauf ist aktiv. Der Assistent antwortet aus dem Netz, nicht aus der Hilfe.",
+      "lastLlm": "Token werden erzeugt.",
+      "lastAgent": "Wartet auf das LLM.",
+      "lastTool": "Werkzeuglauf angefordert.",
+      "waitInput": "Graph wartet auf die erste Nachricht.",
+      "stepError": "Werkzeuglauf ist fehlgeschlagen.",
+      "serviceError": "Der Dienst hat den Schritt abgebrochen.",
+      "log": {
+        "start": "Lauf übernommen.",
+        "debug": "Prompt vorbereitet.",
+        "agent": "Agent arbeitet.",
+        "warn": "Werkzeug antwortet langsam.",
+        "secret": "Anfrage mit apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} meldet Fortschritt.",
+        "user": "Nutzerzeile angenommen.",
+        "assistant": "Antwort abgeschlossen."
+      }
+    }
+  },
+  "history": {
+    "title": "Historie",
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "ribbon": {
+      "refresh": "Aktualisieren",
+      "delete": "Löschen",
+      "export": "Logs exportieren",
+      "purge": "Älter als 90 Tage löschen"
+    },
+    "filter": {
+      "range": "Zeitraum",
+      "today": "Heute",
+      "days7": "7 Tage",
+      "days30": "30 Tage",
+      "custom": "Benutzerdefiniert",
+      "from": "Von",
+      "to": "Bis",
+      "network": "Netz",
+      "allNetworks": "Alle Netze",
+      "model": "Modell",
+      "allModels": "Alle Modelle",
+      "search": "Suche",
+      "searchHint": "Lauf-ID, Netz, Fehler",
+      "reset": "Filter zurücksetzen"
+    },
+    "outcome": {
+      "running": "Läuft",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "cancelled": "Abbruch",
+      "timeout": "Timeout"
+    },
+    "kpi": {
+      "runs": "Läufe",
+      "runsHint": "Nur abgeschlossene Läufe",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "failedFoot": "Abbruch {{cancelled}} · Timeout {{timeout}}",
+      "medianDuration": "Mediane Dauer",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95 ab 20 Läufen"
+    },
+    "chart": {
+      "title": "Läufe nach Tag",
+      "empty": "Keine terminalen Läufe in diesem Zeitraum."
+    },
+    "errors": {
+      "title": "Häufigste Fehler",
+      "empty": "Keine Fehler in diesem Filter."
+    },
+    "errorClass": {
+      "timeout": "Timeout",
+      "tool_error": "Werkzeug",
+      "llm_error": "LLM",
+      "validation": "Validierung",
+      "service": "Dienst",
+      "unknown": "Unbekannt"
+    },
+    "tab": {
+      "history": "Historie",
+      "model": "Pro Modell",
+      "network": "Pro Netz"
+    },
+    "table": {
+      "model": "Modell",
+      "provider": "Anbieter",
+      "calls": "Calls",
+      "ok": "OK",
+      "callErrors": "Fehler",
+      "errorRate": "Fehlerquote",
+      "median": "Mediane Dauer",
+      "tokensIn": "Token in",
+      "tokensOut": "Token out",
+      "network": "Netz",
+      "runs": "Läufe",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "cancelled": "Abbruch",
+      "topErrorNode": "Häufigster Fehlerknoten"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "OpenAI-kompatibel"
+    },
+    "list": {
+      "selectAll": "Sichtbare auswählen",
+      "runId": "Lauf-ID",
+      "network": "Netz",
+      "started": "Start",
+      "duration": "Dauer",
+      "outcome": "Ergebnis",
+      "error": "Fehler",
+      "models": "Modelle",
+      "live": "Live ansehen",
+      "page": "Seite {{page}} von {{pages}}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "detail": {
+      "title": "Lauf",
+      "none": "Wähle einen Lauf in der Liste.",
+      "missing": "Dieser Lauf ist nicht vorhanden.",
+      "error": "Fehler",
+      "exportLog": "Log exportieren",
+      "tabLog": "Log",
+      "tabSteps": "Schritte",
+      "tabChat": "Chat"
+    },
+    "graph": {
+      "fit": "Einpassen"
+    },
+    "log": {
+      "level": "Level",
+      "search": "Log durchsuchen",
+      "node": "Knoten",
+      "allNodes": "Alle Knoten",
+      "errorsOnly": "Nur Fehler",
+      "empty": "Keine Logzeilen für diesen Filter.",
+      "detailTitle": "Log-Detail"
+    },
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warnung",
+      "error": "Fehler"
+    },
+    "steps": {
+      "node": "Knoten",
+      "role": "Rolle",
+      "status": "Status",
+      "error": "Fehler",
+      "empty": "Keine Schritte gespeichert."
+    },
+    "nodeStatus": {
+      "idle": "Leerlauf",
+      "waiting": "Wartend",
+      "running": "Läuft",
+      "done": "Fertig",
+      "error": "Fehler"
+    },
+    "calls": {
+      "ok": "OK",
+      "yes": "Ja",
+      "no": "Nein",
+      "empty": "Keine LLM-Calls."
+    },
+    "empty": {
+      "none": "Noch keine Läufe im Historie-Store.",
+      "filtered": "Keine Treffer für diesen Filter."
+    },
+    "error": {
+      "store": "Historie-Store ist nicht verfügbar.",
+      "openData": "Einstellungen · Daten",
+      "api": "Historie konnte nicht geladen werden.",
+      "runningDelete": "Laufende Läufe können nicht gelöscht werden."
+    },
+    "delete": {
+      "title": "Läufe löschen",
+      "body": "{{count}} ausgewählte Läufe werden aus dem Archiv entfernt. Laufende Läufe bleiben.",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "retention": {
+      "title": "Ältere Läufe löschen",
+      "body": "{{count}} Läufe älter als 90 Tage werden gelöscht.",
+      "confirm": "Löschen"
+    },
+    "notify": {
+      "deleted": "{{count}} Läufe gelöscht",
+      "runningDelete": "Laufende Läufe können nicht gelöscht werden",
+      "runningSkipped": "Mindestens ein laufender Eintrag wurde übersprungen",
+      "purged": "{{count}} alte Läufe gelöscht",
+      "exported": "Export gestartet",
+      "exportError": "Export fehlgeschlagen",
+      "error": "Aktion fehlgeschlagen"
+    }
+  }
+}

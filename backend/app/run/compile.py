@@ -1,0 +1,127 @@
+from __future__ import annotations
+
+from copy import deepcopy
+from dataclasses import dataclass, field
+
+from app.run.graph_models import AgentNetworkDocument, GraphNode
+
+
+@dataclass
+class CompiledLlm:
+    provider: str
+    model: str
+    base_url: str | None
+    credential_id: str | None
+    temperature: float | None
+    max_tokens: int | None
+    node_id: str
+
+
+@dataclass
+class CompiledAgent:
+    node_id: str
+    system_prompt: str
+    llm: CompiledLlm
+    tool_kinds: list[str]
+    mcp: list[tuple[str, list[str] | None]]
+    knowledge_node_ids: list[str]
+    outbound_message: list[str]
+
+
+@dataclass
+class CompiledGraph:
+    network_id: str
+    network_name: str
+    doc: AgentNetworkDocument
+    agents: dict[str, CompiledAgent]
+    chat_input: GraphNode | None
+    end_ids: list[str]
+    routers: dict[str, list[tuple[str, str]]]
+    topo_agents: list[str]
+    by_id: dict[str, GraphNode] = field(default_factory=dict)
+
+
+def compile_document(
+    doc: AgentNetworkDocument, *, network_id: str, network_name: str
+) -> CompiledGraph:
+    by_id = {n.id: n for n in doc.nodes}
+    chats = [n for n in doc.nodes if n.type == "chat_input"]
+    chat_input = chats[0] if chats else None
+    end_ids = [n.id for n in doc.nodes if n.type == "end"]
+    routers: dict[str, list[tuple[str, str]]] = {}
+    for node in doc.nodes:
+        if node.type != "router":
+            continue
+        routers[node.id] = [
+            (e.source_handle, e.target)
+            for e in doc.edges
+            if e.source == node.id
+        ]
+
+    agents: dict[str, CompiledAgent] = {}
+    for node in doc.nodes:
+        if node.type != "agent":
+            continue
+        llm_edges = [e for e in doc.edges if e.target == node.id and e.target_handle == "llm"]
+        llm_node = by_id[llm_edges[0].source] if llm_edges else None
+        data = llm_node.data if llm_node else {}
+        llm = CompiledLlm(
+            provider=str(data.get("provider") or "ollama"),
+            model=str(data.get("model") or ""),
+            base_url=data.get("baseUrl"),
+            credential_id=data.get("credentialId"),
+            temperature=data.get("temperature"),
+            max_tokens=data.get("maxTokens"),
+            node_id=llm_node.id if llm_node else "",
+        )
+        tool_kinds: list[str] = []
+        mcp: list[tuple[str, list[str] | None]] = []
+        for edge in doc.edges:
+            if edge.target != node.id or edge.target_handle != "tool":
+                continue
+            tool = by_id.get(edge.source)
+            if not tool:
+                continue
+            kind = str(tool.data.get("kind") or "")
+            if kind == "mcp":
+                names = tool.data.get("mcpToolNames")
+                mcp.append(
+                    (
+                        str(tool.data.get("mcpServerId") or ""),
+                        list(names) if isinstance(names, list) else None,
+                    )
+                )
+            elif kind:
+                tool_kinds.append(kind)
+        knowledge_ids = [
+            e.source
+            for e in doc.edges
+            if e.target == node.id and e.target_handle == "knowledge"
+        ]
+        outbound = [
+            e.target
+            for e in doc.edges
+            if e.source == node.id and e.source_handle in {"message", "handoff"}
+        ]
+        agents[node.id] = CompiledAgent(
+            node_id=node.id,
+            system_prompt=str(node.data.get("systemPrompt") or ""),
+            llm=llm,
+            tool_kinds=tool_kinds,
+            mcp=mcp,
+            knowledge_node_ids=knowledge_ids,
+            outbound_message=outbound,
+        )
+
+    topo = list(agents.keys())
+    return CompiledGraph(
+        network_id=network_id,
+        network_name=network_name,
+        doc=AgentNetworkDocument.model_validate(deepcopy(doc.model_dump(by_alias=True))),
+        agents=agents,
+        chat_input=chat_input,
+        end_ids=end_ids,
+        routers=routers,
+        topo_agents=topo,
+        by_id=by_id,
+    )

@@ -1,0 +1,11 @@
+{
+  "id": "postgres",
+  "titleKey": "mcp.recipe.postgres",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-postgres@0.6.2"],
+  "credentialKinds": ["postgres"],
+  "envFromKind": { "postgres": "POSTGRES_CONNECTION_STRING" },
+  "needsRoot": false
+}
