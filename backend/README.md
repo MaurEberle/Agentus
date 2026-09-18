@@ -56,7 +56,7 @@ npm run dev
 
 UI: `http://localhost:5173`. API: `http://127.0.0.1:8765/api`.
 
-`python -m app.main` bindet nur Loopback und serviert `GET /api/health`. OpenAPI `/docs` nur mit `AGENTUS_NETWORK_DEV=1`. `0.0.0.0` startet nicht.
+`python -m app.main` bindet nur Loopback. Mit `AGENTUS_NETWORK_DEV=1` oder `AGENTUS_NETWORK_NO_HOST=1` nur API (Vite im Browser). Auf Windows ohne diese Flags: WebView2-Fenster (`window.chromeHost`). OpenAPI `/docs` nur mit DEV. `0.0.0.0` startet nicht.
 
 Tests:
 

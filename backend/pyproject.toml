@@ -17,6 +17,7 @@ dependencies = [
     "keyring>=25.0",
     "mcp>=1.9",
     "psutil>=6.0",
+    "pywebview>=5.0",
 ]
 
 [project.optional-dependencies]
