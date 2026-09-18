@@ -50,6 +50,8 @@ export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSet
     : await apiFetch<AppSettings>('/settings', { method: 'PATCH', body: JSON.stringify(patch) });
   queryClient.setQueryData(['settings'], next);
   await queryClient.invalidateQueries({ queryKey: ['settings'] });
+  await queryClient.invalidateQueries({ queryKey: ['runtime'] });
+  await queryClient.invalidateQueries({ queryKey: ['help-chat', 'status'] });
   return next;
 }
 

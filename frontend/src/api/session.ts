@@ -1,15 +1,10 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, apiFetch, queryClient, USE_MOCKS } from '@/api/client';
-import {
-  mockGetSession,
-  mockListNetworks,
-  mockSetActiveNetwork,
-  mockStartRun,
-  mockStopRun,
-} from '@/api/mocks';
+import { mockGetSession, mockSetActiveNetwork, mockStartRun, mockStopRun } from '@/api/mocks';
 import type { NetworkOption, SessionDto, StartRunResponse, StopRunResponse } from '@/api/types';
 import { notify } from '@/lib/notifications';
+import { listNetworkSummaries } from '@/modules/dashboard/api';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 
@@ -21,8 +16,7 @@ export async function getSession(): Promise<SessionDto> {
 }
 
 export async function listNetworks(): Promise<{ items: NetworkOption[] }> {
-  if (USE_MOCKS) return mockListNetworks();
-  return apiFetch<{ items: NetworkOption[] }>('/networks');
+  return listNetworkSummaries();
 }
 
 export async function selectActiveNetwork(networkId: string | null) {
@@ -35,6 +29,7 @@ export async function selectActiveNetwork(networkId: string | null) {
 
   useAppStore.getState().hydrateSession(session);
   void queryClient.invalidateQueries({ queryKey: ['session'] });
+  void queryClient.invalidateQueries({ queryKey: ['networks'] });
 
   if (session.activeNetworkId) {
     notify({
@@ -91,6 +86,9 @@ export async function startActiveRun() {
       variant: 'success',
     });
     void queryClient.invalidateQueries({ queryKey: ['session'] });
+    void queryClient.invalidateQueries({ queryKey: ['runs'] });
+    void queryClient.invalidateQueries({ queryKey: ['networks'] });
+    void queryClient.invalidateQueries({ queryKey: ['help-chat', 'status'] });
   } catch (error) {
     store.setServiceStatus('error');
     if (error instanceof ApiError && error.status === 409) {
@@ -134,6 +132,9 @@ export async function stopActiveRun() {
       variant: 'success',
     });
     void queryClient.invalidateQueries({ queryKey: ['session'] });
+    void queryClient.invalidateQueries({ queryKey: ['runs'] });
+    void queryClient.invalidateQueries({ queryKey: ['networks'] });
+    void queryClient.invalidateQueries({ queryKey: ['help-chat', 'status'] });
   } catch {
     store.setServiceStatus('error');
     notify({
@@ -144,12 +145,16 @@ export async function stopActiveRun() {
   }
 }
 
-export function useHydrateSession() {
-  const hydrateSession = useAppStore((state) => state.hydrateSession);
-  const { data } = useQuery({
+export function useSessionQuery() {
+  return useQuery({
     queryKey: ['session'],
     queryFn: getSession,
   });
+}
+
+export function useHydrateSession() {
+  const hydrateSession = useAppStore((state) => state.hydrateSession);
+  const { data } = useSessionQuery();
 
   useEffect(() => {
     if (data) hydrateSession(data);
@@ -159,6 +164,6 @@ export function useHydrateSession() {
 export function useNetworkOptions() {
   return useQuery({
     queryKey: ['networks'],
-    queryFn: listNetworks,
+    queryFn: listNetworkSummaries,
   });
 }

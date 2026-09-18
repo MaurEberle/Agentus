@@ -16,6 +16,10 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function peekMockSession(): SessionDto {
+  return { ...mockSession };
+}
+
 export async function mockGetSession(): Promise<SessionDto> {
   await delay(40);
   return { ...mockSession };

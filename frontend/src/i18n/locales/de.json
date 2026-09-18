@@ -373,5 +373,100 @@
       "ragSection": "Hilfe-Chatbot",
       "webTitle": "Ollama-Dokumentation"
     }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "status": {
+      "title": "Status",
+      "noNetwork": "Kein aktives Netz",
+      "openLibrary": "Zur Verwaltung",
+      "runningSince": "Läuft seit {{time}}",
+      "openMonitoring": "Monitoring"
+    },
+    "helpHint": {
+      "title": "Hilfe zur Anwendung",
+      "body": "Die Hilfe erklärt die Anwendung und das Einrichten von Graphen. Sie spricht nicht mit dem Agentennetz. Die Schaltfläche findest du unten rechts.",
+      "open": "Hilfe öffnen",
+      "dismiss": "Verstanden"
+    },
+    "setup": {
+      "title": "Einrichtung",
+      "ollama": "Ollama ist nicht erreichbar",
+      "help": "Hilfe-Profil ist unvollständig",
+      "networks": "Noch kein Netz vorhanden",
+      "runtimeLink": "Runtime prüfen",
+      "helpLink": "Hilfe konfigurieren",
+      "createNetwork": "Neues Netz",
+      "importNetwork": "Netz importieren"
+    },
+    "active": {
+      "title": "Aktives Netz",
+      "empty": "Kein aktives Netz gewählt.",
+      "edit": "Bearbeiten",
+      "library": "Bibliothek",
+      "create": "Neues Netz",
+      "stats": "{{nodes}} Knoten · {{edges}} Kanten",
+      "updated": "Geändert {{time}}"
+    },
+    "validationStatus": {
+      "valid": "Gültig",
+      "invalid": "Ungültig",
+      "unknown": "Unbekannt"
+    },
+    "validation": {
+      "missingModel": "Mindestens ein LLM-Knoten braucht ein Modell."
+    },
+    "recent": {
+      "title": "Zuletzt verwendet",
+      "empty": "Noch keine Netze.",
+      "create": "Neues Netz"
+    },
+    "runs": {
+      "title": "Letzte Läufe",
+      "empty": "Noch keine Läufe.",
+      "storeError": "Der Historie-Store ist nicht verfügbar.",
+      "openData": "Daten prüfen"
+    },
+    "outcome": {
+      "running": "Läuft",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "cancelled": "Abbruch",
+      "timeout": "Timeout"
+    },
+    "week": {
+      "title": "Letzte 7 Tage",
+      "runs": "Läufe",
+      "succeeded": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "openHistory": "Historie"
+    },
+    "environment": {
+      "title": "Umgebung",
+      "ollamaOk": "Ollama erreichbar",
+      "ollamaFail": "Ollama nicht erreichbar",
+      "models_one": "{{count}} Modell",
+      "models_other": "{{count}} Modelle",
+      "storeIssue": "{{store}} ist nicht in Ordnung.",
+      "openData": "Daten",
+      "degraded": "Sparmodus"
+    },
+    "quick": {
+      "title": "Schnellzugriff",
+      "create": "Neues Netz",
+      "import": "Import",
+      "runtime": "Runtime"
+    },
+    "duration": {
+      "seconds": "{{count}} s",
+      "minutes": "{{minutes}} min {{seconds}} s",
+      "hours": "{{hours}} h {{minutes}} min"
+    },
+    "error": {
+      "load": "Dashboard-Daten konnten nicht geladen werden.",
+      "networks": "Netze konnten nicht geladen werden.",
+      "runs": "Läufe konnten nicht geladen werden.",
+      "networkMissing": "Netz nicht gefunden"
+    }
   }
 }

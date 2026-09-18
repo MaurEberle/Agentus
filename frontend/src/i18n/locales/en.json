@@ -373,5 +373,100 @@
       "ragSection": "Help chatbot",
       "webTitle": "Ollama docs"
     }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "status": {
+      "title": "Status",
+      "noNetwork": "No active network",
+      "openLibrary": "Open library",
+      "runningSince": "Running since {{time}}",
+      "openMonitoring": "Monitoring"
+    },
+    "helpHint": {
+      "title": "In-app help",
+      "body": "Help explains the application and how to set up graphs. It does not talk to the agent network. Use the button at the bottom right.",
+      "open": "Open help",
+      "dismiss": "Got it"
+    },
+    "setup": {
+      "title": "Setup",
+      "ollama": "Ollama is not reachable",
+      "help": "Help profile is incomplete",
+      "networks": "No network yet",
+      "runtimeLink": "Check runtime",
+      "helpLink": "Configure help",
+      "createNetwork": "New network",
+      "importNetwork": "Import network"
+    },
+    "active": {
+      "title": "Active network",
+      "empty": "No active network selected.",
+      "edit": "Edit",
+      "library": "Library",
+      "create": "New network",
+      "stats": "{{nodes}} nodes · {{edges}} edges",
+      "updated": "Updated {{time}}"
+    },
+    "validationStatus": {
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "unknown": "Unknown"
+    },
+    "validation": {
+      "missingModel": "At least one LLM node needs a model."
+    },
+    "recent": {
+      "title": "Recently used",
+      "empty": "No networks yet.",
+      "create": "New network"
+    },
+    "runs": {
+      "title": "Recent runs",
+      "empty": "No runs yet.",
+      "storeError": "The history store is unavailable.",
+      "openData": "Check data"
+    },
+    "outcome": {
+      "running": "Running",
+      "succeeded": "Success",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "timeout": "Timeout"
+    },
+    "week": {
+      "title": "Last 7 days",
+      "runs": "Runs",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "openHistory": "History"
+    },
+    "environment": {
+      "title": "Environment",
+      "ollamaOk": "Ollama reachable",
+      "ollamaFail": "Ollama unreachable",
+      "models_one": "{{count}} model",
+      "models_other": "{{count}} models",
+      "storeIssue": "{{store}} is not healthy.",
+      "openData": "Data",
+      "degraded": "Economy mode"
+    },
+    "quick": {
+      "title": "Quick links",
+      "create": "New network",
+      "import": "Import",
+      "runtime": "Runtime"
+    },
+    "duration": {
+      "seconds": "{{count}} s",
+      "minutes": "{{minutes}} min {{seconds}} s",
+      "hours": "{{hours}} h {{minutes}} min"
+    },
+    "error": {
+      "load": "Dashboard data could not be loaded.",
+      "networks": "Networks could not be loaded.",
+      "runs": "Runs could not be loaded.",
+      "networkMissing": "Network not found"
+    }
   }
 }
