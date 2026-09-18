@@ -1,0 +1,110 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "Zum Inhalt springen"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "network": "Netzwerk",
+    "networks": "Verwaltung",
+    "monitoring": "Monitoring",
+    "history": "Historie",
+    "settings": "Einstellungen",
+    "openMenu": "Navigation öffnen",
+    "closeMenu": "Navigation schließen",
+    "collapse": "Seitenleiste einklappen",
+    "expand": "Seitenleiste ausklappen",
+    "main": "Hauptnavigation"
+  },
+  "shell": {
+    "start": "Start",
+    "stop": "Stopp",
+    "quickSelect": "Schnellwahl",
+    "quickSelectPlaceholder": "Netzwerk wählen",
+    "noNetwork": "Kein Netzwerk",
+    "settings": "Einstellungen",
+    "theme": "Darstellung",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "themeSystem": "System",
+    "language": "Sprache",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "window": {
+      "minimize": "Minimieren",
+      "maximize": "Maximieren",
+      "restore": "Wiederherstellen",
+      "close": "Schließen"
+    }
+  },
+  "status": {
+    "stopped": "Gestoppt",
+    "starting": "Startet",
+    "running": "Läuft",
+    "stopping": "Stoppt",
+    "disconnected": "Getrennt",
+    "error": "Fehler"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "empty": "Keine Benachrichtigungen",
+    "markRead": "Als gelesen markieren",
+    "markAllRead": "Alle als gelesen",
+    "clear": "Leeren",
+    "open": "Benachrichtigungen öffnen",
+    "unreadCount": "{{count}} ungelesen"
+  },
+  "notify": {
+    "welcome": {
+      "title": "Willkommen bei Agentus Network",
+      "desc": "Wähle ein Netzwerk und starte einen Lauf über die Kopfzeile."
+    },
+    "runStarting": {
+      "title": "Lauf wird gestartet",
+      "desc": "Das aktive Netzwerk startet."
+    },
+    "runRunning": {
+      "title": "Netzwerk läuft",
+      "desc": "{{name}} ist aktiv."
+    },
+    "runStopping": {
+      "title": "Lauf wird beendet",
+      "desc": "Das Netzwerk wird gestoppt."
+    },
+    "runStopped": {
+      "title": "Lauf beendet",
+      "desc": "Das Netzwerk wurde gestoppt."
+    },
+    "runConflict": {
+      "title": "Start nicht möglich",
+      "desc": "Es läuft bereits ein Netzwerk."
+    },
+    "runError": {
+      "title": "Lauf fehlgeschlagen",
+      "desc": "Der Start oder Stopp ist fehlgeschlagen."
+    },
+    "noNetwork": {
+      "title": "Kein Netzwerk gewählt",
+      "desc": "Wähle zuerst ein Netzwerk in der Schnellwahl."
+    },
+    "networkSelected": {
+      "title": "Aktives Netzwerk",
+      "desc": "{{name}} ist ausgewählt."
+    },
+    "networkCleared": {
+      "title": "Kein aktives Netzwerk",
+      "desc": "Die Schnellwahl wurde geleert."
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "Dieses Modul wird im nächsten Schritt implementiert."
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "body": "Dieser Pfad existiert nicht.",
+    "back": "Zum Dashboard"
+  }
+}

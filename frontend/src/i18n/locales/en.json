@@ -1,0 +1,110 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "Skip to content"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "network": "Network",
+    "networks": "Library",
+    "monitoring": "Monitoring",
+    "history": "History",
+    "settings": "Settings",
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "main": "Main navigation"
+  },
+  "shell": {
+    "start": "Start",
+    "stop": "Stop",
+    "quickSelect": "Quick select",
+    "quickSelectPlaceholder": "Select network",
+    "noNetwork": "No network",
+    "settings": "Settings",
+    "theme": "Appearance",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "language": "Language",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "window": {
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "restore": "Restore",
+      "close": "Close"
+    }
+  },
+  "status": {
+    "stopped": "Stopped",
+    "starting": "Starting",
+    "running": "Running",
+    "stopping": "Stopping",
+    "disconnected": "Disconnected",
+    "error": "Error"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markRead": "Mark as read",
+    "markAllRead": "Mark all as read",
+    "clear": "Clear",
+    "open": "Open notifications",
+    "unreadCount": "{{count}} unread"
+  },
+  "notify": {
+    "welcome": {
+      "title": "Welcome to Agentus Network",
+      "desc": "Select a network and start a run from the header."
+    },
+    "runStarting": {
+      "title": "Starting run",
+      "desc": "The active network is starting."
+    },
+    "runRunning": {
+      "title": "Network running",
+      "desc": "{{name}} is active."
+    },
+    "runStopping": {
+      "title": "Stopping run",
+      "desc": "The network is stopping."
+    },
+    "runStopped": {
+      "title": "Run stopped",
+      "desc": "The network has been stopped."
+    },
+    "runConflict": {
+      "title": "Cannot start",
+      "desc": "A network is already running."
+    },
+    "runError": {
+      "title": "Run failed",
+      "desc": "Start or stop failed."
+    },
+    "noNetwork": {
+      "title": "No network selected",
+      "desc": "Choose a network in the quick select first."
+    },
+    "networkSelected": {
+      "title": "Active network",
+      "desc": "{{name}} is selected."
+    },
+    "networkCleared": {
+      "title": "No active network",
+      "desc": "The quick select was cleared."
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "This module will be implemented in the next step."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "This path does not exist.",
+    "back": "Back to dashboard"
+  }
+}
