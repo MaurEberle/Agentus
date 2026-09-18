@@ -515,6 +515,17 @@
       "end": "End",
       "endHint": "At least one. Finishes the run."
     },
+    "ports": {
+      "message": "Message",
+      "llm": "LLM",
+      "tool": "Tool",
+      "knowledge": "Knowledge",
+      "handoff": "Handoff",
+      "default": "Default",
+      "in": "Input",
+      "out": "Output",
+      "required": "Required"
+    },
     "inspector": {
       "title": "Inspector",
       "displayName": "Display name",

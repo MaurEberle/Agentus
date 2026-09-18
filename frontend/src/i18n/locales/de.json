@@ -515,6 +515,17 @@
       "end": "Ende",
       "endHint": "Mindestens eines. Abschluss des Laufs."
     },
+    "ports": {
+      "message": "Nachricht",
+      "llm": "LLM",
+      "tool": "Werkzeug",
+      "knowledge": "Wissen",
+      "handoff": "Übergabe",
+      "default": "Standard",
+      "in": "Eingang",
+      "out": "Ausgang",
+      "required": "Pflicht"
+    },
     "inspector": {
       "title": "Inspector",
       "displayName": "Anzeigename",

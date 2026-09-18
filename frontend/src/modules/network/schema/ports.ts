@@ -4,8 +4,8 @@ const STATIC_PORTS: Record<NodeType, PortDef[]> = {
   chat_input: [{ id: 'message', kind: 'message', direction: 'out' }],
   llm: [{ id: 'llm', kind: 'llm', direction: 'out' }],
   agent: [
-    { id: 'message', kind: 'message', direction: 'in' },
-    { id: 'llm', kind: 'llm', direction: 'in' },
+    { id: 'message', kind: 'message', direction: 'in', required: true },
+    { id: 'llm', kind: 'llm', direction: 'in', required: true },
     { id: 'tool', kind: 'tool', direction: 'in' },
     { id: 'knowledge', kind: 'knowledge', direction: 'in' },
     { id: 'message', kind: 'message', direction: 'out' },
@@ -13,8 +13,8 @@ const STATIC_PORTS: Record<NodeType, PortDef[]> = {
   ],
   tool: [{ id: 'tool', kind: 'tool', direction: 'out' }],
   knowledge: [{ id: 'knowledge', kind: 'knowledge', direction: 'out' }],
-  router: [{ id: 'message', kind: 'message', direction: 'in' }],
-  end: [{ id: 'message', kind: 'message', direction: 'in' }],
+  router: [{ id: 'message', kind: 'message', direction: 'in', required: true }],
+  end: [{ id: 'message', kind: 'message', direction: 'in', required: true }],
 };
 
 export function portsFor(node: GraphNode): PortDef[] {
@@ -31,7 +31,25 @@ export function portsFor(node: GraphNode): PortDef[] {
 
 export function portKind(node: GraphNode, handleId: string | null | undefined, direction: 'in' | 'out'): PortKind | null {
   if (!handleId) return null;
-  return portsFor(node).find((port) => port.id === handleId && port.direction === direction)?.kind ?? null;
+  const id = handleId === 'out-message' ? 'message' : handleId;
+  return portsFor(node).find((port) => port.id === id && port.direction === direction)?.kind ?? null;
+}
+
+export function portI18nKey(port: PortDef): string {
+  if (port.id === 'default') return 'network.ports.default';
+  return `network.ports.${port.kind}`;
+}
+
+export function routerBranchName(node: GraphNode, portId: string): string | undefined {
+  if (node.type !== 'router') return undefined;
+  const branches = Array.isArray(node.data.branches) ? node.data.branches : [];
+  for (const branch of branches) {
+    const rec = branch as { id?: string; name?: string };
+    if (rec.id !== portId) continue;
+    const name = typeof rec.name === 'string' ? rec.name.trim() : '';
+    return name || undefined;
+  }
+  return undefined;
 }
 
 function kindsCompatible(source: PortKind, target: PortKind): boolean {

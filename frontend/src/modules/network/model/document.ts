@@ -21,6 +21,8 @@ export type PortDef = {
   id: string;
   kind: PortKind;
   direction: 'in' | 'out';
+  /** Must have ≥1 compatible edge before the graph is valid. */
+  required?: boolean;
 };
 
 export type RouterBranch = {

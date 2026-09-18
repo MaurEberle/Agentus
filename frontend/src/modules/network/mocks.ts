@@ -45,13 +45,13 @@ const demo: AgentNetworkDocument = {
     {
       id: 'agent-1',
       type: 'agent',
-      position: { x: 280, y: 140 },
+      position: { x: 320, y: 120 },
       data: { displayName: 'Assistent', systemPrompt: 'Du hilfst beim lokalen Netz.' },
     },
     {
       id: 'end-1',
       type: 'end',
-      position: { x: 560, y: 160 },
+      position: { x: 640, y: 160 },
       data: { displayName: 'Ende' },
     },
   ],
@@ -81,13 +81,13 @@ const support: AgentNetworkDocument = {
     {
       id: 'agent-1',
       type: 'agent',
-      position: { x: 260, y: 80 },
+      position: { x: 320, y: 60 },
       data: { displayName: 'Support', systemPrompt: '' },
     },
     {
       id: 'end-1',
       type: 'end',
-      position: { x: 520, y: 100 },
+      position: { x: 640, y: 100 },
       data: { displayName: 'Ende' },
     },
   ],

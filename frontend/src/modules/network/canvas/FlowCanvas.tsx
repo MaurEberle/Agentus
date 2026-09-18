@@ -25,7 +25,7 @@ import { issuesForNode, validateDocument } from '@/modules/network/validation/va
 import type { GraphEdge, NodeType } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { CanvasContextMenu, type MenuState } from '@/modules/network/canvas/ContextMenu';
-import { docHandleId, rfHandleId } from '@/modules/network/canvas/handles';
+import { connectedPortKeys, docHandleId, rfHandleId } from '@/modules/network/canvas/handles';
 import { NetworkNode } from '@/modules/network/canvas/NetworkNode';
 import { portsFor } from '@/modules/network/schema/ports';
 import {
@@ -79,10 +79,12 @@ export function FlowCanvas({
         position: node.position,
         selected: selectedNodeIds.includes(node.id),
         draggable: !readOnly,
+        className: 'overflow-visible',
         data: {
           graph: node,
           issues: issuesForNode(issues, node.id),
           readOnly,
+          connected: connectedPortKeys(node.id, document.edges),
         },
       })),
     );
