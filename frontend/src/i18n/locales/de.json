@@ -805,5 +805,177 @@
       "imported": "{{count}} Netze importiert",
       "exported": "Export gestartet"
     }
+  },
+  "monitoring": {
+    "title": "Monitoring",
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "empty": {
+      "stoppedTitle": "Kein Lauf",
+      "stoppedBody": "Starte den Dienst über die Kopfzeile.",
+      "stoppedActive": "Aktives Netz: {{name}}",
+      "stoppedNoNetwork": "Kein Netz in der Schnellwahl.",
+      "disconnectedTitle": "Getrennt vom Dienst",
+      "disconnectedBody": "Die Verbindung wird erneut aufgebaut. Letzte Werte sind ausgegraut.",
+      "startingTitle": "Dienst startet",
+      "stoppingTitle": "Dienst stoppt",
+      "errorTitle": "Dienstfehler",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "runId": "Lauf-ID",
+      "started": "Start",
+      "duration": "Dauer",
+      "step": "Schritt",
+      "runningCount": "{{count}} laufend",
+      "noLlm": "Kein LLM aktiv",
+      "activeLlms": "Aktive LLMs",
+      "otherNodes": "Weitere Knoten",
+      "local": "lokal",
+      "cloud": "Cloud"
+    },
+    "resources": {
+      "title": "Host-Ressourcen",
+      "hostHint": "Systemwerte dieses Rechners, nicht nur der App-Prozess.",
+      "cpu": "CPU",
+      "cpuCores": "Kerne",
+      "ram": "Arbeitsspeicher",
+      "gpu": "GPU",
+      "vram": "VRAM",
+      "noGpu": "Keine GPU",
+      "noGpuHint": "Kein lokaler Beschleuniger erkannt. Bei Cloud-Läufen ist das normal.",
+      "usedOf": "{{used}} von {{total}}"
+    },
+    "graph": {
+      "title": "Netz (nur Lesen)",
+      "fit": "Einpassen",
+      "filterChip": "Knoten {{name}}",
+      "clearFilter": "Filter lösen",
+      "detailTitle": "Knotendetail",
+      "role": "Rolle",
+      "status": "Status",
+      "wait": "Wartet auf",
+      "lastMessage": "Letzte Meldung",
+      "error": "Fehler",
+      "model": "Modell",
+      "provider": "Anbieter",
+      "tokens": "Token"
+    },
+    "nodeType": {
+      "chat_input": "Eingabe",
+      "llm": "LLM",
+      "agent": "Agent",
+      "tool": "Werkzeug",
+      "knowledge": "Wissen",
+      "router": "Router",
+      "end": "Ende"
+    },
+    "nodeStatus": {
+      "idle": "Leerlauf",
+      "waiting": "Wartend",
+      "running": "Läuft",
+      "done": "Fertig",
+      "error": "Fehler"
+    },
+    "wait": {
+      "none": "Kein Warten",
+      "llm": "LLM",
+      "tool": "Werkzeug",
+      "human": "Eingabe"
+    },
+    "activity": {
+      "title": "Aktivität",
+      "current": "Aktuelle Knoten",
+      "none": "Kein Knoten aktiv",
+      "dag": "Schritt {{completed}} von {{total}}",
+      "pending": "Offen",
+      "stepError": "Fehler im Schritt",
+      "tokensIn": "Eingabe",
+      "tokensOut": "Ausgabe",
+      "perSecond": "{{value}} Token/s",
+      "context": "Kontext {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "Chat",
+      "log": "Log"
+    },
+    "chat": {
+      "placeholder": "Nachricht…",
+      "send": "Senden",
+      "stop": "Generierung stoppen",
+      "waitInput": "Erste Nachricht schreiben. Der Graph wartet auf Eingabe.",
+      "empty": "Noch keine Nachrichten in diesem Lauf.",
+      "disabled": "Chat nur während eines Laufs."
+    },
+    "log": {
+      "pause": "Halten",
+      "resume": "Weiter",
+      "jumpLatest": "Zu neuesten",
+      "newCount": "{{count}} neu",
+      "search": "Log durchsuchen",
+      "level": "Level",
+      "levelFrom": "ab {{level}}",
+      "node": "Knoten",
+      "allNodes": "Alle Knoten",
+      "errorsOnly": "Nur Fehler",
+      "export": "Export",
+      "empty": "Keine Logzeilen für diesen Filter.",
+      "detailTitle": "Log-Detail",
+      "payload": "Payload",
+      "stack": "Stack",
+      "message": "Meldung",
+      "copyLine": "Zeile kopieren",
+      "copyPayload": "Payload kopieren"
+    },
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warnung",
+      "error": "Fehler"
+    },
+    "notify": {
+      "runStarted": "Lauf gestartet",
+      "runStopped": "Lauf beendet",
+      "stepFailed": "Schritt fehlgeschlagen",
+      "disconnected": "Dienst nicht erreichbar"
+    },
+    "dev": {
+      "label": "Mock-Szenario",
+      "stopped": "Gestoppt",
+      "disconnected": "Getrennt",
+      "starting": "Startet",
+      "stopping": "Stoppt",
+      "running": "Läuft (Chat)",
+      "nochat": "Läuft (ohne Chat)",
+      "cloud": "Cloud / keine GPU",
+      "error": "Fehler",
+      "wait": "Wartet auf Eingabe"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "OpenAI-kompatibel"
+    },
+    "mock": {
+      "userLine": "Fasse den letzten Lauf kurz zusammen.",
+      "chatReply": "Der Lauf ist aktiv. Der Assistent antwortet aus dem Netz, nicht aus der Hilfe.",
+      "lastLlm": "Token werden erzeugt.",
+      "lastAgent": "Wartet auf das LLM.",
+      "lastTool": "Werkzeuglauf angefordert.",
+      "waitInput": "Graph wartet auf die erste Nachricht.",
+      "stepError": "Werkzeuglauf ist fehlgeschlagen.",
+      "serviceError": "Der Dienst hat den Schritt abgebrochen.",
+      "log": {
+        "start": "Lauf übernommen.",
+        "debug": "Prompt vorbereitet.",
+        "agent": "Agent arbeitet.",
+        "warn": "Werkzeug antwortet langsam.",
+        "secret": "Anfrage mit apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} meldet Fortschritt.",
+        "user": "Nutzerzeile angenommen.",
+        "assistant": "Antwort abgeschlossen."
+      }
+    }
   }
 }

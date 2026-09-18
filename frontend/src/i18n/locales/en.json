@@ -805,5 +805,177 @@
       "imported": "{{count}} networks imported",
       "exported": "Export started"
     }
+  },
+  "monitoring": {
+    "title": "Monitoring",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
+    "empty": {
+      "stoppedTitle": "No run",
+      "stoppedBody": "Start the service from the header.",
+      "stoppedActive": "Active network: {{name}}",
+      "stoppedNoNetwork": "No network in quick select.",
+      "disconnectedTitle": "Disconnected from the service",
+      "disconnectedBody": "Reconnecting. Last known values are dimmed.",
+      "startingTitle": "Service is starting",
+      "stoppingTitle": "Service is stopping",
+      "errorTitle": "Service error",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "runId": "Run ID",
+      "started": "Started",
+      "duration": "Duration",
+      "step": "Step",
+      "runningCount": "{{count}} running",
+      "noLlm": "No LLM active",
+      "activeLlms": "Active LLMs",
+      "otherNodes": "Other nodes",
+      "local": "local",
+      "cloud": "cloud"
+    },
+    "resources": {
+      "title": "Host resources",
+      "hostHint": "System values for this machine, not only the app process.",
+      "cpu": "CPU",
+      "cpuCores": "Cores",
+      "ram": "Memory",
+      "gpu": "GPU",
+      "vram": "VRAM",
+      "noGpu": "No GPU",
+      "noGpuHint": "No local accelerator detected. That is expected for cloud runs.",
+      "usedOf": "{{used}} of {{total}}"
+    },
+    "graph": {
+      "title": "Network (read only)",
+      "fit": "Fit",
+      "filterChip": "Node {{name}}",
+      "clearFilter": "Clear filter",
+      "detailTitle": "Node detail",
+      "role": "Role",
+      "status": "Status",
+      "wait": "Waiting on",
+      "lastMessage": "Last message",
+      "error": "Error",
+      "model": "Model",
+      "provider": "Provider",
+      "tokens": "Tokens"
+    },
+    "nodeType": {
+      "chat_input": "Input",
+      "llm": "LLM",
+      "agent": "Agent",
+      "tool": "Tool",
+      "knowledge": "Knowledge",
+      "router": "Router",
+      "end": "End"
+    },
+    "nodeStatus": {
+      "idle": "Idle",
+      "waiting": "Waiting",
+      "running": "Running",
+      "done": "Done",
+      "error": "Error"
+    },
+    "wait": {
+      "none": "None",
+      "llm": "LLM",
+      "tool": "Tool",
+      "human": "Input"
+    },
+    "activity": {
+      "title": "Activity",
+      "current": "Current nodes",
+      "none": "No node active",
+      "dag": "Step {{completed}} of {{total}}",
+      "pending": "Pending",
+      "stepError": "Step failed",
+      "tokensIn": "Input",
+      "tokensOut": "Output",
+      "perSecond": "{{value}} tokens/s",
+      "context": "Context {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "Chat",
+      "log": "Log"
+    },
+    "chat": {
+      "placeholder": "Message…",
+      "send": "Send",
+      "stop": "Stop generation",
+      "waitInput": "Write the first message. The graph is waiting for input.",
+      "empty": "No messages in this run yet.",
+      "disabled": "Chat is available only while a run is active."
+    },
+    "log": {
+      "pause": "Hold",
+      "resume": "Resume",
+      "jumpLatest": "Jump to latest",
+      "newCount": "{{count}} new",
+      "search": "Search log",
+      "level": "Level",
+      "levelFrom": "from {{level}}",
+      "node": "Node",
+      "allNodes": "All nodes",
+      "errorsOnly": "Errors only",
+      "export": "Export",
+      "empty": "No log lines for this filter.",
+      "detailTitle": "Log detail",
+      "payload": "Payload",
+      "stack": "Stack",
+      "message": "Message",
+      "copyLine": "Copy line",
+      "copyPayload": "Copy payload"
+    },
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warning",
+      "error": "Error"
+    },
+    "notify": {
+      "runStarted": "Run started",
+      "runStopped": "Run stopped",
+      "stepFailed": "Step failed",
+      "disconnected": "Service unreachable"
+    },
+    "dev": {
+      "label": "Mock scenario",
+      "stopped": "Stopped",
+      "disconnected": "Disconnected",
+      "starting": "Starting",
+      "stopping": "Stopping",
+      "running": "Running (chat)",
+      "nochat": "Running (no chat)",
+      "cloud": "Cloud / no GPU",
+      "error": "Error",
+      "wait": "Waiting for input"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "OpenAI-compatible"
+    },
+    "mock": {
+      "userLine": "Summarize the latest run briefly.",
+      "chatReply": "The run is active. This assistant answers from the network, not from help.",
+      "lastLlm": "Tokens are being produced.",
+      "lastAgent": "Waiting on the LLM.",
+      "lastTool": "Tool call requested.",
+      "waitInput": "The graph is waiting for the first message.",
+      "stepError": "The tool call failed.",
+      "serviceError": "The service aborted the step.",
+      "log": {
+        "start": "Run accepted.",
+        "debug": "Prompt prepared.",
+        "agent": "Agent is working.",
+        "warn": "Tool is responding slowly.",
+        "secret": "Request with apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} reports progress.",
+        "user": "User line accepted.",
+        "assistant": "Reply finished."
+      }
+    }
   }
 }

@@ -16,6 +16,28 @@ export function peekMockSession(): SessionDto {
   return { ...mockSession };
 }
 
+export function mockApplyService(
+  status: ServiceStatus,
+  extra?: { runId?: string | null; keepRun?: boolean },
+): SessionDto {
+  mockSession.serviceStatus = status;
+  const live = status === 'running' || status === 'starting' || status === 'stopping' || status === 'error';
+  if (extra?.runId === null) {
+    mockSession.runId = undefined;
+    mockSession.startedAt = undefined;
+  } else if (extra?.runId) {
+    mockSession.runId = extra.runId;
+    mockSession.startedAt = mockSession.startedAt ?? new Date().toISOString();
+  } else if (live) {
+    mockSession.runId = mockSession.runId ?? `run-${crypto.randomUUID().slice(0, 8)}`;
+    mockSession.startedAt = mockSession.startedAt ?? new Date().toISOString();
+  } else if (!extra?.keepRun) {
+    mockSession.runId = undefined;
+    mockSession.startedAt = undefined;
+  }
+  return { ...mockSession };
+}
+
 export async function mockGetSession(): Promise<SessionDto> {
   await delay(40);
   return { ...mockSession };

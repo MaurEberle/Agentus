@@ -102,6 +102,20 @@
   cursor: default !important;
 }
 
+.monitoring-flow .react-flow__pane,
+.monitoring-flow .react-flow__pane.draggable,
+.monitoring-flow .react-flow__pane.dragging,
+.monitoring-flow .react-flow__pane.selection,
+.monitoring-flow .react-flow__node,
+.monitoring-flow .react-flow__node.selectable,
+.monitoring-flow .react-flow__node.draggable,
+.monitoring-flow .react-flow__handle,
+.monitoring-flow .react-flow__edge.selectable,
+.monitoring-flow .react-flow__nodesselection-rect,
+.monitoring-flow .react-flow__selection {
+  cursor: default !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
