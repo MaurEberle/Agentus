@@ -1,0 +1,11 @@
+{
+  "id": "notion",
+  "titleKey": "mcp.recipe.notion",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@notionhq/notion-mcp-server@1.8.1"],
+  "credentialKinds": ["notion"],
+  "envFromKind": { "notion": "NOTION_TOKEN" },
+  "needsRoot": false
+}

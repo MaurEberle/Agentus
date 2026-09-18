@@ -1,0 +1,9 @@
+{
+  "id": "fetch",
+  "titleKey": "mcp.recipe.fetch",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "mcp-server-fetch@2025.1.17"],
+  "needsRoot": false
+}

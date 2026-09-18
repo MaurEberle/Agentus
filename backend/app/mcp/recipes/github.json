@@ -1,0 +1,11 @@
+{
+  "id": "github",
+  "titleKey": "mcp.recipe.github",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github@0.6.2"],
+  "credentialKinds": ["github"],
+  "envFromKind": { "github": "GITHUB_PERSONAL_ACCESS_TOKEN" },
+  "needsRoot": false
+}

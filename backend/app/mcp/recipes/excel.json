@@ -1,0 +1,10 @@
+{
+  "id": "excel",
+  "titleKey": "mcp.recipe.excel",
+  "transport": "stdio",
+  "runtime": "uvx",
+  "command": "uvx",
+  "args": ["excel-mcp-server"],
+  "needsRoot": true,
+  "appendRoot": true
+}

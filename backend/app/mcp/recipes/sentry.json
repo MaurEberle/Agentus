@@ -1,0 +1,11 @@
+{
+  "id": "sentry",
+  "titleKey": "mcp.recipe.sentry",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@sentry/mcp-server@0.15.0"],
+  "credentialKinds": ["token"],
+  "envFromKind": { "token": "SENTRY_AUTH_TOKEN" },
+  "needsRoot": false
+}

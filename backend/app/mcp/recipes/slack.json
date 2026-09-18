@@ -1,0 +1,11 @@
+{
+  "id": "slack",
+  "titleKey": "mcp.recipe.slack",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-slack@0.6.2"],
+  "credentialKinds": ["slack"],
+  "envFromKind": { "slack": "SLACK_BOT_TOKEN" },
+  "needsRoot": false
+}

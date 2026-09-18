@@ -1,0 +1,9 @@
+{
+  "id": "playwright",
+  "titleKey": "mcp.recipe.playwright",
+  "transport": "stdio",
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@playwright/mcp@0.0.79"],
+  "needsRoot": false
+}

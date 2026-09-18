@@ -51,6 +51,8 @@ def persist_status(message_key: str) -> int:
         return 404
     if message_key.startswith("dataDir.") or message_key.startswith("store."):
         return 400
+    if message_key.startswith("mcp.") or message_key.startswith("graph.mcp."):
+        return 404 if message_key.endswith("notFound") else 400
     return 500
 
 
