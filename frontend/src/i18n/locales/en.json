@@ -106,5 +106,221 @@
     "title": "Page not found",
     "body": "This path does not exist.",
     "back": "Back to dashboard"
+  },
+  "settings": {
+    "title": "Settings",
+    "unsaved": {
+      "title": "Unsaved changes",
+      "body": "Some fields are not saved yet. Discard and continue?",
+      "stay": "Stay",
+      "leave": "Discard"
+    },
+    "common": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "close": "Close",
+      "actions": "Actions"
+    },
+    "nav": {
+      "appearance": "Appearance",
+      "credentials": "Credentials",
+      "runtime": "Runtime",
+      "help-chat": "Help chatbot",
+      "mcp": "MCP servers",
+      "data": "Data",
+      "about": "About"
+    },
+    "appearance": {
+      "lead": "Color and language apply everywhere in the app, including the header.",
+      "fab": "Help button",
+      "fabHint": "Shows the help widget in the lower right. Configuration stays under Help chatbot."
+    },
+    "credentials": {
+      "lead": "Named credentials for cloud models, web search, and MCP. After saving, only a mask remains visible.",
+      "create": "Add credential",
+      "createTitle": "Add credential",
+      "editTitle": "Replace credential",
+      "empty": "No credentials yet.",
+      "name": "Name",
+      "kind": "Kind",
+      "mask": "Mask",
+      "secret": "Secret",
+      "secretHint": "The secret is sent once. The list then only shows the mask.",
+      "secretUnchanged": "Leave empty to keep the current secret",
+      "deleteTitle": "Delete credential?",
+      "deleteBody": "“{{name}}” will be removed. The secret will no longer be available.",
+      "inUseTitle": "Credential in use",
+      "inUseBody": "“{{name}}” is still used by a help profile, network, or MCP server and cannot be deleted.",
+      "kindName": {
+        "xai": "xAI",
+        "openai_compat": "OpenAI-compatible",
+        "web_search": "Web search",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "Token"
+      }
+    },
+    "runtime": {
+      "lead": "Local Ollama URL. Ping and model list go through the app API, not from the browser to Ollama.",
+      "ollamaUrl": "Ollama base URL",
+      "openaiCompatUrl": "OpenAI-compatible base URL",
+      "ping": "Check connection",
+      "pingOk": "Runtime reachable",
+      "pingFail": "Runtime not reachable",
+      "models": "Installed models",
+      "modelsEmpty": "No models, or the runtime is unavailable.",
+      "modelName": "Model",
+      "modelSize": "Size",
+      "status": {
+        "unknown": "Unknown",
+        "ok": "OK",
+        "error": "Error"
+      }
+    },
+    "helpChat": {
+      "lead": "The only configuration for the help widget. Incomplete if provider or model is missing.",
+      "configured": "Configured",
+      "incomplete": "Incomplete",
+      "provider": "Chat provider",
+      "providerEmpty": "Not set",
+      "openaiCompat": "OpenAI-compatible",
+      "model": "Chat model",
+      "credential": "Credential",
+      "credentialEmpty": "No credential",
+      "embedProvider": "Embedding provider",
+      "embedModel": "Embedding model",
+      "reindexHint": "Rebuild the index after changing embeddings.",
+      "webSearch": "Web search",
+      "webSearchHint": "Optional. Without a search credential the chat can still be configured; search stays disabled.",
+      "webSearchCredential": "Search credential",
+      "webSearchMissing": "Credential missing — add a web search entry under Credentials.",
+      "fallback": "Economy model (optional)",
+      "ping": "Check connection",
+      "pingOk": "Help chat reachable",
+      "pingFail": "Help chat not reachable",
+      "clear": "Clear history",
+      "clearTitle": "Clear help history?",
+      "clearBody": "All help-chat messages will be removed. The profile stays.",
+      "reindex": "Rebuild index",
+      "resetOnboarding": "Show onboarding again"
+    },
+    "mcp": {
+      "lead": "Recipes and custom servers. Default: inactive. Help does not use these servers.",
+      "recipes": "Recipes",
+      "servers": "Configured servers",
+      "empty": "No MCP servers yet.",
+      "enable": "Enable",
+      "added": "Added",
+      "custom": "Custom",
+      "customCreate": "Custom server",
+      "transport": "Transport",
+      "enabled": "Enabled",
+      "status": "Status",
+      "probe": "Probe",
+      "presetHint": "Credentials and optional root path from the recipe. Saving creates the server immediately.",
+      "officeHint": "Office bundles PDF and Office formats. Enable the individual presets in parallel only if needed.",
+      "rootPath": "Root path",
+      "untrusted": "An untrusted process will start with the given privileges. Use trusted commands only.",
+      "command": "Command",
+      "args": "Arguments",
+      "url": "URL",
+      "deleteTitle": "Delete server?",
+      "deleteBody": "This custom server configuration will be removed.",
+      "pingOk": "MCP server responded",
+      "pingError": "MCP probe failed",
+      "runtimeMissing": "Runtime missing (Node, npx, Docker, or uvx).",
+      "statusName": {
+        "unknown": "Unknown",
+        "ok": "OK",
+        "error": "Error",
+        "runtime_missing": "Runtime missing"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "Filesystem",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "Data folder and store status. No SQL browser, no secrets.",
+      "dir": "Data folder",
+      "pick": "Choose folder",
+      "busy": "Changing the folder is blocked while a network is starting, running, or stopping.",
+      "invalidRoot": "A drive or system root is not allowed.",
+      "stores": "Stores",
+      "storeName": "Store",
+      "fileName": "File",
+      "retentionLabel": "History retention",
+      "copy": "Copy contents to the new folder",
+      "confirmTitle": "Change data folder",
+      "confirmBody": "The old folder is kept. Create an empty target or use existing store files.",
+      "source": {
+        "env": "The folder comes from an environment variable and is read-only.",
+        "portable": "Portable mode: the data folder is fixed and read-only."
+      },
+      "store": {
+        "settings": "Settings",
+        "help": "Help",
+        "workspace": "Workspace",
+        "history": "History"
+      },
+      "storeState": {
+        "ok": "OK",
+        "missing": "Missing",
+        "error": "Error"
+      },
+      "retention": {
+        "30": "30 days",
+        "90": "90 days",
+        "365": "365 days",
+        "unlimited": "Unlimited"
+      }
+    },
+    "about": {
+      "lead": "Versions and short status without secrets.",
+      "uiVersion": "UI version",
+      "apiVersion": "API version",
+      "runtime": "Ollama",
+      "dataFolder": "Data folder",
+      "storesOk": "Stores reachable"
+    },
+    "notify": {
+      "saved": "Settings saved",
+      "saveError": "Save failed",
+      "credentialCreated": "Credential created",
+      "credentialUpdated": "Credential updated",
+      "credentialDeleted": "Credential deleted",
+      "credentialInUse": "Credential is still in use",
+      "helpCleared": "Help history cleared",
+      "reindexed": "Help index rebuilt",
+      "onboardingReset": "Onboarding will show the next time help opens",
+      "mcpSaved": "MCP server saved",
+      "mcpDeleted": "MCP server deleted",
+      "dataDirOk": "Data folder updated"
+    }
   }
 }

@@ -106,5 +106,221 @@
     "title": "Seite nicht gefunden",
     "body": "Dieser Pfad existiert nicht.",
     "back": "Zum Dashboard"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "unsaved": {
+      "title": "Ungespeicherte Änderungen",
+      "body": "Einige Felder sind noch nicht gespeichert. Verwerfen und fortfahren?",
+      "stay": "Bleiben",
+      "leave": "Verwerfen"
+    },
+    "common": {
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "close": "Schließen",
+      "actions": "Aktionen"
+    },
+    "nav": {
+      "appearance": "Darstellung",
+      "credentials": "Zugänge",
+      "runtime": "Runtime",
+      "help-chat": "Hilfe-Chatbot",
+      "mcp": "MCP-Server",
+      "data": "Daten",
+      "about": "Über"
+    },
+    "appearance": {
+      "lead": "Farbe und Sprache gelten überall in der App, inklusive Kopfzeile.",
+      "fab": "Hilfe-Schaltfläche",
+      "fabHint": "Zeigt das Hilfe-Widget unten rechts. Die Konfiguration bleibt unter Hilfe-Chatbot."
+    },
+    "credentials": {
+      "lead": "Benannte Zugänge für Cloud-Modelle, Websuche und MCP. Nach dem Speichern bleibt nur eine Maske sichtbar.",
+      "create": "Zugang anlegen",
+      "createTitle": "Zugang anlegen",
+      "editTitle": "Zugang ersetzen",
+      "empty": "Noch keine Zugänge.",
+      "name": "Name",
+      "kind": "Art",
+      "mask": "Maske",
+      "secret": "Geheimnis",
+      "secretHint": "Das Geheimnis wird nur einmal gesendet. Die Liste zeigt danach nur die Maske.",
+      "secretUnchanged": "Leer lassen, um das Geheimnis nicht zu ändern",
+      "deleteTitle": "Zugang löschen?",
+      "deleteBody": "„{{name}}“ wird entfernt. Das Geheimnis ist danach nicht mehr verfügbar.",
+      "inUseTitle": "Zugang wird verwendet",
+      "inUseBody": "„{{name}}“ ist noch einem Hilfe-Profil, Netz oder MCP-Server zugeordnet und kann nicht gelöscht werden.",
+      "kindName": {
+        "xai": "xAI",
+        "openai_compat": "OpenAI-kompatibel",
+        "web_search": "Websuche",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "Token"
+      }
+    },
+    "runtime": {
+      "lead": "Lokale Ollama-URL. Prüfung und Modellliste laufen über die App-API, nicht direkt aus dem Browser.",
+      "ollamaUrl": "Ollama-Basis-URL",
+      "openaiCompatUrl": "OpenAI-kompatible Basis-URL",
+      "ping": "Verbindung prüfen",
+      "pingOk": "Runtime erreichbar",
+      "pingFail": "Runtime nicht erreichbar",
+      "models": "Installierte Modelle",
+      "modelsEmpty": "Keine Modelle oder Runtime nicht erreichbar.",
+      "modelName": "Modell",
+      "modelSize": "Größe",
+      "status": {
+        "unknown": "Unbekannt",
+        "ok": "OK",
+        "error": "Fehler"
+      }
+    },
+    "helpChat": {
+      "lead": "Einzige Konfiguration für das Hilfe-Widget. Unvollständig, wenn Provider oder Modell fehlen.",
+      "configured": "Konfiguriert",
+      "incomplete": "Unvollständig",
+      "provider": "Chat-Provider",
+      "providerEmpty": "Nicht gesetzt",
+      "openaiCompat": "OpenAI-kompatibel",
+      "model": "Chat-Modell",
+      "credential": "Zugang",
+      "credentialEmpty": "Keinen Zugang wählen",
+      "embedProvider": "Embedding-Provider",
+      "embedModel": "Embedding-Modell",
+      "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen.",
+      "webSearch": "Websuche",
+      "webSearchHint": "Optional. Ohne Such-Zugang bleibt der Chat konfiguriert, die Suche ist dann deaktiviert.",
+      "webSearchCredential": "Such-Zugang",
+      "webSearchMissing": "Zugang fehlt — lege unter Zugänge einen Eintrag der Art Websuche an.",
+      "fallback": "Spar-Modell (optional)",
+      "ping": "Verbindung prüfen",
+      "pingOk": "Hilfe-Chat erreichbar",
+      "pingFail": "Hilfe-Chat nicht erreichbar",
+      "clear": "Verlauf löschen",
+      "clearTitle": "Hilfe-Verlauf löschen?",
+      "clearBody": "Alle Nachrichten im Hilfe-Chat werden entfernt. Das Profil bleibt erhalten.",
+      "reindex": "Index neu aufbauen",
+      "resetOnboarding": "Onboarding erneut zeigen"
+    },
+    "mcp": {
+      "lead": "Rezepte und eigene Server. Standard: inaktiv. Die Hilfe nutzt diese Server nicht.",
+      "recipes": "Rezepte",
+      "servers": "Konfigurierte Server",
+      "empty": "Noch keine MCP-Server.",
+      "enable": "Aktivieren",
+      "added": "Vorhanden",
+      "custom": "Benutzerdefiniert",
+      "customCreate": "Eigener Server",
+      "transport": "Transport",
+      "enabled": "Aktiv",
+      "status": "Status",
+      "probe": "Probe",
+      "presetHint": "Zugänge und optionaler Wurzelpfad laut Rezept. Speichern legt den Server sofort an.",
+      "officeHint": "Office bündelt PDF und Office-Formate. Einzel-Presets parallel nur bei Bedarf aktivieren.",
+      "rootPath": "Wurzelpfad",
+      "untrusted": "Ein unbekannter Prozess wird mit den angegebenen Rechten gestartet. Nur vertrauenswürdige Befehle verwenden.",
+      "command": "Befehl",
+      "args": "Argumente",
+      "url": "URL",
+      "deleteTitle": "Server löschen?",
+      "deleteBody": "Die Konfiguration dieses eigenen Servers wird entfernt.",
+      "pingOk": "MCP-Server antwortet",
+      "pingError": "MCP-Probe fehlgeschlagen",
+      "runtimeMissing": "Runtime fehlt (Node, npx, Docker oder uvx).",
+      "statusName": {
+        "unknown": "Unbekannt",
+        "ok": "OK",
+        "error": "Fehler",
+        "runtime_missing": "Runtime fehlt"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "Dateisystem",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "Datenordner und Store-Status. Kein SQL-Browser, keine Secrets.",
+      "dir": "Datenordner",
+      "pick": "Ordner wählen",
+      "busy": "Ordnerwechsel ist gesperrt, solange ein Netz startet, läuft oder stoppt.",
+      "invalidRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "stores": "Stores",
+      "storeName": "Store",
+      "fileName": "Datei",
+      "retentionLabel": "Aufbewahrung der Historie",
+      "copy": "Inhalt in den neuen Ordner kopieren",
+      "confirmTitle": "Datenordner wechseln",
+      "confirmBody": "Der alte Ordner bleibt erhalten. Ziel leer anlegen oder vorhandene Store-Dateien nutzen.",
+      "source": {
+        "env": "Der Ordner kommt aus einer Umgebungsvariable und ist schreibgeschützt.",
+        "portable": "Portabler Modus: der Datenordner ist fest und schreibgeschützt."
+      },
+      "store": {
+        "settings": "Einstellungen",
+        "help": "Hilfe",
+        "workspace": "Workspace",
+        "history": "Historie"
+      },
+      "storeState": {
+        "ok": "OK",
+        "missing": "Fehlt",
+        "error": "Fehler"
+      },
+      "retention": {
+        "30": "30 Tage",
+        "90": "90 Tage",
+        "365": "365 Tage",
+        "unlimited": "Unbegrenzt"
+      }
+    },
+    "about": {
+      "lead": "Versionen und Kurzstatus ohne Secrets.",
+      "uiVersion": "UI-Version",
+      "apiVersion": "API-Version",
+      "runtime": "Ollama",
+      "dataFolder": "Datenordner",
+      "storesOk": "Stores erreichbar"
+    },
+    "notify": {
+      "saved": "Einstellungen gespeichert",
+      "saveError": "Speichern fehlgeschlagen",
+      "credentialCreated": "Zugang angelegt",
+      "credentialUpdated": "Zugang aktualisiert",
+      "credentialDeleted": "Zugang gelöscht",
+      "credentialInUse": "Zugang wird noch verwendet",
+      "helpCleared": "Hilfe-Verlauf gelöscht",
+      "reindexed": "Hilfe-Index neu aufgebaut",
+      "onboardingReset": "Onboarding wird beim nächsten Öffnen wieder gezeigt",
+      "mcpSaved": "MCP-Server gespeichert",
+      "mcpDeleted": "MCP-Server gelöscht",
+      "dataDirOk": "Datenordner aktualisiert"
+    }
   }
 }
