@@ -1,13 +1,16 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { pickFolderPath } from '@/lib/pickFolder';
 import {
   useEditorCredentialsQuery,
@@ -143,6 +146,99 @@ export function Inspector({
   );
 }
 
+function ModelCombobox({
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const query = draft.trim().toLowerCase();
+  const filtered = query ? options.filter((item) => item.toLowerCase().includes(query)) : options;
+  const exact = options.some((item) => item.toLowerCase() === query);
+
+  function commit(next: string) {
+    onChange(next);
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="h-8 w-full justify-between px-2.5 font-normal"
+        >
+          <span className={cn('truncate', !value && 'text-muted-foreground')}>
+            {value || t('network.inspector.llm.model')}
+          </span>
+          <ChevronDown className="size-4 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={4} className="z-[80] w-[var(--radix-popover-trigger-width)] p-1">
+        <Input
+          value={draft}
+          autoFocus
+          disabled={disabled}
+          placeholder={t('network.inspector.llm.model')}
+          className="mb-1 h-8"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commit(draft.trim());
+            }
+          }}
+        />
+        <ul className="max-h-48 overflow-auto">
+          {filtered.map((item) => (
+            <li key={item}>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                onClick={() => commit(item)}
+              >
+                <Check className={cn('size-3.5 shrink-0', item === value ? 'opacity-100' : 'opacity-0')} />
+                <span className="truncate">{item}</span>
+              </button>
+            </li>
+          ))}
+          {query && !exact ? (
+            <li>
+              <button
+                type="button"
+                className="flex w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                onClick={() => commit(draft.trim())}
+              >
+                {t('network.inspector.llm.useModel', { name: draft.trim() })}
+              </button>
+            </li>
+          ) : null}
+          {filtered.length === 0 && !query ? (
+            <li className="px-2 py-1.5 text-sm text-muted-foreground">{t('network.inspector.llm.noModels')}</li>
+          ) : null}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
@@ -211,17 +307,12 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         </Select>
       </Field>
       <Field label={t('network.inspector.llm.model')}>
-        <Input
+        <ModelCombobox
           value={model}
+          options={(models.data?.items ?? []).map((item) => item.name)}
           disabled={readOnly}
-          list="network-llm-models"
-          onChange={(event) => editorUpdateNodeData(node.id, { model: event.target.value })}
+          onChange={(value) => editorUpdateNodeData(node.id, { model: value })}
         />
-        <datalist id="network-llm-models">
-          {(models.data?.items ?? []).map((item) => (
-            <option key={item.name} value={item.name} />
-          ))}
-        </datalist>
       </Field>
       {provider !== 'ollama' ? (
         <Field label={t('network.inspector.llm.credential')}>
@@ -257,12 +348,14 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           />
         </Field>
       ) : null}
-      <Button type="button" size="sm" variant="outline" disabled={pinging || !model} onClick={() => void ping()}>
-        {t('network.inspector.llm.ping')}
-      </Button>
-      <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setAdvanced((v) => !v)}>
-        {t('network.inspector.llm.advanced')}
-      </button>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+        <Button type="button" size="sm" variant="outline" disabled={pinging || !model} onClick={() => void ping()}>
+          {t('network.inspector.llm.ping')}
+        </Button>
+        <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setAdvanced((v) => !v)}>
+          {t('network.inspector.llm.advanced')}
+        </button>
+      </div>
       {advanced ? (
         <>
           <Field label={t('network.inspector.llm.temperature')}>
