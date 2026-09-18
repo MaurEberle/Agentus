@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { HelpChatHost } from '@/components/help-chat/HelpChatHost';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -41,6 +42,7 @@ export function AppShell() {
       </div>
       <Footer />
       <Toaster />
+      <HelpChatHost />
     </div>
   );
 }

@@ -322,5 +322,56 @@
       "mcpDeleted": "MCP-Server gelöscht",
       "dataDirOk": "Datenordner aktualisiert"
     }
+  },
+  "helpChat": {
+    "title": "Hilfe",
+    "fab": {
+      "open": "Hilfe öffnen",
+      "close": "Hilfe schließen"
+    },
+    "onboarding": {
+      "title": "Hilfe zur Anwendung",
+      "body": "Dieser Chat erklärt die App und das Einrichten von Graphen. Er spricht nicht mit einem laufenden Agentennetz. Die Konfiguration liegt unter Einstellungen.",
+      "configure": "Jetzt konfigurieren",
+      "later": "Später"
+    },
+    "status": {
+      "unconfigured": "Deaktiviert",
+      "ready": "Bereit",
+      "degraded": "Sparmodus",
+      "generating": "Antwortet",
+      "error": "Fehler"
+    },
+    "action": {
+      "send": "Senden",
+      "stop": "Stop",
+      "settings": "Einstellungen für die Hilfe",
+      "close": "Hilfe schließen"
+    },
+    "input": {
+      "placeholder": "Frage zur App oder zum Graphen…"
+    },
+    "empty": "Noch keine Nachrichten. Frag etwas zur Bedienung.",
+    "unconfigured": {
+      "body": "Die Hilfe ist noch nicht konfiguriert. Provider und Modell setzt du unter Einstellungen.",
+      "cta": "Zu den Einstellungen"
+    },
+    "sources": {
+      "rag": "Dokument",
+      "web": "Web"
+    },
+    "error": {
+      "generic": "Die Hilfe-Antwort ist fehlgeschlagen."
+    },
+    "resize": {
+      "width": "Breite ändern",
+      "height": "Höhe ändern"
+    },
+    "mock": {
+      "reply": "Das ist eine **Beispielantwort** der Hilfe. Sie erklärt die App, nicht das laufende Netz. Unter `Einstellungen` konfigurierst du Provider und Modell.",
+      "ragTitle": "Kurzanleitung",
+      "ragSection": "Hilfe-Chatbot",
+      "webTitle": "Ollama-Dokumentation"
+    }
   }
 }

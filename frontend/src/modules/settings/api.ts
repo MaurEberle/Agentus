@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, apiFetch, queryClient, USE_MOCKS } from '@/api/client';
+import { clearHelpMessageCache } from '@/components/help-chat/messageStore';
 import { getChromeHost } from '@/lib/chromeHost';
 import {
   mockClearHelpChatMessages,
@@ -117,8 +118,11 @@ export async function pingHelpChat(): Promise<HelpPing> {
 }
 
 export async function clearHelpChatMessages(): Promise<void> {
-  if (USE_MOCKS) await mockClearHelpChatMessages();
-  else await apiFetch<void>('/help-chat/clear', { method: 'POST' });
+  if (USE_MOCKS) {
+    await mockClearHelpChatMessages();
+    clearHelpMessageCache();
+  } else await apiFetch<void>('/help-chat/clear', { method: 'POST' });
+  await queryClient.invalidateQueries({ queryKey: ['help-chat', 'messages'] });
 }
 
 export async function reindexHelpChat(): Promise<{ state: 'ready' | 'error'; messageKey?: string }> {

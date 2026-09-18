@@ -17,6 +17,8 @@ export const useAppStore = create<AppStore>()(
       partialize: (state) => ({
         helpChatFabVisible: state.helpChatFabVisible,
         sidebarCollapsed: state.sidebarCollapsed,
+        helpChatWidth: state.helpChatWidth,
+        helpChatHeight: state.helpChatHeight,
       }),
     },
   ),
