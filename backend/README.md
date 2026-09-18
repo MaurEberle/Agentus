@@ -102,6 +102,7 @@ Ein Konzept einmal. Fachmodule importieren, klonen nicht.
 | Secret-Maskierung | `app/common/secrets.py` (`mask_text`, `mask_obj`) |
 | `httpx.Client` | `app/common/http.py` `client()` |
 | `messageKey`-Fehler | `app/http/errors.py` (`AppError`) |
+| HTTP-Vertrag v1 | `app/http/contract.py` — Pfade aus `python_backend_api.md`; Fachrouter dürfen keine Extra-`/api`-Routen erfinden |
 | Vault | `app/db/vault.py` — Windows: `keyring` (Credential Manager), Target `Agentus-Network` / `credential/{id}`. Tests: `AGENTUS_NETWORK_VAULT=memory` |
 | Completions / Embeddings | `app/runtime/` (Runtime-Prompt) |
 | Tool-Katalog | `app/tools/catalog.py` (Tools-Prompt) |
