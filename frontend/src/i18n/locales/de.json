@@ -977,5 +977,184 @@
         "assistant": "Antwort abgeschlossen."
       }
     }
+  },
+  "history": {
+    "title": "Historie",
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "ribbon": {
+      "refresh": "Aktualisieren",
+      "delete": "Löschen",
+      "export": "Logs exportieren",
+      "purge": "Älter als 90 Tage löschen"
+    },
+    "filter": {
+      "range": "Zeitraum",
+      "today": "Heute",
+      "days7": "7 Tage",
+      "days30": "30 Tage",
+      "custom": "Benutzerdefiniert",
+      "from": "Von",
+      "to": "Bis",
+      "network": "Netz",
+      "allNetworks": "Alle Netze",
+      "model": "Modell",
+      "allModels": "Alle Modelle",
+      "search": "Suche",
+      "searchHint": "Lauf-ID, Netz, Fehler",
+      "reset": "Filter zurücksetzen"
+    },
+    "outcome": {
+      "running": "Läuft",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "cancelled": "Abbruch",
+      "timeout": "Timeout"
+    },
+    "kpi": {
+      "runs": "Läufe",
+      "runsHint": "Nur abgeschlossene Läufe",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "failedFoot": "Abbruch {{cancelled}} · Timeout {{timeout}}",
+      "medianDuration": "Mediane Dauer",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95 ab 20 Läufen"
+    },
+    "chart": {
+      "title": "Läufe nach Tag",
+      "empty": "Keine terminalen Läufe in diesem Zeitraum."
+    },
+    "errors": {
+      "title": "Häufigste Fehler",
+      "empty": "Keine Fehler in diesem Filter."
+    },
+    "errorClass": {
+      "timeout": "Timeout",
+      "tool_error": "Werkzeug",
+      "llm_error": "LLM",
+      "validation": "Validierung",
+      "service": "Dienst",
+      "unknown": "Unbekannt"
+    },
+    "tab": {
+      "history": "Historie",
+      "model": "Pro Modell",
+      "network": "Pro Netz"
+    },
+    "table": {
+      "model": "Modell",
+      "provider": "Anbieter",
+      "calls": "Calls",
+      "ok": "OK",
+      "callErrors": "Fehler",
+      "errorRate": "Fehlerquote",
+      "median": "Mediane Dauer",
+      "tokensIn": "Token in",
+      "tokensOut": "Token out",
+      "network": "Netz",
+      "runs": "Läufe",
+      "succeeded": "Erfolg",
+      "failed": "Fehler",
+      "cancelled": "Abbruch",
+      "topErrorNode": "Häufigster Fehlerknoten"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "OpenAI-kompatibel"
+    },
+    "list": {
+      "selectAll": "Sichtbare auswählen",
+      "runId": "Lauf-ID",
+      "network": "Netz",
+      "started": "Start",
+      "duration": "Dauer",
+      "outcome": "Ergebnis",
+      "error": "Fehler",
+      "models": "Modelle",
+      "live": "Live ansehen",
+      "page": "Seite {{page}} von {{pages}}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "detail": {
+      "title": "Lauf",
+      "none": "Wähle einen Lauf in der Liste.",
+      "missing": "Dieser Lauf ist nicht vorhanden.",
+      "error": "Fehler",
+      "exportLog": "Log exportieren",
+      "tabLog": "Log",
+      "tabSteps": "Schritte",
+      "tabChat": "Chat"
+    },
+    "graph": {
+      "fit": "Einpassen"
+    },
+    "log": {
+      "level": "Level",
+      "search": "Log durchsuchen",
+      "node": "Knoten",
+      "allNodes": "Alle Knoten",
+      "errorsOnly": "Nur Fehler",
+      "empty": "Keine Logzeilen für diesen Filter.",
+      "detailTitle": "Log-Detail"
+    },
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warnung",
+      "error": "Fehler"
+    },
+    "steps": {
+      "node": "Knoten",
+      "role": "Rolle",
+      "status": "Status",
+      "error": "Fehler",
+      "empty": "Keine Schritte gespeichert."
+    },
+    "nodeStatus": {
+      "idle": "Leerlauf",
+      "waiting": "Wartend",
+      "running": "Läuft",
+      "done": "Fertig",
+      "error": "Fehler"
+    },
+    "calls": {
+      "ok": "OK",
+      "yes": "Ja",
+      "no": "Nein",
+      "empty": "Keine LLM-Calls."
+    },
+    "empty": {
+      "none": "Noch keine Läufe im Historie-Store.",
+      "filtered": "Keine Treffer für diesen Filter."
+    },
+    "error": {
+      "store": "Historie-Store ist nicht verfügbar.",
+      "openData": "Einstellungen · Daten",
+      "api": "Historie konnte nicht geladen werden.",
+      "runningDelete": "Laufende Läufe können nicht gelöscht werden."
+    },
+    "delete": {
+      "title": "Läufe löschen",
+      "body": "{{count}} ausgewählte Läufe werden aus dem Archiv entfernt. Laufende Läufe bleiben.",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "retention": {
+      "title": "Ältere Läufe löschen",
+      "body": "{{count}} Läufe älter als 90 Tage werden gelöscht.",
+      "confirm": "Löschen"
+    },
+    "notify": {
+      "deleted": "{{count}} Läufe gelöscht",
+      "runningDelete": "Laufende Läufe können nicht gelöscht werden",
+      "runningSkipped": "Mindestens ein laufender Eintrag wurde übersprungen",
+      "purged": "{{count}} alte Läufe gelöscht",
+      "exported": "Export gestartet",
+      "exportError": "Export fehlgeschlagen",
+      "error": "Aktion fehlgeschlagen"
+    }
   }
 }

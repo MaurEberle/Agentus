@@ -977,5 +977,184 @@
         "assistant": "Reply finished."
       }
     }
+  },
+  "history": {
+    "title": "History",
+    "close": "Close",
+    "copy": "Copy",
+    "ribbon": {
+      "refresh": "Refresh",
+      "delete": "Delete",
+      "export": "Export logs",
+      "purge": "Delete older than 90 days"
+    },
+    "filter": {
+      "range": "Range",
+      "today": "Today",
+      "days7": "7 days",
+      "days30": "30 days",
+      "custom": "Custom",
+      "from": "From",
+      "to": "To",
+      "network": "Network",
+      "allNetworks": "All networks",
+      "model": "Model",
+      "allModels": "All models",
+      "search": "Search",
+      "searchHint": "Run ID, network, error",
+      "reset": "Reset filters"
+    },
+    "outcome": {
+      "running": "Running",
+      "succeeded": "Success",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "timeout": "Timeout"
+    },
+    "kpi": {
+      "runs": "Runs",
+      "runsHint": "Completed runs only",
+      "succeeded": "Success",
+      "failed": "Failed",
+      "failedFoot": "Cancelled {{cancelled}} · Timeout {{timeout}}",
+      "medianDuration": "Median duration",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95 from 20 runs"
+    },
+    "chart": {
+      "title": "Runs by day",
+      "empty": "No completed runs in this range."
+    },
+    "errors": {
+      "title": "Top errors",
+      "empty": "No errors in this filter."
+    },
+    "errorClass": {
+      "timeout": "Timeout",
+      "tool_error": "Tool",
+      "llm_error": "LLM",
+      "validation": "Validation",
+      "service": "Service",
+      "unknown": "Unknown"
+    },
+    "tab": {
+      "history": "History",
+      "model": "By model",
+      "network": "By network"
+    },
+    "table": {
+      "model": "Model",
+      "provider": "Provider",
+      "calls": "Calls",
+      "ok": "OK",
+      "callErrors": "Errors",
+      "errorRate": "Error rate",
+      "median": "Median duration",
+      "tokensIn": "Tokens in",
+      "tokensOut": "Tokens out",
+      "network": "Network",
+      "runs": "Runs",
+      "succeeded": "Success",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "topErrorNode": "Most common error node"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "OpenAI-compatible"
+    },
+    "list": {
+      "selectAll": "Select visible",
+      "runId": "Run ID",
+      "network": "Network",
+      "started": "Started",
+      "duration": "Duration",
+      "outcome": "Outcome",
+      "error": "Error",
+      "models": "Models",
+      "live": "View live",
+      "page": "Page {{page}} of {{pages}}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "detail": {
+      "title": "Run",
+      "none": "Select a run in the list.",
+      "missing": "This run does not exist.",
+      "error": "Error",
+      "exportLog": "Export log",
+      "tabLog": "Log",
+      "tabSteps": "Steps",
+      "tabChat": "Chat"
+    },
+    "graph": {
+      "fit": "Fit"
+    },
+    "log": {
+      "level": "Level",
+      "search": "Search log",
+      "node": "Node",
+      "allNodes": "All nodes",
+      "errorsOnly": "Errors only",
+      "empty": "No log lines for this filter.",
+      "detailTitle": "Log detail"
+    },
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warning",
+      "error": "Error"
+    },
+    "steps": {
+      "node": "Node",
+      "role": "Role",
+      "status": "Status",
+      "error": "Error",
+      "empty": "No steps stored."
+    },
+    "nodeStatus": {
+      "idle": "Idle",
+      "waiting": "Waiting",
+      "running": "Running",
+      "done": "Done",
+      "error": "Error"
+    },
+    "calls": {
+      "ok": "OK",
+      "yes": "Yes",
+      "no": "No",
+      "empty": "No LLM calls."
+    },
+    "empty": {
+      "none": "No runs in the history store yet.",
+      "filtered": "No matches for this filter."
+    },
+    "error": {
+      "store": "The history store is unavailable.",
+      "openData": "Settings · Data",
+      "api": "History could not be loaded.",
+      "runningDelete": "Running runs cannot be deleted."
+    },
+    "delete": {
+      "title": "Delete runs",
+      "body": "{{count}} selected runs will be removed from the archive. Running runs stay.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "retention": {
+      "title": "Delete older runs",
+      "body": "{{count}} runs older than 90 days will be deleted.",
+      "confirm": "Delete"
+    },
+    "notify": {
+      "deleted": "{{count}} runs deleted",
+      "runningDelete": "Running runs cannot be deleted",
+      "runningSkipped": "At least one running entry was skipped",
+      "purged": "{{count}} old runs deleted",
+      "exported": "Export started",
+      "exportError": "Export failed",
+      "error": "Action failed"
+    }
   }
 }
