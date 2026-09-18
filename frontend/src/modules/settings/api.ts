@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, apiFetch, queryClient, USE_MOCKS } from '@/api/client';
 import { clearHelpMessageCache } from '@/components/help-chat/messageStore';
-import { getChromeHost } from '@/lib/chromeHost';
+import { pickFolderPath } from '@/lib/pickFolder';
 import {
   mockClearHelpChatMessages,
   mockCreateCredential,
@@ -15,7 +15,6 @@ import {
   mockListMcpServers,
   mockListRuntimeModels,
   mockPatchSettings,
-  mockPickDataDir,
   mockPingHelpChat,
   mockPingMcpServer,
   mockPingRuntime,
@@ -194,10 +193,7 @@ export async function getDataLocation(): Promise<DataLocation> {
 }
 
 export async function pickDataDir(): Promise<string | null> {
-  const host = getChromeHost();
-  if (host?.pickFolder) return host.pickFolder();
-  if (USE_MOCKS) return mockPickDataDir();
-  return null;
+  return pickFolderPath();
 }
 
 export async function setDataDir(input: { path: string; copy?: boolean }): Promise<DataLocation> {

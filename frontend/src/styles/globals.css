@@ -85,6 +85,23 @@
   }
 }
 
+/* Unlayered so it wins over @xyflow/react/dist/style.css (also unlayered). */
+.network-flow .react-flow__pane,
+.network-flow .react-flow__pane.draggable,
+.network-flow .react-flow__pane.dragging,
+.network-flow .react-flow__pane.selection,
+.network-flow .react-flow__node,
+.network-flow .react-flow__node.selectable,
+.network-flow .react-flow__node.draggable,
+.network-flow .react-flow__node.draggable.dragging,
+.network-flow .react-flow__handle,
+.network-flow .react-flow__handle.connectionindicator,
+.network-flow .react-flow__edge.selectable,
+.network-flow .react-flow__nodesselection-rect,
+.network-flow .react-flow__selection {
+  cursor: default !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { GraphNode, PortDef, ValidationIssue } from '@/modules/network/model/document';
 import { displayNameOf } from '@/modules/network/model/document';
@@ -56,7 +55,6 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
   const fromNode = useConnection((state) => state.fromNode);
   const updateNodeInternals = useUpdateNodeInternals();
   const minHeight = nodeMinHeightPx(ins.length, outs.length);
-  const multi = Math.max(ins.length, outs.length) > 1;
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   const fromGraph = (fromNode?.data as NetworkNodeData | undefined)?.graph;
@@ -76,16 +74,28 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
     return accepts ? 'match' : 'mismatch';
   }
 
+  function labelOf(port: PortDef): string {
+    return routerBranchName(node, port.id) ?? t(portI18nKey(port));
+  }
+
+  function showsIdle(port: PortDef, count: number): boolean {
+    return count > 1 || (Boolean(port.required) && !connected.has(portStateKey(port)));
+  }
+
+  const leftIdle = ins.filter((port) => showsIdle(port, ins.length)).map(labelOf);
+  const rightIdle = outs.filter((port) => showsIdle(port, outs.length)).map(labelOf);
+  const widestLeft = leftIdle.reduce((best, name) => (name.length > best.length ? name : best), '');
+  const widestRight = rightIdle.reduce((best, name) => (name.length > best.length ? name : best), '');
+
   return (
     <div
       className={cn(
-        'group/node relative flex items-center overflow-visible rounded-lg border bg-card py-2 shadow-sm',
-        multi ? 'min-w-56 px-16' : 'min-w-40 px-3',
-        selected && 'ring-2 ring-ring',
-        invalid && 'border-destructive',
+        'group/node relative flex items-stretch gap-3 overflow-visible rounded-lg border bg-card px-3 shadow-sm',
+        invalid ? 'border-destructive' : 'border-border',
+        selected && (invalid ? 'ring-2 ring-destructive' : 'ring-2 ring-ring'),
         nodeData.readOnly && 'opacity-80',
       )}
-      style={{ minHeight }}
+      style={{ minHeight, minWidth: 160 }}
     >
       {ins.map((port, index) => {
         const match = matchFor(port);
@@ -101,23 +111,38 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
             readOnly={Boolean(nodeData.readOnly)}
             match={match}
             showFullLabel={match === 'match' || (match !== 'mismatch' && hoveredKey === portStateKey(port))}
-            showIdleName={ins.length > 1}
             onHover={setHoveredKey}
           />
         );
       })}
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+      {widestLeft ? (
+        <PortNameColumn
+          widest={widestLeft}
+          ports={ins}
+          node={node}
+          connected={connected}
+          matchFor={matchFor}
+          hoveredKey={hoveredKey}
+        />
+      ) : null}
+      <div className="flex min-w-0 flex-1 items-center gap-2 py-2">
         <Icon className="size-4 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs text-muted-foreground">{t(`network.palette.${node.type}`)}</p>
-          {invalid ? (
-            <Badge variant="destructive" className="mt-0.5 px-1.5 py-0 text-[10px] leading-4">
-              {t('network.badge.invalid')}
-            </Badge>
-          ) : null}
           <p className="truncate text-sm font-medium">{displayNameOf(node)}</p>
         </div>
       </div>
+      {widestRight ? (
+        <PortNameColumn
+          widest={widestRight}
+          ports={outs}
+          node={node}
+          connected={connected}
+          matchFor={matchFor}
+          hoveredKey={hoveredKey}
+          align="right"
+        />
+      ) : null}
       {outs.map((port, index) => {
         const match = matchFor(port);
         return (
@@ -132,9 +157,59 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
             readOnly={Boolean(nodeData.readOnly)}
             match={match}
             showFullLabel={match === 'match' || (match !== 'mismatch' && hoveredKey === portStateKey(port))}
-            showIdleName={outs.length > 1}
             onHover={setHoveredKey}
           />
+        );
+      })}
+    </div>
+  );
+}
+
+function PortNameColumn({
+  widest,
+  ports,
+  node,
+  connected,
+  matchFor,
+  hoveredKey,
+  align = 'left',
+}: {
+  widest: string;
+  ports: PortDef[];
+  node: GraphNode;
+  connected: Set<string>;
+  matchFor: (port: PortDef) => ConnectMatch;
+  hoveredKey: string | null;
+  align?: 'left' | 'right';
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="relative w-max shrink-0 self-stretch">
+      <span className="invisible block whitespace-nowrap text-[10px] font-medium leading-tight" aria-hidden>
+        {widest}
+      </span>
+      {ports.map((port, index) => {
+        const unconfigured = Boolean(port.required) && !connected.has(portStateKey(port));
+        const show = ports.length > 1 || unconfigured;
+        if (!show) return null;
+        const match = matchFor(port);
+        const name = routerBranchName(node, port.id) ?? t(portI18nKey(port));
+        const hideForHover = match === 'match' || (match !== 'mismatch' && hoveredKey === portStateKey(port));
+        return (
+          <span
+            key={portStateKey(port)}
+            className={cn(
+              'pointer-events-none absolute top-0 -translate-y-1/2 whitespace-nowrap text-[10px] font-medium leading-tight',
+              align === 'right' ? 'right-0 text-right' : 'left-0 text-left',
+              unconfigured ? 'text-destructive' : 'text-muted-foreground',
+              match === 'mismatch' && 'opacity-25',
+              hideForHover && 'opacity-0',
+            )}
+            style={{ top: handleTopPercent(index, ports.length) }}
+            aria-hidden
+          >
+            {name}
+          </span>
         );
       })}
     </div>
@@ -151,7 +226,6 @@ function PortHandle({
   readOnly,
   match,
   showFullLabel,
-  showIdleName,
   onHover,
 }: {
   node: GraphNode;
@@ -163,7 +237,6 @@ function PortHandle({
   readOnly: boolean;
   match: ConnectMatch;
   showFullLabel: boolean;
-  showIdleName: boolean;
   onHover: (key: string | null) => void;
 }) {
   const { t } = useTranslation();
@@ -200,21 +273,6 @@ function PortHandle({
           match === 'idle' && '!size-3',
         )}
       />
-      {showIdleName || unconfigured ? (
-        <span
-          className={cn(
-            'pointer-events-none absolute z-10 max-w-14 -translate-y-1/2 truncate text-[10px] font-medium leading-tight',
-            side === 'left' ? 'left-3 text-left' : 'right-3 text-right',
-            unconfigured ? 'text-destructive' : 'text-muted-foreground',
-            match === 'mismatch' && 'opacity-25',
-            showFullLabel && 'opacity-0',
-          )}
-          style={{ top }}
-          aria-hidden
-        >
-          {name}
-        </span>
-      ) : null}
       <div
         className={cn(
           'pointer-events-none absolute z-20 -translate-y-1/2 transition-opacity motion-reduce:transition-none',

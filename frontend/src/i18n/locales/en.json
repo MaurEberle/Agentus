@@ -54,6 +54,25 @@
     "open": "Open notifications",
     "unreadCount": "{{count}} unread"
   },
+  "folderPicker": {
+    "title": "Choose folder",
+    "description": "Pick a folder on this computer. The full path is written into the field.",
+    "select": "Select",
+    "cancel": "Cancel",
+    "close": "Close",
+    "up": "Parent folder",
+    "empty": "No subfolders",
+    "error": "This folder could not be read.",
+    "unavailable": "The filesystem is not available in this session.",
+    "loading": "Loading folders…",
+    "path": "Path",
+    "places": {
+      "home": "Home",
+      "desktop": "Desktop",
+      "documents": "Documents",
+      "downloads": "Downloads"
+    }
+  },
   "notify": {
     "welcome": {
       "title": "Welcome to Agentus Network",

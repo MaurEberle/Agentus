@@ -54,6 +54,25 @@
     "open": "Benachrichtigungen öffnen",
     "unreadCount": "{{count}} ungelesen"
   },
+  "folderPicker": {
+    "title": "Ordner wählen",
+    "description": "Wähle einen Ordner auf diesem Computer. Der vollständige Pfad wird übernommen.",
+    "select": "Auswählen",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "up": "Übergeordneter Ordner",
+    "empty": "Keine Unterordner",
+    "error": "Ordner konnte nicht gelesen werden.",
+    "unavailable": "Dateisystem ist in dieser Sitzung nicht erreichbar.",
+    "loading": "Ordner werden geladen…",
+    "path": "Pfad",
+    "places": {
+      "home": "Benutzerordner",
+      "desktop": "Desktop",
+      "documents": "Dokumente",
+      "downloads": "Downloads"
+    }
+  },
   "notify": {
     "welcome": {
       "title": "Willkommen bei Agentus Network",

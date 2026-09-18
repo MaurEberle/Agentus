@@ -227,7 +227,7 @@ export function FlowCanvas({
         panOnDrag={[1]}
         colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
         proOptions={{ hideAttribution: true }}
-        className="h-full bg-background"
+        className="network-flow h-full bg-background"
       >
         {showGrid ? <Background variant={BackgroundVariant.Dots} gap={16} size={1} /> : null}
         <Controls showInteractive={!readOnly} />

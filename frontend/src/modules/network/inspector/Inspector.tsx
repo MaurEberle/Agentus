@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getChromeHost } from '@/lib/chromeHost';
+import { pickFolderPath } from '@/lib/pickFolder';
 import {
   useEditorCredentialsQuery,
   useEditorModelsQuery,
@@ -419,16 +419,25 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
   const { t } = useTranslation();
   const document = useNetworkEditor((state) => state.document);
   const [reindexing, setReindexing] = useState(false);
+  const [picking, setPicking] = useState(false);
+
+  function applyPath(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed) return;
+    editorUpdateNodeData(node.id, { sourcePath: trimmed });
+    if (isForbiddenDataRoot(trimmed)) {
+      notify({ titleKey: 'network.validation.knowledgeRoot', variant: 'error' });
+    }
+  }
 
   async function pick() {
-    const host = getChromeHost();
-    const path = host?.pickFolder ? await host.pickFolder() : 'C:\\Users\\Demo\\AppData\\Local\\Agentus-Network\\data\\workspace\\docs';
-    if (!path) return;
-    if (isForbiddenDataRoot(path)) {
-      notify({ titleKey: 'network.validation.knowledgeRoot', variant: 'error' });
-      return;
+    setPicking(true);
+    try {
+      const path = await pickFolderPath();
+      if (path) applyPath(path);
+    } finally {
+      setPicking(false);
     }
-    editorUpdateNodeData(node.id, { sourcePath: path });
   }
 
   async function reindex() {
@@ -452,9 +461,13 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
           <Input
             value={String(node.data.sourcePath ?? '')}
             disabled={readOnly}
+            spellCheck={false}
+            autoComplete="off"
+            title={String(node.data.sourcePath ?? '')}
+            className="min-w-0 font-mono text-xs"
             onChange={(event) => editorUpdateNodeData(node.id, { sourcePath: event.target.value })}
           />
-          <Button type="button" size="sm" variant="outline" disabled={readOnly} onClick={() => void pick()}>
+          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} onClick={() => void pick()}>
             {t('network.inspector.knowledge.pick')}
           </Button>
         </div>
