@@ -28,6 +28,14 @@ def init() -> Bootstrap:
 
     set_bootstrap(bootstrap)
     open_all()
+    try:
+        from app.install_seed import bundled_help_docs, seed_help_documents
+
+        bundled = bundled_help_docs()
+        if bundled is not None:
+            seed_help_documents(bootstrap.data_dir, bundled=bundled)
+    except Exception:
+        pass
     return bootstrap
 
 

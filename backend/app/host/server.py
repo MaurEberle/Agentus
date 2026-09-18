@@ -7,12 +7,18 @@ import uvicorn
 
 from app.common.http import client
 from app.http.app import create_app
+from app.stdio import ensure_stdio, uvicorn_kwargs
 
 
 def start_uvicorn(host: str, port: int) -> uvicorn.Server:
+    ensure_stdio()
     app = create_app()
+    extra = uvicorn_kwargs()
     config = uvicorn.Config(
-        app, host=host, port=port, log_level="info", access_log=False
+        app,
+        host=host,
+        port=port,
+        **extra,
     )
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, name="uvicorn", daemon=True)

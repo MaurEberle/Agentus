@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, Request
@@ -12,6 +11,7 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from app.http.errors import AppError
+from app.http.paths import static_dir
 
 
 class _SpaRoute(APIRoute):
@@ -25,18 +25,7 @@ class _SpaRoute(APIRoute):
 
 
 def resolve_static_dir() -> Path | None:
-    env = os.environ.get("AGENTUS_NETWORK_STATIC_DIR")
-    if env:
-        path = Path(env).expanduser()
-    else:
-        path = Path(__file__).resolve().parents[2].parent / "frontend" / "dist"
-    try:
-        path = path.resolve()
-    except OSError:
-        return None
-    if (path / "index.html").is_file():
-        return path
-    return None
+    return static_dir()
 
 
 def mount_spa(app: FastAPI) -> None:

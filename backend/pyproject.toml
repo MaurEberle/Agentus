@@ -24,6 +24,9 @@ dependencies = [
 dev = [
     "pytest>=8.0",
 ]
+packaging = [
+    "pyinstaller>=6.11,<7",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

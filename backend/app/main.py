@@ -8,6 +8,7 @@ import sys
 import uvicorn
 
 from app.http.app import create_app
+from app.stdio import ensure_stdio, uvicorn_kwargs
 
 
 def assert_loopback(host: str) -> None:
@@ -54,7 +55,12 @@ def _bootstrap() -> None:
         pass
 
 
-def main() -> None:
+def _run() -> None:
+    if getattr(sys, "frozen", False):
+        import multiprocessing
+
+        multiprocessing.freeze_support()
+    ensure_stdio()
     host = os.environ.get("AGENTUS_NETWORK_API_HOST", "127.0.0.1")
     port = _port()
     assert_loopback(host)
@@ -65,7 +71,23 @@ def main() -> None:
         run_host(host, port)
         return
     app = create_app()
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, **uvicorn_kwargs())
+
+
+def main() -> None:
+    try:
+        _run()
+    except Exception:
+        ensure_stdio()
+        import traceback
+        from pathlib import Path
+
+        crash = Path(os.environ.get("TEMP", ".")).expanduser() / "agentus-network-crash.txt"
+        try:
+            crash.write_text(traceback.format_exc(), encoding="utf-8")
+        except OSError:
+            pass
+        raise
 
 
 if __name__ == "__main__":
