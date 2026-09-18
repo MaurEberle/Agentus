@@ -54,14 +54,16 @@ export function DetailPanel({
           <dd>{formatStamp(item.lastUsedAt, i18n.language)}</dd>
         </div>
       </dl>
-      {item.lastRunId ? (
-        <Button asChild size="sm" variant="link" className="h-auto px-0">
-          <Link to={`/history/${item.lastRunId}`}>{t('networks.detail.lastRun')}</Link>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {item.lastRunId ? (
+          <Button asChild size="sm" variant="link" className="h-auto px-0">
+            <Link to={`/history/${item.lastRunId}`}>{t('networks.detail.lastRun')}</Link>
+          </Button>
+        ) : null}
+        <Button type="button" size="sm" onClick={() => onOpen(item.id)}>
+          {t('networks.ribbon.open')}
         </Button>
-      ) : null}
-      <Button type="button" size="sm" onClick={() => onOpen(item.id)}>
-        {t('networks.ribbon.open')}
-      </Button>
+      </div>
     </div>
   );
 }
