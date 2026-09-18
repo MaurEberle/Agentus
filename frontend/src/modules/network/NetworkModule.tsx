@@ -4,8 +4,6 @@ import { Link, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -32,7 +30,6 @@ import { FlowCanvas } from '@/modules/network/canvas/FlowCanvas';
 import { Inspector } from '@/modules/network/inspector/Inspector';
 import { LoadDialog } from '@/modules/network/library/LoadDialog';
 import { downloadJson, duplicateNodes, exportDocument } from '@/modules/network/model/serialize';
-import { emptyDocument } from '@/modules/network/model/document';
 import { Palette } from '@/modules/network/palette/Palette';
 import { Ribbon } from '@/modules/network/ribbon/Ribbon';
 import { validateDocument } from '@/modules/network/validation/validate';
@@ -75,9 +72,14 @@ function NetworkEditor() {
   const [nameMode, setNameMode] = useState<'save' | 'saveAs'>('save');
   const [dirtyAction, setDirtyAction] = useState<DirtyAction | null>(null);
   const pendingLoadId = useRef<string | null>(null);
+  const pendingActionRef = useRef<DirtyAction | null>(null);
+  const allowLeaveRef = useRef(false);
+  const leaveToRef = useRef<string | null>(null);
   const clipboard = useRef<ReturnType<typeof duplicateNodes> | null>(null);
 
   const dirty = useNetworkEditor((state) => state.isDirty());
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
   const issues = useMemo(() => validateDocument(document), [document]);
   const readOnly = Boolean(
     (serviceStatus === 'running' || serviceStatus === 'starting') && document.id && document.id === activeNetworkId,
@@ -99,10 +101,72 @@ function NetworkEditor() {
     }
   }, [hydrate, id, query.data, resetNew]);
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      dirty && currentLocation.pathname !== nextLocation.pathname,
+  const shouldBlock = useCallback(
+    ({ currentLocation, nextLocation }: { currentLocation: { pathname: string }; nextLocation: { pathname: string; search: string; hash: string } }) => {
+      const block =
+        !allowLeaveRef.current && dirtyRef.current && currentLocation.pathname !== nextLocation.pathname;
+      if (block) leaveToRef.current = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+      return block;
+    },
+    [],
   );
+  const blocker = useBlocker(shouldBlock);
+
+  function allowNextNav(fn: () => void) {
+    allowLeaveRef.current = true;
+    fn();
+    queueMicrotask(() => {
+      allowLeaveRef.current = false;
+    });
+  }
+
+  function resolvedAction(): DirtyAction | null {
+    return pendingActionRef.current ?? dirtyAction ?? (blocker.state === 'blocked' ? 'leave' : null);
+  }
+
+  function runPending(action: DirtyAction | null) {
+    pendingActionRef.current = null;
+    setDirtyAction(null);
+    if (!action) return;
+    const blocked = blocker.state === 'blocked';
+    const leaveTo = leaveToRef.current;
+    allowNextNav(() => {
+      if (action === 'leave') {
+        if (blocked) blocker.proceed?.();
+        else if (leaveTo) navigate(leaveTo);
+        leaveToRef.current = null;
+        return;
+      }
+      leaveToRef.current = null;
+      if (action === 'new') {
+        resetNew();
+        navigate('/network');
+        return;
+      }
+      if (action === 'library') {
+        navigate('/networks');
+        return;
+      }
+      if (action === 'load' && pendingLoadId.current) {
+        const next = pendingLoadId.current;
+        pendingLoadId.current = null;
+        navigate(`/network/${next}`);
+      }
+    });
+  }
+
+  function revertDirty() {
+    const state = useNetworkEditor.getState();
+    if (state.saved) state.hydrate(state.saved, true);
+    else state.resetNew();
+  }
+
+  function cancelDirtyPrompt() {
+    pendingActionRef.current = null;
+    leaveToRef.current = null;
+    setDirtyAction(null);
+    if (blocker.state === 'blocked') blocker.reset?.();
+  }
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -151,14 +215,14 @@ function NetworkEditor() {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const save = useCallback(async (explicitName?: string) => {
+  const save = useCallback(async (explicitName?: string): Promise<boolean> => {
     const current = useNetworkEditor.getState().document;
     const name = (explicitName ?? current.name).trim();
     if (!current.id && !name) {
       setNameMode('save');
       setNameValue(current.name);
       setNameOpen(true);
-      return;
+      return false;
     }
     try {
       const payload = { ...current, name: name || current.name };
@@ -167,22 +231,38 @@ function NetworkEditor() {
         : await createNetwork(payload);
       useNetworkEditor.getState().markSaved(saved);
       notify({ titleKey: 'network.notify.saved', variant: 'success' });
-      if (!id || id !== saved.id) navigate(`/network/${saved.id}`, { replace: !id });
+      if (!pendingActionRef.current && (!id || id !== saved.id)) {
+        allowLeaveRef.current = true;
+        navigate(`/network/${saved.id}`, { replace: !id });
+        queueMicrotask(() => {
+          allowLeaveRef.current = false;
+        });
+      }
+      return true;
     } catch {
       notify({ titleKey: 'network.notify.saveError', variant: 'error' });
+      return false;
     }
   }, [id, navigate]);
 
-  async function saveAsConfirmed(name: string) {
+  async function saveAsConfirmed(name: string): Promise<boolean> {
     try {
       const { id: _id, ...rest } = useNetworkEditor.getState().document;
       void _id;
       const saved = await createNetwork({ ...rest, name });
       useNetworkEditor.getState().markSaved(saved);
       notify({ titleKey: 'network.notify.saved', variant: 'success' });
-      navigate(`/network/${saved.id}`);
+      if (!pendingActionRef.current) {
+        allowLeaveRef.current = true;
+        navigate(`/network/${saved.id}`);
+        queueMicrotask(() => {
+          allowLeaveRef.current = false;
+        });
+      }
+      return true;
     } catch {
       notify({ titleKey: 'network.notify.saveError', variant: 'error' });
+      return false;
     }
   }
 
@@ -215,23 +295,28 @@ function NetworkEditor() {
   }
 
   function discardAndContinue() {
-    const action = dirtyAction;
-    setDirtyAction(null);
-    if (blocker.state === 'blocked' && action === 'leave') {
-      blocker.proceed?.();
-      return;
-    }
-    useNetworkEditor.getState().hydrate(emptyDocument(), false);
-    if (action === 'new') {
-      resetNew();
-      navigate('/network');
-    }
-    if (action === 'library') navigate('/networks');
-    if (action === 'load' && pendingLoadId.current) {
-      const next = pendingLoadId.current;
-      pendingLoadId.current = null;
-      navigate(`/network/${next}`);
-    }
+    const action = resolvedAction();
+    revertDirty();
+    runPending(action);
+  }
+
+  async function saveAndContinue() {
+    const action = resolvedAction() ?? 'leave';
+    pendingActionRef.current = action;
+    const ok = await save();
+    if (!ok) return;
+    setNameOpen(false);
+    runPending(action);
+  }
+
+  async function confirmName() {
+    const name = nameValue.trim();
+    if (!name) return;
+    const ok = nameMode === 'saveAs' ? await saveAsConfirmed(name) : await save(name);
+    if (!ok) return;
+    setNameOpen(false);
+    const action = pendingActionRef.current;
+    if (action) runPending(action);
   }
 
   async function duplicate() {
@@ -366,65 +451,50 @@ function NetworkEditor() {
           </DialogHeader>
           <div className="grid gap-1.5">
             <Label htmlFor="network-name">{t('network.inspector.graph.name')}</Label>
-            <Input id="network-name" value={nameValue} onChange={(event) => setNameValue(event.target.value)} />
+            <Input
+              id="network-name"
+              value={nameValue}
+              autoFocus
+              onChange={(event) => setNameValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  void confirmName();
+                }
+              }}
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setNameOpen(false)}>
               {t('network.dialog.cancel')}
             </Button>
-            <Button
-              type="button"
-              disabled={!nameValue.trim()}
-              onClick={() => {
-                const name = nameValue.trim();
-                setNameOpen(false);
-                if (nameMode === 'saveAs') void saveAsConfirmed(name);
-                else void save(name);
-              }}
-            >
+            <Button type="button" disabled={!nameValue.trim()} onClick={() => void confirmName()}>
               {t('network.ribbon.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={dirtyAction !== null || blocker.state === 'blocked'}>
+      <AlertDialog
+        open={(dirtyAction !== null || blocker.state === 'blocked') && !nameOpen}
+        onOpenChange={(open) => {
+          if (!open) cancelDirtyPrompt();
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('network.dirty.title')}</AlertDialogTitle>
             <AlertDialogDescription>{t('network.dirty.body')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setDirtyAction(null);
-                blocker.reset?.();
-              }}
-            >
+            <Button type="button" variant="outline" onClick={cancelDirtyPrompt}>
               {t('network.dirty.cancel')}
-            </AlertDialogCancel>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                const action = dirtyAction ?? 'leave';
-                setDirtyAction(null);
-                void save().then(() => {
-                  if (action === 'new') {
-                    resetNew();
-                    navigate('/network');
-                  }
-                  if (action === 'library') navigate('/networks');
-                  if (action === 'load' && pendingLoadId.current) {
-                    navigate(`/network/${pendingLoadId.current}`);
-                    pendingLoadId.current = null;
-                  }
-                  if (action === 'leave') blocker.proceed?.();
-                });
-              }}
-            >
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void saveAndContinue()}>
               {t('network.dirty.save')}
             </Button>
-            <AlertDialogAction onClick={discardAndContinue}>{t('network.dirty.discard')}</AlertDialogAction>
+            <Button type="button" onClick={discardAndContinue}>
+              {t('network.dirty.discard')}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

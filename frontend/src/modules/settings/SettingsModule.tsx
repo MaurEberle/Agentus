@@ -1,10 +1,8 @@
-import { useEffect, type JSX } from 'react';
+import { useEffect, useRef, type JSX } from 'react';
 import { useBlocker, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -78,12 +76,38 @@ export function SettingsModule() {
     setHelpChatFabVisible(settings.helpChatFabVisible);
   }, [hydrate, setHelpChatFabVisible, settings]);
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isDirty &&
+  const dirtyRef = useRef(isDirty);
+  dirtyRef.current = isDirty;
+  const allowLeaveRef = useRef(false);
+  const leaveToRef = useRef<string | null>(null);
+
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    const block =
+      !allowLeaveRef.current &&
+      dirtyRef.current &&
       (currentLocation.pathname !== nextLocation.pathname ||
-        currentLocation.hash !== nextLocation.hash),
-  );
+        currentLocation.hash !== nextLocation.hash);
+    if (block) leaveToRef.current = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+    return block;
+  });
+
+  function stay() {
+    leaveToRef.current = null;
+    if (blocker.state === 'blocked') blocker.reset?.();
+  }
+
+  function leave() {
+    if (settings) reset(settings);
+    const blocked = blocker.state === 'blocked';
+    const leaveTo = leaveToRef.current;
+    leaveToRef.current = null;
+    allowLeaveRef.current = true;
+    if (blocked) blocker.proceed?.();
+    else if (leaveTo) navigate(leaveTo);
+    queueMicrotask(() => {
+      allowLeaveRef.current = false;
+    });
+  }
 
   function go(id: SettingsSectionId) {
     navigate({ pathname: '/settings', hash: id });
@@ -124,24 +148,24 @@ export function SettingsModule() {
       <div className="min-h-0 min-w-0 flex-1 overflow-auto p-4 md:p-6">
         <Section />
       </div>
-      <AlertDialog open={blocker.state === 'blocked'}>
+      <AlertDialog
+        open={blocker.state === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open) stay();
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('settings.unsaved.title')}</AlertDialogTitle>
             <AlertDialogDescription>{t('settings.unsaved.body')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>
+            <Button type="button" variant="outline" onClick={stay}>
               {t('settings.unsaved.stay')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (settings) reset(settings);
-                blocker.proceed?.();
-              }}
-            >
+            </Button>
+            <Button type="button" onClick={leave}>
               {t('settings.unsaved.leave')}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
