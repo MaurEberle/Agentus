@@ -523,8 +523,7 @@
       "handoff": "Übergabe",
       "default": "Standard",
       "in": "Eingang",
-      "out": "Ausgang",
-      "required": "Pflicht"
+      "out": "Ausgang"
     },
     "inspector": {
       "title": "Inspector",

@@ -72,6 +72,35 @@ export function connectionAllowed(input: {
   return kindsCompatible(from, to);
 }
 
+/** Whether `toPort` on `toNode` can complete a drag that started at `from`. */
+export function portAcceptsConnection(
+  toNode: GraphNode,
+  toPort: PortDef,
+  from: {
+    node: GraphNode;
+    handleId: string | null | undefined;
+    handleType: 'source' | 'target';
+  },
+): boolean {
+  if (from.node.id === toNode.id) return false;
+  if (from.handleType === 'source') {
+    if (toPort.direction !== 'in') return false;
+    return connectionAllowed({
+      source: from.node,
+      target: toNode,
+      sourceHandle: from.handleId,
+      targetHandle: toPort.id,
+    });
+  }
+  if (toPort.direction !== 'out') return false;
+  return connectionAllowed({
+    source: toNode,
+    target: from.node,
+    sourceHandle: toPort.id,
+    targetHandle: from.handleId,
+  });
+}
+
 export const PALETTE_TYPES: NodeType[] = [
   'chat_input',
   'llm',

@@ -3,7 +3,7 @@ import type { GraphEdge, PortDef } from '@/modules/network/model/document';
 /** Vertical space reserved per handle so stacked ports do not overlap. */
 export const HANDLE_ROW_PX = 32;
 const NODE_CHROME_PX = 16;
-const NODE_HEADER_PX = 52;
+const NODE_HEADER_PX = 72;
 
 export function rfHandleId(port: PortDef): string {
   if (port.direction === 'out' && port.id === 'message') return 'out-message';
