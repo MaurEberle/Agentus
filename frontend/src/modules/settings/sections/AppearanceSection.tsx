@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { setAppLanguage } from '@/i18n';
+import { APP_LANGUAGES, LANGUAGE_LABEL_KEYS, isAppLanguage, resolveAppLanguage, setAppLanguage } from '@/i18n';
 import { notify } from '@/lib/notifications';
 import { patchSettings } from '@/modules/settings/api';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
@@ -12,7 +12,7 @@ import { useAppStore } from '@/store';
 export function AppearanceSection() {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
-  const language = i18n.resolvedLanguage === 'en' ? 'en' : 'de';
+  const language = resolveAppLanguage(i18n.resolvedLanguage ?? i18n.language);
   const fabVisible = useAppStore((state) => state.helpChatFabVisible);
   const setHelpChatFabVisible = useAppStore((state) => state.setHelpChatFabVisible);
 
@@ -45,17 +45,17 @@ export function AppearanceSection() {
           <legend className="text-sm font-medium">{t('shell.language')}</legend>
           <RadioGroup
             value={language}
-            onValueChange={(value) => void setAppLanguage(value === 'en' ? 'en' : 'de')}
+            onValueChange={(value) => {
+              if (isAppLanguage(value)) void setAppLanguage(value);
+            }}
             className="grid gap-2"
           >
-            <label className="flex items-center gap-2 text-sm">
-              <RadioGroupItem value="de" id="lang-de" />
-              <span>{t('shell.languageDe')}</span>
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <RadioGroupItem value="en" id="lang-en" />
-              <span>{t('shell.languageEn')}</span>
-            </label>
+            {APP_LANGUAGES.map((code) => (
+              <label key={code} className="flex items-center gap-2 text-sm">
+                <RadioGroupItem value={code} id={`lang-${code}`} />
+                <span>{t(LANGUAGE_LABEL_KEYS[code])}</span>
+              </label>
+            ))}
           </RadioGroup>
         </fieldset>
         <div className="flex items-center justify-between gap-4 rounded-md border p-3">

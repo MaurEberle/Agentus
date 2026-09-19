@@ -18,7 +18,7 @@ Version: `0.1.0` (eine Quelle: `backend/pyproject.toml`).
 
 Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App und zum Graphen.
 
-Sprachen: Deutsch (Default) und Englisch.
+Sprachen: Deutsch (Default), Englisch und Spanisch.
 
 ## Voraussetzungen
 

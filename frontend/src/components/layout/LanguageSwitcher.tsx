@@ -8,11 +8,11 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { setAppLanguage } from '@/i18n';
+import { APP_LANGUAGES, LANGUAGE_LABEL_KEYS, isAppLanguage, resolveAppLanguage, setAppLanguage } from '@/i18n';
 
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { t, i18n } = useTranslation();
-  const current = i18n.resolvedLanguage === 'en' ? 'en' : 'de';
+  const current = resolveAppLanguage(i18n.resolvedLanguage ?? i18n.language);
 
   return (
     <DropdownMenu>
@@ -26,10 +26,15 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
       <DropdownMenuContent align="end" className="app-no-drag">
         <DropdownMenuRadioGroup
           value={current}
-          onValueChange={(value) => void setAppLanguage(value === 'en' ? 'en' : 'de')}
+          onValueChange={(value) => {
+            if (isAppLanguage(value)) void setAppLanguage(value);
+          }}
         >
-          <DropdownMenuRadioItem value="de">{t('shell.languageDe')}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="en">{t('shell.languageEn')}</DropdownMenuRadioItem>
+          {APP_LANGUAGES.map((code) => (
+            <DropdownMenuRadioItem key={code} value={code}>
+              {t(LANGUAGE_LABEL_KEYS[code])}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,0 +1,1161 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "Saltar al contenido"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "network": "Red",
+    "networks": "Biblioteca",
+    "monitoring": "Supervisión",
+    "history": "Historial",
+    "settings": "Ajustes",
+    "openMenu": "Abrir navegación",
+    "closeMenu": "Cerrar navegación",
+    "collapse": "Contraer barra lateral",
+    "expand": "Expandir barra lateral",
+    "main": "Navegación principal"
+  },
+  "shell": {
+    "start": "Iniciar",
+    "stop": "Detener",
+    "quickSelect": "Selección rápida",
+    "quickSelectPlaceholder": "Elegir red",
+    "noNetwork": "Sin red",
+    "settings": "Ajustes",
+    "theme": "Apariencia",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeSystem": "Sistema",
+    "language": "Idioma",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "window": {
+      "minimize": "Minimizar",
+      "maximize": "Maximizar",
+      "restore": "Restaurar",
+      "close": "Cerrar"
+    }
+  },
+  "status": {
+    "stopped": "Detenido",
+    "starting": "Iniciando",
+    "running": "En ejecución",
+    "stopping": "Deteniendo",
+    "disconnected": "Desconectado",
+    "error": "Error"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "empty": "Sin notificaciones",
+    "markRead": "Marcar como leída",
+    "markAllRead": "Marcar todas como leídas",
+    "clear": "Vaciar",
+    "open": "Abrir notificaciones",
+    "unreadCount": "{{count}} sin leer"
+  },
+  "folderPicker": {
+    "title": "Elegir carpeta",
+    "description": "Elige una carpeta de este equipo. Se usará la ruta completa.",
+    "select": "Seleccionar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "up": "Carpeta superior",
+    "empty": "Sin subcarpetas",
+    "error": "No se pudo leer esta carpeta.",
+    "unavailable": "El sistema de archivos no está disponible en esta sesión.",
+    "loading": "Cargando carpetas…",
+    "path": "Ruta",
+    "places": {
+      "home": "Carpeta de usuario",
+      "desktop": "Escritorio",
+      "documents": "Documentos",
+      "downloads": "Descargas"
+    }
+  },
+  "notify": {
+    "welcome": {
+      "title": "Bienvenido a Agentus Network",
+      "desc": "Elige una red e inicia una ejecución desde la cabecera."
+    },
+    "runStarting": {
+      "title": "Iniciando ejecución",
+      "desc": "La red activa está arrancando."
+    },
+    "runRunning": {
+      "title": "Red en ejecución",
+      "desc": "{{name}} está activa."
+    },
+    "runStopping": {
+      "title": "Deteniendo ejecución",
+      "desc": "La red se está deteniendo."
+    },
+    "runStopped": {
+      "title": "Ejecución detenida",
+      "desc": "La red se ha detenido."
+    },
+    "runConflict": {
+      "title": "No se puede iniciar",
+      "desc": "Ya hay una red en ejecución."
+    },
+    "runError": {
+      "title": "La ejecución falló",
+      "desc": "El inicio o la parada ha fallado."
+    },
+    "noNetwork": {
+      "title": "Ninguna red seleccionada",
+      "desc": "Elige primero una red en la selección rápida."
+    },
+    "networkSelected": {
+      "title": "Red activa",
+      "desc": "{{name}} está seleccionada."
+    },
+    "networkCleared": {
+      "title": "Ninguna red activa",
+      "desc": "Se ha vaciado la selección rápida."
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "Este módulo se implementará en el siguiente paso."
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "body": "Esta ruta no existe.",
+    "back": "Volver al panel"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "unsaved": {
+      "title": "Cambios sin guardar",
+      "body": "Algunos campos aún no están guardados. ¿Descartar y continuar?",
+      "stay": "Quedarse",
+      "leave": "Descartar"
+    },
+    "common": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "close": "Cerrar",
+      "actions": "Acciones"
+    },
+    "nav": {
+      "appearance": "Apariencia",
+      "credentials": "Credenciales",
+      "runtime": "Runtime",
+      "help-chat": "Chat de ayuda",
+      "mcp": "Servidores MCP",
+      "data": "Datos",
+      "about": "Acerca de"
+    },
+    "appearance": {
+      "lead": "El color y el idioma se aplican en toda la app, incluida la cabecera.",
+      "fab": "Botón de ayuda",
+      "fabHint": "Muestra el widget de ayuda abajo a la derecha. La configuración sigue en Chat de ayuda."
+    },
+    "credentials": {
+      "lead": "Credenciales con nombre para modelos en la nube, búsqueda web y MCP. Tras guardar solo queda una máscara.",
+      "create": "Añadir credencial",
+      "createTitle": "Añadir credencial",
+      "editTitle": "Sustituir credencial",
+      "empty": "Aún no hay credenciales.",
+      "name": "Nombre",
+      "kind": "Tipo",
+      "mask": "Máscara",
+      "secret": "Secreto",
+      "secretHint": "El secreto se envía una sola vez. Luego la lista solo muestra la máscara.",
+      "secretUnchanged": "Déjalo vacío para no cambiar el secreto",
+      "deleteTitle": "¿Eliminar credencial?",
+      "deleteBody": "Se eliminará «{{name}}». El secreto dejará de estar disponible.",
+      "inUseTitle": "Credencial en uso",
+      "inUseBody": "«{{name}}» sigue asignada a un perfil de ayuda, una red o un servidor MCP y no se puede eliminar.",
+      "kindName": {
+        "xai": "xAI",
+        "openai_compat": "Compatible con OpenAI",
+        "web_search": "Búsqueda web",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "Token"
+      }
+    },
+    "runtime": {
+      "lead": "URL local de Ollama. La comprobación y la lista de modelos pasan por la API de la app, no desde el navegador.",
+      "ollamaUrl": "URL base de Ollama",
+      "openaiCompatUrl": "URL base compatible con OpenAI",
+      "ping": "Comprobar conexión",
+      "pingOk": "Runtime accesible",
+      "pingFail": "Runtime no accesible",
+      "models": "Modelos instalados",
+      "modelsEmpty": "No hay modelos o el runtime no está disponible.",
+      "modelName": "Modelo",
+      "modelSize": "Tamaño",
+      "status": {
+        "unknown": "Desconocido",
+        "ok": "OK",
+        "error": "Error"
+      }
+    },
+    "helpChat": {
+      "lead": "Única configuración del widget de ayuda. Incompleto si faltan proveedor o modelo.",
+      "configured": "Configurado",
+      "incomplete": "Incompleto",
+      "provider": "Proveedor de chat",
+      "providerEmpty": "No definido",
+      "openaiCompat": "Compatible con OpenAI",
+      "model": "Modelo de chat",
+      "credential": "Credencial",
+      "credentialEmpty": "Ninguna credencial",
+      "embedProvider": "Proveedor de embeddings",
+      "embedModel": "Modelo de embeddings",
+      "reindexHint": "Reconstruye el índice después de cambiar los embeddings.",
+      "webSearch": "Búsqueda web",
+      "webSearchHint": "Opcional. Sin credencial de búsqueda el chat puede estar configurado; la búsqueda queda desactivada.",
+      "webSearchCredential": "Credencial de búsqueda",
+      "webSearchMissing": "Falta la credencial: crea una de tipo Búsqueda web en Credenciales.",
+      "fallback": "Modelo de ahorro (opcional)",
+      "ping": "Comprobar conexión",
+      "pingOk": "Chat de ayuda accesible",
+      "pingFail": "Chat de ayuda no accesible",
+      "clear": "Borrar historial",
+      "clearTitle": "¿Borrar el historial de ayuda?",
+      "clearBody": "Se eliminarán todos los mensajes del chat de ayuda. El perfil se mantiene.",
+      "reindex": "Reconstruir índice",
+      "resetOnboarding": "Mostrar la introducción otra vez"
+    },
+    "mcp": {
+      "lead": "Recetas y servidores propios. Por defecto: inactivos. La ayuda no usa estos servidores.",
+      "recipes": "Recetas",
+      "servers": "Servidores configurados",
+      "empty": "Aún no hay servidores MCP.",
+      "enable": "Activar",
+      "added": "Añadido",
+      "custom": "Personalizado",
+      "customCreate": "Servidor propio",
+      "transport": "Transporte",
+      "enabled": "Activo",
+      "status": "Estado",
+      "probe": "Probar",
+      "presetHint": "Credenciales y ruta raíz opcional según la receta. Guardar crea el servidor al momento.",
+      "officeHint": "Office agrupa PDF y formatos de Office. Activa los presets sueltos solo si los necesitas.",
+      "rootPath": "Ruta raíz",
+      "untrusted": "Se iniciará un proceso desconocido con los privilegios indicados. Usa solo comandos de confianza.",
+      "command": "Comando",
+      "args": "Argumentos",
+      "url": "URL",
+      "deleteTitle": "¿Eliminar servidor?",
+      "deleteBody": "Se eliminará la configuración de este servidor propio.",
+      "pingOk": "El servidor MCP ha respondido",
+      "pingError": "La prueba MCP ha fallado",
+      "runtimeMissing": "Falta el runtime (Node, npx, Docker o uvx).",
+      "statusName": {
+        "unknown": "Desconocido",
+        "ok": "OK",
+        "error": "Error",
+        "runtime_missing": "Falta el runtime"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "Sistema de archivos",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "Carpeta de datos y estado de los almacenes. Sin visor SQL ni secretos.",
+      "dir": "Carpeta de datos",
+      "pick": "Elegir carpeta",
+      "busy": "No se puede cambiar de carpeta mientras una red arranca, se ejecuta o se detiene.",
+      "invalidRoot": "No se permite la raíz de una unidad o del sistema.",
+      "stores": "Almacenes",
+      "storeName": "Almacén",
+      "fileName": "Archivo",
+      "retentionLabel": "Retención del historial",
+      "copy": "Copiar el contenido a la carpeta nueva",
+      "confirmTitle": "Cambiar carpeta de datos",
+      "confirmBody": "La carpeta anterior se conserva. Crea un destino vacío o usa archivos de almacén existentes.",
+      "source": {
+        "env": "La carpeta viene de una variable de entorno y es de solo lectura.",
+        "portable": "Modo portable: la carpeta de datos es fija y de solo lectura."
+      },
+      "store": {
+        "settings": "Ajustes",
+        "help": "Ayuda",
+        "workspace": "Espacio de trabajo",
+        "history": "Historial"
+      },
+      "storeState": {
+        "ok": "OK",
+        "missing": "Falta",
+        "error": "Error"
+      },
+      "retention": {
+        "30": "30 días",
+        "90": "90 días",
+        "365": "365 días",
+        "unlimited": "Ilimitado"
+      }
+    },
+    "about": {
+      "lead": "Versiones y estado breve, sin secretos.",
+      "uiVersion": "Versión de la UI",
+      "apiVersion": "Versión de la API",
+      "runtime": "Ollama",
+      "dataFolder": "Carpeta de datos",
+      "storesOk": "Almacenes accesibles"
+    },
+    "notify": {
+      "saved": "Ajustes guardados",
+      "saveError": "No se pudo guardar",
+      "credentialCreated": "Credencial creada",
+      "credentialUpdated": "Credencial actualizada",
+      "credentialDeleted": "Credencial eliminada",
+      "credentialInUse": "La credencial sigue en uso",
+      "helpCleared": "Historial de ayuda borrado",
+      "reindexed": "Índice de ayuda reconstruido",
+      "onboardingReset": "La introducción se mostrará la próxima vez que abras la ayuda",
+      "mcpSaved": "Servidor MCP guardado",
+      "mcpDeleted": "Servidor MCP eliminado",
+      "dataDirOk": "Carpeta de datos actualizada"
+    }
+  },
+  "helpChat": {
+    "title": "Ayuda",
+    "fab": {
+      "open": "Abrir ayuda",
+      "close": "Cerrar ayuda"
+    },
+    "onboarding": {
+      "title": "Ayuda de la aplicación",
+      "body": "Este chat explica la app y cómo montar grafos. No habla con una red de agentes en ejecución. La configuración está en Ajustes.",
+      "configure": "Configurar ahora",
+      "later": "Más tarde"
+    },
+    "status": {
+      "unconfigured": "Desactivado",
+      "ready": "Listo",
+      "degraded": "Modo ahorro",
+      "generating": "Respondiendo",
+      "error": "Error"
+    },
+    "action": {
+      "send": "Enviar",
+      "stop": "Parar",
+      "settings": "Ajustes de la ayuda",
+      "close": "Cerrar ayuda"
+    },
+    "input": {
+      "placeholder": "Pregunta sobre la app o el grafo…"
+    },
+    "empty": "Aún no hay mensajes. Pregunta algo sobre el uso.",
+    "unconfigured": {
+      "body": "La ayuda aún no está configurada. Define proveedor y modelo en Ajustes.",
+      "cta": "Ir a ajustes"
+    },
+    "sources": {
+      "rag": "Documento",
+      "web": "Web"
+    },
+    "error": {
+      "generic": "La respuesta de ayuda ha fallado."
+    },
+    "resize": {
+      "width": "Cambiar ancho",
+      "height": "Cambiar alto"
+    },
+    "mock": {
+      "reply": "Esta es una **respuesta de ejemplo** de la ayuda. Explica la app, no la red en ejecución. En `Ajustes` configuras proveedor y modelo.",
+      "ragTitle": "Guía rápida",
+      "ragSection": "Chat de ayuda",
+      "webTitle": "Documentación de Ollama"
+    }
+  },
+  "dashboard": {
+    "title": "Panel",
+    "status": {
+      "title": "Estado",
+      "noNetwork": "Ninguna red activa",
+      "openLibrary": "Ir a la biblioteca",
+      "runningSince": "En ejecución desde {{time}}",
+      "openMonitoring": "Supervisión"
+    },
+    "helpHint": {
+      "title": "Ayuda de la aplicación",
+      "body": "La ayuda explica la aplicación y cómo montar grafos. No habla con la red de agentes. El botón está abajo a la derecha.",
+      "open": "Abrir ayuda",
+      "dismiss": "Entendido"
+    },
+    "setup": {
+      "title": "Configuración inicial",
+      "ollama": "Ollama no es accesible",
+      "help": "El perfil de ayuda está incompleto",
+      "networks": "Aún no hay ninguna red",
+      "runtimeLink": "Comprobar runtime",
+      "helpLink": "Configurar ayuda",
+      "createNetwork": "Nueva red",
+      "importNetwork": "Importar red"
+    },
+    "active": {
+      "title": "Red activa",
+      "empty": "No hay ninguna red activa seleccionada.",
+      "edit": "Editar",
+      "library": "Biblioteca",
+      "create": "Nueva red",
+      "stats": "{{nodes}} nodos · {{edges}} aristas",
+      "updated": "Modificada {{time}}"
+    },
+    "validationStatus": {
+      "valid": "Válida",
+      "invalid": "No válida",
+      "unknown": "Desconocido"
+    },
+    "validation": {
+      "missingModel": "Al menos un nodo LLM necesita un modelo."
+    },
+    "recent": {
+      "title": "Usadas recientemente",
+      "empty": "Aún no hay redes.",
+      "create": "Nueva red"
+    },
+    "runs": {
+      "title": "Últimas ejecuciones",
+      "empty": "Aún no hay ejecuciones.",
+      "storeError": "El almacén de historial no está disponible.",
+      "openData": "Revisar datos"
+    },
+    "outcome": {
+      "running": "En ejecución",
+      "succeeded": "Correcto",
+      "failed": "Error",
+      "cancelled": "Cancelada",
+      "timeout": "Tiempo agotado"
+    },
+    "week": {
+      "title": "Últimos 7 días",
+      "runs": "Ejecuciones",
+      "succeeded": "Correctas",
+      "failed": "Fallidas",
+      "openHistory": "Historial"
+    },
+    "environment": {
+      "title": "Entorno",
+      "ollamaOk": "Ollama accesible",
+      "ollamaFail": "Ollama no accesible",
+      "models_one": "{{count}} modelo",
+      "models_other": "{{count}} modelos",
+      "storeIssue": "{{store}} no está en buen estado.",
+      "openData": "Datos",
+      "degraded": "Modo ahorro"
+    },
+    "quick": {
+      "title": "Accesos rápidos",
+      "create": "Nueva red",
+      "import": "Importar",
+      "runtime": "Runtime"
+    },
+    "duration": {
+      "seconds": "{{count}} s",
+      "minutes": "{{minutes}} min {{seconds}} s",
+      "hours": "{{hours}} h {{minutes}} min"
+    },
+    "error": {
+      "load": "No se pudieron cargar los datos del panel.",
+      "networks": "No se pudieron cargar las redes.",
+      "runs": "No se pudieron cargar las ejecuciones.",
+      "networkMissing": "Red no encontrada"
+    }
+  },
+  "network": {
+    "untitled": "Red sin título",
+    "copySuffix": "(copia)",
+    "badge": {
+      "valid": "Válida",
+      "invalid": "No válida",
+      "active": "Activa",
+      "running": "En ejecución"
+    },
+    "ribbon": {
+      "new": "Nueva",
+      "save": "Guardar",
+      "saveAs": "Guardar como",
+      "load": "Abrir",
+      "duplicate": "Duplicar",
+      "export": "Exportar",
+      "validate": "Validar",
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "library": "Ir a la biblioteca",
+      "view": "Vista"
+    },
+    "view": {
+      "fit": "Ajustar",
+      "snap": "Ajuste a la cuadrícula",
+      "grid": "Cuadrícula",
+      "minimap": "Minimapa"
+    },
+    "palette": {
+      "title": "Paleta",
+      "search": "Buscar nodos",
+      "chat_input": "Entrada de chat",
+      "chat_inputHint": "Como máximo una. Texto inicial y campo obligatorio para la ejecución.",
+      "llm": "LLM",
+      "llmHint": "Modelo y proveedor. Arista al puerto llm del agente.",
+      "agent": "Agente",
+      "agentHint": "Prompt de sistema. LLM, mensaje, herramientas y conocimiento por aristas.",
+      "tool": "Herramienta",
+      "toolHint": "Tipo del catálogo, MCP opcional.",
+      "knowledge": "Conocimiento",
+      "knowledgeHint": "Carpeta de origen, solo al puerto knowledge del agente.",
+      "router": "Enrutador",
+      "routerHint": "Bifurca mensajes según condiciones.",
+      "end": "Fin",
+      "endHint": "Al menos uno. Cierra la ejecución."
+    },
+    "ports": {
+      "message": "Mensaje",
+      "llm": "LLM",
+      "tool": "Herramienta",
+      "knowledge": "Conocimiento",
+      "handoff": "Traspaso",
+      "default": "Predeterminado",
+      "in": "Entrada",
+      "out": "Salida"
+    },
+    "inspector": {
+      "title": "Inspector",
+      "displayName": "Nombre visible",
+      "multi": "{{count}} nodos seleccionados",
+      "graph": {
+        "title": "Red",
+        "name": "Nombre",
+        "description": "Descripción",
+        "tags": "Etiquetas",
+        "stats": "{{nodes}} nodos · {{edges}} aristas",
+        "noIssues": "Sin errores de validación."
+      },
+      "llm": {
+        "provider": "Proveedor",
+        "openaiCompat": "Compatible con OpenAI",
+        "model": "Modelo",
+        "credential": "Credencial",
+        "credentialEmpty": "Sin credencial",
+        "baseUrl": "URL base",
+        "ping": "Comprobar conexión",
+        "pingOk": "El modelo ha respondido",
+        "pingFail": "La prueba ha fallado",
+        "advanced": "Avanzado",
+        "noModels": "No hay modelos cargados.",
+        "useModel": "Usar «{{name}}»",
+        "temperature": "Temperatura",
+        "maxTokens": "Máx. tokens"
+      },
+      "agent": {
+        "hint": "LLM, herramientas y conocimiento llegan por aristas, no como campos.",
+        "systemPrompt": "Prompt de sistema"
+      },
+      "tool": {
+        "kind": "Tipo",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "Búsqueda web",
+          "datetime": "Fecha/hora",
+          "calculator": "Calculadora",
+          "mcp": "MCP"
+        },
+        "method": "Método",
+        "url": "URL",
+        "credential": "Credencial",
+        "mcpServer": "Servidor MCP",
+        "mcpEmpty": "Sin servidor",
+        "mcpHint": "Por defecto: todas las herramientas del servidor. Crea servidores en Ajustes.",
+        "mcpSettings": "Ir a ajustes MCP"
+      },
+      "knowledge": {
+        "path": "Carpeta de origen",
+        "pick": "Carpeta",
+        "topK": "topK",
+        "score": "Umbral de puntuación",
+        "reindex": "Reconstruir índice",
+        "reindexOk": "Índice reconstruido",
+        "reindexFail": "El índice ha fallado"
+      },
+      "router": {
+        "branches": "Ramas",
+        "branchName": "Nombre",
+        "condition": "Condición",
+        "add": "Añadir rama"
+      },
+      "chat": {
+        "placeholder": "Marcador de posición",
+        "startMessage": "Texto inicial",
+        "requireInput": "Se requiere entrada"
+      }
+    },
+    "load": {
+      "title": "Abrir red",
+      "body": "Elige una red guardada. La selección múltiple, el borrado y la importación están en la biblioteca.",
+      "search": "Buscar",
+      "sortUpdated": "Modificada",
+      "sortName": "Nombre",
+      "sortUsed": "Último uso",
+      "open": "Abrir",
+      "preview": "{{nodes}} nodos · {{edges}} aristas"
+    },
+    "empty": {
+      "body": "Arrastra un nodo de la paleta al lienzo o abre una red guardada.",
+      "insert": "Paleta"
+    },
+    "context": {
+      "insert": "Insertar",
+      "fit": "Ajustar",
+      "duplicate": "Duplicar",
+      "delete": "Eliminar"
+    },
+    "dialog": {
+      "close": "Cerrar",
+      "cancel": "Cancelar",
+      "nameTitle": "Nombrar la red"
+    },
+    "dirty": {
+      "title": "Cambios sin guardar",
+      "body": "La red abierta tiene cambios. ¿Guardar, descartar o cancelar?",
+      "save": "Guardar",
+      "discard": "Descartar",
+      "cancel": "Cancelar"
+    },
+    "readonly": {
+      "title": "Solo lectura",
+      "body": "Esta red está en ejecución. Deténla en la cabecera antes de editar."
+    },
+    "validation": {
+      "nameRequired": "El nombre no puede estar vacío.",
+      "tooManyChatInputs": "Como máximo una entrada de chat.",
+      "endRequired": "Al menos un nodo de fin.",
+      "danglingEdge": "La arista apunta a un nodo que no existe.",
+      "edgeType": "Esta conexión no es compatible de tipo.",
+      "agentLlm": "Cada agente necesita exactamente una arista LLM.",
+      "agentMessage": "Cada agente necesita un mensaje de entrada.",
+      "modelRequired": "El modelo es obligatorio.",
+      "credentialRequired": "El proveedor en la nube necesita una credencial.",
+      "toolKind": "Falta el tipo de herramienta.",
+      "mcpServer": "Elige un servidor MCP activo.",
+      "mcpRoot": "Este servidor MCP necesita una ruta raíz en Ajustes.",
+      "knowledgePath": "La carpeta de origen es obligatoria.",
+      "knowledgeRoot": "No se permite la raíz de una unidad o del sistema.",
+      "knowledgeSandbox": "La ruta debe estar bajo la carpeta de datos.",
+      "knowledgeHelpCorpus": "El corpus de ayuda no es conocimiento de la red.",
+      "knowledgeTarget": "Conecta el conocimiento solo al puerto knowledge del agente.",
+      "cycle": "No se permiten ciclos.",
+      "knowledge": {
+        "missing": "Falta el índice.",
+        "stale": "El índice está desactualizado.",
+        "error": "Error de índice."
+      }
+    },
+    "notify": {
+      "saved": "Red guardada",
+      "saveError": "No se pudo guardar",
+      "duplicated": "Copia abierta",
+      "valid": "La red es válida",
+      "invalid": "La red tiene errores de validación"
+    },
+    "error": {
+      "missing": "Red no encontrada"
+    },
+    "catalog": {
+      "firstParty": "First-party"
+    }
+  },
+  "networks": {
+    "title": "Biblioteca",
+    "copySuffix": "(copia)",
+    "ribbon": {
+      "new": "Nueva",
+      "open": "Abrir",
+      "duplicate": "Duplicar",
+      "rename": "Renombrar",
+      "tags": "Añadir etiquetas",
+      "activate": "Establecer como activa",
+      "delete": "Eliminar",
+      "import": "Importar",
+      "export": "Exportar",
+      "refresh": "Actualizar",
+      "more": "Más acciones",
+      "needOne": "Selecciona exactamente una red.",
+      "needSome": "Selecciona al menos una red.",
+      "needValid": "Solo una red válida puede activarse.",
+      "alreadyActive": "Esta red ya está activa.",
+      "runningBlocked": "No se puede eliminar una red en ejecución."
+    },
+    "filter": {
+      "search": "Buscar por nombre, descripción, etiquetas",
+      "sort": {
+        "name": "Nombre",
+        "updatedAt": "Modificada",
+        "lastUsedAt": "Último uso"
+      },
+      "direction": "Orden",
+      "tags": "Etiquetas",
+      "tagsHint": "Varias etiquetas: O",
+      "noTags": "Sin etiquetas",
+      "onlyValid": "Solo válidas",
+      "onlyActive": "Solo activas"
+    },
+    "list": {
+      "selectAll": "Seleccionar todas las visibles",
+      "name": "Nombre",
+      "description": "Descripción",
+      "status": "Estado",
+      "graph": "Grafo",
+      "updated": "Modificada",
+      "lastUsed": "Último uso",
+      "counts": "{{nodes}} nodos · {{edges}} aristas"
+    },
+    "badge": {
+      "valid": "Válida",
+      "invalid": "No válida",
+      "unknown": "Desconocido",
+      "active": "Activa",
+      "running": "En ejecución",
+      "credentialMissing": "Falta la credencial"
+    },
+    "detail": {
+      "title": "Detalles",
+      "none": "Ninguna red seleccionada.",
+      "multi": "{{count}} seleccionadas",
+      "noDescription": "Sin descripción.",
+      "lastRun": "Última ejecución"
+    },
+    "empty": {
+      "library": "Aún no hay redes guardadas.",
+      "filter": "Ningún resultado para estos filtros.",
+      "clearFilters": "Quitar filtros"
+    },
+    "error": {
+      "title": "No se cargó la lista",
+      "body": "No se pudo cargar la biblioteca.",
+      "missing": "Red no encontrada",
+      "running": "No se puede eliminar una red en ejecución."
+    },
+    "dialog": {
+      "close": "Cerrar",
+      "cancel": "Cancelar",
+      "save": "Guardar"
+    },
+    "rename": {
+      "title": "Renombrar",
+      "body": "Nombre y descripción, sin cambiar el grafo.",
+      "name": "Nombre",
+      "description": "Descripción"
+    },
+    "tags": {
+      "title": "Añadir etiquetas",
+      "body": "Las etiquetas se añaden a {{count}} redes; las existentes se mantienen.",
+      "label": "Etiquetas",
+      "placeholder": "ops, prod",
+      "add": "Añadir"
+    },
+    "delete": {
+      "title": "Eliminar redes",
+      "body": "Se elimina el índice del espacio de trabajo de esta red. Los archivos de origen en disco se quedan. El almacén de ayuda y las ejecuciones del historial no se tocan.",
+      "none": "No se puede eliminar ninguna red.",
+      "runningSkipped": "En ejecución y omitida: {{names}}",
+      "activeWarning": "Hay al menos una red activa. Se vaciará la selección rápida."
+    },
+    "import": {
+      "unreadable": "Algunos archivos no se pudieron leer.",
+      "unreadableNames": "{{names}}",
+      "schema": "schemaVersion no es compatible.",
+      "secrets": "Se descartaron secretos en los archivos importados.",
+      "collisionTitle": "Nombre ya usado",
+      "collisionBody": "Renombra u omite el archivo. Cancelar solo afecta a estos archivos.",
+      "skip": "Omitir este archivo",
+      "include": "Importar de todos modos",
+      "continue": "Importar"
+    },
+    "notify": {
+      "error": "La acción ha fallado",
+      "duplicated": "Copia añadida a la biblioteca",
+      "renamed": "Metadatos guardados",
+      "tagged": "Etiquetas añadidas",
+      "deleted": "Redes eliminadas",
+      "imported": "{{count}} redes importadas",
+      "exported": "Exportación iniciada"
+    }
+  },
+  "monitoring": {
+    "title": "Supervisión",
+    "close": "Cerrar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "empty": {
+      "stoppedTitle": "Sin ejecución",
+      "stoppedBody": "Inicia el servicio desde la cabecera.",
+      "stoppedActive": "Red activa: {{name}}",
+      "stoppedNoNetwork": "Ninguna red en la selección rápida.",
+      "disconnectedTitle": "Desconectado del servicio",
+      "disconnectedBody": "Reconectando. Los últimos valores se muestran atenuados.",
+      "startingTitle": "El servicio está arrancando",
+      "stoppingTitle": "El servicio se está deteniendo",
+      "errorTitle": "Error del servicio",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "runId": "ID de ejecución",
+      "started": "Inicio",
+      "duration": "Duración",
+      "step": "Paso",
+      "runningCount": "{{count}} en ejecución",
+      "noLlm": "Ningún LLM activo",
+      "activeLlms": "LLM activos",
+      "otherNodes": "Otros nodos",
+      "local": "local",
+      "cloud": "nube"
+    },
+    "resources": {
+      "title": "Recursos del equipo",
+      "hostHint": "Valores del sistema de este equipo, no solo del proceso de la app.",
+      "cpu": "CPU",
+      "cpuCores": "Núcleos",
+      "ram": "Memoria",
+      "gpu": "GPU",
+      "vram": "VRAM",
+      "noGpu": "Sin GPU",
+      "noGpuHint": "No se ha detectado acelerador local. Es normal en ejecuciones en la nube.",
+      "usedOf": "{{used}} de {{total}}"
+    },
+    "graph": {
+      "title": "Red (solo lectura)",
+      "fit": "Ajustar",
+      "filterChip": "Nodo {{name}}",
+      "clearFilter": "Quitar filtro",
+      "detailTitle": "Detalle del nodo",
+      "role": "Rol",
+      "status": "Estado",
+      "wait": "Esperando",
+      "lastMessage": "Último mensaje",
+      "error": "Error",
+      "model": "Modelo",
+      "provider": "Proveedor",
+      "tokens": "Tokens"
+    },
+    "nodeType": {
+      "chat_input": "Entrada",
+      "llm": "LLM",
+      "agent": "Agente",
+      "tool": "Herramienta",
+      "knowledge": "Conocimiento",
+      "router": "Enrutador",
+      "end": "Fin"
+    },
+    "nodeStatus": {
+      "idle": "Inactivo",
+      "waiting": "En espera",
+      "running": "En ejecución",
+      "done": "Hecho",
+      "error": "Error"
+    },
+    "wait": {
+      "none": "Sin espera",
+      "llm": "LLM",
+      "tool": "Herramienta",
+      "human": "Entrada"
+    },
+    "activity": {
+      "title": "Actividad",
+      "current": "Nodos actuales",
+      "none": "Ningún nodo activo",
+      "dag": "Paso {{completed}} de {{total}}",
+      "pending": "Pendiente",
+      "stepError": "Error en el paso",
+      "tokensIn": "Entrada",
+      "tokensOut": "Salida",
+      "perSecond": "{{value}} tokens/s",
+      "context": "Contexto {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "Chat",
+      "log": "Registro"
+    },
+    "chat": {
+      "placeholder": "Mensaje…",
+      "send": "Enviar",
+      "stop": "Detener generación",
+      "waitInput": "Escribe el primer mensaje. El grafo espera una entrada.",
+      "empty": "Aún no hay mensajes en esta ejecución.",
+      "disabled": "El chat solo está disponible durante una ejecución."
+    },
+    "log": {
+      "pause": "Pausar",
+      "resume": "Continuar",
+      "jumpLatest": "Ir a los más recientes",
+      "newCount": "{{count}} nuevos",
+      "search": "Buscar en el registro",
+      "level": "Nivel",
+      "levelFrom": "desde {{level}}",
+      "node": "Nodo",
+      "allNodes": "Todos los nodos",
+      "errorsOnly": "Solo errores",
+      "export": "Exportar",
+      "empty": "Ninguna línea de registro para este filtro.",
+      "detailTitle": "Detalle del registro",
+      "payload": "Carga",
+      "stack": "Pila",
+      "message": "Mensaje",
+      "copyLine": "Copiar línea",
+      "copyPayload": "Copiar carga"
+    },
+    "level": {
+      "debug": "Depuración",
+      "info": "Info",
+      "warn": "Aviso",
+      "error": "Error"
+    },
+    "notify": {
+      "runStarted": "Ejecución iniciada",
+      "runStopped": "Ejecución detenida",
+      "stepFailed": "El paso ha fallado",
+      "disconnected": "Servicio no accesible"
+    },
+    "dev": {
+      "label": "Escenario de prueba",
+      "stopped": "Detenido",
+      "disconnected": "Desconectado",
+      "starting": "Iniciando",
+      "stopping": "Deteniendo",
+      "running": "En ejecución (chat)",
+      "nochat": "En ejecución (sin chat)",
+      "cloud": "Nube / sin GPU",
+      "error": "Error",
+      "wait": "Esperando entrada"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "Compatible con OpenAI"
+    },
+    "mock": {
+      "userLine": "Resume brevemente la última ejecución.",
+      "chatReply": "La ejecución está activa. Este asistente responde desde la red, no desde la ayuda.",
+      "lastLlm": "Se están generando tokens.",
+      "lastAgent": "Esperando al LLM.",
+      "lastTool": "Llamada a herramienta solicitada.",
+      "waitInput": "El grafo espera el primer mensaje.",
+      "stepError": "La llamada a la herramienta ha fallado.",
+      "serviceError": "El servicio ha abortado el paso.",
+      "log": {
+        "start": "Ejecución aceptada.",
+        "debug": "Prompt preparado.",
+        "agent": "El agente trabaja.",
+        "warn": "La herramienta responde despacio.",
+        "secret": "Solicitud con apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} informa de progreso.",
+        "user": "Línea de usuario aceptada.",
+        "assistant": "Respuesta terminada."
+      }
+    }
+  },
+  "history": {
+    "title": "Historial",
+    "close": "Cerrar",
+    "copy": "Copiar",
+    "ribbon": {
+      "refresh": "Actualizar",
+      "delete": "Eliminar",
+      "export": "Exportar registros",
+      "purge": "Eliminar anteriores a 90 días"
+    },
+    "filter": {
+      "range": "Periodo",
+      "today": "Hoy",
+      "days7": "7 días",
+      "days30": "30 días",
+      "custom": "Personalizado",
+      "from": "Desde",
+      "to": "Hasta",
+      "network": "Red",
+      "allNetworks": "Todas las redes",
+      "model": "Modelo",
+      "allModels": "Todos los modelos",
+      "search": "Buscar",
+      "searchHint": "ID de ejecución, red, error",
+      "reset": "Restablecer filtros"
+    },
+    "outcome": {
+      "running": "En ejecución",
+      "succeeded": "Correcto",
+      "failed": "Error",
+      "cancelled": "Cancelada",
+      "timeout": "Tiempo agotado"
+    },
+    "kpi": {
+      "runs": "Ejecuciones",
+      "runsHint": "Solo ejecuciones terminadas",
+      "succeeded": "Correctas",
+      "failed": "Fallidas",
+      "failedFoot": "Canceladas {{cancelled}} · Tiempo agotado {{timeout}}",
+      "medianDuration": "Duración mediana",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95 a partir de 20 ejecuciones"
+    },
+    "chart": {
+      "title": "Ejecuciones por día",
+      "empty": "No hay ejecuciones terminadas en este periodo."
+    },
+    "errors": {
+      "title": "Errores más frecuentes",
+      "empty": "Ningún error en este filtro."
+    },
+    "errorClass": {
+      "timeout": "Tiempo agotado",
+      "tool_error": "Herramienta",
+      "llm_error": "LLM",
+      "validation": "Validación",
+      "service": "Servicio",
+      "unknown": "Desconocido"
+    },
+    "tab": {
+      "history": "Historial",
+      "model": "Por modelo",
+      "network": "Por red"
+    },
+    "table": {
+      "model": "Modelo",
+      "provider": "Proveedor",
+      "calls": "Llamadas",
+      "ok": "OK",
+      "callErrors": "Errores",
+      "errorRate": "Tasa de error",
+      "median": "Duración mediana",
+      "tokensIn": "Tokens de entrada",
+      "tokensOut": "Tokens de salida",
+      "network": "Red",
+      "runs": "Ejecuciones",
+      "succeeded": "Correctas",
+      "failed": "Fallidas",
+      "cancelled": "Canceladas",
+      "topErrorNode": "Nodo de error más frecuente"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai_compat": "Compatible con OpenAI"
+    },
+    "list": {
+      "selectAll": "Seleccionar visibles",
+      "runId": "ID de ejecución",
+      "network": "Red",
+      "started": "Inicio",
+      "duration": "Duración",
+      "outcome": "Resultado",
+      "error": "Error",
+      "models": "Modelos",
+      "live": "Ver en vivo",
+      "page": "Página {{page}} de {{pages}}",
+      "prev": "Anterior",
+      "next": "Siguiente"
+    },
+    "detail": {
+      "title": "Ejecución",
+      "none": "Elige una ejecución de la lista.",
+      "missing": "Esta ejecución no existe.",
+      "error": "Error",
+      "exportLog": "Exportar registro",
+      "tabLog": "Registro",
+      "tabSteps": "Pasos",
+      "tabChat": "Chat"
+    },
+    "graph": {
+      "fit": "Ajustar"
+    },
+    "log": {
+      "level": "Nivel",
+      "search": "Buscar en el registro",
+      "node": "Nodo",
+      "allNodes": "Todos los nodos",
+      "errorsOnly": "Solo errores",
+      "empty": "Ninguna línea de registro para este filtro.",
+      "detailTitle": "Detalle del registro"
+    },
+    "level": {
+      "debug": "Depuración",
+      "info": "Info",
+      "warn": "Aviso",
+      "error": "Error"
+    },
+    "steps": {
+      "node": "Nodo",
+      "role": "Rol",
+      "status": "Estado",
+      "error": "Error",
+      "empty": "No hay pasos guardados."
+    },
+    "nodeStatus": {
+      "idle": "Inactivo",
+      "waiting": "En espera",
+      "running": "En ejecución",
+      "done": "Hecho",
+      "error": "Error"
+    },
+    "calls": {
+      "ok": "OK",
+      "yes": "Sí",
+      "no": "No",
+      "empty": "No hay llamadas LLM."
+    },
+    "empty": {
+      "none": "Aún no hay ejecuciones en el almacén de historial.",
+      "filtered": "Ningún resultado para este filtro."
+    },
+    "error": {
+      "store": "El almacén de historial no está disponible.",
+      "openData": "Ajustes · Datos",
+      "api": "No se pudo cargar el historial.",
+      "runningDelete": "No se pueden eliminar ejecuciones en curso."
+    },
+    "delete": {
+      "title": "Eliminar ejecuciones",
+      "body": "Se eliminarán {{count}} ejecuciones seleccionadas del archivo. Las que siguen en curso se quedan.",
+      "confirm": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "retention": {
+      "title": "Eliminar ejecuciones antiguas",
+      "body": "Se eliminarán {{count}} ejecuciones de más de 90 días.",
+      "confirm": "Eliminar"
+    },
+    "notify": {
+      "deleted": "{{count}} ejecuciones eliminadas",
+      "runningDelete": "No se pueden eliminar ejecuciones en curso",
+      "runningSkipped": "Se omitió al menos una entrada en ejecución",
+      "purged": "{{count}} ejecuciones antiguas eliminadas",
+      "exported": "Exportación iniciada",
+      "exportError": "La exportación ha fallado",
+      "error": "La acción ha fallado"
+    }
+  }
+}

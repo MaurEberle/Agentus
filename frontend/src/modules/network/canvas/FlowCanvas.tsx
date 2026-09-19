@@ -195,12 +195,7 @@ export function FlowCanvas({
         onPaneClick={() => useNetworkEditor.getState().select([])}
         onPaneContextMenu={(event) => {
           event.preventDefault();
-          setMenu({
-            kind: 'pane',
-            x: event.clientX,
-            y: event.clientY,
-            flow: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-          });
+          setMenu({kind: 'pane', x: event.clientX, y: event.clientY, flow: screenToFlowPosition({ x: event.clientX, y: event.clientY })});
         }}
         onNodeContextMenu={(event, node) => {
           event.preventDefault();
