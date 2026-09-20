@@ -104,6 +104,21 @@ export type GraphNode = {
   data: Record<string, unknown>;
 };
 
+export function asGraphNode(node: {
+  id: string;
+  type: string;
+  position: { x: number; y: number };
+  data?: Record<string, unknown>;
+}): GraphNode | undefined {
+  if (!(NODE_TYPES as readonly string[]).includes(node.type)) return undefined;
+  return {
+    id: node.id,
+    type: node.type as NodeType,
+    position: node.position,
+    data: node.data ?? {},
+  };
+}
+
 export type GraphEdge = {
   id: string;
   source: string;

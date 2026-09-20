@@ -19,6 +19,8 @@ import type { RunSnapshot } from '@/modules/monitoring/model/types';
 import { StatusNode, type StatusFlowNode } from '@/modules/monitoring/graph/StatusNode';
 import { NodeDetail } from '@/modules/monitoring/graph/NodeDetail';
 import { useMonitoringStore } from '@/modules/monitoring/store';
+import { asGraphNode } from '@/modules/network/model/document';
+import { toRfHandlePair } from '@/modules/network/canvas/handles';
 
 const nodeTypes = { status: StatusNode };
 
@@ -55,12 +57,14 @@ function GraphInner({
           type: 'status',
           position: node.position,
           selected: selectedNodeId === node.id,
+          className: 'overflow-visible',
           data: {
             displayName: nodeDisplayName(node),
             nodeType: node.type,
             role: runtime?.role,
             status: runtime?.status ?? 'idle',
             waitReason: runtime?.waitReason,
+            nodeData: node.data,
           },
         } satisfies StatusFlowNode;
       }),
@@ -69,14 +73,23 @@ function GraphInner({
 
   const edges: Edge[] = useMemo(
     () =>
-      run.graph.edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle,
-      })),
-    [run.graph.edges],
+      run.graph.edges.map((edge) => {
+        const sourceNode = run.graph.nodes.find((node) => node.id === edge.source);
+        const targetNode = run.graph.nodes.find((node) => node.id === edge.target);
+        const handles = toRfHandlePair(
+          sourceNode ? asGraphNode(sourceNode) : undefined,
+          targetNode ? asGraphNode(targetNode) : undefined,
+          edge,
+        );
+        return {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: handles.sourceHandle,
+          targetHandle: handles.targetHandle,
+        };
+      }),
+    [run.graph.edges, run.graph.nodes],
   );
 
   const graphKey = `${run.runId}:${run.graph.nodes.map((node) => node.id).join(',')}`;

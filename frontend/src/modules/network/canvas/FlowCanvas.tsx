@@ -25,9 +25,8 @@ import { issuesForNode, validateDocument } from '@/modules/network/validation/va
 import type { GraphEdge, NodeType } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { CanvasContextMenu, type MenuState } from '@/modules/network/canvas/ContextMenu';
-import { connectedPortKeys, docHandleId, rfHandleId } from '@/modules/network/canvas/handles';
+import { connectedPortKeys, docHandleId, toRfHandlePair } from '@/modules/network/canvas/handles';
 import { NetworkNode } from '@/modules/network/canvas/NetworkNode';
-import { portsFor } from '@/modules/network/schema/ports';
 import {
   editorAddNode,
   editorDeleteSelection,
@@ -94,18 +93,13 @@ export function FlowCanvas({
       document.edges.map((edge) => {
         const sourceNode = document.nodes.find((item) => item.id === edge.source);
         const targetNode = document.nodes.find((item) => item.id === edge.target);
-        const sourcePort = sourceNode
-          ? portsFor(sourceNode).find((port) => port.direction === 'out' && port.id === edge.sourceHandle)
-          : undefined;
-        const targetPort = targetNode
-          ? portsFor(targetNode).find((port) => port.direction === 'in' && port.id === edge.targetHandle)
-          : undefined;
+        const handles = toRfHandlePair(sourceNode, targetNode, edge);
         return {
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          sourceHandle: sourcePort ? rfHandleId(sourcePort) : edge.sourceHandle,
-          targetHandle: targetPort ? rfHandleId(targetPort) : edge.targetHandle,
+          sourceHandle: handles.sourceHandle,
+          targetHandle: handles.targetHandle,
           type: 'smoothstep',
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
           className: issues.some((issue) => issue.edgeId === edge.id) ? '!stroke-destructive' : undefined,

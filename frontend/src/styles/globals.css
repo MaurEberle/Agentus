@@ -116,6 +116,15 @@
   cursor: default !important;
 }
 
+.monitoring-flow .react-flow__node {
+  overflow: visible !important;
+}
+
+.monitoring-flow .react-flow__handle {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

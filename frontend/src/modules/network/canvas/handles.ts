@@ -1,4 +1,5 @@
-import type { GraphEdge, PortDef } from '@/modules/network/model/document';
+import type { GraphEdge, GraphNode, PortDef } from '@/modules/network/model/document';
+import { portsFor } from '@/modules/network/schema/ports';
 
 /** Vertical space reserved per handle so stacked ports do not overlap. */
 export const HANDLE_ROW_PX = 32;
@@ -13,6 +14,31 @@ export function rfHandleId(port: PortDef): string {
 export function docHandleId(handle: string | null | undefined): string {
   if (handle === 'out-message') return 'message';
   return handle ?? '';
+}
+
+function portByHandle(
+  node: GraphNode | undefined,
+  direction: 'in' | 'out',
+  handle?: string | null,
+): PortDef | undefined {
+  if (!node || !handle) return undefined;
+  return portsFor(node).find(
+    (port) => port.direction === direction && (port.id === handle || rfHandleId(port) === handle),
+  );
+}
+
+/** Map document handle ids onto React Flow handle ids (`message` out → `out-message`). */
+export function toRfHandlePair(
+  source: GraphNode | undefined,
+  target: GraphNode | undefined,
+  edge: { sourceHandle?: string | null; targetHandle?: string | null },
+): { sourceHandle?: string; targetHandle?: string } {
+  const sourcePort = portByHandle(source, 'out', edge.sourceHandle);
+  const targetPort = portByHandle(target, 'in', edge.targetHandle);
+  return {
+    sourceHandle: sourcePort ? rfHandleId(sourcePort) : (edge.sourceHandle ?? undefined),
+    targetHandle: targetPort ? rfHandleId(targetPort) : (edge.targetHandle ?? undefined),
+  };
 }
 
 export function portStateKey(port: PortDef): string {
