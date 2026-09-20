@@ -8,7 +8,7 @@ Web-UI-Rahmen (Vite + React) für die lokale Agentnetz-App. Fachmodule hängen i
 - React Router (Layout + `<Outlet />`)
 - Tailwind CSS + shadcn/ui (New York)
 - Lucide, `next-themes` (light / dark / system)
-- i18next (`de` Default, `en`, `es`)
+- i18next (`de` Default, `en`, `es`, `fr`, `tr`, `pt`, `zh`, `ja`, `ar`)
 - `@xyflow/react` (Dependency + Styles; Editor kommt im Modul-Prompt)
 - Zustand (`useAppStore`) für Session, Notifications, UI-Prefs
 - TanStack Query für Serverdaten
@@ -34,11 +34,11 @@ Dev-Server: `http://localhost:5173`. API-Proxy: `/api` → `http://127.0.0.1:876
 
 ## i18n
 
-- Dateien: `src/i18n/locales/de.json`, `en.json`, `es.json`
-- Sprachenliste: `src/i18n/languages.ts` (`de`, `en`, `es`)
+- Dateien: `src/i18n/locales/{de,en,es,fr,tr,pt,zh,ja,ar}.json`
+- Sprachenliste: `src/i18n/languages.ts` (`de`, `en`, `es`, `fr`, `tr`, `pt`, `zh`, `ja`, `ar`)
 - Keine sichtbaren Strings in Komponenten — nur Keys
 - Language-Switcher in Header (`md+`), Burger (`< md`) und Einstellungen → Darstellung
-- Locale in `localStorage` (`i18nextLng`), setzt `document.documentElement.lang`
+- Locale in `localStorage` (`i18nextLng`), setzt `document.documentElement.lang` und `dir` (`rtl` nur für `ar`)
 - Notification-Center übersetzt Keys beim Rendern (Sprachwechsel aktualisiert die Liste)
 
 ## React Flow
@@ -87,7 +87,7 @@ Toaster sitzt in der Shell (oben rechts ab `md`, unten Mitte auf schmal). Die Gl
 
 1. Ordner `src/modules/<id>/` mit Page-Komponente
 2. Eintrag in `src/modules/registry.ts`: `{ id, titleKey, path, icon, component }`
-3. i18n-Key unter `nav.*` in `de.json` / `en.json` / `es.json`
+3. i18n-Key unter `nav.*` in allen Locale-Dateien (`de` / `en` / `es` / `fr` / `tr` / `pt` / `zh` / `ja` / `ar`)
 4. Sidebar-Reihenfolge: `dashboard`, `network`, `networks`, `monitoring`, `history`
 5. `settings` nur im Header (und Burger), nicht doppelt in der Desktop-Sidebar
 6. **Nicht** anlegen: `overview`, `runtime`, `stats`, `chat` — Hilfe ist ein FAB (`frontend_module_chat.md`)

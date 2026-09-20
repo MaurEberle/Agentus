@@ -1,0 +1,1258 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "本文へスキップ"
+  },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "OpenAI互換"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "network": "ネットワーク",
+    "networks": "ライブラリ",
+    "monitoring": "監視",
+    "history": "履歴",
+    "settings": "設定",
+    "openMenu": "ナビゲーションを開く",
+    "closeMenu": "ナビゲーションを閉じる",
+    "collapse": "サイドバーを折りたたむ",
+    "expand": "サイドバーを展開",
+    "main": "メインナビゲーション"
+  },
+  "shell": {
+    "start": "開始",
+    "stop": "停止",
+    "quickSelect": "クイック選択",
+    "quickSelectPlaceholder": "ネットワークを選択",
+    "noNetwork": "ネットワークなし",
+    "settings": "設定",
+    "theme": "外観",
+    "themeLight": "ライト",
+    "themeDark": "ダーク",
+    "themeSystem": "システム",
+    "language": "言語",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "languageFr": "Français",
+    "languageTr": "Türkçe",
+    "languagePt": "Português",
+    "languageZh": "中文",
+    "languageJa": "日本語",
+    "languageAr": "العربية",
+    "window": {
+      "minimize": "最小化",
+      "maximize": "最大化",
+      "restore": "元に戻す",
+      "close": "閉じる"
+    }
+  },
+  "status": {
+    "stopped": "停止中",
+    "starting": "開始中",
+    "running": "実行中",
+    "stopping": "停止処理中",
+    "disconnected": "切断",
+    "error": "エラー"
+  },
+  "notifications": {
+    "title": "通知",
+    "empty": "通知はありません",
+    "markRead": "既読にする",
+    "markAllRead": "すべて既読にする",
+    "clear": "クリア",
+    "open": "通知を開く",
+    "unreadCount": "未読 {{count}} 件"
+  },
+  "folderPicker": {
+    "title": "フォルダーを選択",
+    "description": "このコンピューター上のフォルダーを選びます。完全なパスが入力されます。",
+    "select": "選択",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "up": "親フォルダー",
+    "empty": "サブフォルダーはありません",
+    "error": "このフォルダーを読み取れませんでした。",
+    "unavailable": "このセッションではファイルシステムを利用できません。",
+    "loading": "フォルダーを読み込み中…",
+    "path": "パス",
+    "places": {
+      "home": "ユーザーフォルダー",
+      "desktop": "デスクトップ",
+      "documents": "ドキュメント",
+      "downloads": "ダウンロード"
+    }
+  },
+  "notify": {
+    "welcome": {
+      "title": "Agentus Network へようこそ",
+      "desc": "ネットワークを選び、ヘッダーから実行を開始してください。"
+    },
+    "runStarting": {
+      "title": "実行を開始しています",
+      "desc": "アクティブなネットワークが開始します。"
+    },
+    "runRunning": {
+      "title": "ネットワーク実行中",
+      "desc": "{{name}} がアクティブです。"
+    },
+    "runStopping": {
+      "title": "実行を停止しています",
+      "desc": "ネットワークを停止しています。"
+    },
+    "runStopped": {
+      "title": "実行が停止しました",
+      "desc": "ネットワークは停止しました。"
+    },
+    "runConflict": {
+      "title": "開始できません",
+      "desc": "すでにネットワークが実行中です。"
+    },
+    "runError": {
+      "title": "実行に失敗しました",
+      "desc": "開始または停止に失敗しました。"
+    },
+    "noNetwork": {
+      "title": "ネットワークが未選択です",
+      "desc": "先にクイック選択でネットワークを選んでください。"
+    },
+    "networkSelected": {
+      "title": "アクティブなネットワーク",
+      "desc": "{{name}} が選択されました。"
+    },
+    "networkCleared": {
+      "title": "アクティブなネットワークはありません",
+      "desc": "クイック選択をクリアしました。"
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "このモジュールは次のステップで実装されます。"
+  },
+  "notFound": {
+    "title": "ページが見つかりません",
+    "body": "このパスは存在しません。",
+    "back": "ダッシュボードへ戻る"
+  },
+  "settings": {
+    "title": "設定",
+    "unsaved": {
+      "title": "未保存の変更",
+      "body": "一部の項目がまだ保存されていません。破棄して続行しますか？",
+      "stay": "残る",
+      "leave": "破棄"
+    },
+    "common": {
+      "save": "保存",
+      "cancel": "キャンセル",
+      "delete": "削除",
+      "edit": "編集",
+      "close": "閉じる",
+      "actions": "操作"
+    },
+    "nav": {
+      "appearance": "外観",
+      "credentials": "資格情報",
+      "runtime": "ランタイム",
+      "help-chat": "ヘルプチャット",
+      "mcp": "MCPサーバー",
+      "data": "データ",
+      "about": "情報"
+    },
+    "appearance": {
+      "lead": "色と言語はヘッダーを含め、アプリ全体に適用されます。",
+      "fab": "ヘルプボタン",
+      "fabHint": "右下にヘルプウィジェットを表示します。設定はヘルプチャットにあります。"
+    },
+    "credentials": {
+      "lead": "クラウドモデル、ウェブ検索、MCP用の名前付き資格情報。保存後はマスクのみ表示されます。",
+      "create": "資格情報を追加",
+      "createTitle": "資格情報を追加",
+      "editTitle": "資格情報を置き換え",
+      "empty": "資格情報はまだありません。",
+      "name": "名前",
+      "kind": "種類",
+      "mask": "マスク",
+      "secret": "シークレット",
+      "secretHint": "シークレットは一度だけ送信されます。その後リストにはマスクだけが表示されます。",
+      "secretUnchanged": "現在のシークレットを維持するには空のままにします",
+      "deleteTitle": "資格情報を削除しますか？",
+      "deleteBody": "「{{name}}」を削除します。シークレットは利用できなくなります。",
+      "inUseTitle": "資格情報は使用中です",
+      "inUseBody": "「{{name}}」はヘルプ設定、ネットワーク、またはMCPサーバーにまだ割り当てられており、削除できません。",
+      "kindName": {
+        "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
+        "openai_compat": "OpenAI互換",
+        "web_search": "ウェブ検索",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "トークン"
+      }
+    },
+    "runtime": {
+      "lead": "ローカルの Ollama URL。確認とモデル一覧はアプリAPI経由で、ブラウザーから直接ではありません。",
+      "ollamaUrl": "Ollama ベースURL",
+      "openaiCompatUrl": "OpenAI互換ベースURL",
+      "ping": "接続を確認",
+      "pingOk": "ランタイムに到達できます",
+      "pingFail": "ランタイムに到達できません",
+      "modelNotFound": "モデルが見つからないか読み込めません: {{name}}",
+      "timeout": "モデルからの進捗がありません（{{name}}）。総時間ではなく無応答で中止しました。",
+      "unreachable": "Ollama に到達できません（{{name}}）。",
+      "models": "インストール済みモデル",
+      "modelsEmpty": "モデルがないか、ランタイムに到達できません。",
+      "modelName": "モデル",
+      "modelSize": "サイズ",
+      "status": {
+        "unknown": "不明",
+        "ok": "OK",
+        "error": "エラー"
+      }
+    },
+    "helpChat": {
+      "lead": "ヘルプウィジェットの唯一の設定です。プロバイダーまたはモデルがないと未完了です。",
+      "configured": "設定済み",
+      "incomplete": "未完了",
+      "provider": "チャットプロバイダー",
+      "providerEmpty": "未設定",
+      "openaiCompat": "OpenAI互換",
+      "model": "チャットモデル",
+      "credential": "資格情報",
+      "credentialEmpty": "資格情報なし",
+      "credentialHint": "先に有効なAPIキーを選んでください。その後モデルが読み込まれます。",
+      "noCredentials": "このプロバイダーの資格情報がありません — 資格情報に該当する項目を追加してください。",
+      "pickCredentialFirst": "先に有効なAPIキーを選んでください",
+      "modelsLoadError": "モデルを読み込めませんでした。APIキーを確認してください。",
+      "embedProvider": "埋め込みプロバイダー",
+      "embedModel": "埋め込みモデル",
+      "reindexHint": "埋め込みを変更したらインデックスを再構築してください。",
+      "webSearch": "ウェブ検索",
+      "webSearchHint": "任意。検索用資格情報がなくてもチャットは設定できます。検索は無効のままです。",
+      "webSearchCredential": "検索用資格情報",
+      "webSearchMissing": "資格情報がありません — 資格情報にウェブ検索の項目を追加してください。",
+      "fallback": "節約モデル（任意）",
+      "ping": "接続を確認",
+      "pingOk": "ヘルプチャットに到達できます",
+      "pingFail": "ヘルプチャットに到達できません",
+      "clear": "履歴を消去",
+      "clearTitle": "ヘルプ履歴を消去しますか？",
+      "clearBody": "ヘルプチャットのすべてのメッセージが削除されます。設定は残ります。",
+      "reindex": "インデックスを再構築",
+      "resetOnboarding": "オンボーディングを再表示"
+    },
+    "mcp": {
+      "lead": "レシピと独自サーバー。既定は無効です。ヘルプはこれらのサーバーを使いません。",
+      "recipes": "レシピ",
+      "servers": "設定済みサーバー",
+      "empty": "MCPサーバーはまだありません。",
+      "enable": "有効化",
+      "added": "追加済み",
+      "custom": "カスタム",
+      "customCreate": "独自サーバー",
+      "transport": "トランスポート",
+      "enabled": "有効",
+      "status": "状態",
+      "probe": "プローブ",
+      "presetHint": "レシピに従う資格情報と任意のルートパス。保存するとサーバーがすぐに作成されます。",
+      "officeHint": "Office は PDF と Office 形式をまとめます。個別プリセットは必要なときだけ並行して有効にしてください。",
+      "rootPath": "ルートパス",
+      "untrusted": "指定した権限で未知のプロセスが起動します。信頼できるコマンドだけを使ってください。",
+      "command": "コマンド",
+      "args": "引数",
+      "url": "URL",
+      "deleteTitle": "サーバーを削除しますか？",
+      "deleteBody": "この独自サーバーの設定が削除されます。",
+      "pingOk": "MCPサーバーが応答しました",
+      "pingError": "MCPプローブに失敗しました",
+      "runtimeMissing": "ランタイムがありません（Node、npx、Docker、uvx）。",
+      "statusName": {
+        "unknown": "不明",
+        "ok": "OK",
+        "error": "エラー",
+        "runtime_missing": "ランタイムなし"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "ファイルシステム",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "データフォルダーとストアの状態。SQLブラウザーもシークレットもありません。",
+      "dir": "データフォルダー",
+      "pick": "フォルダーを選択",
+      "busy": "ネットワークの開始・実行・停止中はフォルダーを変更できません。",
+      "invalidRoot": "ドライブまたはシステムのルートは許可されません。",
+      "stores": "ストア",
+      "storeName": "ストア",
+      "fileName": "ファイル",
+      "retentionLabel": "履歴の保持",
+      "copy": "内容を新しいフォルダーへコピー",
+      "confirmTitle": "データフォルダーを変更",
+      "confirmBody": "古いフォルダーは残ります。空の宛先を作るか、既存のストアファイルを使います。",
+      "source": {
+        "env": "フォルダーは環境変数から来ており、読み取り専用です。",
+        "portable": "ポータブルモード: データフォルダーは固定で読み取り専用です。"
+      },
+      "store": {
+        "settings": "設定",
+        "help": "ヘルプ",
+        "workspace": "ワークスペース",
+        "history": "履歴"
+      },
+      "storeState": {
+        "ok": "OK",
+        "missing": "不足",
+        "error": "エラー"
+      },
+      "retention": {
+        "30": "30日",
+        "90": "90日",
+        "365": "365日",
+        "unlimited": "無制限"
+      }
+    },
+    "about": {
+      "lead": "バージョンと短い状態。シークレットは含みません。",
+      "uiVersion": "UIバージョン",
+      "apiVersion": "APIバージョン",
+      "runtime": "Ollama",
+      "dataFolder": "データフォルダー",
+      "storesOk": "ストアに到達できます"
+    },
+    "notify": {
+      "saved": "設定を保存しました",
+      "saveError": "保存に失敗しました",
+      "credentialCreated": "資格情報を作成しました",
+      "credentialUpdated": "資格情報を更新しました",
+      "credentialDeleted": "資格情報を削除しました",
+      "credentialInUse": "資格情報はまだ使用中です",
+      "helpCleared": "ヘルプ履歴を消去しました",
+      "reindexed": "ヘルプインデックスを再構築しました",
+      "onboardingReset": "次回ヘルプを開くとオンボーディングを表示します",
+      "mcpSaved": "MCPサーバーを保存しました",
+      "mcpDeleted": "MCPサーバーを削除しました",
+      "dataDirOk": "データフォルダーを更新しました"
+    }
+  },
+  "helpChat": {
+    "title": "ヘルプ",
+    "fab": {
+      "open": "ヘルプを開く",
+      "close": "ヘルプを閉じる"
+    },
+    "onboarding": {
+      "title": "アプリ内ヘルプ",
+      "body": "このチャットはアプリとグラフの設定を説明します。実行中のエージェント網とは話しません。設定は設定画面にあります。",
+      "configure": "今すぐ設定",
+      "later": "後で"
+    },
+    "status": {
+      "unconfigured": "無効",
+      "ready": "準備完了",
+      "degraded": "節約モード",
+      "generating": "応答中",
+      "error": "エラー"
+    },
+    "action": {
+      "send": "送信",
+      "stop": "停止",
+      "settings": "ヘルプの設定",
+      "close": "ヘルプを閉じる"
+    },
+    "input": {
+      "placeholder": "アプリやグラフについて質問…"
+    },
+    "empty": "まだメッセージはありません。使い方について質問してください。",
+    "unconfigured": {
+      "body": "ヘルプはまだ設定されていません。設定でプロバイダーとモデルを指定してください。",
+      "cta": "設定へ"
+    },
+    "sources": {
+      "rag": "文書",
+      "web": "ウェブ"
+    },
+    "error": {
+      "generic": "ヘルプの応答に失敗しました。"
+    },
+    "resize": {
+      "width": "幅を変更",
+      "height": "高さを変更"
+    },
+    "mock": {
+      "reply": "これはヘルプの**サンプル応答**です。実行中の網ではなくアプリを説明します。`設定`でプロバイダーとモデルを構成します。",
+      "ragTitle": "クイックスタート",
+      "ragSection": "ヘルプチャット",
+      "webTitle": "Ollama ドキュメント"
+    }
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "status": {
+      "title": "状態",
+      "noNetwork": "アクティブなネットワークなし",
+      "openLibrary": "ライブラリを開く",
+      "runningSince": "{{time}} から実行中",
+      "openMonitoring": "監視"
+    },
+    "helpHint": {
+      "title": "アプリ内ヘルプ",
+      "body": "ヘルプはアプリとグラフの設定を説明します。エージェント網とは話しません。ボタンは右下にあります。",
+      "open": "ヘルプを開く",
+      "dismiss": "了解"
+    },
+    "setup": {
+      "title": "セットアップ",
+      "ollama": "Ollama に到達できません",
+      "help": "ヘルプ設定が未完了です",
+      "networks": "まだネットワークがありません",
+      "runtimeLink": "ランタイムを確認",
+      "helpLink": "ヘルプを設定",
+      "createNetwork": "新しいネットワーク",
+      "importNetwork": "ネットワークをインポート"
+    },
+    "active": {
+      "title": "アクティブなネットワーク",
+      "empty": "アクティブなネットワークが選ばれていません。",
+      "edit": "編集",
+      "library": "ライブラリ",
+      "create": "新しいネットワーク",
+      "stats": "{{nodes}} ノード · {{edges}} エッジ",
+      "updated": "{{time}} に更新"
+    },
+    "validationStatus": {
+      "valid": "有効",
+      "invalid": "無効",
+      "unknown": "不明"
+    },
+    "validation": {
+      "missingModel": "少なくとも1つのLLMノードにモデルが必要です。"
+    },
+    "recent": {
+      "title": "最近使用",
+      "empty": "まだネットワークはありません。",
+      "create": "新しいネットワーク"
+    },
+    "runs": {
+      "title": "最近の実行",
+      "empty": "まだ実行はありません。",
+      "storeError": "履歴ストアを利用できません。",
+      "openData": "データを確認"
+    },
+    "outcome": {
+      "running": "実行中",
+      "succeeded": "成功",
+      "failed": "失敗",
+      "cancelled": "キャンセル",
+      "timeout": "タイムアウト"
+    },
+    "week": {
+      "title": "直近7日",
+      "runs": "実行",
+      "succeeded": "成功",
+      "failed": "失敗",
+      "openHistory": "履歴"
+    },
+    "environment": {
+      "title": "環境",
+      "ollamaOk": "Ollama に到達できます",
+      "ollamaFail": "Ollama に到達できません",
+      "models_one": "{{count}} モデル",
+      "models_other": "{{count}} モデル",
+      "storeIssue": "{{store}} の状態が正常ではありません。",
+      "openData": "データ",
+      "degraded": "節約モード"
+    },
+    "quick": {
+      "title": "クイックリンク",
+      "create": "新しいネットワーク",
+      "import": "インポート",
+      "runtime": "ランタイム"
+    },
+    "duration": {
+      "seconds": "{{count}} 秒",
+      "minutes": "{{minutes}} 分 {{seconds}} 秒",
+      "hours": "{{hours}} 時間 {{minutes}} 分"
+    },
+    "error": {
+      "load": "ダッシュボードデータを読み込めませんでした。",
+      "networks": "ネットワークを読み込めませんでした。",
+      "runs": "実行を読み込めませんでした。",
+      "networkMissing": "ネットワークが見つかりません"
+    }
+  },
+  "network": {
+    "untitled": "無題のネットワーク",
+    "copySuffix": "（コピー）",
+    "badge": {
+      "valid": "有効",
+      "invalid": "無効",
+      "active": "アクティブ",
+      "running": "実行中"
+    },
+    "ribbon": {
+      "new": "新規",
+      "save": "保存",
+      "saveAs": "名前を付けて保存",
+      "load": "開く",
+      "duplicate": "複製",
+      "export": "エクスポート",
+      "validate": "検証",
+      "undo": "元に戻す",
+      "redo": "やり直す",
+      "library": "ライブラリ",
+      "view": "表示"
+    },
+    "view": {
+      "fit": "合わせる",
+      "snap": "スナップ",
+      "grid": "グリッド",
+      "minimap": "ミニマップ"
+    },
+    "palette": {
+      "title": "パレット",
+      "collapse": "要素選択を折りたたむ",
+      "expand": "要素選択を展開",
+      "search": "ノードを検索",
+      "chat_input": "チャット入力",
+      "chat_inputHint": "最大1つ。開始テキストと実行の必須入力。",
+      "llm": "LLM",
+      "llmHint": "モデルとプロバイダー。エージェントの llm ポートへエッジ。",
+      "agent": "エージェント",
+      "agentHint": "システムプロンプト。LLM、メッセージ、ツール、知識はエッジで接続。",
+      "tool": "ツール",
+      "toolHint": "カタログの種類。任意でMCP。",
+      "knowledge": "知識",
+      "knowledgeHint": "ソースフォルダー。エージェントの knowledge ポートのみ。",
+      "router": "ルーター",
+      "routerHint": "条件に応じてメッセージを分岐します。",
+      "end": "終了",
+      "endHint": "少なくとも1つ。実行を終えます。"
+    },
+    "ports": {
+      "message": "メッセージ",
+      "llm": "LLM",
+      "tool": "ツール",
+      "knowledge": "知識",
+      "handoff": "引き継ぎ",
+      "default": "既定",
+      "in": "入力",
+      "out": "出力"
+    },
+    "inspector": {
+      "title": "インスペクター",
+      "collapse": "インスペクターを折りたたむ",
+      "expand": "インスペクターを展開",
+      "displayName": "表示名",
+      "multi": "{{count}} 個のノードを選択",
+      "graph": {
+        "title": "ネットワーク",
+        "name": "名前",
+        "description": "説明",
+        "tags": "タグ",
+        "stats": "{{nodes}} ノード · {{edges}} エッジ",
+        "noIssues": "検証エラーはありません。"
+      },
+      "llm": {
+        "provider": "プロバイダー",
+        "openaiCompat": "OpenAI互換",
+        "model": "モデル",
+        "credential": "資格情報",
+        "credentialEmpty": "資格情報なし",
+        "credentialHint": "先に有効なAPIキーを選んでください。その後モデルが読み込まれます。",
+        "noCredentials": "このプロバイダーの資格情報はまだありません。",
+        "pickCredentialFirst": "先に有効なAPIキーを選んでください",
+        "modelsLoadError": "モデルを読み込めませんでした。APIキーを確認してください。",
+        "baseUrl": "ベースURL",
+        "ping": "接続をテスト",
+        "pingOk": "モデルが応答しました",
+        "pingFail": "テストに失敗しました",
+        "advanced": "詳細",
+        "noModels": "モデルが読み込まれていません。",
+        "useModel": "「{{name}}」を使用",
+        "temperature": "温度",
+        "maxTokens": "最大トークン"
+      },
+      "agent": {
+        "hint": "LLM、ツール、知識はフィールドではなくエッジから来ます。",
+        "systemPrompt": "システムプロンプト"
+      },
+      "tool": {
+        "kind": "種類",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "ウェブ検索",
+          "datetime": "日付/時刻",
+          "calculator": "電卓",
+          "file_access": "ファイルアクセス",
+          "mcp": "MCP"
+        },
+        "method": "メソッド",
+        "url": "URL",
+        "rootPath": "ルートフォルダー",
+        "pickRoot": "フォルダー",
+        "allowWrite": "書き込みを許可",
+        "allowDelete": "削除を許可",
+        "fileAccessHint": "エージェントはこのフォルダー配下でのみ読み書きと削除ができます。",
+        "credential": "資格情報",
+        "mcpServer": "MCPサーバー",
+        "mcpEmpty": "サーバーなし",
+        "mcpHint": "既定: サーバーの全ツール。サーバーは設定で作成します。",
+        "mcpSettings": "MCP設定"
+      },
+      "knowledge": {
+        "path": "ソースフォルダー",
+        "pick": "フォルダー",
+        "embedProvider": "埋め込みプロバイダー",
+        "embedModel": "埋め込みモデル",
+        "topK": "topK",
+        "score": "スコアしきい値",
+        "reindex": "インデックス再構築",
+        "reindexOk": "インデックスを再構築しました",
+        "reindexFail": "インデックスに失敗しました",
+        "reindexHint": "埋め込みを変更したらインデックスを再構築してください。"
+      },
+      "router": {
+        "branches": "分岐",
+        "branchName": "名前",
+        "condition": "条件",
+        "add": "分岐を追加"
+      },
+      "chat": {
+        "placeholder": "プレースホルダー",
+        "startMessage": "開始テキスト",
+        "requireInput": "入力必須"
+      }
+    },
+    "load": {
+      "title": "ネットワークを開く",
+      "body": "保存済みのネットワークを1つ選びます。一括、削除、インポートはライブラリにあります。",
+      "search": "検索",
+      "sortUpdated": "更新",
+      "sortName": "名前",
+      "sortUsed": "最終使用",
+      "open": "開く",
+      "preview": "{{nodes}} ノード · {{edges}} エッジ"
+    },
+    "empty": {
+      "body": "パレットからノードをキャンバスへドラッグするか、保存済みネットワークを開いてください。",
+      "insert": "パレット"
+    },
+    "context": {
+      "insert": "挿入",
+      "fit": "合わせる",
+      "duplicate": "複製",
+      "delete": "削除"
+    },
+    "dialog": {
+      "close": "閉じる",
+      "cancel": "キャンセル",
+      "nameTitle": "ネットワークに名前を付ける"
+    },
+    "dirty": {
+      "title": "未保存の変更",
+      "body": "開いているネットワークが変更されています。保存、破棄、キャンセル？",
+      "save": "保存",
+      "discard": "破棄",
+      "cancel": "キャンセル"
+    },
+    "readonly": {
+      "title": "読み取り専用",
+      "body": "このネットワークは実行中です。編集する前にヘッダーで停止してください。"
+    },
+    "validation": {
+      "nameRequired": "名前を空にできません。",
+      "tooManyChatInputs": "チャット入力は最大1つです。",
+      "endRequired": "終了ノードが少なくとも1つ必要です。",
+      "danglingEdge": "エッジが存在しないノードを指しています。",
+      "edgeType": "この接続は型が互換ではありません。",
+      "agentLlm": "各エージェントにはちょうど1本のLLMエッジが必要です。",
+      "agentMessage": "各エージェントには入力メッセージが必要です。",
+      "modelRequired": "モデルは必須です。",
+      "credentialRequired": "クラウドプロバイダーには資格情報が必要です。",
+      "toolKind": "ツールの種類がありません。",
+      "mcpServer": "有効なMCPサーバーを選んでください。",
+      "mcpRoot": "このMCPサーバーには設定でルートパスが必要です。",
+      "fileAccessRoot": "ファイルアクセスにはドライブルートではないフォルダーが必要です。",
+      "knowledgePath": "ソースフォルダーは必須です。",
+      "knowledgeRoot": "ドライブまたはシステムのルートは許可されません。",
+      "knowledgeSandbox": "パスはデータフォルダー配下である必要があります。",
+      "knowledgeHelpCorpus": "ヘルプコーパスはネットワーク知識ではありません。",
+      "knowledgeTarget": "知識はエージェントの knowledge ポートにだけ接続してください。",
+      "cycle": "循環は許可されません。",
+      "knowledge": {
+        "missing": "インデックスがありません。",
+        "stale": "インデックスが古くなっています。",
+        "error": "インデックスエラー。"
+      }
+    },
+    "notify": {
+      "saved": "ネットワークを保存しました",
+      "saveError": "保存に失敗しました",
+      "duplicated": "コピーを開きました",
+      "valid": "ネットワークは有効です",
+      "invalid": "ネットワークに検証エラーがあります"
+    },
+    "error": {
+      "missing": "ネットワークが見つかりません"
+    },
+    "catalog": {
+      "firstParty": "ファーストパーティ"
+    }
+  },
+  "networks": {
+    "title": "ライブラリ",
+    "copySuffix": "（コピー）",
+    "ribbon": {
+      "new": "新規",
+      "open": "開く",
+      "duplicate": "複製",
+      "rename": "名前を変更",
+      "tags": "タグを追加",
+      "activate": "アクティブにする",
+      "delete": "削除",
+      "import": "インポート",
+      "export": "エクスポート",
+      "refresh": "更新",
+      "more": "その他の操作",
+      "needOne": "ネットワークをちょうど1つ選んでください。",
+      "needSome": "ネットワークを少なくとも1つ選んでください。",
+      "needValid": "有効なネットワークだけがアクティブになれます。",
+      "alreadyActive": "このネットワークはすでにアクティブです。",
+      "runningBlocked": "実行中のネットワークは削除できません。"
+    },
+    "filter": {
+      "search": "名前、説明、タグを検索",
+      "sort": {
+        "name": "名前",
+        "updatedAt": "更新",
+        "lastUsedAt": "最終使用"
+      },
+      "direction": "並べ替え方向",
+      "tags": "タグ",
+      "tagsHint": "複数タグ: OR",
+      "noTags": "タグなし",
+      "onlyValid": "有効のみ",
+      "onlyActive": "アクティブのみ"
+    },
+    "list": {
+      "selectAll": "表示中をすべて選択",
+      "name": "名前",
+      "description": "説明",
+      "status": "状態",
+      "graph": "グラフ",
+      "updated": "更新",
+      "lastUsed": "最終使用",
+      "counts": "{{nodes}} ノード · {{edges}} エッジ"
+    },
+    "badge": {
+      "valid": "有効",
+      "invalid": "無効",
+      "unknown": "不明",
+      "active": "アクティブ",
+      "running": "実行中",
+      "credentialMissing": "資格情報がありません"
+    },
+    "detail": {
+      "title": "詳細",
+      "none": "ネットワークが選択されていません。",
+      "multi": "{{count}} 件選択",
+      "noDescription": "説明はありません。",
+      "lastRun": "前回の実行"
+    },
+    "empty": {
+      "library": "保存済みネットワークはまだありません。",
+      "filter": "このフィルターに一致するものはありません。",
+      "clearFilters": "フィルターを解除"
+    },
+    "error": {
+      "title": "一覧を読み込めませんでした",
+      "body": "ライブラリを読み込めませんでした。",
+      "missing": "ネットワークが見つかりません",
+      "running": "実行中のネットワークは削除できません。"
+    },
+    "dialog": {
+      "close": "閉じる",
+      "cancel": "キャンセル",
+      "save": "保存"
+    },
+    "rename": {
+      "title": "名前を変更",
+      "body": "名前と説明のみ。グラフは変わりません。",
+      "name": "名前",
+      "description": "説明"
+    },
+    "tags": {
+      "title": "タグを追加",
+      "body": "タグは {{count}} 個のネットワークに追加されます。既存のタグは残ります。",
+      "label": "タグ",
+      "placeholder": "ops, prod",
+      "add": "追加"
+    },
+    "delete": {
+      "title": "ネットワークを削除",
+      "body": "このネットワークのワークスペースインデックスも削除されます。ディスク上のソースファイルは残ります。ヘルプストアと履歴の実行は影響を受けません。",
+      "none": "削除できるネットワークはありません。",
+      "runningSkipped": "実行中のため削除しません: {{names}}",
+      "activeWarning": "アクティブなネットワークが少なくとも1つ含まれます。クイック選択はクリアされます。"
+    },
+    "import": {
+      "unreadable": "一部のファイルを読み取れませんでした。",
+      "unreadableNames": "{{names}}",
+      "schema": "schemaVersion はサポートされていません。",
+      "secrets": "インポートファイル内のシークレットは破棄されました。",
+      "collisionTitle": "名前は既に使われています",
+      "collisionBody": "名前を変更するかファイルをスキップしてください。キャンセルはこのファイルにのみ適用されます。",
+      "skip": "このファイルをスキップ",
+      "include": "それでもインポート",
+      "continue": "インポート"
+    },
+    "notify": {
+      "error": "操作に失敗しました",
+      "duplicated": "コピーをライブラリに追加しました",
+      "renamed": "メタデータを保存しました",
+      "tagged": "タグを追加しました",
+      "deleted": "ネットワークを削除しました",
+      "imported": "{{count}} 個のネットワークをインポートしました",
+      "exported": "エクスポートを開始しました"
+    }
+  },
+  "monitoring": {
+    "title": "監視",
+    "close": "閉じる",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "empty": {
+      "stoppedTitle": "実行なし",
+      "stoppedBody": "ヘッダーからサービスを開始してください。",
+      "stoppedActive": "アクティブなネットワーク: {{name}}",
+      "stoppedNoNetwork": "クイック選択にネットワークがありません。",
+      "lastRunBody": "アクティブな実行はありません。最後に保存した実行を表示しています。",
+      "disconnectedTitle": "サービスから切断されました",
+      "disconnectedBody": "再接続しています。直近の値は薄く表示されます。",
+      "startingTitle": "サービスを開始しています",
+      "stoppingTitle": "サービスを停止しています",
+      "errorTitle": "サービスエラー",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "lastRun": "前回の実行",
+      "runId": "実行ID",
+      "started": "開始",
+      "duration": "所要時間",
+      "step": "ステップ",
+      "runningCount": "{{count}} 件実行中",
+      "noLlm": "アクティブなLLMなし",
+      "activeLlms": "アクティブなLLM",
+      "otherNodes": "その他のノード",
+      "local": "ローカル",
+      "cloud": "クラウド"
+    },
+    "resources": {
+      "title": "ホストリソース",
+      "hostHint": "アプリプロセスだけでなく、このマシンのシステム値です。",
+      "cpu": "CPU",
+      "cpuCores": "コア",
+      "ram": "メモリ",
+      "gpu": "GPU",
+      "vram": "VRAM",
+      "noGpu": "GPUなし",
+      "noGpuHint": "ローカルのアクセラレーターは検出されませんでした。クラウド実行では想定どおりです。",
+      "usedOf": "{{used}} / {{total}}"
+    },
+    "graph": {
+      "title": "ネットワーク（読み取り専用）",
+      "fit": "合わせる",
+      "filterChip": "ノード {{name}}",
+      "clearFilter": "フィルターを解除",
+      "detailTitle": "ノード詳細",
+      "role": "役割",
+      "status": "状態",
+      "wait": "待機中",
+      "lastMessage": "最後のメッセージ",
+      "error": "エラー",
+      "model": "モデル",
+      "provider": "プロバイダー",
+      "tokens": "トークン"
+    },
+    "nodeType": {
+      "chat_input": "入力",
+      "llm": "LLM",
+      "agent": "エージェント",
+      "tool": "ツール",
+      "knowledge": "知識",
+      "router": "ルーター",
+      "end": "終了"
+    },
+    "nodeStatus": {
+      "idle": "アイドル",
+      "waiting": "待機中",
+      "running": "実行中",
+      "done": "完了",
+      "error": "エラー"
+    },
+    "wait": {
+      "none": "待機なし",
+      "llm": "LLM",
+      "tool": "ツール",
+      "human": "入力"
+    },
+    "activity": {
+      "title": "アクティビティ",
+      "current": "現在のノード",
+      "none": "アクティブなノードはありません",
+      "dag": "ステップ {{completed}} / {{total}}",
+      "pending": "保留",
+      "stepError": "ステップエラー",
+      "tokensIn": "入力",
+      "tokensOut": "出力",
+      "perSecond": "{{value}} トークン/秒",
+      "rate": "トークン/秒",
+      "runTotal": "実行合計",
+      "context": "コンテキスト {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "チャット",
+      "log": "ログ"
+    },
+    "chat": {
+      "placeholder": "メッセージ…",
+      "send": "送信",
+      "stop": "生成を停止",
+      "waitInput": "最初のメッセージを書いてください。グラフは入力待ちです。",
+      "empty": "この実行にはまだメッセージがありません。",
+      "disabled": "チャットは実行中のみ利用できます。"
+    },
+    "log": {
+      "pause": "一時停止",
+      "resume": "再開",
+      "jumpLatest": "最新へ",
+      "newCount": "新規 {{count}} 件",
+      "search": "ログを検索",
+      "level": "レベル",
+      "levelFrom": "{{level}} 以上",
+      "node": "ノード",
+      "allNodes": "すべてのノード",
+      "errorsOnly": "エラーのみ",
+      "export": "エクスポート",
+      "empty": "このフィルターのログ行はありません。",
+      "detailTitle": "ログ詳細",
+      "payload": "ペイロード",
+      "stack": "スタック",
+      "message": "メッセージ",
+      "copyLine": "行をコピー",
+      "copyPayload": "ペイロードをコピー"
+    },
+    "level": {
+      "debug": "デバッグ",
+      "info": "情報",
+      "warn": "警告",
+      "error": "エラー"
+    },
+    "notify": {
+      "runStarted": "実行を開始しました",
+      "runStopped": "実行が停止しました",
+      "stepFailed": "ステップに失敗しました",
+      "disconnected": "サービスに到達できません"
+    },
+    "dev": {
+      "label": "モックシナリオ",
+      "stopped": "停止中",
+      "disconnected": "切断",
+      "starting": "開始中",
+      "stopping": "停止処理中",
+      "running": "実行中（チャット）",
+      "nochat": "実行中（チャットなし）",
+      "cloud": "クラウド / GPUなし",
+      "error": "エラー",
+      "wait": "入力待ち"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "OpenAI互換"
+    },
+    "mock": {
+      "userLine": "直近の実行を短く要約してください。",
+      "chatReply": "実行はアクティブです。このアシスタントはヘルプではなくネットワークから答えます。",
+      "lastLlm": "トークンを生成しています。",
+      "lastAgent": "LLMを待っています。",
+      "lastTool": "ツール呼び出しが要求されました。",
+      "waitInput": "グラフは最初のメッセージを待っています。",
+      "stepError": "ツール呼び出しに失敗しました。",
+      "serviceError": "サービスがステップを中止しました。",
+      "log": {
+        "start": "実行を受け付けました。",
+        "debug": "プロンプトを準備しました。",
+        "agent": "エージェントが作業中です。",
+        "warn": "ツールの応答が遅いです。",
+        "secret": "Request with apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} が進捗を報告しています。",
+        "user": "ユーザー行を受け付けました。",
+        "assistant": "応答が完了しました。"
+      }
+    }
+  },
+  "history": {
+    "title": "履歴",
+    "close": "閉じる",
+    "copy": "コピー",
+    "ribbon": {
+      "refresh": "更新",
+      "delete": "削除",
+      "export": "ログをエクスポート",
+      "purge": "90日より古いものを削除"
+    },
+    "filter": {
+      "range": "期間",
+      "today": "今日",
+      "days7": "7日",
+      "days30": "30日",
+      "custom": "カスタム",
+      "from": "開始",
+      "to": "終了",
+      "network": "ネットワーク",
+      "allNetworks": "すべてのネットワーク",
+      "model": "モデル",
+      "allModels": "すべてのモデル",
+      "search": "検索",
+      "searchHint": "実行ID、ネットワーク、エラー",
+      "reset": "フィルターをリセット"
+    },
+    "outcome": {
+      "running": "実行中",
+      "succeeded": "成功",
+      "failed": "失敗",
+      "cancelled": "キャンセル",
+      "timeout": "タイムアウト"
+    },
+    "kpi": {
+      "runs": "実行",
+      "runsHint": "完了した実行のみ",
+      "succeeded": "成功",
+      "failed": "失敗",
+      "failedFoot": "キャンセル {{cancelled}} · タイムアウト {{timeout}}",
+      "medianDuration": "中央値の所要時間",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95 は20件から"
+    },
+    "chart": {
+      "title": "日ごとの実行",
+      "empty": "この期間に完了した実行はありません。"
+    },
+    "errors": {
+      "title": "多いエラー",
+      "empty": "このフィルターにエラーはありません。"
+    },
+    "errorClass": {
+      "timeout": "タイムアウト",
+      "tool_error": "ツール",
+      "llm_error": "LLM",
+      "validation": "検証",
+      "service": "サービス",
+      "unknown": "不明"
+    },
+    "tab": {
+      "history": "履歴",
+      "model": "モデル別",
+      "network": "ネットワーク別"
+    },
+    "table": {
+      "model": "モデル",
+      "provider": "プロバイダー",
+      "calls": "呼び出し",
+      "ok": "OK",
+      "callErrors": "エラー",
+      "errorRate": "エラー率",
+      "median": "中央値の所要時間",
+      "tokensIn": "入力トークン",
+      "tokensOut": "出力トークン",
+      "network": "ネットワーク",
+      "runs": "実行",
+      "succeeded": "成功",
+      "failed": "失敗",
+      "cancelled": "キャンセル",
+      "topErrorNode": "最も多いエラーノード"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "OpenAI互換"
+    },
+    "list": {
+      "selectAll": "表示中を選択",
+      "runId": "実行ID",
+      "network": "ネットワーク",
+      "started": "開始",
+      "duration": "所要時間",
+      "outcome": "結果",
+      "error": "エラー",
+      "models": "モデル",
+      "live": "ライブで見る",
+      "page": "{{page}} / {{pages}} ページ",
+      "prev": "前へ",
+      "next": "次へ"
+    },
+    "detail": {
+      "title": "実行",
+      "none": "一覧から実行を選んでください。",
+      "missing": "この実行は存在しません。",
+      "error": "エラー",
+      "exportLog": "ログをエクスポート",
+      "tabLog": "ログ",
+      "tabSteps": "ステップ",
+      "tabChat": "チャット"
+    },
+    "graph": {
+      "fit": "合わせる"
+    },
+    "log": {
+      "level": "レベル",
+      "search": "ログを検索",
+      "node": "ノード",
+      "allNodes": "すべてのノード",
+      "errorsOnly": "エラーのみ",
+      "empty": "このフィルターのログ行はありません。",
+      "detailTitle": "ログ詳細"
+    },
+    "level": {
+      "debug": "デバッグ",
+      "info": "情報",
+      "warn": "警告",
+      "error": "エラー"
+    },
+    "steps": {
+      "node": "ノード",
+      "role": "役割",
+      "status": "状態",
+      "error": "エラー",
+      "empty": "保存されたステップはありません。"
+    },
+    "nodeStatus": {
+      "idle": "アイドル",
+      "waiting": "待機中",
+      "running": "実行中",
+      "done": "完了",
+      "error": "エラー"
+    },
+    "calls": {
+      "ok": "OK",
+      "yes": "はい",
+      "no": "いいえ",
+      "empty": "LLM呼び出しはありません。"
+    },
+    "empty": {
+      "none": "履歴ストアにまだ実行はありません。",
+      "filtered": "このフィルターに一致するものはありません。"
+    },
+    "error": {
+      "store": "履歴ストアを利用できません。",
+      "openData": "設定 · データ",
+      "api": "履歴を読み込めませんでした。",
+      "runningDelete": "実行中の実行は削除できません。"
+    },
+    "delete": {
+      "title": "実行を削除",
+      "body": "選択した {{count}} 件の実行がアーカイブから削除されます。実行中のものは残ります。",
+      "confirm": "削除",
+      "cancel": "キャンセル"
+    },
+    "retention": {
+      "title": "古い実行を削除",
+      "body": "90日より古い {{count}} 件の実行が削除されます。",
+      "confirm": "削除"
+    },
+    "notify": {
+      "deleted": "{{count}} 件の実行を削除しました",
+      "runningDelete": "実行中の実行は削除できません",
+      "runningSkipped": "実行中の項目を少なくとも1件スキップしました",
+      "purged": "古い実行を {{count}} 件削除しました",
+      "exported": "エクスポートを開始しました",
+      "exportError": "エクスポートに失敗しました",
+      "error": "操作に失敗しました"
+    }
+  },
+  "runLog": {
+    "run": {
+      "start": "実行を開始しました（{{networkName}}）",
+      "wait": {
+        "human": "入力待ち"
+      },
+      "chat": {
+        "user": "ユーザーメッセージ"
+      },
+      "batch": {
+        "start": "バッチ実行を開始しました"
+      },
+      "agent": {
+        "start": "エージェントを開始しました",
+        "done": "エージェントが完了しました"
+      },
+      "knowledge": "知識検索（{{count}} 件）",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM完了（{{durationMs}} ms）"
+      },
+      "tool": {
+        "call": "ツール {{name}}"
+      },
+      "router": "ルーター → {{target}}",
+      "end": "終了に到達しました",
+      "succeeded": "実行は成功しました",
+      "failed": "実行は失敗しました",
+      "cancelled": "実行はキャンセルされました",
+      "interrupted": "実行が中断されました（アプリ終了）",
+      "help": {
+        "fallbackMissing": "ヘルプのフォールバックモデルがありません"
+      },
+      "stepLimit": "ステップ上限に達しました"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "ルーターに一致するエッジがありません"
+      }
+    },
+    "runtime": {
+      "timeout": "モデルからの進捗がありません",
+      "unreachable": "ランタイムに到達できません"
+    }
+  }
+}

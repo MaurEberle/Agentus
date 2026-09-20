@@ -39,6 +39,12 @@
     "languageDe": "Deutsch",
     "languageEn": "English",
     "languageEs": "Español",
+    "languageFr": "Français",
+    "languageTr": "Türkçe",
+    "languagePt": "Português",
+    "languageZh": "中文",
+    "languageJa": "日本語",
+    "languageAr": "العربية",
     "window": {
       "minimize": "Minimieren",
       "maximize": "Maximieren",

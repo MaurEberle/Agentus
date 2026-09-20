@@ -48,7 +48,7 @@ export function AppearanceSection() {
             onValueChange={(value) => {
               if (isAppLanguage(value)) void setAppLanguage(value);
             }}
-            className="grid gap-2"
+            className="grid gap-2 sm:grid-cols-2"
           >
             {APP_LANGUAGES.map((code) => (
               <label key={code} className="flex items-center gap-2 text-sm">

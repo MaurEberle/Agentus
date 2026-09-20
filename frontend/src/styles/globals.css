@@ -71,6 +71,29 @@
       system-ui,
       sans-serif;
   }
+
+  html[lang='zh'] body {
+    font-family:
+      'Microsoft YaHei UI',
+      'Microsoft YaHei',
+      'Segoe UI',
+      sans-serif;
+  }
+
+  html[lang='ja'] body {
+    font-family:
+      'Yu Gothic UI',
+      Meiryo,
+      'Segoe UI',
+      sans-serif;
+  }
+
+  html[lang='ar'] body {
+    font-family:
+      'Segoe UI',
+      Tahoma,
+      sans-serif;
+  }
 }
 
 @layer utilities {

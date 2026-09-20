@@ -1,0 +1,1258 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "跳到内容"
+  },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "OpenAI 兼容"
+  },
+  "nav": {
+    "dashboard": "仪表板",
+    "network": "网络",
+    "networks": "资料库",
+    "monitoring": "监控",
+    "history": "历史",
+    "settings": "设置",
+    "openMenu": "打开导航",
+    "closeMenu": "关闭导航",
+    "collapse": "折叠侧边栏",
+    "expand": "展开侧边栏",
+    "main": "主导航"
+  },
+  "shell": {
+    "start": "启动",
+    "stop": "停止",
+    "quickSelect": "快速选择",
+    "quickSelectPlaceholder": "选择网络",
+    "noNetwork": "无网络",
+    "settings": "设置",
+    "theme": "外观",
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "系统",
+    "language": "语言",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "languageFr": "Français",
+    "languageTr": "Türkçe",
+    "languagePt": "Português",
+    "languageZh": "中文",
+    "languageJa": "日本語",
+    "languageAr": "العربية",
+    "window": {
+      "minimize": "最小化",
+      "maximize": "最大化",
+      "restore": "还原",
+      "close": "关闭"
+    }
+  },
+  "status": {
+    "stopped": "已停止",
+    "starting": "正在启动",
+    "running": "运行中",
+    "stopping": "正在停止",
+    "disconnected": "已断开",
+    "error": "错误"
+  },
+  "notifications": {
+    "title": "通知",
+    "empty": "暂无通知",
+    "markRead": "标为已读",
+    "markAllRead": "全部标为已读",
+    "clear": "清空",
+    "open": "打开通知",
+    "unreadCount": "{{count}} 条未读"
+  },
+  "folderPicker": {
+    "title": "选择文件夹",
+    "description": "在此计算机上选择一个文件夹。完整路径会填入字段。",
+    "select": "选择",
+    "cancel": "取消",
+    "close": "关闭",
+    "up": "上级文件夹",
+    "empty": "没有子文件夹",
+    "error": "无法读取此文件夹。",
+    "unavailable": "此会话无法访问文件系统。",
+    "loading": "正在加载文件夹…",
+    "path": "路径",
+    "places": {
+      "home": "用户文件夹",
+      "desktop": "桌面",
+      "documents": "文档",
+      "downloads": "下载"
+    }
+  },
+  "notify": {
+    "welcome": {
+      "title": "欢迎使用 Agentus Network",
+      "desc": "选择一个网络，然后从标题栏启动运行。"
+    },
+    "runStarting": {
+      "title": "正在启动运行",
+      "desc": "活动网络正在启动。"
+    },
+    "runRunning": {
+      "title": "网络运行中",
+      "desc": "{{name}} 处于活动状态。"
+    },
+    "runStopping": {
+      "title": "正在结束运行",
+      "desc": "网络正在停止。"
+    },
+    "runStopped": {
+      "title": "运行已结束",
+      "desc": "网络已停止。"
+    },
+    "runConflict": {
+      "title": "无法启动",
+      "desc": "已有网络在运行。"
+    },
+    "runError": {
+      "title": "运行失败",
+      "desc": "启动或停止失败。"
+    },
+    "noNetwork": {
+      "title": "未选择网络",
+      "desc": "请先在快速选择中选择网络。"
+    },
+    "networkSelected": {
+      "title": "活动网络",
+      "desc": "已选择 {{name}}。"
+    },
+    "networkCleared": {
+      "title": "无活动网络",
+      "desc": "已清空快速选择。"
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "此模块将在下一步实现。"
+  },
+  "notFound": {
+    "title": "找不到页面",
+    "body": "此路径不存在。",
+    "back": "返回仪表板"
+  },
+  "settings": {
+    "title": "设置",
+    "unsaved": {
+      "title": "未保存的更改",
+      "body": "部分字段尚未保存。放弃并继续？",
+      "stay": "留下",
+      "leave": "放弃"
+    },
+    "common": {
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除",
+      "edit": "编辑",
+      "close": "关闭",
+      "actions": "操作"
+    },
+    "nav": {
+      "appearance": "外观",
+      "credentials": "凭据",
+      "runtime": "运行时",
+      "help-chat": "帮助聊天",
+      "mcp": "MCP 服务器",
+      "data": "数据",
+      "about": "关于"
+    },
+    "appearance": {
+      "lead": "颜色和语言应用于整个应用，包括标题栏。",
+      "fab": "帮助按钮",
+      "fabHint": "在右下角显示帮助组件。配置仍在“帮助聊天”中。"
+    },
+    "credentials": {
+      "lead": "用于云模型、网页搜索和 MCP 的命名凭据。保存后仅显示掩码。",
+      "create": "添加凭据",
+      "createTitle": "添加凭据",
+      "editTitle": "替换凭据",
+      "empty": "尚无凭据。",
+      "name": "名称",
+      "kind": "类型",
+      "mask": "掩码",
+      "secret": "密钥",
+      "secretHint": "密钥只发送一次。之后列表仅显示掩码。",
+      "secretUnchanged": "留空以保留当前密钥",
+      "deleteTitle": "删除凭据？",
+      "deleteBody": "将移除“{{name}}”。密钥将不再可用。",
+      "inUseTitle": "凭据正在使用",
+      "inUseBody": "“{{name}}”仍被帮助配置、网络或 MCP 服务器使用，无法删除。",
+      "kindName": {
+        "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
+        "openai_compat": "OpenAI 兼容",
+        "web_search": "网页搜索",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "令牌"
+      }
+    },
+    "runtime": {
+      "lead": "本地 Ollama URL。检测和模型列表通过应用 API，而不是浏览器直连。",
+      "ollamaUrl": "Ollama 基础 URL",
+      "openaiCompatUrl": "OpenAI 兼容基础 URL",
+      "ping": "检查连接",
+      "pingOk": "运行时可达",
+      "pingFail": "运行时不可达",
+      "modelNotFound": "找不到或无法加载模型：{{name}}",
+      "timeout": "模型无进展（{{name}}）。因静默中止，而非总时长限制。",
+      "unreachable": "无法访问 Ollama（{{name}}）。",
+      "models": "已安装的模型",
+      "modelsEmpty": "没有模型，或运行时不可达。",
+      "modelName": "模型",
+      "modelSize": "大小",
+      "status": {
+        "unknown": "未知",
+        "ok": "正常",
+        "error": "错误"
+      }
+    },
+    "helpChat": {
+      "lead": "帮助组件的唯一配置。缺少提供方或模型即为不完整。",
+      "configured": "已配置",
+      "incomplete": "不完整",
+      "provider": "聊天提供方",
+      "providerEmpty": "未设置",
+      "openaiCompat": "OpenAI 兼容",
+      "model": "聊天模型",
+      "credential": "凭据",
+      "credentialEmpty": "不选择凭据",
+      "credentialHint": "请先选择有效的 API 密钥。随后加载模型。",
+      "noCredentials": "此提供方没有凭据 — 请在“凭据”中添加对应条目。",
+      "pickCredentialFirst": "请先选择有效的 API 密钥",
+      "modelsLoadError": "无法加载模型。请检查 API 密钥。",
+      "embedProvider": "嵌入提供方",
+      "embedModel": "嵌入模型",
+      "reindexHint": "更改嵌入后请重建索引。",
+      "webSearch": "网页搜索",
+      "webSearchHint": "可选。没有搜索凭据时仍可配置聊天，搜索保持关闭。",
+      "webSearchCredential": "搜索凭据",
+      "webSearchMissing": "缺少凭据 — 请在“凭据”中添加网页搜索条目。",
+      "fallback": "节省模型（可选）",
+      "ping": "检查连接",
+      "pingOk": "帮助聊天可达",
+      "pingFail": "帮助聊天不可达",
+      "clear": "清除历史",
+      "clearTitle": "清除帮助历史？",
+      "clearBody": "将删除帮助聊天中的所有消息。配置保留。",
+      "reindex": "重建索引",
+      "resetOnboarding": "再次显示引导"
+    },
+    "mcp": {
+      "lead": "配方和自定义服务器。默认：未启用。帮助不使用这些服务器。",
+      "recipes": "配方",
+      "servers": "已配置的服务器",
+      "empty": "尚无 MCP 服务器。",
+      "enable": "启用",
+      "added": "已添加",
+      "custom": "自定义",
+      "customCreate": "自定义服务器",
+      "transport": "传输",
+      "enabled": "已启用",
+      "status": "状态",
+      "probe": "探测",
+      "presetHint": "按配方填写凭据和可选根路径。保存会立即创建服务器。",
+      "officeHint": "Office 捆绑 PDF 和 Office 格式。仅在需要时并行启用单项预设。",
+      "rootPath": "根路径",
+      "untrusted": "将以给定权限启动未知进程。请仅使用可信命令。",
+      "command": "命令",
+      "args": "参数",
+      "url": "URL",
+      "deleteTitle": "删除服务器？",
+      "deleteBody": "将移除此自定义服务器配置。",
+      "pingOk": "MCP 服务器已响应",
+      "pingError": "MCP 探测失败",
+      "runtimeMissing": "缺少运行时（Node、npx、Docker 或 uvx）。",
+      "statusName": {
+        "unknown": "未知",
+        "ok": "正常",
+        "error": "错误",
+        "runtime_missing": "缺少运行时"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "文件系统",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "数据文件夹和存储状态。无 SQL 浏览器，无密钥。",
+      "dir": "数据文件夹",
+      "pick": "选择文件夹",
+      "busy": "网络正在启动、运行或停止时无法更改文件夹。",
+      "invalidRoot": "不允许使用驱动器或系统根目录。",
+      "stores": "存储",
+      "storeName": "存储",
+      "fileName": "文件",
+      "retentionLabel": "历史保留",
+      "copy": "将内容复制到新文件夹",
+      "confirmTitle": "更改数据文件夹",
+      "confirmBody": "旧文件夹会保留。可创建空目标或使用已有存储文件。",
+      "source": {
+        "env": "文件夹来自环境变量，为只读。",
+        "portable": "便携模式：数据文件夹固定且只读。"
+      },
+      "store": {
+        "settings": "设置",
+        "help": "帮助",
+        "workspace": "工作区",
+        "history": "历史"
+      },
+      "storeState": {
+        "ok": "正常",
+        "missing": "缺失",
+        "error": "错误"
+      },
+      "retention": {
+        "30": "30 天",
+        "90": "90 天",
+        "365": "365 天",
+        "unlimited": "不限"
+      }
+    },
+    "about": {
+      "lead": "版本与简要状态，不含密钥。",
+      "uiVersion": "界面版本",
+      "apiVersion": "API 版本",
+      "runtime": "Ollama",
+      "dataFolder": "数据文件夹",
+      "storesOk": "存储可达"
+    },
+    "notify": {
+      "saved": "设置已保存",
+      "saveError": "保存失败",
+      "credentialCreated": "已创建凭据",
+      "credentialUpdated": "已更新凭据",
+      "credentialDeleted": "已删除凭据",
+      "credentialInUse": "凭据仍在使用",
+      "helpCleared": "已清除帮助历史",
+      "reindexed": "已重建帮助索引",
+      "onboardingReset": "下次打开帮助时将再次显示引导",
+      "mcpSaved": "已保存 MCP 服务器",
+      "mcpDeleted": "已删除 MCP 服务器",
+      "dataDirOk": "已更新数据文件夹"
+    }
+  },
+  "helpChat": {
+    "title": "帮助",
+    "fab": {
+      "open": "打开帮助",
+      "close": "关闭帮助"
+    },
+    "onboarding": {
+      "title": "应用内帮助",
+      "body": "此聊天说明应用以及如何设置图。它不会与正在运行的智能体网络对话。配置在设置中。",
+      "configure": "立即配置",
+      "later": "稍后"
+    },
+    "status": {
+      "unconfigured": "已禁用",
+      "ready": "就绪",
+      "degraded": "节省模式",
+      "generating": "正在回复",
+      "error": "错误"
+    },
+    "action": {
+      "send": "发送",
+      "stop": "停止",
+      "settings": "帮助设置",
+      "close": "关闭帮助"
+    },
+    "input": {
+      "placeholder": "询问应用或图…"
+    },
+    "empty": "还没有消息。请询问使用方法。",
+    "unconfigured": {
+      "body": "帮助尚未配置。请在设置中指定提供方和模型。",
+      "cta": "前往设置"
+    },
+    "sources": {
+      "rag": "文档",
+      "web": "网页"
+    },
+    "error": {
+      "generic": "帮助回复失败。"
+    },
+    "resize": {
+      "width": "调整宽度",
+      "height": "调整高度"
+    },
+    "mock": {
+      "reply": "这是帮助的**示例回复**。它说明应用，而不是正在运行的网络。在`设置`中配置提供方和模型。",
+      "ragTitle": "快速入门",
+      "ragSection": "帮助聊天",
+      "webTitle": "Ollama 文档"
+    }
+  },
+  "dashboard": {
+    "title": "仪表板",
+    "status": {
+      "title": "状态",
+      "noNetwork": "无活动网络",
+      "openLibrary": "打开资料库",
+      "runningSince": "已运行 {{time}}",
+      "openMonitoring": "监控"
+    },
+    "helpHint": {
+      "title": "应用内帮助",
+      "body": "帮助说明应用以及如何设置图。它不会与智能体网络对话。按钮在右下角。",
+      "open": "打开帮助",
+      "dismiss": "知道了"
+    },
+    "setup": {
+      "title": "设置",
+      "ollama": "无法访问 Ollama",
+      "help": "帮助配置不完整",
+      "networks": "尚无网络",
+      "runtimeLink": "检查运行时",
+      "helpLink": "配置帮助",
+      "createNetwork": "新建网络",
+      "importNetwork": "导入网络"
+    },
+    "active": {
+      "title": "活动网络",
+      "empty": "未选择活动网络。",
+      "edit": "编辑",
+      "library": "资料库",
+      "create": "新建网络",
+      "stats": "{{nodes}} 个节点 · {{edges}} 条边",
+      "updated": "已更新 {{time}}"
+    },
+    "validationStatus": {
+      "valid": "有效",
+      "invalid": "无效",
+      "unknown": "未知"
+    },
+    "validation": {
+      "missingModel": "至少一个 LLM 节点需要模型。"
+    },
+    "recent": {
+      "title": "最近使用",
+      "empty": "尚无网络。",
+      "create": "新建网络"
+    },
+    "runs": {
+      "title": "最近运行",
+      "empty": "尚无运行。",
+      "storeError": "历史存储不可用。",
+      "openData": "检查数据"
+    },
+    "outcome": {
+      "running": "运行中",
+      "succeeded": "成功",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "timeout": "超时"
+    },
+    "week": {
+      "title": "最近 7 天",
+      "runs": "运行",
+      "succeeded": "成功",
+      "failed": "失败",
+      "openHistory": "历史"
+    },
+    "environment": {
+      "title": "环境",
+      "ollamaOk": "Ollama 可达",
+      "ollamaFail": "Ollama 不可达",
+      "models_one": "{{count}} 个模型",
+      "models_other": "{{count}} 个模型",
+      "storeIssue": "{{store}} 状态异常。",
+      "openData": "数据",
+      "degraded": "节省模式"
+    },
+    "quick": {
+      "title": "快捷方式",
+      "create": "新建网络",
+      "import": "导入",
+      "runtime": "运行时"
+    },
+    "duration": {
+      "seconds": "{{count}} 秒",
+      "minutes": "{{minutes}} 分 {{seconds}} 秒",
+      "hours": "{{hours}} 小时 {{minutes}} 分"
+    },
+    "error": {
+      "load": "无法加载仪表板数据。",
+      "networks": "无法加载网络。",
+      "runs": "无法加载运行。",
+      "networkMissing": "找不到网络"
+    }
+  },
+  "network": {
+    "untitled": "未命名网络",
+    "copySuffix": "（副本）",
+    "badge": {
+      "valid": "有效",
+      "invalid": "无效",
+      "active": "活动",
+      "running": "运行中"
+    },
+    "ribbon": {
+      "new": "新建",
+      "save": "保存",
+      "saveAs": "另存为",
+      "load": "打开",
+      "duplicate": "复制",
+      "export": "导出",
+      "validate": "验证",
+      "undo": "撤销",
+      "redo": "重做",
+      "library": "资料库",
+      "view": "视图"
+    },
+    "view": {
+      "fit": "适应",
+      "snap": "对齐网格",
+      "grid": "网格",
+      "minimap": "小地图"
+    },
+    "palette": {
+      "title": "面板",
+      "collapse": "折叠元素选择",
+      "expand": "展开元素选择",
+      "search": "搜索节点",
+      "chat_input": "聊天输入",
+      "chat_inputHint": "最多一个。起始文本，运行时必填。",
+      "llm": "LLM",
+      "llmHint": "模型和提供方。连接到智能体 llm 端口。",
+      "agent": "智能体",
+      "agentHint": "系统提示。通过边连接 LLM、消息、工具和知识。",
+      "tool": "工具",
+      "toolHint": "目录类型，可选 MCP。",
+      "knowledge": "知识",
+      "knowledgeHint": "源文件夹，仅连接到智能体 knowledge 端口。",
+      "router": "路由器",
+      "routerHint": "按条件分支消息。",
+      "end": "结束",
+      "endHint": "至少一个。结束运行。"
+    },
+    "ports": {
+      "message": "消息",
+      "llm": "LLM",
+      "tool": "工具",
+      "knowledge": "知识",
+      "handoff": "交接",
+      "default": "默认",
+      "in": "输入",
+      "out": "输出"
+    },
+    "inspector": {
+      "title": "检查器",
+      "collapse": "折叠检查器",
+      "expand": "展开检查器",
+      "displayName": "显示名称",
+      "multi": "已选择 {{count}} 个节点",
+      "graph": {
+        "title": "网络",
+        "name": "名称",
+        "description": "描述",
+        "tags": "标签",
+        "stats": "{{nodes}} 个节点 · {{edges}} 条边",
+        "noIssues": "没有验证错误。"
+      },
+      "llm": {
+        "provider": "提供方",
+        "openaiCompat": "OpenAI 兼容",
+        "model": "模型",
+        "credential": "凭据",
+        "credentialEmpty": "无凭据",
+        "credentialHint": "请先选择有效的 API 密钥。随后加载模型。",
+        "noCredentials": "此提供方尚无凭据。",
+        "pickCredentialFirst": "请先选择有效的 API 密钥",
+        "modelsLoadError": "无法加载模型。请检查 API 密钥。",
+        "baseUrl": "基础 URL",
+        "ping": "测试连接",
+        "pingOk": "模型已响应",
+        "pingFail": "测试失败",
+        "advanced": "高级",
+        "noModels": "未加载模型。",
+        "useModel": "使用“{{name}}”",
+        "temperature": "温度",
+        "maxTokens": "最大 token 数"
+      },
+      "agent": {
+        "hint": "LLM、工具和知识来自边，而不是字段。",
+        "systemPrompt": "系统提示"
+      },
+      "tool": {
+        "kind": "类型",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "网页搜索",
+          "datetime": "日期/时间",
+          "calculator": "计算器",
+          "file_access": "文件访问",
+          "mcp": "MCP"
+        },
+        "method": "方法",
+        "url": "URL",
+        "rootPath": "根文件夹",
+        "pickRoot": "文件夹",
+        "allowWrite": "允许写入",
+        "allowDelete": "允许删除",
+        "fileAccessHint": "智能体只能在此文件夹下读取、写入和删除。",
+        "credential": "凭据",
+        "mcpServer": "MCP 服务器",
+        "mcpEmpty": "无服务器",
+        "mcpHint": "默认：服务器的全部工具。在设置中创建服务器。",
+        "mcpSettings": "MCP 设置"
+      },
+      "knowledge": {
+        "path": "源文件夹",
+        "pick": "文件夹",
+        "embedProvider": "嵌入提供方",
+        "embedModel": "嵌入模型",
+        "topK": "topK",
+        "score": "分数阈值",
+        "reindex": "重建索引",
+        "reindexOk": "索引已重建",
+        "reindexFail": "索引失败",
+        "reindexHint": "更改嵌入后请重建索引。"
+      },
+      "router": {
+        "branches": "分支",
+        "branchName": "名称",
+        "condition": "条件",
+        "add": "添加分支"
+      },
+      "chat": {
+        "placeholder": "占位符",
+        "startMessage": "起始文本",
+        "requireInput": "需要输入"
+      }
+    },
+    "load": {
+      "title": "打开网络",
+      "body": "选择一个已保存的网络。批量、删除和导入在资料库中。",
+      "search": "搜索",
+      "sortUpdated": "已更改",
+      "sortName": "名称",
+      "sortUsed": "最近使用",
+      "open": "打开",
+      "preview": "{{nodes}} 个节点 · {{edges}} 条边"
+    },
+    "empty": {
+      "body": "从面板将节点拖到画布，或打开已保存的网络。",
+      "insert": "面板"
+    },
+    "context": {
+      "insert": "插入",
+      "fit": "适应",
+      "duplicate": "复制",
+      "delete": "删除"
+    },
+    "dialog": {
+      "close": "关闭",
+      "cancel": "取消",
+      "nameTitle": "命名网络"
+    },
+    "dirty": {
+      "title": "未保存的更改",
+      "body": "打开的网络已更改。保存、放弃还是取消？",
+      "save": "保存",
+      "discard": "放弃",
+      "cancel": "取消"
+    },
+    "readonly": {
+      "title": "只读",
+      "body": "此网络正在运行。请先在标题栏停止后再编辑。"
+    },
+    "validation": {
+      "nameRequired": "名称不能为空。",
+      "tooManyChatInputs": "最多一个聊天输入。",
+      "endRequired": "至少一个结束节点。",
+      "danglingEdge": "边指向缺失的节点。",
+      "edgeType": "此连接类型不兼容。",
+      "agentLlm": "每个智能体需要恰好一条 LLM 边。",
+      "agentMessage": "每个智能体需要一条传入消息。",
+      "modelRequired": "模型为必填。",
+      "credentialRequired": "云提供方需要凭据。",
+      "toolKind": "缺少工具类型。",
+      "mcpServer": "请选择已启用的 MCP 服务器。",
+      "mcpRoot": "此 MCP 服务器需要在设置中指定根路径。",
+      "fileAccessRoot": "文件访问需要不是驱动器根目录的文件夹。",
+      "knowledgePath": "源文件夹为必填。",
+      "knowledgeRoot": "不允许使用驱动器或系统根目录。",
+      "knowledgeSandbox": "路径必须位于数据文件夹下。",
+      "knowledgeHelpCorpus": "帮助语料不是网络知识。",
+      "knowledgeTarget": "知识只能连接到智能体 knowledge 端口。",
+      "cycle": "不允许循环。",
+      "knowledge": {
+        "missing": "缺少索引。",
+        "stale": "索引已过期。",
+        "error": "索引错误。"
+      }
+    },
+    "notify": {
+      "saved": "网络已保存",
+      "saveError": "保存失败",
+      "duplicated": "已打开副本",
+      "valid": "网络有效",
+      "invalid": "网络存在验证错误"
+    },
+    "error": {
+      "missing": "找不到网络"
+    },
+    "catalog": {
+      "firstParty": "第一方"
+    }
+  },
+  "networks": {
+    "title": "资料库",
+    "copySuffix": "（副本）",
+    "ribbon": {
+      "new": "新建",
+      "open": "打开",
+      "duplicate": "复制",
+      "rename": "重命名",
+      "tags": "添加标签",
+      "activate": "设为活动",
+      "delete": "删除",
+      "import": "导入",
+      "export": "导出",
+      "refresh": "刷新",
+      "more": "更多操作",
+      "needOne": "请恰好选择一个网络。",
+      "needSome": "请至少选择一个网络。",
+      "needValid": "只有有效网络可以设为活动。",
+      "alreadyActive": "此网络已是活动网络。",
+      "runningBlocked": "正在运行的网络无法删除。"
+    },
+    "filter": {
+      "search": "按名称、描述、标签搜索",
+      "sort": {
+        "name": "名称",
+        "updatedAt": "已更改",
+        "lastUsedAt": "最近使用"
+      },
+      "direction": "排序方向",
+      "tags": "标签",
+      "tagsHint": "多个标签：或",
+      "noTags": "无标签",
+      "onlyValid": "仅有效",
+      "onlyActive": "仅活动"
+    },
+    "list": {
+      "selectAll": "选择全部可见项",
+      "name": "名称",
+      "description": "描述",
+      "status": "状态",
+      "graph": "图",
+      "updated": "已更改",
+      "lastUsed": "最近使用",
+      "counts": "{{nodes}} 个节点 · {{edges}} 条边"
+    },
+    "badge": {
+      "valid": "有效",
+      "invalid": "无效",
+      "unknown": "未知",
+      "active": "活动",
+      "running": "运行中",
+      "credentialMissing": "缺少凭据"
+    },
+    "detail": {
+      "title": "详情",
+      "none": "未选择网络。",
+      "multi": "已选择 {{count}} 个",
+      "noDescription": "无描述。",
+      "lastRun": "上次运行"
+    },
+    "empty": {
+      "library": "尚无已保存的网络。",
+      "filter": "这些筛选没有匹配项。",
+      "clearFilters": "清除筛选"
+    },
+    "error": {
+      "title": "列表未加载",
+      "body": "无法加载资料库。",
+      "missing": "找不到网络",
+      "running": "正在运行的网络无法删除。"
+    },
+    "dialog": {
+      "close": "关闭",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "rename": {
+      "title": "重命名",
+      "body": "仅名称和描述，不更改图。",
+      "name": "名称",
+      "description": "描述"
+    },
+    "tags": {
+      "title": "添加标签",
+      "body": "标签将添加到 {{count}} 个网络。现有标签保留。",
+      "label": "标签",
+      "placeholder": "ops, prod",
+      "add": "添加"
+    },
+    "delete": {
+      "title": "删除网络",
+      "body": "此网络的工作区索引也会删除。磁盘上的源文件保留。帮助存储和历史运行不受影响。",
+      "none": "没有可删除的网络。",
+      "runningSkipped": "正在运行，未删除：{{names}}",
+      "activeWarning": "包含至少一个活动网络。快速选择将被清空。"
+    },
+    "import": {
+      "unreadable": "部分文件无法读取。",
+      "unreadableNames": "{{names}}",
+      "schema": "不支持的 schemaVersion。",
+      "secrets": "导入文件中的密钥已被丢弃。",
+      "collisionTitle": "名称已被使用",
+      "collisionBody": "重命名或跳过该文件。取消仅适用于这些文件。",
+      "skip": "跳过此文件",
+      "include": "仍要导入",
+      "continue": "导入"
+    },
+    "notify": {
+      "error": "操作失败",
+      "duplicated": "已将副本添加到资料库",
+      "renamed": "元数据已保存",
+      "tagged": "已添加标签",
+      "deleted": "已删除网络",
+      "imported": "已导入 {{count}} 个网络",
+      "exported": "已开始导出"
+    }
+  },
+  "monitoring": {
+    "title": "监控",
+    "close": "关闭",
+    "copy": "复制",
+    "copied": "已复制",
+    "empty": {
+      "stoppedTitle": "无运行",
+      "stoppedBody": "请从标题栏启动服务。",
+      "stoppedActive": "活动网络：{{name}}",
+      "stoppedNoNetwork": "快速选择中没有网络。",
+      "lastRunBody": "没有活动运行。正在显示上次保存的运行。",
+      "disconnectedTitle": "已与服务断开",
+      "disconnectedBody": "正在重新连接。上次的值显示为灰色。",
+      "startingTitle": "服务正在启动",
+      "stoppingTitle": "服务正在停止",
+      "errorTitle": "服务错误",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "lastRun": "上次运行",
+      "runId": "运行 ID",
+      "started": "开始",
+      "duration": "时长",
+      "step": "步骤",
+      "runningCount": "{{count}} 个运行中",
+      "noLlm": "无活动 LLM",
+      "activeLlms": "活动 LLM",
+      "otherNodes": "其他节点",
+      "local": "本地",
+      "cloud": "云"
+    },
+    "resources": {
+      "title": "主机资源",
+      "hostHint": "此计算机的系统值，不仅是应用进程。",
+      "cpu": "CPU",
+      "cpuCores": "核心",
+      "ram": "内存",
+      "gpu": "GPU",
+      "vram": "显存",
+      "noGpu": "无 GPU",
+      "noGpuHint": "未检测到本地加速器。云运行时这是正常的。",
+      "usedOf": "{{used}} / {{total}}"
+    },
+    "graph": {
+      "title": "网络（只读）",
+      "fit": "适应",
+      "filterChip": "节点 {{name}}",
+      "clearFilter": "清除筛选",
+      "detailTitle": "节点详情",
+      "role": "角色",
+      "status": "状态",
+      "wait": "等待",
+      "lastMessage": "最后消息",
+      "error": "错误",
+      "model": "模型",
+      "provider": "提供方",
+      "tokens": "Token"
+    },
+    "nodeType": {
+      "chat_input": "输入",
+      "llm": "LLM",
+      "agent": "智能体",
+      "tool": "工具",
+      "knowledge": "知识",
+      "router": "路由器",
+      "end": "结束"
+    },
+    "nodeStatus": {
+      "idle": "空闲",
+      "waiting": "等待中",
+      "running": "运行中",
+      "done": "完成",
+      "error": "错误"
+    },
+    "wait": {
+      "none": "无等待",
+      "llm": "LLM",
+      "tool": "工具",
+      "human": "输入"
+    },
+    "activity": {
+      "title": "活动",
+      "current": "当前节点",
+      "none": "无活动节点",
+      "dag": "步骤 {{completed}} / {{total}}",
+      "pending": "待处理",
+      "stepError": "步骤错误",
+      "tokensIn": "输入",
+      "tokensOut": "输出",
+      "perSecond": "{{value}} token/秒",
+      "rate": "Token/秒",
+      "runTotal": "运行合计",
+      "context": "上下文 {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "聊天",
+      "log": "日志"
+    },
+    "chat": {
+      "placeholder": "消息…",
+      "send": "发送",
+      "stop": "停止生成",
+      "waitInput": "请写下第一条消息。图正在等待输入。",
+      "empty": "此运行尚无消息。",
+      "disabled": "仅在运行期间可聊天。"
+    },
+    "log": {
+      "pause": "暂停",
+      "resume": "继续",
+      "jumpLatest": "跳到最新",
+      "newCount": "{{count}} 条新",
+      "search": "搜索日志",
+      "level": "级别",
+      "levelFrom": "从 {{level}} 起",
+      "node": "节点",
+      "allNodes": "全部节点",
+      "errorsOnly": "仅错误",
+      "export": "导出",
+      "empty": "此筛选没有日志行。",
+      "detailTitle": "日志详情",
+      "payload": "负载",
+      "stack": "堆栈",
+      "message": "消息",
+      "copyLine": "复制行",
+      "copyPayload": "复制负载"
+    },
+    "level": {
+      "debug": "调试",
+      "info": "信息",
+      "warn": "警告",
+      "error": "错误"
+    },
+    "notify": {
+      "runStarted": "运行已启动",
+      "runStopped": "运行已结束",
+      "stepFailed": "步骤失败",
+      "disconnected": "无法访问服务"
+    },
+    "dev": {
+      "label": "模拟场景",
+      "stopped": "已停止",
+      "disconnected": "已断开",
+      "starting": "正在启动",
+      "stopping": "正在停止",
+      "running": "运行中（聊天）",
+      "nochat": "运行中（无聊天）",
+      "cloud": "云 / 无 GPU",
+      "error": "错误",
+      "wait": "等待输入"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "OpenAI 兼容"
+    },
+    "mock": {
+      "userLine": "简要总结上次运行。",
+      "chatReply": "运行处于活动状态。此助手从网络回答，而不是帮助。",
+      "lastLlm": "正在生成 token。",
+      "lastAgent": "正在等待 LLM。",
+      "lastTool": "已请求工具调用。",
+      "waitInput": "图正在等待第一条消息。",
+      "stepError": "工具调用失败。",
+      "serviceError": "服务中止了该步骤。",
+      "log": {
+        "start": "运行已接受。",
+        "debug": "提示已准备。",
+        "agent": "智能体正在工作。",
+        "warn": "工具响应较慢。",
+        "secret": "Request with apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} 报告进度。",
+        "user": "已接受用户行。",
+        "assistant": "回复已完成。"
+      }
+    }
+  },
+  "history": {
+    "title": "历史",
+    "close": "关闭",
+    "copy": "复制",
+    "ribbon": {
+      "refresh": "刷新",
+      "delete": "删除",
+      "export": "导出日志",
+      "purge": "删除超过 90 天的记录"
+    },
+    "filter": {
+      "range": "范围",
+      "today": "今天",
+      "days7": "7 天",
+      "days30": "30 天",
+      "custom": "自定义",
+      "from": "从",
+      "to": "到",
+      "network": "网络",
+      "allNetworks": "全部网络",
+      "model": "模型",
+      "allModels": "全部模型",
+      "search": "搜索",
+      "searchHint": "运行 ID、网络、错误",
+      "reset": "重置筛选"
+    },
+    "outcome": {
+      "running": "运行中",
+      "succeeded": "成功",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "timeout": "超时"
+    },
+    "kpi": {
+      "runs": "运行",
+      "runsHint": "仅已完成的运行",
+      "succeeded": "成功",
+      "failed": "失败",
+      "failedFoot": "已取消 {{cancelled}} · 超时 {{timeout}}",
+      "medianDuration": "中位时长",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95 需 20 次运行"
+    },
+    "chart": {
+      "title": "按日运行",
+      "empty": "此范围内没有已完成的运行。"
+    },
+    "errors": {
+      "title": "常见错误",
+      "empty": "此筛选没有错误。"
+    },
+    "errorClass": {
+      "timeout": "超时",
+      "tool_error": "工具",
+      "llm_error": "LLM",
+      "validation": "验证",
+      "service": "服务",
+      "unknown": "未知"
+    },
+    "tab": {
+      "history": "历史",
+      "model": "按模型",
+      "network": "按网络"
+    },
+    "table": {
+      "model": "模型",
+      "provider": "提供方",
+      "calls": "调用",
+      "ok": "正常",
+      "callErrors": "错误",
+      "errorRate": "错误率",
+      "median": "中位时长",
+      "tokensIn": "输入 token",
+      "tokensOut": "输出 token",
+      "network": "网络",
+      "runs": "运行",
+      "succeeded": "成功",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "topErrorNode": "最常见错误节点"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "OpenAI 兼容"
+    },
+    "list": {
+      "selectAll": "选择可见项",
+      "runId": "运行 ID",
+      "network": "网络",
+      "started": "开始",
+      "duration": "时长",
+      "outcome": "结果",
+      "error": "错误",
+      "models": "模型",
+      "live": "查看实时",
+      "page": "第 {{page}} 页，共 {{pages}} 页",
+      "prev": "上一页",
+      "next": "下一页"
+    },
+    "detail": {
+      "title": "运行",
+      "none": "请在列表中选择一次运行。",
+      "missing": "此运行不存在。",
+      "error": "错误",
+      "exportLog": "导出日志",
+      "tabLog": "日志",
+      "tabSteps": "步骤",
+      "tabChat": "聊天"
+    },
+    "graph": {
+      "fit": "适应"
+    },
+    "log": {
+      "level": "级别",
+      "search": "搜索日志",
+      "node": "节点",
+      "allNodes": "全部节点",
+      "errorsOnly": "仅错误",
+      "empty": "此筛选没有日志行。",
+      "detailTitle": "日志详情"
+    },
+    "level": {
+      "debug": "调试",
+      "info": "信息",
+      "warn": "警告",
+      "error": "错误"
+    },
+    "steps": {
+      "node": "节点",
+      "role": "角色",
+      "status": "状态",
+      "error": "错误",
+      "empty": "没有保存的步骤。"
+    },
+    "nodeStatus": {
+      "idle": "空闲",
+      "waiting": "等待中",
+      "running": "运行中",
+      "done": "完成",
+      "error": "错误"
+    },
+    "calls": {
+      "ok": "正常",
+      "yes": "是",
+      "no": "否",
+      "empty": "没有 LLM 调用。"
+    },
+    "empty": {
+      "none": "历史存储中尚无运行。",
+      "filtered": "此筛选没有匹配项。"
+    },
+    "error": {
+      "store": "历史存储不可用。",
+      "openData": "设置 · 数据",
+      "api": "无法加载历史。",
+      "runningDelete": "无法删除正在运行的项。"
+    },
+    "delete": {
+      "title": "删除运行",
+      "body": "将从归档中移除 {{count}} 次所选运行。正在运行的项会保留。",
+      "confirm": "删除",
+      "cancel": "取消"
+    },
+    "retention": {
+      "title": "删除较旧的运行",
+      "body": "将删除超过 90 天的 {{count}} 次运行。",
+      "confirm": "删除"
+    },
+    "notify": {
+      "deleted": "已删除 {{count}} 次运行",
+      "runningDelete": "无法删除正在运行的项",
+      "runningSkipped": "至少跳过了一条正在运行的记录",
+      "purged": "已删除 {{count}} 次旧运行",
+      "exported": "已开始导出",
+      "exportError": "导出失败",
+      "error": "操作失败"
+    }
+  },
+  "runLog": {
+    "run": {
+      "start": "运行已启动（{{networkName}}）",
+      "wait": {
+        "human": "等待输入"
+      },
+      "chat": {
+        "user": "用户消息"
+      },
+      "batch": {
+        "start": "批处理运行已启动"
+      },
+      "agent": {
+        "start": "智能体已启动",
+        "done": "智能体已完成"
+      },
+      "knowledge": "知识搜索（{{count}} 条结果）",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM 已完成（{{durationMs}} ms）"
+      },
+      "tool": {
+        "call": "工具 {{name}}"
+      },
+      "router": "路由器 → {{target}}",
+      "end": "已到达结束",
+      "succeeded": "运行成功",
+      "failed": "运行失败",
+      "cancelled": "运行已取消",
+      "interrupted": "运行已中断（应用关闭）",
+      "help": {
+        "fallbackMissing": "缺少帮助备用模型"
+      },
+      "stepLimit": "已达到步骤上限"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "路由器没有匹配的边"
+      }
+    },
+    "runtime": {
+      "timeout": "模型无进展",
+      "unreachable": "运行时不可达"
+    }
+  }
+}

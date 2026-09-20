@@ -16,7 +16,7 @@ Left (on a phone: burger menu):
 
 **Settings** live in the header (gear), not in the left nav.
 
-The header also has **Start** / **Stop**, **quick select** for the active network, the bell (notifications), light/dark/system, language (German/English), and window buttons (minimize, maximize, close).
+The header also has **Start** / **Stop**, **quick select** for the active network, the bell (notifications), light/dark/system, language (Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية), and window buttons (minimize, maximize, close).
 
 Drag the logo or empty header to move the window. Start, Stop, quick select, and the buttons on the right are not drag areas.
 

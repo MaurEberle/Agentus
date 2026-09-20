@@ -16,7 +16,7 @@ Links (auf dem Telefon: Burger-Menü):
 
 **Einstellungen** sitzen in der Kopfzeile (Zahnrad), nicht in der linken Navigation.
 
-In der Kopfzeile außerdem: **Start** / **Stopp**, **Schnellwahl** des aktiven Netzes, Glocke (Benachrichtigungen), Hell/Dunkel/System, Sprache (Deutsch/Englisch), Fensterknöpfe (Minimieren, Maximieren, Schließen).
+In der Kopfzeile außerdem: **Start** / **Stopp**, **Schnellwahl** des aktiven Netzes, Glocke (Benachrichtigungen), Hell/Dunkel/System, Sprache (Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية), Fensterknöpfe (Minimieren, Maximieren, Schließen).
 
 Ziehen am Logo oder an leerem Header-Bereich verschiebt das Fenster. Start, Stopp, Schnellwahl und die Knöpfe rechts sind keine Ziehflächen.
 
