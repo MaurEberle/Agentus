@@ -71,15 +71,52 @@ def test_list_anthropic_models_headers(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_list_gemini_strips_models_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert str(request.url).startswith("https://generativelanguage.googleapis.com/v1beta/openai/models")
-        return httpx.Response(
-            200,
-            json={"data": [{"id": "models/gemini-2.0-flash"}, {"id": "gemini-2.5-pro"}]},
-        )
+        url = str(request.url)
+        if "/openai/models" in url:
+            return httpx.Response(
+                200,
+                json={"data": [{"id": "models/gemini-2.0-flash"}, {"id": "gemini-2.5-pro"}]},
+            )
+        if "/v1beta/models" in url:
+            return httpx.Response(200, json={"models": []})
+        return httpx.Response(404)
 
     install_transport(monkeypatch, handler)
     items = list_openai_compat_models("gemini", secret="gem-key")
     assert [item.name for item in items] == ["gemini-2.0-flash", "gemini-2.5-pro"]
+
+
+def test_list_gemini_merges_native_embedding_models(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if "/openai/models" in url:
+            return httpx.Response(200, json={"data": [{"id": "gemini-2.0-flash"}]})
+        if url.startswith("https://generativelanguage.googleapis.com/v1beta/models"):
+            assert request.headers.get("x-goog-api-key") == "gem-key"
+            return httpx.Response(
+                200,
+                json={
+                    "models": [
+                        {
+                            "name": "models/gemini-embedding-001",
+                            "supportedGenerationMethods": ["embedContent"],
+                        },
+                        {
+                            "name": "models/gemini-embedding-2",
+                            "supportedGenerationMethods": ["embedContent"],
+                        },
+                    ]
+                },
+            )
+        return httpx.Response(404)
+
+    install_transport(monkeypatch, handler)
+    items = list_openai_compat_models("gemini", secret="gem-key")
+    assert [item.name for item in items] == [
+        "gemini-2.0-flash",
+        "gemini-embedding-001",
+        "gemini-embedding-2",
+    ]
 
 
 def test_list_xai_unauthorized(monkeypatch: pytest.MonkeyPatch) -> None:

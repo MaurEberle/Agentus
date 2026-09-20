@@ -34,8 +34,10 @@ import {
   useSettingsQuery,
 } from '@/modules/settings/api';
 import {
+  EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
   credentialMatchesProvider,
+  embeddingNeedsCredential,
   helpChatConfigured,
   helpChatWritePayload,
   isCloudCatalogProvider,
@@ -112,6 +114,11 @@ export function HelpChatSection() {
     credentialId: help?.credentialId,
     enabled: isCloudCatalogProvider(help?.provider ?? '') && Boolean(help?.credentialId),
   });
+  const embedCatalogQuery = useRuntimeModelsQuery({
+    provider: (help?.embeddingProvider || 'ollama') as LlmProvider,
+    credentialId: help?.embeddingCredentialId,
+    enabled: embeddingNeedsCredential(help?.embeddingProvider ?? '') && Boolean(help?.embeddingCredentialId),
+  });
   const dirty = useSettingsDraft((state) => state.helpDirty(settings));
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
   const [busy, setBusy] = useState(false);
@@ -122,7 +129,8 @@ export function HelpChatSection() {
     Boolean(settings) &&
     Boolean(help) &&
     (help?.embeddingProvider !== settings?.helpChat.embeddingProvider ||
-      help?.embeddingModel !== settings?.helpChat.embeddingModel);
+      help?.embeddingModel !== settings?.helpChat.embeddingModel ||
+      (help?.embeddingCredentialId || '') !== (settings?.helpChat.embeddingCredentialId || ''));
 
   const cloudCredentials = (credentials?.items ?? []).filter((item) =>
     credentialMatchesProvider(item.kind, help?.provider ?? ''),
@@ -133,6 +141,9 @@ export function HelpChatSection() {
   const hasRuntimeModels = runtimeModels.length > 0;
   const embedModels = runtimeModels.filter((model) => isEmbeddingModelName(model.name));
   const catalogModels = catalogQuery.data?.items ?? [];
+  const embedCatalogModels = (embedCatalogQuery.data?.items ?? []).filter((model) =>
+    isEmbeddingModelName(model.name),
+  );
   const emptyLabel = t('settings.helpChat.providerEmpty');
   const catalogLocked = isCloudCatalogProvider(help?.provider ?? '') && !help?.credentialId;
   const catalogFailed =
@@ -141,6 +152,19 @@ export function HelpChatSection() {
     !catalogQuery.isFetching &&
     !catalogQuery.isPending &&
     catalogModels.length === 0;
+  const embedLocked = embeddingNeedsCredential(help?.embeddingProvider ?? '') && !help?.embeddingCredentialId;
+  const embedCatalogFailed =
+    embeddingNeedsCredential(help?.embeddingProvider ?? '') &&
+    Boolean(help?.embeddingCredentialId) &&
+    !embedCatalogQuery.isFetching &&
+    !embedCatalogQuery.isPending &&
+    embedCatalogModels.length === 0;
+  const embedKindCredentials = (credentials?.items ?? []).filter(
+    (item) => item.kind === help?.embeddingProvider,
+  );
+  const embedCredentials = (credentials?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, help?.embeddingProvider ?? ''),
+  );
 
   async function save() {
     if (!help) return;
@@ -315,31 +339,93 @@ export function HelpChatSection() {
             <Label>{t('settings.helpChat.embedProvider')}</Label>
             <Select
               value={help.embeddingProvider || 'none'}
-              onValueChange={(value) =>
-                setHelpChat({
-                  embeddingProvider: value === 'none' ? '' : (value as EmbeddingProvider),
-                })
-              }
+              onValueChange={(value) => {
+                const next = value === 'none' ? '' : (value as EmbeddingProvider);
+                const patch: Partial<typeof help> = {
+                  embeddingProvider: next,
+                  embeddingModel: '',
+                };
+                if (!embeddingNeedsCredential(next)) {
+                  patch.embeddingCredentialId = undefined;
+                } else {
+                  const nextKind = (credentials?.items ?? []).filter((item) => item.kind === next);
+                  const current = (credentials?.items ?? []).find(
+                    (item) => item.id === help.embeddingCredentialId,
+                  );
+                  if (!current || !credentialMatchesProvider(current.kind, next)) {
+                    if (help.provider === next && help.credentialId) {
+                      patch.embeddingCredentialId = help.credentialId;
+                    } else {
+                      patch.embeddingCredentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
+                    }
+                  }
+                }
+                setHelpChat(patch);
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t('settings.helpChat.providerEmpty')}</SelectItem>
-                <SelectItem value="ollama">Ollama</SelectItem>
-                <SelectItem value="openai_compat">{t('settings.helpChat.openaiCompat')}</SelectItem>
+                {EMBEDDING_PROVIDERS.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {t(`providers.${id}`)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+          {embeddingNeedsCredential(help.embeddingProvider || '') ? (
+            <div className="grid gap-1.5">
+              <Label>{t('settings.helpChat.credential')}</Label>
+              <Select
+                value={help.embeddingCredentialId ?? 'none'}
+                onValueChange={(value) =>
+                  setHelpChat({
+                    embeddingCredentialId: value === 'none' ? undefined : value,
+                    embeddingModel: '',
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('settings.helpChat.credentialEmpty')}</SelectItem>
+                  {embedCredentials.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {embedKindCredentials.length === 0 ? (
+                <p className="text-xs text-destructive">{t('settings.helpChat.noCredentials')}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t('settings.helpChat.credentialHint')}</p>
+              )}
+            </div>
+          ) : null}
           <ModelField
             id="embed-model"
             label={t('settings.helpChat.embedModel')}
-            value={help.embeddingModel ?? ''}
-            models={embedModels}
-            useSelect={help.embeddingProvider === 'ollama' && hasRuntimeModels}
+            value={embedLocked ? '' : (help.embeddingModel ?? '')}
+            models={
+              embeddingNeedsCredential(help.embeddingProvider || '') ? embedCatalogModels : embedModels
+            }
+            useSelect={
+              (help.embeddingProvider === 'ollama' && hasRuntimeModels) ||
+              (embeddingNeedsCredential(help.embeddingProvider || '') && Boolean(help.embeddingCredentialId))
+            }
             emptyLabel={emptyLabel}
+            disabled={embedLocked}
+            placeholder={embedLocked ? t('settings.helpChat.pickCredentialFirst') : undefined}
             onChange={(value) => setHelpChat({ embeddingModel: value || undefined })}
           />
+          {embedCatalogFailed ? (
+            <p className="text-xs text-destructive">{t('settings.helpChat.modelsLoadError')}</p>
+          ) : null}
           {embedChanged ? (
             <Alert>
               <AlertDescription>{t('settings.helpChat.reindexHint')}</AlertDescription>

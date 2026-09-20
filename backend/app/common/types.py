@@ -8,7 +8,7 @@ CLOUD_CATALOG_PROVIDERS: tuple[Provider, ...] = ("xai", "openai", "anthropic", "
 NEEDS_CREDENTIAL: frozenset[Provider] = frozenset((*CLOUD_CATALOG_PROVIDERS, "openai_compat"))
 
 HelpProvider = Literal["ollama", "xai", "openai", "anthropic", "gemini", "openai_compat", ""]
-EmbeddingProvider = Literal["ollama", "openai_compat", ""]
+EmbeddingProvider = Literal["ollama", "openai", "gemini", "openai_compat", ""]
 
 CredentialKind = Literal[
     "xai",

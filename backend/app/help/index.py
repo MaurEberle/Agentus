@@ -103,9 +103,11 @@ def reindex() -> tuple[Literal["ready", "error"], str | None]:
         return "error", "help.embed.unsupported"
     credential_id = None
     if provider != "ollama":
-        if not help_chat.credential_id:
+        credential_id = help_chat.embedding_credential_id or (
+            help_chat.credential_id if help_chat.provider == provider else None
+        )
+        if not credential_id:
             return "error", "help.embed.unsupported"
-        credential_id = help_chat.credential_id
     chunks = _build_chunks()
     if not chunks:
         wipe_chunks()

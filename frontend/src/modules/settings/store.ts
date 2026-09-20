@@ -48,6 +48,7 @@ function helpFrom(settings: AppSettings): HelpChatSettings {
     credentialId: help.credentialId || undefined,
     embeddingProvider: help.embeddingProvider || '',
     embeddingModel: help.embeddingModel || '',
+    embeddingCredentialId: help.embeddingCredentialId || undefined,
     webSearchEnabled: Boolean(help.webSearchEnabled),
     webSearchCredentialId: help.webSearchCredentialId || undefined,
     fallbackModel: help.fallbackModel || undefined,

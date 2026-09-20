@@ -24,6 +24,7 @@ class HelpChatSettings(ApiModel):
     credential_id: str | None = Field(default=None, alias="credentialId")
     embedding_provider: EmbeddingProvider = Field(default="", alias="embeddingProvider")
     embedding_model: str = Field(default="", alias="embeddingModel")
+    embedding_credential_id: str | None = Field(default=None, alias="embeddingCredentialId")
     web_search_enabled: bool = Field(default=False, alias="webSearchEnabled")
     web_search_credential_id: str | None = Field(default=None, alias="webSearchCredentialId")
     fallback_model: str | None = Field(default=None, alias="fallbackModel")

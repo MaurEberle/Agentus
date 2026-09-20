@@ -1,4 +1,4 @@
-"""List models from OpenAI-compatible /v1/models (xAI and openai_compat)."""
+"""List models from OpenAI-compatible /v1/models (and Gemini native /v1beta/models)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,8 @@ from app.runtime.errors import (
 )
 from app.runtime.models import OllamaModel
 from app.runtime.urls import models_url, settings_roots
+
+GEMINI_NATIVE_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 def list_openai_compat_models(
@@ -37,18 +39,64 @@ def list_openai_compat_models(
         settings_openai=openai_base,
     )
     headers = request_headers(provider, resolved)
+    compat_names: list[str] = []
+    compat_error: RuntimeApiError | None = None
     try:
         with client(timeout_sec=timeout_sec) as http:
             response = http.get(url, headers=headers)
         raise_for_status(response)
-        payload = response_json(response)
-    except RuntimeApiError:
-        raise
+        compat_names = _model_names(response_json(response))
+    except RuntimeApiError as exc:
+        compat_error = exc
     except Exception as exc:
         if is_transport_error(exc):
             raise_transport(exc)
         raise
-    return [OllamaModel(name=name) for name in _model_names(payload)]
+    native_names: list[str] = []
+    if provider == "gemini":
+        try:
+            native_names = _list_gemini_native(resolved, timeout_sec=timeout_sec)
+        except RuntimeApiError:
+            if not compat_names:
+                if compat_error:
+                    raise compat_error
+                raise
+    names = sorted(set(compat_names) | set(native_names))
+    if not names and compat_error:
+        raise compat_error
+    return [OllamaModel(name=name) for name in names]
+
+
+def _list_gemini_native(secret: str, *, timeout_sec: float) -> list[str]:
+    headers = {
+        "Authorization": f"Bearer {secret}",
+        "x-goog-api-key": secret,
+    }
+    names: list[str] = []
+    page_token: str | None = None
+    for _ in range(5):
+        params: dict[str, str] = {"pageSize": "200"}
+        if page_token:
+            params["pageToken"] = page_token
+        try:
+            with client(timeout_sec=timeout_sec) as http:
+                response = http.get(GEMINI_NATIVE_MODELS_URL, headers=headers, params=params)
+            raise_for_status(response)
+            payload = response_json(response)
+        except RuntimeApiError:
+            raise
+        except Exception as exc:
+            if is_transport_error(exc):
+                raise_transport(exc)
+            raise
+        names.extend(_model_names(payload))
+        if not isinstance(payload, dict):
+            break
+        token = payload.get("nextPageToken")
+        if not isinstance(token, str) or not token:
+            break
+        page_token = token
+    return names
 
 
 def _model_names(payload: object) -> list[str]:

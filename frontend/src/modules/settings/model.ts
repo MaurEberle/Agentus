@@ -43,7 +43,12 @@ export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 export const CLOUD_CATALOG_PROVIDERS = ['xai', 'openai', 'anthropic', 'gemini'] as const;
 export type CloudCatalogProvider = (typeof CLOUD_CATALOG_PROVIDERS)[number];
 export type HelpProvider = LlmProvider | '';
-export type EmbeddingProvider = 'ollama' | 'openai_compat' | '';
+export const EMBEDDING_PROVIDERS = ['ollama', 'openai', 'gemini', 'openai_compat'] as const;
+export type EmbeddingProvider = (typeof EMBEDDING_PROVIDERS)[number] | '';
+
+export function embeddingNeedsCredential(provider: string): boolean {
+  return provider === 'openai' || provider === 'gemini' || provider === 'openai_compat';
+}
 
 export function isCloudCatalogProvider(provider: string): provider is CloudCatalogProvider {
   return (CLOUD_CATALOG_PROVIDERS as readonly string[]).includes(provider);
@@ -71,6 +76,7 @@ export type HelpChatSettings = {
   credentialId?: string;
   embeddingProvider?: EmbeddingProvider;
   embeddingModel?: string;
+  embeddingCredentialId?: string;
   webSearchEnabled: boolean;
   webSearchCredentialId?: string;
   fallbackModel?: string;
@@ -204,6 +210,9 @@ export function helpChatSnapshot(help: HelpChatSettings): string {
     credentialId: providerNeedsCredential(help.provider) ? optionalText(help.credentialId) : '',
     embeddingProvider: help.embeddingProvider || '',
     embeddingModel: optionalText(help.embeddingModel),
+    embeddingCredentialId: embeddingNeedsCredential(help.embeddingProvider || '')
+      ? optionalText(help.embeddingCredentialId)
+      : '',
     webSearchEnabled: Boolean(help.webSearchEnabled),
     webSearchCredentialId: help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '',
     fallbackModel: optionalText(help.fallbackModel),
@@ -212,6 +221,9 @@ export function helpChatSnapshot(help: HelpChatSettings): string {
 
 export function helpChatWritePayload(help: HelpChatSettings) {
   const credentialId = providerNeedsCredential(help.provider) ? optionalText(help.credentialId) : '';
+  const embeddingCredentialId = embeddingNeedsCredential(help.embeddingProvider || '')
+    ? optionalText(help.embeddingCredentialId)
+    : '';
   const webSearchCredentialId = help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '';
   return {
     provider: help.provider,
@@ -219,6 +231,7 @@ export function helpChatWritePayload(help: HelpChatSettings) {
     credentialId: credentialId || null,
     embeddingProvider: help.embeddingProvider || '',
     embeddingModel: optionalText(help.embeddingModel),
+    embeddingCredentialId: embeddingCredentialId || null,
     webSearchEnabled: Boolean(help.webSearchEnabled),
     webSearchCredentialId: webSearchCredentialId || null,
     fallbackModel: optionalText(help.fallbackModel) || null,

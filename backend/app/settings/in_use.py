@@ -46,6 +46,9 @@ def usage_labels(credential_id: str) -> list[str]:
     llm = help_chat.get("credentialId", help_chat.get("credential_id"))
     if isinstance(llm, str) and llm == credential_id:
         labels.append("helpChat.llm")
+    embed = help_chat.get("embeddingCredentialId", help_chat.get("embedding_credential_id"))
+    if isinstance(embed, str) and embed == credential_id:
+        labels.append("helpChat.embedding")
     web = help_chat.get("webSearchCredentialId", help_chat.get("web_search_credential_id"))
     if isinstance(web, str) and web == credential_id:
         labels.append("helpChat.webSearch")

@@ -34,7 +34,11 @@ def retrieve_scored(query: str) -> list[tuple[float, HelpSource]]:
     model = help_chat.embedding_model.strip() or "nomic-embed-text"
     if provider == "xai" or provider == "anthropic":
         return []
-    credential_id = help_chat.credential_id if provider != "ollama" else None
+    credential_id = None
+    if provider != "ollama":
+        credential_id = help_chat.embedding_credential_id or (
+            help_chat.credential_id if help_chat.provider == provider else None
+        )
     from app.runtime.embeddings import embed
 
     try:
