@@ -338,6 +338,33 @@ class RunController:
                 raise AppError("runtime.modelNotFound", status_code=409, message=tag)
         return fallback_missing
 
+    def _chat_payload(self) -> list[dict[str, Any]]:
+        return [item.model_dump(by_alias=True) for item in self.conversation]
+
+    def flush_chat(self, *, generating: bool | None = None) -> None:
+        payload = self._chat_payload()
+        run_id = self.run_id
+        if run_id:
+            try:
+                update_run(run_id, chat=payload or None)
+            except StoreUnavailable:
+                pass
+        snap = self.snapshot
+        if snap is None:
+            return
+        prev = snap.chat if isinstance(snap.chat, dict) else {}
+        gen = bool(prev.get("generating")) if generating is None else generating
+        self.snapshot = snap.model_copy(
+            update={"chat": {"messages": payload, "generating": gen}}
+        )
+
+    def remember_chat(self, msg: ChatMessage, *, generating: bool | None = None) -> None:
+        with self.lock:
+            self.conversation.append(msg)
+            run_id = self.run_id or ""
+        self.flush_chat(generating=generating)
+        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True)})
+
     def send_chat(self, text: str) -> None:
         with self.lock:
             if self.service_status != "running" or not self.compiled or not self.compiled.chat_input:
@@ -351,11 +378,11 @@ class RunController:
             content=mask_text(text),
             created_at=utc_now(),
         )
-        self.conversation.append(msg)
-        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True)})
+        self.remember_chat(msg, generating=True)
 
     def abort_chat(self) -> None:
         self.abort_generation.set()
+        self.flush_chat(generating=False)
 
 
 def node_label(compiled: CompiledGraph | None, node_id: str | None) -> str | None:

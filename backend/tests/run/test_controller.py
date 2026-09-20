@@ -112,6 +112,30 @@ def test_stop_while_waiting(client: TestClient) -> None:
     assert get_help_degraded() is False
 
 
+def test_chat_persisted_while_running(client: TestClient) -> None:
+    _save_mini(requireInput=True)
+    start = client.post("/api/run/start")
+    assert start.status_code == 200
+    run_id = get_controller().run_id
+    assert run_id
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        snap = client.get("/api/run").json()
+        if snap and snap.get("serviceStatus") == "running":
+            break
+        time.sleep(0.05)
+    chat = client.post("/api/run/chat", json={"text": "hello from user"})
+    assert chat.status_code == 204
+    stored = client.get(f"/api/runs/{run_id}").json()
+    assert isinstance(stored.get("chat"), list)
+    assert stored["chat"][0]["role"] == "user"
+    assert "hello from user" in stored["chat"][0]["content"]
+    live = client.get("/api/run").json()
+    messages = (live.get("chat") or {}).get("messages") or []
+    assert messages and messages[0]["role"] == "user"
+    client.post("/api/run/stop")
+
+
 def test_chat_without_chat_input(client: TestClient) -> None:
     doc = mini_doc()
     doc["nodes"] = [n for n in doc["nodes"] if n["id"] != "in"]

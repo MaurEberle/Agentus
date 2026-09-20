@@ -411,8 +411,7 @@ def _agent_turn(
             content=content,
             created_at=utc_now(),
         )
-        ctrl.conversation.append(msg)
-        publish("chat", {"runId": ctrl.run_id, "message": msg.model_dump(by_alias=True)})
+        ctrl.remember_chat(msg, generating=False)
         conversation.append(LlmMessage(role="assistant", content=content))
     return content
 
@@ -513,5 +512,4 @@ def _publish_user(ctrl: RunController, text: str) -> None:
         content=text,
         created_at=utc_now(),
     )
-    ctrl.conversation.append(msg)
-    publish("chat", {"runId": ctrl.run_id, "message": msg.model_dump(by_alias=True)})
+    ctrl.remember_chat(msg, generating=True)

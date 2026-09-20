@@ -16,7 +16,7 @@ type RawRun = {
   errorNodeName?: string | null;
   models?: RawModel[];
   graphSnapshot?: RunDetail['graphSnapshot'];
-  chat?: RunDetail['chat'];
+  chat?: RunDetail['chat'] | { messages?: RunDetail['chat'] };
   calls?: RunDetail['calls'];
   steps?: RunDetail['steps'];
 };
@@ -64,11 +64,18 @@ export function normalizeRun(raw: RawRun): RunSummary {
   };
 }
 
+function normalizeChat(raw: RawRun['chat']): RunDetail['chat'] {
+  if (!raw) return undefined;
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw.messages)) return raw.messages;
+  return undefined;
+}
+
 export function normalizeRunDetail(raw: RawRun): RunDetail {
   return {
     ...normalizeRun(raw),
     graphSnapshot: raw.graphSnapshot,
-    chat: raw.chat,
+    chat: normalizeChat(raw.chat),
     calls: raw.calls ?? [],
     steps: raw.steps ?? [],
   };

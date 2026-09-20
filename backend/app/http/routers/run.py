@@ -62,6 +62,11 @@ def run_stream():
 
                 for row in list_logs(run_id):
                     yield sse_event("log", _camel_log(row))
+                for msg in list(ctrl.conversation):
+                    yield sse_event(
+                        "chat",
+                        {"runId": run_id, "message": msg.model_dump(by_alias=True)},
+                    )
             while True:
                 try:
                     event, data = q.get(timeout=15)

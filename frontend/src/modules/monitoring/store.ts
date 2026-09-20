@@ -268,12 +268,28 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       toastOnce(stepKey, 'monitoring.notify.stepFailed', 'error');
     }
     if (!step) lastStepKey = '';
+    const incoming = merged.chat?.messages ?? [];
+    let chatMessages = current.chatMessages;
+    let chatGenerating = current.chatGenerating;
+    if (isNew) {
+      chatMessages = incoming;
+      chatGenerating = Boolean(merged.chat?.generating);
+    } else if (incoming.length > 0) {
+      let next = chatMessages;
+      for (const message of incoming) {
+        next = upsertChat(next, { ...message, content: maskText(message.content) });
+      }
+      chatMessages = next;
+      if (typeof merged.chat?.generating === 'boolean') {
+        chatGenerating = merged.chat.generating;
+      }
+    }
     useMonitoringStore.setState({
       run: merged,
       lastErrorMessage: merged.errorMessage ?? current.lastErrorMessage,
       ...(isNew ? resetForRun(merged) : null),
-      chatMessages: isNew ? (merged.chat?.messages ?? []) : current.chatMessages,
-      chatGenerating: isNew ? Boolean(merged.chat?.generating) : current.chatGenerating,
+      chatMessages,
+      chatGenerating,
     });
   }
 }
