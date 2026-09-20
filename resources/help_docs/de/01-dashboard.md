@@ -12,6 +12,10 @@ Die Karte **Einrichtung** erscheint, wenn etwas für den ersten Lauf fehlt, zum 
 
 Ist die Umgebung vollständig, bleibt die Karte aus. Fehlende optionale Modelle nach einem stillen Setup ohne Pull sind kein zweiter Assistent: Runtime-Ping oder der Hilfe-Chat zeigen den Fehler.
 
+## Host-Ressourcen
+
+Dieselbe Karte wie unter **Monitoring**: CPU, Arbeitsspeicher und GPU/VRAM **dieses PCs**, nicht nur der App-Prozess. Die Werte aktualisieren sich laufend, auch ohne aktiven Lauf.
+
 ## Status
 
 Zeigt, ob der Dienst **gestoppt**, **startet**, **läuft** oder **stoppt**, plus das aktive Netz. Bei laufendem Netz: Link **Monitoring** und optional „läuft seit …“. Ohne Schnellwahl: Hinweis und Link zur **Verwaltung**.

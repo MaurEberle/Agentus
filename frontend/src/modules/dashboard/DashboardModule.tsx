@@ -11,6 +11,7 @@ import { RecentRunsCard } from '@/modules/dashboard/sections/RecentRunsCard';
 import { SetupCard } from '@/modules/dashboard/sections/SetupCard';
 import { StatusCard } from '@/modules/dashboard/sections/StatusCard';
 import { WeekStatsCard } from '@/modules/dashboard/sections/WeekStatsCard';
+import { ResourcesPanel } from '@/modules/monitoring/resources/ResourcesPanel';
 import { useAppStore } from '@/store';
 
 function useErrorToast(active: boolean, titleKey: string) {
@@ -29,7 +30,7 @@ function useErrorToast(active: boolean, titleKey: string) {
 export function DashboardModule() {
   const { t } = useTranslation();
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
-  const { networks, ping, models, stores, help, historyOk, recentRuns, weekRuns } =
+  const { networks, ping, models, stores, help, resources, historyOk, recentRuns, weekRuns } =
     useDashboardQueries();
 
   useErrorToast(networks.isError, 'dashboard.error.networks');
@@ -43,6 +44,7 @@ export function DashboardModule() {
     <div className="flex min-h-full w-full min-w-0 flex-col gap-4 overflow-x-hidden p-4 pb-24 md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('dashboard.title')}</h1>
       <StatusCard />
+      <ResourcesPanel resources={resources.data ?? null} />
       <HelpHintCard onboardingSeen={help.data?.onboardingSeen} loading={help.isLoading} />
       <SetupCard
         loading={ping.isLoading || help.isLoading || networksLoading}

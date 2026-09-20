@@ -67,6 +67,7 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("POST", "/api/runtime/ping", RUNTIME),
     ContractRoute("GET", "/api/runtime/models", RUNTIME),
     ContractRoute("POST", "/api/runtime/test-llm", RUNTIME),
+    ContractRoute("GET", "/api/runtime/resources", RUNTIME),
     ContractRoute("GET", "/api/mcp/recipes", MCP),
     ContractRoute("GET", "/api/mcp/servers", MCP),
     ContractRoute("POST", "/api/mcp/servers", MCP),

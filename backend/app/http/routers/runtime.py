@@ -1,4 +1,4 @@
-"""POST /runtime/ping, GET /runtime/models, POST /runtime/test-llm. Always HTTP 200."""
+"""POST /runtime/ping, GET /runtime/models, POST /runtime/test-llm, GET /runtime/resources."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from app.runtime.catalog import list_openai_compat_models
 from app.runtime.completions import test_llm
 from app.runtime.errors import RuntimeApiError
 from app.runtime.models import PingResult, RuntimeModelOut, RuntimeModelsResponse, TestLlmRequest
+from app.run.models import ResourceSnapshot
+from app.run.resources import latest as latest_resources
 from app.runtime.ollama import list_ollama_models, ping_ollama
 
 router = APIRouter()
@@ -46,3 +48,8 @@ def runtime_models(
 @router.post("/runtime/test-llm", response_model=PingResult, response_model_exclude_none=True)
 def runtime_test_llm(body: TestLlmRequest) -> PingResult:
     return test_llm(body)
+
+
+@router.get("/runtime/resources", response_model=ResourceSnapshot, response_model_exclude_none=True)
+def runtime_resources() -> ResourceSnapshot:
+    return latest_resources()

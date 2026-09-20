@@ -11,16 +11,18 @@ from app.run.sse import publish
 
 _stop = threading.Event()
 _thread: threading.Thread | None = None
+_lock = threading.Lock()
+_latest: ResourceSnapshot | None = None
 
 
-def _sample() -> ResourceSnapshot:
+def _sample(*, wait_cpu: bool = False) -> ResourceSnapshot:
     cpu = 0.0
     ram_used = 0
     ram_total = 0
     try:
         import psutil
 
-        cpu = float(psutil.cpu_percent(interval=None))
+        cpu = float(psutil.cpu_percent(interval=0.1 if wait_cpu else None))
         mem = psutil.virtual_memory()
         ram_used = int(mem.used)
         ram_total = int(mem.total)
@@ -39,6 +41,13 @@ def _sample() -> ResourceSnapshot:
     )
 
 
+def _store(snap: ResourceSnapshot) -> ResourceSnapshot:
+    global _latest
+    with _lock:
+        _latest = snap
+    return snap
+
+
 def _loop() -> None:
     try:
         import psutil
@@ -47,7 +56,7 @@ def _loop() -> None:
     except Exception:
         pass
     while not _stop.wait(RESOURCES_INTERVAL_SEC):
-        snap = _sample()
+        snap = _store(_sample())
         publish("resources", snap.model_dump(by_alias=True))
         try:
             from app.db.runs import touch_run
@@ -130,12 +139,15 @@ def start_resources() -> None:
     _thread.start()
 
 
-def stop_resources() -> None:
-    _stop.set()
-    if sys.platform == "win32":
-        try:
-            from app.run.gpu_win import close_sampler
+def latest() -> ResourceSnapshot:
+    start_resources()
+    with _lock:
+        snap = _latest
+    if snap is not None:
+        return snap
+    return _store(_sample(wait_cpu=True))
 
-            close_sampler()
-        except Exception:
-            pass
+
+def stop_resources() -> None:
+    """Keep host sampling for the dashboard; do not tear down GPU counters."""
+    return

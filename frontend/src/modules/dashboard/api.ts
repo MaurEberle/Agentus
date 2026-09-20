@@ -10,6 +10,7 @@ import {
 import { listNetworkSummaries } from '@/modules/network/api';
 import { pingRuntime, useRuntimeModelsQuery, useStoresQuery } from '@/modules/settings/api';
 import { normalizeRun } from '@/modules/history/model/normalize';
+import type { ResourceSnapshot } from '@/modules/monitoring/model/types';
 
 export { listNetworkSummaries };
 
@@ -53,12 +54,22 @@ export function useRuntimePingQuery() {
   });
 }
 
+export function useHostResourcesQuery() {
+  return useQuery({
+    queryKey: ['runtime', 'resources'],
+    queryFn: () => apiFetch<ResourceSnapshot>('/runtime/resources'),
+    refetchInterval: 1500,
+    staleTime: 0,
+  });
+}
+
 export function useDashboardQueries() {
   const networks = useNetworksQuery();
   const ping = useRuntimePingQuery();
   const models = useRuntimeModelsQuery();
   const stores = useStoresQuery();
   const help = useHelpChatStatusQuery();
+  const resources = useHostResourcesQuery();
   const historyOk = isHistoryStoreOk(stores.data);
   const runsEnabled = stores.isSuccess && historyOk;
   const recentRuns = useRecentRunsQuery(runsEnabled);
@@ -70,6 +81,7 @@ export function useDashboardQueries() {
     models,
     stores,
     help,
+    resources,
     historyOk,
     recentRuns,
     weekRuns,

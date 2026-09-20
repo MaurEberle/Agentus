@@ -41,6 +41,18 @@ def test_models_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     assert item["sizeBytes"] == 42
 
 
+def test_resources_host_snapshot(client: TestClient) -> None:
+    response = client.get("/api/runtime/resources")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["scope"] == "host"
+    assert "cpuPercent" in body
+    assert "ramUsedBytes" in body
+    assert "ramTotalBytes" in body
+    assert body["ramTotalBytes"] >= 0
+    assert isinstance(body.get("gpus"), list) or body.get("gpus") is None
+
+
 def test_xai_models_need_credential(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise AssertionError("must not call HTTP")

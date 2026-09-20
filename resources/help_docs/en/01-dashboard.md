@@ -12,6 +12,10 @@ The **Setup** card appears when something is missing for a first run, for exampl
 
 When the environment is complete, the card stays hidden. Missing optional models after a silent install without pulls are not a second wizard: runtime ping or help chat will show the failure.
 
+## Host resources
+
+The same card as on **Monitoring**: CPU, RAM, and GPU/VRAM of **this PC**, not only the app process. Values refresh continuously, even when no run is active.
+
 ## Status
 
 Shows whether the service is **stopped**, **starting**, **running**, or **stopping**, plus the active network. While running: **Monitoring** link and optional “running since …”. With empty quick select: a hint and a link to the **library**.
