@@ -6,7 +6,7 @@ export function defaultData(type: NodeType): Record<string, unknown> {
     case 'chat_input':
       return { displayName: '', placeholder: '', startMessage: '', requireInput: false };
     case 'llm':
-      return { displayName: '', provider: 'ollama', model: 'llama3.2:1b' };
+      return { displayName: '', provider: 'ollama', model: '' };
     case 'agent':
       return { displayName: '', systemPrompt: '' };
     case 'tool':

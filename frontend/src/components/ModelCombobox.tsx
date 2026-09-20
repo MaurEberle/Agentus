@@ -15,6 +15,7 @@ export function ModelCombobox({
   noModelsLabel,
   useValueLabel,
   emptyLabel,
+  restrictToOptions,
 }: {
   id?: string;
   value: string;
@@ -25,16 +26,19 @@ export function ModelCombobox({
   noModelsLabel?: string;
   useValueLabel?: (name: string) => string;
   emptyLabel?: string;
+  restrictToOptions?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  const names = value && !options.includes(value) ? [value, ...options] : options;
+  const names =
+    restrictToOptions || !value || options.includes(value) ? options : [value, ...options];
   const query = search.trim().toLowerCase();
   const filtered = query ? names.filter((item) => item.toLowerCase().includes(query)) : names;
   const exact = names.some((item) => item.toLowerCase() === query);
 
   function commit(next: string) {
+    if (restrictToOptions && next && !options.includes(next)) return;
     onChange(next);
     setOpen(false);
     setSearch('');
@@ -74,11 +78,20 @@ export function ModelCombobox({
           className="mb-1 h-8"
           onChange={(event) => setSearch(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              const next = search.trim();
-              if (next) commit(next);
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const next = search.trim();
+            if (!next) return;
+            if (exact) {
+              const match = names.find((item) => item.toLowerCase() === query);
+              if (match) commit(match);
+              return;
             }
+            if (restrictToOptions) {
+              if (filtered.length === 1) commit(filtered[0]);
+              return;
+            }
+            commit(next);
           }}
         />
         <ul className="max-h-48 overflow-auto">
@@ -106,7 +119,7 @@ export function ModelCombobox({
               </button>
             </li>
           ))}
-          {query && !exact && useValueLabel ? (
+          {query && !exact && !restrictToOptions && useValueLabel ? (
             <li>
               <button
                 type="button"

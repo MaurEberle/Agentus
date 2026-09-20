@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ModelCombobox } from '@/components/ModelCombobox';
@@ -194,13 +194,33 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     enabled: catalogProvider && Boolean(credentialId),
   });
 
-  const modelOptions =
+  const modelOptions = useMemo(() => {
+    const items =
+      provider === 'ollama'
+        ? (ollamaModels.data?.items ?? [])
+        : catalogProvider
+          ? (catalogModels.data?.items ?? [])
+          : [];
+    return items.map((item) => item.name).filter((name) => !isEmbeddingModelName(name));
+  }, [catalogModels.data?.items, catalogProvider, ollamaModels.data?.items, provider]);
+  const modelsLoading =
     provider === 'ollama'
-      ? (ollamaModels.data?.items ?? []).map((item) => item.name).filter((name) => !isEmbeddingModelName(name))
+      ? ollamaModels.isPending || ollamaModels.isFetching
       : catalogProvider
-        ? (catalogModels.data?.items ?? []).map((item) => item.name).filter((name) => !isEmbeddingModelName(name))
-        : [];
+        ? catalogModels.isPending || catalogModels.isFetching
+        : false;
   const modelLocked = catalogProvider && !credentialId;
+
+  useEffect(() => {
+    if (readOnly || modelLocked || modelsLoading) return;
+    if (modelOptions.length === 0) {
+      if (model) editorUpdateNodeData(node.id, { model: '' });
+      return;
+    }
+    if (!modelOptions.includes(model)) {
+      editorUpdateNodeData(node.id, { model: modelOptions[0] });
+    }
+  }, [model, modelLocked, modelOptions, modelsLoading, node.id, readOnly]);
   const catalogFailed =
     catalogProvider &&
     Boolean(credentialId) &&
@@ -303,11 +323,11 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           value={modelLocked ? '' : model}
           options={modelOptions}
           disabled={readOnly || modelLocked}
+          restrictToOptions
           placeholder={
             modelLocked ? t('network.inspector.llm.pickCredentialFirst') : t('network.inspector.llm.model')
           }
           noModelsLabel={t('network.inspector.llm.noModels')}
-          useValueLabel={(name) => t('network.inspector.llm.useModel', { name })}
           onChange={(value) => editorUpdateNodeData(node.id, { model: value })}
         />
         {catalogFailed ? (
