@@ -111,13 +111,17 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   clearLogFilter: () => set({ logNodeId: null }),
 }));
 
+function tabForRun(run: RunSnapshot | null, preferred: MonitoringTab): MonitoringTab {
+  if (preferred === 'chat' && hasChatInput(run?.graph)) return 'chat';
+  return 'log';
+}
+
 function resetForRun(run: RunSnapshot | null): Partial<MonitoringState> {
-  const chat = hasChatInput(run?.graph);
   return {
     logs: [],
     chatMessages: run?.chat?.messages ?? [],
     chatGenerating: Boolean(run?.chat?.generating),
-    tab: chat ? 'chat' : 'log',
+    tab: tabForRun(run, useMonitoringStore.getState().tab),
     logQuery: '',
     logNodeId: null,
     logErrorsOnly: false,
@@ -170,7 +174,7 @@ export function hydrateMonitoring(snapshot: {
     chatGenerating: Boolean(snapshot.run?.chat?.generating),
     adapterErrorKey: null,
     lastErrorMessage: snapshot.run?.errorMessage ?? null,
-    tab: hasChatInput(snapshot.run?.graph) ? 'chat' : 'log',
+    tab: tabForRun(snapshot.run, useMonitoringStore.getState().tab),
   });
 }
 
