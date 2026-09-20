@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import type { AppSettings, HelpChatSettings, HistoryRetentionDays } from '@/modules/settings/model';
+import {
+  helpChatSnapshot,
+  type AppSettings,
+  type HelpChatSettings,
+  type HistoryRetentionDays,
+} from '@/modules/settings/model';
 
 export type RuntimeDraft = {
   ollamaBaseUrl: string;
@@ -19,6 +24,9 @@ type SettingsDraftState = {
   setHelpChat: (patch: Partial<HelpChatSettings>) => void;
   setData: (patch: Partial<DataDraft>) => void;
   reset: (settings: AppSettings) => void;
+  syncHelpChat: (settings: AppSettings) => void;
+  syncRuntime: (settings: AppSettings) => void;
+  syncData: (settings: AppSettings) => void;
   isDirty: (settings?: AppSettings | null) => boolean;
   runtimeDirty: (settings?: AppSettings | null) => boolean;
   helpDirty: (settings?: AppSettings | null) => boolean;
@@ -38,11 +46,11 @@ function helpFrom(settings: AppSettings): HelpChatSettings {
     provider: help.provider,
     model: help.model,
     credentialId: help.credentialId || undefined,
-    embeddingProvider: help.embeddingProvider,
-    embeddingModel: help.embeddingModel,
-    webSearchEnabled: help.webSearchEnabled,
+    embeddingProvider: help.embeddingProvider || '',
+    embeddingModel: help.embeddingModel || '',
+    webSearchEnabled: Boolean(help.webSearchEnabled),
     webSearchCredentialId: help.webSearchCredentialId || undefined,
-    fallbackModel: help.fallbackModel,
+    fallbackModel: help.fallbackModel || undefined,
   };
 }
 
@@ -85,6 +93,9 @@ export const useSettingsDraft = create<SettingsDraftState>((set, get) => ({
       helpChat: helpFrom(settings),
       data: dataFrom(settings),
     }),
+  syncHelpChat: (settings) => set({ helpChat: helpFrom(settings) }),
+  syncRuntime: (settings) => set({ runtime: runtimeFrom(settings) }),
+  syncData: (settings) => set({ data: dataFrom(settings) }),
   isDirty: (settings) => {
     const state = get();
     return state.runtimeDirty(settings) || state.helpDirty(settings) || state.dataDirty(settings);
@@ -94,8 +105,9 @@ export const useSettingsDraft = create<SettingsDraftState>((set, get) => ({
     return JSON.stringify(get().runtime) !== JSON.stringify(runtimeFrom(settings));
   },
   helpDirty: (settings) => {
-    if (!settings || !get().helpChat) return false;
-    return JSON.stringify(get().helpChat) !== JSON.stringify(helpFrom(settings));
+    const help = get().helpChat;
+    if (!settings || !help) return false;
+    return helpChatSnapshot(help) !== helpChatSnapshot(helpFrom(settings));
   },
   dataDirty: (settings) => {
     if (!settings || !get().data) return false;

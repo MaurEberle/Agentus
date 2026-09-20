@@ -36,9 +36,11 @@ import {
   LLM_PROVIDERS,
   credentialMatchesProvider,
   helpChatConfigured,
+  helpChatWritePayload,
   isCloudCatalogProvider,
   isEmbeddingModelName,
   type EmbeddingProvider,
+  type HelpChatSettings,
   type HelpProvider,
   type LlmProvider,
   type RuntimeModel,
@@ -140,6 +142,7 @@ export function HelpChatSection() {
   const { data: credentials } = useCredentialsQuery();
   const help = useSettingsDraft((state) => state.helpChat);
   const setHelpChat = useSettingsDraft((state) => state.setHelpChat);
+  const syncHelpChat = useSettingsDraft((state) => state.syncHelpChat);
   const { data: models } = useRuntimeModelsQuery();
   const catalogQuery = useRuntimeModelsQuery({
     provider: (help?.provider || 'ollama') as LlmProvider,
@@ -180,7 +183,10 @@ export function HelpChatSection() {
     if (!help) return;
     setBusy(true);
     try {
-      await patchSettings({ helpChat: help });
+      const next = await patchSettings({
+        helpChat: helpChatWritePayload(help) as HelpChatSettings,
+      });
+      syncHelpChat(next);
       notify({ titleKey: 'settings.notify.saved', variant: 'success' });
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });

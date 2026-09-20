@@ -193,6 +193,38 @@ export function helpChatConfigured(help: HelpChatSettings): boolean {
   return true;
 }
 
+function optionalText(value: string | null | undefined): string {
+  return value?.trim() ? value : '';
+}
+
+export function helpChatSnapshot(help: HelpChatSettings): string {
+  return JSON.stringify({
+    provider: help.provider || '',
+    model: help.model || '',
+    credentialId: providerNeedsCredential(help.provider) ? optionalText(help.credentialId) : '',
+    embeddingProvider: help.embeddingProvider || '',
+    embeddingModel: optionalText(help.embeddingModel),
+    webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchCredentialId: help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '',
+    fallbackModel: optionalText(help.fallbackModel),
+  });
+}
+
+export function helpChatWritePayload(help: HelpChatSettings) {
+  const credentialId = providerNeedsCredential(help.provider) ? optionalText(help.credentialId) : '';
+  const webSearchCredentialId = help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '';
+  return {
+    provider: help.provider,
+    model: help.model,
+    credentialId: credentialId || null,
+    embeddingProvider: help.embeddingProvider || '',
+    embeddingModel: optionalText(help.embeddingModel),
+    webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchCredentialId: webSearchCredentialId || null,
+    fallbackModel: optionalText(help.fallbackModel) || null,
+  };
+}
+
 export function isEmbeddingModelName(name: string): boolean {
   return name.toLowerCase().includes('embed');
 }

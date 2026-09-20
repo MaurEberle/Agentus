@@ -44,6 +44,7 @@ export function DataSection() {
   const serviceStatus = useAppStore((state) => state.serviceStatus);
   const dataDraft = useSettingsDraft((state) => state.data);
   const setData = useSettingsDraft((state) => state.setData);
+  const syncData = useSettingsDraft((state) => state.syncData);
   const dirty = useSettingsDraft((state) => state.dataDirty(settings));
   const busy =
     serviceStatus === 'starting' || serviceStatus === 'running' || serviceStatus === 'stopping';
@@ -79,7 +80,8 @@ export function DataSection() {
     if (!dataDraft) return;
     setSaving(true);
     try {
-      await patchSettings({ historyRetentionDays: dataDraft.historyRetentionDays });
+      const next = await patchSettings({ historyRetentionDays: dataDraft.historyRetentionDays });
+      syncData(next);
       notify({ titleKey: 'settings.notify.saved', variant: 'success' });
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });

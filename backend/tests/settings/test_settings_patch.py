@@ -42,6 +42,34 @@ def test_patch_help_chat_model_keeps_rest(client: TestClient) -> None:
     assert help_chat["embeddingModel"] == before["embeddingModel"]
 
 
+def test_patch_help_chat_clears_optional_ids(client: TestClient) -> None:
+    created = client.post(
+        "/api/credentials",
+        json={"name": "search", "kind": "web_search", "secret": "secret-value"},
+    ).json()
+    client.patch(
+        "/api/settings",
+        json={
+            "helpChat": {
+                "webSearchEnabled": True,
+                "webSearchCredentialId": created["id"],
+                "credentialId": created["id"],
+            }
+        },
+    )
+    before = client.get("/api/settings").json()["helpChat"]
+    assert before["webSearchCredentialId"] == created["id"]
+    assert before["credentialId"] == created["id"]
+    response = client.patch(
+        "/api/settings",
+        json={"helpChat": {"webSearchCredentialId": None, "credentialId": None}},
+    )
+    assert response.status_code == 200
+    help_chat = response.json()["helpChat"]
+    assert help_chat["webSearchCredentialId"] is None
+    assert help_chat["credentialId"] is None
+
+
 def test_patch_onboarding_seen(client: TestClient) -> None:
     response = client.patch("/api/settings", json={"chatOnboardingSeen": True})
     assert response.status_code == 200

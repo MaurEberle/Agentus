@@ -30,6 +30,7 @@ export function RuntimeSection() {
   const { data: models } = useRuntimeModelsQuery();
   const runtime = useSettingsDraft((state) => state.runtime);
   const setRuntime = useSettingsDraft((state) => state.setRuntime);
+  const syncRuntime = useSettingsDraft((state) => state.syncRuntime);
   const dirty = useSettingsDraft((state) => state.runtimeDirty(settings));
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
   const [pinging, setPinging] = useState(false);
@@ -39,10 +40,11 @@ export function RuntimeSection() {
     if (!runtime) return;
     setSaving(true);
     try {
-      await patchSettings({
+      const next = await patchSettings({
         ollamaBaseUrl: runtime.ollamaBaseUrl.trim(),
-        openaiCompatBaseUrl: runtime.openaiCompatBaseUrl.trim() || undefined,
+        openaiCompatBaseUrl: runtime.openaiCompatBaseUrl.trim(),
       });
+      syncRuntime(next);
       notify({ titleKey: 'settings.notify.saved', variant: 'success' });
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
