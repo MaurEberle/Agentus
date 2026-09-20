@@ -534,6 +534,8 @@
     },
     "palette": {
       "title": "Palette",
+      "collapse": "Elementauswahl einklappen",
+      "expand": "Elementauswahl ausklappen",
       "search": "Knoten suchen",
       "chat_input": "Chat-Eingabe",
       "chat_inputHint": "Höchstens eine. Starttext und Pflichtfeld für den Lauf.",
@@ -562,6 +564,8 @@
     },
     "inspector": {
       "title": "Inspector",
+      "collapse": "Inspector einklappen",
+      "expand": "Inspector ausklappen",
       "displayName": "Anzeigename",
       "multi": "{{count}} Knoten ausgewählt",
       "graph": {

@@ -534,6 +534,8 @@
     },
     "palette": {
       "title": "Palette",
+      "collapse": "Collapse palette",
+      "expand": "Expand palette",
       "search": "Search nodes",
       "chat_input": "Chat input",
       "chat_inputHint": "At most one. Start text and required input for the run.",
@@ -562,6 +564,8 @@
     },
     "inspector": {
       "title": "Inspector",
+      "collapse": "Collapse inspector",
+      "expand": "Expand inspector",
       "displayName": "Display name",
       "multi": "{{count}} nodes selected",
       "graph": {
