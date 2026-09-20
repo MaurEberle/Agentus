@@ -55,6 +55,13 @@ def run_stream():
             )
             if ctrl.snapshot is not None:
                 yield sse_event("run", ctrl.snapshot.model_dump(by_alias=True))
+            run_id = ctrl.run_id
+            if run_id:
+                from app.http.routers.runs import _camel_log
+                from app.db.runs import list_logs
+
+                for row in list_logs(run_id):
+                    yield sse_event("log", _camel_log(row))
             while True:
                 try:
                     event, data = q.get(timeout=15)

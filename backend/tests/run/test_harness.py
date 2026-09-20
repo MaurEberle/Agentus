@@ -69,9 +69,13 @@ def test_execute_first_party_allowlist(monkeypatch, api_env) -> None:
         )
     )
     patch_settings(AppSettingsPatch(active_network_id="net-1"))
-    get_controller().start()
+    run_id = get_controller().start()["runId"]
     thread = get_controller().thread
     if thread:
         thread.join(timeout=5)
     assert "calculator" in called
     assert "http" not in called
+    from app.db.runs import list_logs
+
+    messages = [row["message"] for row in list_logs(run_id)]
+    assert "run.tool.call" in messages

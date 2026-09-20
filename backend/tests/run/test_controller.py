@@ -55,6 +55,29 @@ def test_start_succeeds_and_teardown_unloads(client: TestClient) -> None:
     assert get_help_degraded() is False
 
 
+def test_run_persists_logs_steps_and_chat(client: TestClient) -> None:
+    _save_mini(startMessage="go")
+    response = client.post("/api/run/start")
+    assert response.status_code == 200
+    run_id = response.json()["runId"]
+    thread = get_controller().thread
+    if thread:
+        thread.join(timeout=5)
+    time.sleep(0.05)
+    logs = client.get(f"/api/runs/{run_id}/logs").json()["items"]
+    messages = [row["message"] for row in logs]
+    assert "run.start" in messages
+    assert "run.chat.user" in messages
+    assert "run.llm.start" in messages
+    assert "run.agent.done" in messages
+    assert "run.succeeded" in messages
+    assert any(row.get("nodeId") for row in logs)
+    detail = client.get(f"/api/runs/{run_id}").json()
+    assert detail["steps"]
+    assert detail["calls"]
+    assert detail["chat"]
+
+
 def test_start_busy(client: TestClient) -> None:
     _save_mini(requireInput=True)
     first = client.post("/api/run/start")

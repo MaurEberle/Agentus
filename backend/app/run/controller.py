@@ -10,7 +10,7 @@ from app.common.secrets import mask_obj, mask_text
 from app.common.types import ServiceStatus
 from app.db.engine import utc_now
 from app.db.networks import get_network, touch_network
-from app.db.runs import insert_log, insert_run, update_run
+from app.db.runs import insert_log, insert_run, update_run, upsert_step
 from app.http.errors import AppError
 from app.run.compile import CompiledGraph, compile_document
 from app.run.graph_models import AgentNetworkDocument
@@ -133,7 +133,7 @@ class RunController:
                 node = compiled.by_id.get(kid)
                 if node and index_node(row.id, node, data_dir=data_dir) == "error":
                     raise AppError("run.knowledge.failed", status_code=409)
-            self._vram_start(compiled, settings)
+            fallback_missing = self._vram_start(compiled, settings)
             server_ids = [sid for ag in compiled.agents.values() for sid, _ in ag.mcp if sid]
             if server_ids and mcp is not None:
                 mcp.open_for(list(dict.fromkeys(server_ids)))
@@ -164,8 +164,16 @@ class RunController:
                 self.compiled = compiled
                 self.snapshot = snapshot
                 self.service_status = "running"
+            _seed_steps(compiled, run_id)
             publish("service", {"serviceStatus": "running"})
             publish("run", snapshot.model_dump(by_alias=True))
+            if fallback_missing:
+                emit_log("warn", "run.help.fallbackMissing")
+            emit_log(
+                "info",
+                "run.start",
+                payload={"networkId": row.id, "networkName": row.name},
+            )
             start_resources()
             from app.run.harness import run_harness
 
@@ -210,7 +218,8 @@ class RunController:
     def finish(self, outcome: str) -> None:
         run_id = self.run_id
         if run_id:
-            update_run(run_id, outcome=outcome, ended_at=utc_now())
+            chat = [item.model_dump(by_alias=True) for item in self.conversation] or None
+            update_run(run_id, outcome=outcome, ended_at=utc_now(), chat=chat)
         self.teardown(outcome=outcome)
         with self.lock:
             self.service_status = "stopped"
@@ -246,10 +255,11 @@ class RunController:
         set_help_degraded(False)
         stop_resources()
 
-    def _vram_start(self, compiled: CompiledGraph, settings: Any) -> None:
+    def _vram_start(self, compiled: CompiledGraph, settings: Any) -> bool:
         from app.runtime.errors import RuntimeApiError
         from app.runtime.ollama import ensure_loaded
 
+        fallback_missing = False
         help_chat = settings.help_chat
         if help_chat.provider == "ollama" and help_chat.model.strip():
             set_help_degraded(True)
@@ -259,7 +269,7 @@ class RunController:
                 ensure_loaded(fallback)
                 self._unloads.append(fallback)
             except Exception:
-                emit_log("warn", "run.help.fallbackMissing")
+                fallback_missing = True
         models: list[str] = []
         for agent in compiled.agents.values():
             if agent.llm.provider == "ollama" and agent.llm.model:
@@ -278,6 +288,7 @@ class RunController:
             self._unloads.append("nomic-embed-text")
         except Exception:
             pass
+        return fallback_missing
 
     def send_chat(self, text: str) -> None:
         with self.lock:
@@ -299,27 +310,59 @@ class RunController:
         self.abort_generation.set()
 
 
+def node_label(compiled: CompiledGraph | None, node_id: str | None) -> str | None:
+    if compiled is None or not node_id:
+        return None
+    node = compiled.by_id.get(node_id)
+    if node is None:
+        return None
+    name = str(node.data.get("displayName") or "").strip()
+    return name or node.type
+
+
+def _seed_steps(compiled: CompiledGraph, run_id: str) -> None:
+    for node in compiled.doc.nodes:
+        role = str(node.data.get("role") or "").strip() or None
+        upsert_step(
+            run_id=run_id,
+            node_id=node.id,
+            node_name=node_label(compiled, node.id),
+            role=role,
+            type=node.type,
+            status="idle",
+        )
+
+
 def emit_log(
     level: str,
     message: str,
     *,
     node_id: str | None = None,
+    node_name: str | None = None,
     payload: object | None = None,
     stack: str | None = None,
 ) -> None:
     ctrl = get_controller()
     run_id = ctrl.run_id or ""
+    if node_name is None:
+        node_name = node_label(ctrl.compiled, node_id)
     if payload is not None:
         dumped = json.dumps(mask_obj(payload), ensure_ascii=False, default=str)
         if len(dumped) > LOG_PAYLOAD_MAX:
             dumped = dumped[:LOG_PAYLOAD_MAX]
-        payload = json.loads(dumped)
+            try:
+                payload = json.loads(dumped)
+            except json.JSONDecodeError:
+                payload = {"truncated": True}
+        else:
+            payload = json.loads(dumped)
     event = LogEvent(
         id=str(uuid.uuid4()),
         ts=utc_now(),
         level=level,  # type: ignore[arg-type]
         run_id=run_id,
         node_id=node_id,
+        node_name=node_name,
         message=mask_text(message),
         payload=payload,
         stack=mask_text(stack) if stack else None,
@@ -332,6 +375,7 @@ def emit_log(
             ts=event.ts,
             level=level,
             node_id=node_id,
+            node_name=node_name,
             payload=payload,
             stack=event.stack,
         )

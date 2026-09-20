@@ -1182,5 +1182,45 @@
       "exportError": "Export failed",
       "error": "Action failed"
     }
+  },
+  "runLog": {
+    "run": {
+      "start": "Run started ({{networkName}})",
+      "wait": {
+        "human": "Waiting for input"
+      },
+      "chat": {
+        "user": "User message"
+      },
+      "batch": {
+        "start": "Batch run started"
+      },
+      "agent": {
+        "start": "Agent started",
+        "done": "Agent finished"
+      },
+      "knowledge": "Knowledge search ({{count}} hits)",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM finished ({{durationMs}} ms)"
+      },
+      "tool": {
+        "call": "Tool {{name}}"
+      },
+      "router": "Router → {{target}}",
+      "end": "End reached",
+      "succeeded": "Run succeeded",
+      "failed": "Run failed",
+      "cancelled": "Run cancelled",
+      "help": {
+        "fallbackMissing": "Help fallback model is missing"
+      },
+      "stepLimit": "Step limit reached"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "Router has no matching edge"
+      }
+    }
   }
 }

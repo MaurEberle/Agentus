@@ -1182,5 +1182,45 @@
       "exportError": "Export fehlgeschlagen",
       "error": "Aktion fehlgeschlagen"
     }
+  },
+  "runLog": {
+    "run": {
+      "start": "Lauf gestartet ({{networkName}})",
+      "wait": {
+        "human": "Wartet auf Eingabe"
+      },
+      "chat": {
+        "user": "Nutzereingabe"
+      },
+      "batch": {
+        "start": "Batch-Lauf gestartet"
+      },
+      "agent": {
+        "start": "Agent gestartet",
+        "done": "Agent fertig"
+      },
+      "knowledge": "Wissenssuche ({{count}} Treffer)",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM fertig ({{durationMs}} ms)"
+      },
+      "tool": {
+        "call": "Werkzeug {{name}}"
+      },
+      "router": "Router → {{target}}",
+      "end": "Ende erreicht",
+      "succeeded": "Lauf erfolgreich",
+      "failed": "Lauf fehlgeschlagen",
+      "cancelled": "Lauf abgebrochen",
+      "help": {
+        "fallbackMissing": "Hilfe-Fallback-Modell fehlt"
+      },
+      "stepLimit": "Schrittlimit erreicht"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "Router ohne passende Kante"
+      }
+    }
   }
 }

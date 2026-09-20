@@ -38,7 +38,7 @@ export async function listRunLogs(runId: string, logFilter?: LogFilter): Promise
   if (logFilter?.nodeId) params.set('nodeId', logFilter.nodeId);
   const suffix = params.toString() ? `?${params}` : '';
   const body = await apiFetch<{ items: LogEvent[] }>(`/runs/${encodeURIComponent(runId)}/logs${suffix}`);
-  return body.items;
+  return body.items ?? [];
 }
 
 export async function listCalls(filter: RunListFilter = {}): Promise<LlmCall[]> {

@@ -180,6 +180,7 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
   }
 
   if (evt.type === 'log') {
+    if (current.logs.some((item) => item.id === evt.log.id)) return;
     const masked = maskLog(evt.log);
     const log: LogEvent = { ...evt.log, ...masked };
     const logs = [...current.logs, log];

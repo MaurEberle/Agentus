@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { fileStamp, formatTime, safeFilePart, shortId } from '@/modules/monitoring/model/format';
 import { filterLogs, logHasExtra, nodeDisplayName } from '@/modules/monitoring/model/graph';
+import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { maskSecrets, maskText } from '@/modules/monitoring/model/mask';
 import type { LogEvent, LogLevel, RunSnapshot } from '@/modules/monitoring/model/types';
 import { LOG_LEVELS } from '@/modules/monitoring/model/types';
@@ -230,6 +231,7 @@ function LogRow({
   locale: string;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   const extra = logHasExtra(event);
   const Icon = LEVEL_ICON[event.level];
   return (
@@ -275,7 +277,7 @@ function LogRow({
               event.level === 'warn' && 'font-medium',
             )}
           >
-            {event.message}
+            {formatRunLogMessage(event.message, t, event.payload)}
           </span>
         </span>
       </div>
@@ -326,8 +328,16 @@ function LogDetail({
           </p>
           <div>
             <p className="text-xs text-muted-foreground">{t('monitoring.log.message')}</p>
-            <p className="whitespace-pre-wrap break-words font-mono text-xs">{event.message}</p>
-            <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2" onClick={() => void copy(event.message)}>
+            <p className="whitespace-pre-wrap break-words font-mono text-xs">
+              {formatRunLogMessage(event.message, t, event.payload)}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="mt-1 h-7 px-2"
+              onClick={() => void copy(formatRunLogMessage(event.message, t, event.payload))}
+            >
               {t('monitoring.log.copyLine')}
             </Button>
           </div>

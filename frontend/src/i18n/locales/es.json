@@ -1182,5 +1182,45 @@
       "exportError": "La exportación ha fallado",
       "error": "La acción ha fallado"
     }
+  },
+  "runLog": {
+    "run": {
+      "start": "Ejecución iniciada ({{networkName}})",
+      "wait": {
+        "human": "Esperando entrada"
+      },
+      "chat": {
+        "user": "Mensaje del usuario"
+      },
+      "batch": {
+        "start": "Ejecución por lotes iniciada"
+      },
+      "agent": {
+        "start": "Agente iniciado",
+        "done": "Agente finalizado"
+      },
+      "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM finalizado ({{durationMs}} ms)"
+      },
+      "tool": {
+        "call": "Herramienta {{name}}"
+      },
+      "router": "Enrutador → {{target}}",
+      "end": "Fin alcanzado",
+      "succeeded": "Ejecución correcta",
+      "failed": "Ejecución fallida",
+      "cancelled": "Ejecución cancelada",
+      "help": {
+        "fallbackMissing": "Falta el modelo de respaldo de ayuda"
+      },
+      "stepLimit": "Límite de pasos alcanzado"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "El enrutador no tiene una arista coincidente"
+      }
+    }
   }
 }
