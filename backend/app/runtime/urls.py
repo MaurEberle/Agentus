@@ -81,6 +81,24 @@ def embeddings_url(
     )
 
 
+def models_url(
+    provider: Provider,
+    *,
+    ollama_root: str,
+    override_base: str | None,
+    settings_openai: str | None,
+) -> str:
+    return _join_api(
+        _provider_base(
+            provider,
+            ollama_root=ollama_root,
+            override_base=override_base,
+            settings_openai=settings_openai,
+        ),
+        "models",
+    )
+
+
 def settings_roots() -> tuple[str, str | None]:
     """``(ollama_root, openai_compat_base_url_or_none)`` from settings, with defaults."""
     try:

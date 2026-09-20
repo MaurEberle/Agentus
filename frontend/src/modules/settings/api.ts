@@ -8,6 +8,7 @@ import type {
   CredentialListItem,
   DataLocation,
   HelpPing,
+  LlmProvider,
   McpRecipe,
   McpServerListItem,
   RuntimeModel,
@@ -42,6 +43,7 @@ export async function createCredential(input: {
     body: JSON.stringify(input),
   });
   await queryClient.invalidateQueries({ queryKey: ['credentials'] });
+  await queryClient.invalidateQueries({ queryKey: ['runtime', 'models'] });
   return item;
 }
 
@@ -54,6 +56,7 @@ export async function updateCredential(
     body: JSON.stringify(input),
   });
   await queryClient.invalidateQueries({ queryKey: ['credentials'] });
+  await queryClient.invalidateQueries({ queryKey: ['runtime', 'models'] });
   return item;
 }
 
@@ -69,14 +72,28 @@ export async function deleteCredential(id: string): Promise<void> {
     throw error;
   }
   await queryClient.invalidateQueries({ queryKey: ['credentials'] });
+  await queryClient.invalidateQueries({ queryKey: ['runtime', 'models'] });
 }
 
 export async function pingRuntime(): Promise<RuntimePing> {
   return apiFetch<RuntimePing>('/runtime/ping', { method: 'POST' });
 }
 
-export async function listRuntimeModels(): Promise<{ items: RuntimeModel[] }> {
-  return apiFetch<{ items: RuntimeModel[] }>('/runtime/models');
+export type RuntimeModelsParams = {
+  provider?: LlmProvider;
+  credentialId?: string;
+  baseUrl?: string;
+};
+
+export type RuntimeModelList = { items: RuntimeModel[]; messageKey?: string };
+
+export async function listRuntimeModels(params: RuntimeModelsParams = {}): Promise<RuntimeModelList> {
+  const query = new URLSearchParams();
+  if (params.provider) query.set('provider', params.provider);
+  if (params.credentialId) query.set('credentialId', params.credentialId);
+  if (params.baseUrl) query.set('baseUrl', params.baseUrl);
+  const suffix = query.toString();
+  return apiFetch<RuntimeModelList>(`/runtime/models${suffix ? `?${suffix}` : ''}`);
 }
 
 export async function pingHelpChat(): Promise<HelpPing> {
@@ -173,8 +190,23 @@ export function useCredentialsQuery() {
   return useQuery({ queryKey: ['credentials'], queryFn: listCredentials });
 }
 
-export function useRuntimeModelsQuery() {
-  return useQuery({ queryKey: ['runtime', 'models'], queryFn: listRuntimeModels });
+export function useRuntimeModelsQuery(params: RuntimeModelsParams & { enabled?: boolean } = {}) {
+  const provider = params.provider ?? 'ollama';
+  const credentialId = params.credentialId ?? '';
+  const baseUrl = params.baseUrl ?? '';
+  const ollamaDefault = provider === 'ollama' && !credentialId && !baseUrl;
+  return useQuery({
+    queryKey: ollamaDefault
+      ? ['runtime', 'models']
+      : ['runtime', 'models', provider, credentialId, baseUrl],
+    queryFn: () =>
+      listRuntimeModels({
+        provider: params.provider,
+        credentialId: params.credentialId,
+        baseUrl: params.baseUrl,
+      }),
+    enabled: params.enabled ?? true,
+  });
 }
 
 export function useMcpRecipesQuery() {

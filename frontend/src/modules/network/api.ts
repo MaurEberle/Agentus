@@ -100,7 +100,7 @@ export function useEditorCredentialsQuery() {
 export function useEditorModelsQuery() {
   return useQuery({
     queryKey: ['runtime', 'models'],
-    queryFn: listRuntimeModels,
+    queryFn: () => listRuntimeModels(),
   });
 }
 

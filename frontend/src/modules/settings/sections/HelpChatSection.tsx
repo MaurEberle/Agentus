@@ -49,6 +49,7 @@ function RuntimeModelSelect({
   onChange,
   placeholder,
   emptyLabel,
+  disabled,
 }: {
   id?: string;
   value: string;
@@ -56,12 +57,17 @@ function RuntimeModelSelect({
   onChange: (value: string) => void;
   placeholder?: string;
   emptyLabel: string;
+  disabled?: boolean;
 }) {
   const names = new Set(models.map((model) => model.name));
   const options = value && !names.has(value) ? [{ name: value }, ...models] : models;
 
   return (
-    <Select value={value || 'none'} onValueChange={(next) => onChange(next === 'none' ? '' : next)}>
+    <Select
+      value={value || 'none'}
+      disabled={disabled}
+      onValueChange={(next) => onChange(next === 'none' ? '' : next)}
+    >
       <SelectTrigger id={id}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
@@ -85,6 +91,8 @@ function ModelField({
   useSelect,
   onChange,
   emptyLabel,
+  disabled,
+  placeholder,
 }: {
   id: string;
   label: string;
@@ -93,6 +101,8 @@ function ModelField({
   useSelect: boolean;
   onChange: (value: string) => void;
   emptyLabel: string;
+  disabled?: boolean;
+  placeholder?: string;
 }) {
   return (
     <div className="grid gap-1.5">
@@ -103,11 +113,18 @@ function ModelField({
           value={value}
           models={models}
           onChange={onChange}
-          placeholder={label}
+          placeholder={placeholder ?? label}
           emptyLabel={emptyLabel}
+          disabled={disabled}
         />
       ) : (
-        <Input id={id} value={value} onChange={(event) => onChange(event.target.value)} />
+        <Input
+          id={id}
+          value={value}
+          disabled={disabled}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+        />
       )}
     </div>
   );
@@ -117,9 +134,14 @@ export function HelpChatSection() {
   const { t } = useTranslation();
   const { data: settings } = useSettingsQuery();
   const { data: credentials } = useCredentialsQuery();
-  const { data: models } = useRuntimeModelsQuery();
   const help = useSettingsDraft((state) => state.helpChat);
   const setHelpChat = useSettingsDraft((state) => state.setHelpChat);
+  const { data: models } = useRuntimeModelsQuery();
+  const xaiModelsQuery = useRuntimeModelsQuery({
+    provider: 'xai',
+    credentialId: help?.credentialId,
+    enabled: help?.provider === 'xai' && Boolean(help?.credentialId),
+  });
   const dirty = useSettingsDraft((state) => state.helpDirty(settings));
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
   const [busy, setBusy] = useState(false);
@@ -139,7 +161,15 @@ export function HelpChatSection() {
   const runtimeModels = models?.items ?? [];
   const hasRuntimeModels = runtimeModels.length > 0;
   const embedModels = runtimeModels.filter((model) => isEmbeddingModelName(model.name));
+  const xaiModels = xaiModelsQuery.data?.items ?? [];
   const emptyLabel = t('settings.helpChat.providerEmpty');
+  const xaiLocked = help?.provider === 'xai' && !help.credentialId;
+  const xaiModelsFailed =
+    help?.provider === 'xai' &&
+    Boolean(help.credentialId) &&
+    !xaiModelsQuery.isFetching &&
+    !xaiModelsQuery.isPending &&
+    xaiModels.length === 0;
 
   async function save() {
     if (!help) return;
@@ -188,9 +218,23 @@ export function HelpChatSection() {
             <Label>{t('settings.helpChat.provider')}</Label>
             <Select
               value={help.provider || 'none'}
-              onValueChange={(value) =>
-                setHelpChat({ provider: value === 'none' ? '' : (value as HelpProvider) })
-              }
+              onValueChange={(value) => {
+                const next = value === 'none' ? '' : (value as HelpProvider);
+                const patch: Partial<typeof help> = { provider: next };
+                if (next !== help.provider) {
+                  patch.model = '';
+                }
+                if (next === 'ollama') {
+                  patch.credentialId = undefined;
+                } else if (next === 'xai') {
+                  const xaiOnly = cloudCredentials.filter((item) => item.kind === 'xai');
+                  const current = cloudCredentials.find((item) => item.id === help.credentialId);
+                  if (!current || current.kind !== 'xai') {
+                    patch.credentialId = xaiOnly.length === 1 ? xaiOnly[0].id : undefined;
+                  }
+                }
+                setHelpChat(patch);
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -203,16 +247,57 @@ export function HelpChatSection() {
               </SelectContent>
             </Select>
           </div>
+          {help.provider === 'xai' ? (
+            <div className="grid gap-1.5">
+              <Label>{t('settings.helpChat.credential')}</Label>
+              <Select
+                value={help.credentialId ?? 'none'}
+                onValueChange={(value) =>
+                  setHelpChat({
+                    credentialId: value === 'none' ? undefined : value,
+                    model: '',
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('settings.helpChat.credentialEmpty')}</SelectItem>
+                  {cloudCredentials
+                    .filter((item) => item.kind === 'xai' || item.kind === 'token')
+                    .map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {cloudCredentials.filter((item) => item.kind === 'xai').length === 0 ? (
+                <p className="text-xs text-destructive">{t('settings.helpChat.noCredentials')}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t('settings.helpChat.credentialHint')}</p>
+              )}
+            </div>
+          ) : null}
           <ModelField
             id="help-model"
             label={t('settings.helpChat.model')}
-            value={help.model}
-            models={runtimeModels}
-            useSelect={help.provider === 'ollama' && hasRuntimeModels}
+            value={xaiLocked ? '' : help.model}
+            models={help.provider === 'xai' ? xaiModels : runtimeModels}
+            useSelect={
+              (help.provider === 'ollama' && hasRuntimeModels) ||
+              (help.provider === 'xai' && Boolean(help.credentialId))
+            }
             emptyLabel={emptyLabel}
+            disabled={xaiLocked}
+            placeholder={xaiLocked ? t('settings.helpChat.pickCredentialFirst') : undefined}
             onChange={(value) => setHelpChat({ model: value })}
           />
-          {help.provider === 'xai' || help.provider === 'openai_compat' ? (
+          {xaiModelsFailed ? (
+            <p className="text-xs text-destructive">{t('settings.helpChat.modelsLoadError')}</p>
+          ) : null}
+          {help.provider === 'openai_compat' ? (
             <div className="grid gap-1.5">
               <Label>{t('settings.helpChat.credential')}</Label>
               <Select
@@ -226,11 +311,13 @@ export function HelpChatSection() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('settings.helpChat.credentialEmpty')}</SelectItem>
-                  {cloudCredentials.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
+                  {cloudCredentials
+                    .filter((item) => item.kind === 'openai_compat' || item.kind === 'token')
+                    .map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

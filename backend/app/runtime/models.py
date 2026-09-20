@@ -100,3 +100,4 @@ class RuntimeModelOut(ApiModel):
 
 class RuntimeModelsResponse(ApiModel):
     items: list[RuntimeModelOut]
+    message_key: str | None = Field(default=None, alias="messageKey")

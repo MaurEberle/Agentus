@@ -1,5 +1,6 @@
 """Inference client. Help and harness import these functions only."""
 
+from app.runtime.catalog import list_openai_compat_models
 from app.runtime.completions import complete, complete_stream, test_llm
 from app.runtime.embeddings import embed
 from app.runtime.models import (
@@ -35,6 +36,7 @@ __all__ = [
     "ensure_loaded",
     "list_loaded_models",
     "list_ollama_models",
+    "list_openai_compat_models",
     "ping_ollama",
     "test_llm",
     "unload",
