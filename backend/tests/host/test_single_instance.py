@@ -33,20 +33,14 @@ def test_run_host_second_instance_skips_uvicorn(monkeypatch) -> None:
     assert called["uvicorn"] == 0
 
 
-def test_on_closing_posts_stop(monkeypatch) -> None:
-    seen: list[str] = []
+def test_on_closing_stops_controller(monkeypatch) -> None:
+    seen = {"stop": 0}
 
-    class FakeClient:
-        def __enter__(self):
-            return self
+    class Fake:
+        def stop(self):
+            seen["stop"] += 1
+            return {"serviceStatus": "stopped"}
 
-        def __exit__(self, *args):
-            return False
-
-        def post(self, url, **kwargs):
-            seen.append(url)
-            return type("R", (), {"status_code": 200})()
-
-    monkeypatch.setattr("app.common.http.client", lambda **k: FakeClient())
+    monkeypatch.setattr("app.run.controller.get_controller", lambda: Fake())
     assert on_closing(object(), 8765) is True
-    assert seen == ["http://127.0.0.1:8765/api/run/stop"]
+    assert seen["stop"] == 1

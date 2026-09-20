@@ -52,7 +52,7 @@ Ribbon: refresh, delete selected runs, export logs, purge older than retention (
 | Running | still active — in history only as a link |
 | Succeeded | finished normally |
 | Failed | a step or the service failed |
-| Cancelled | Stop in the header or window closed |
+| Cancelled | Stop in the header, window closed, or app exit (including after a crash, on the next start) |
 | Timeout | deadline exceeded |
 
 **Cancelled is not failed.** Timeouts and cancellations are counted separately in KPIs (footnote on “Failed”).

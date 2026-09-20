@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.db.engine import json_dumps, json_loads, locked, transaction, utc_now
+from app.db.errors import StoreUnavailable
 
 _JSON_FIELDS = frozenset({"graph_snapshot", "chat", "models"})
 _UPDATE_FIELDS = frozenset(
@@ -188,24 +189,98 @@ def insert_run(
         )
 
 
-def update_run(id: str, **fields: Any) -> None:
-    updates = {key: value for key, value in fields.items() if key in _UPDATE_FIELDS}
-    if not updates:
-        return
+def abandon_orphaned_runs(*, ended_at: str | None = None) -> int:
+    """Mark leftover ``running`` rows cancelled. Safe at process start."""
+    ended = ended_at or utc_now()
+    try:
+        with transaction("history") as conn:
+            rows = conn.execute(
+                "SELECT id FROM runs WHERE outcome = 'running'"
+            ).fetchall()
+            if not rows:
+                return 0
+            ids = [str(row["id"]) for row in rows]
+            conn.execute(
+                """
+                UPDATE runs
+                SET outcome = 'cancelled', ended_at = ?
+                WHERE outcome = 'running'
+                """,
+                (ended,),
+            )
+            placeholders = ",".join("?" * len(ids))
+            conn.execute(
+                f"""
+                UPDATE run_steps
+                SET status = 'error',
+                    error_message = COALESCE(error_message, 'run.interrupted')
+                WHERE run_id IN ({placeholders})
+                  AND status IN ('waiting', 'running')
+                """,
+                ids,
+            )
+            for run_id in ids:
+                conn.execute(
+                    """
+                    INSERT INTO run_logs (
+                      id, run_id, ts, level, node_id, node_name, message, payload, stack
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(uuid.uuid4()),
+                        run_id,
+                        ended,
+                        "warn",
+                        None,
+                        None,
+                        "run.interrupted",
+                        None,
+                        None,
+                    ),
+                )
+            return len(ids)
+    except StoreUnavailable:
+        return 0
+
+
+def _run_assignments(fields: dict[str, Any]) -> tuple[str, list[object]]:
     assignments: list[str] = []
     params: list[object] = []
-    for key, value in updates.items():
+    for key, value in fields.items():
         assignments.append(f"{key} = ?")
         if key in _JSON_FIELDS:
             params.append(_dump_optional(value) if key != "models" else json_dumps(value or []))
         else:
             params.append(value)
+    return ", ".join(assignments), params
+
+
+def update_run(id: str, **fields: Any) -> None:
+    updates = {key: value for key, value in fields.items() if key in _UPDATE_FIELDS}
+    if not updates:
+        return
+    assignments, params = _run_assignments(updates)
     params.append(id)
     with transaction("history") as conn:
         conn.execute(
-            f"UPDATE runs SET {', '.join(assignments)} WHERE id = ?",
+            f"UPDATE runs SET {assignments} WHERE id = ?",
             params,
         )
+
+
+def complete_run(id: str, **fields: Any) -> bool:
+    """Write a terminal outcome only while the row is still ``running``."""
+    updates = {key: value for key, value in fields.items() if key in _UPDATE_FIELDS}
+    if "outcome" not in updates:
+        return False
+    assignments, params = _run_assignments(updates)
+    params.append(id)
+    with transaction("history") as conn:
+        cur = conn.execute(
+            f"UPDATE runs SET {assignments} WHERE id = ? AND outcome = 'running'",
+            params,
+        )
+        return int(cur.rowcount) > 0
 
 
 def get_run(id: str) -> dict[str, Any] | None:

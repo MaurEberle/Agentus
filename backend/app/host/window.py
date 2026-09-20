@@ -54,11 +54,11 @@ def _save_geom(window: Any) -> None:
 
 
 def on_closing(server: Any, port: int) -> bool:
+    _ = (server, port)
     try:
-        from app.common.http import client
+        from app.run.controller import get_controller
 
-        with client(timeout_sec=8.0) as http:
-            http.post(f"http://127.0.0.1:{port}/api/run/stop")
+        get_controller().stop()
     except Exception:
         pass
     return True

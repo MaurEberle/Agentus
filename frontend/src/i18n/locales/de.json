@@ -1233,6 +1233,7 @@
       "succeeded": "Lauf erfolgreich",
       "failed": "Lauf fehlgeschlagen",
       "cancelled": "Lauf abgebrochen",
+      "interrupted": "Lauf unterbrochen (App beendet)",
       "help": {
         "fallbackMissing": "Hilfe-Fallback-Modell fehlt"
       },

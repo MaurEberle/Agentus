@@ -89,6 +89,17 @@ def test_start_busy(client: TestClient) -> None:
     client.post("/api/run/stop")
 
 
+def test_finish_does_not_overwrite_cancelled(client: TestClient) -> None:
+    _save_mini(requireInput=True)
+    client.post("/api/run/start")
+    run_id = get_controller().run_id
+    client.post("/api/run/stop")
+    get_controller().finish("succeeded")
+    listed = client.get("/api/runs").json()["items"]
+    assert listed[0]["id"] == run_id
+    assert listed[0]["outcome"] == "cancelled"
+
+
 def test_stop_while_waiting(client: TestClient) -> None:
     _save_mini(requireInput=True)
     client.post("/api/run/start")

@@ -52,7 +52,7 @@ Ribbon: Aktualisieren, Löschen ausgewählter Läufe, Logs exportieren, alte Ein
 | Läuft | noch aktiv — in der Historie nur als Link |
 | Erfolg | normal beendet |
 | Fehler | Schritt oder Dienst fehlgeschlagen |
-| Abbruch | Stopp in der Kopfzeile oder Fenster zu |
+| Abbruch | Stopp in der Kopfzeile, Fenster zu, oder App-Ende (auch nach Absturz beim nächsten Start) |
 | Timeout | Zeitüberschreitung |
 
 **Abbruch ist nicht Fehler.** Timeouts und Abbrüche zählen in den KPIs getrennt (Fußzeile bei „Fehler“).

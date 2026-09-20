@@ -1233,6 +1233,7 @@
       "succeeded": "Ejecución correcta",
       "failed": "Ejecución fallida",
       "cancelled": "Ejecución cancelada",
+      "interrupted": "Ejecución interrumpida (aplicación cerrada)",
       "help": {
         "fallbackMissing": "Falta el modelo de respaldo de ayuda"
       },

@@ -1233,6 +1233,7 @@
       "succeeded": "Run succeeded",
       "failed": "Run failed",
       "cancelled": "Run cancelled",
+      "interrupted": "Run interrupted (app closed)",
       "help": {
         "fallbackMissing": "Help fallback model is missing"
       },

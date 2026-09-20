@@ -10,7 +10,8 @@ from app.common.secrets import mask_obj, mask_text
 from app.common.types import ServiceStatus
 from app.db.engine import utc_now
 from app.db.networks import get_network, touch_network
-from app.db.runs import insert_log, insert_run, update_run, upsert_step
+from app.db.errors import StoreUnavailable
+from app.db.runs import complete_run, get_run, insert_log, insert_run, update_run, upsert_step
 from app.http.errors import AppError
 from app.run.compile import CompiledGraph, compile_document
 from app.run.graph_models import AgentNetworkDocument
@@ -211,18 +212,22 @@ class RunController:
             if self.service_status in {"stopped", "disconnected"}:
                 return {"serviceStatus": "stopped"}
             self.service_status = "stopping"
+            run_id = self.run_id
         publish("service", {"serviceStatus": "stopping"})
         self.stop_event.set()
+        self.abort_generation.set()
+        if run_id:
+            try:
+                complete_run(run_id, outcome="cancelled", ended_at=utc_now())
+            except Exception:
+                pass
         thread = self.thread
         if thread and thread.is_alive():
             thread.join(timeout=10)
         with self.lock:
             already = self.service_status == "stopped"
         if not already:
-            self.teardown(outcome="cancelled")
-            with self.lock:
-                self.service_status = "stopped"
-            publish("service", {"serviceStatus": "stopped"})
+            self.finish("cancelled")
         return {"serviceStatus": "stopped"}
 
     def finish(
@@ -236,21 +241,37 @@ class RunController:
     ) -> None:
         run_id = self.run_id
         if run_id:
+            try:
+                row = get_run(run_id)
+            except StoreUnavailable:
+                row = None
             chat = [item.model_dump(by_alias=True) for item in self.conversation] or None
-            fields: dict[str, Any] = {
-                "outcome": outcome,
-                "ended_at": utc_now(),
-                "chat": chat,
-            }
-            if error_message:
-                fields["error_message"] = error_message
-            if error_class:
-                fields["error_class"] = error_class
-            if error_node_id:
-                fields["error_node_id"] = error_node_id
-            if error_node_name:
-                fields["error_node_name"] = error_node_name
-            update_run(run_id, **fields)
+            if row is None or row.get("outcome") == "running":
+                fields: dict[str, Any] = {
+                    "outcome": outcome,
+                    "ended_at": utc_now(),
+                    "chat": chat,
+                }
+                if error_message:
+                    fields["error_message"] = error_message
+                if error_class:
+                    fields["error_class"] = error_class
+                if error_node_id:
+                    fields["error_node_id"] = error_node_id
+                if error_node_name:
+                    fields["error_node_name"] = error_node_name
+                try:
+                    complete_run(run_id, **fields)
+                except StoreUnavailable:
+                    pass
+            elif chat and row.get("outcome") == "cancelled" and not row.get("chat"):
+                try:
+                    update_run(run_id, chat=chat)
+                except StoreUnavailable:
+                    pass
+        with self.lock:
+            if self.service_status == "stopped":
+                return
         self.teardown(outcome=outcome)
         with self.lock:
             self.service_status = "stopped"
