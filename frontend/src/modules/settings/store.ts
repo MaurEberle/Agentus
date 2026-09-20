@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { defaultSettings, type AppSettings, type HelpChatSettings, type HistoryRetentionDays } from '@/modules/settings/model';
+import type { AppSettings, HelpChatSettings, HistoryRetentionDays } from '@/modules/settings/model';
 
 export type RuntimeDraft = {
   ollamaBaseUrl: string;
@@ -32,20 +32,32 @@ function runtimeFrom(settings: AppSettings): RuntimeDraft {
   };
 }
 
+function helpFrom(settings: AppSettings): HelpChatSettings {
+  const help = settings.helpChat;
+  return {
+    provider: help.provider,
+    model: help.model,
+    credentialId: help.credentialId || undefined,
+    embeddingProvider: help.embeddingProvider,
+    embeddingModel: help.embeddingModel,
+    webSearchEnabled: help.webSearchEnabled,
+    webSearchCredentialId: help.webSearchCredentialId || undefined,
+    fallbackModel: help.fallbackModel,
+  };
+}
+
 function dataFrom(settings: AppSettings): DataDraft {
   return { historyRetentionDays: settings.historyRetentionDays };
 }
 
-const initial = defaultSettings();
-
 export const useSettingsDraft = create<SettingsDraftState>((set, get) => ({
-  runtime: runtimeFrom(initial),
-  helpChat: { ...initial.helpChat },
-  data: dataFrom(initial),
+  runtime: null,
+  helpChat: null,
+  data: null,
   hydrate: (settings) =>
     set({
       runtime: runtimeFrom(settings),
-      helpChat: { ...settings.helpChat },
+      helpChat: helpFrom(settings),
       data: dataFrom(settings),
     }),
   setRuntime: (patch) =>
@@ -70,7 +82,7 @@ export const useSettingsDraft = create<SettingsDraftState>((set, get) => ({
   reset: (settings) =>
     set({
       runtime: runtimeFrom(settings),
-      helpChat: { ...settings.helpChat },
+      helpChat: helpFrom(settings),
       data: dataFrom(settings),
     }),
   isDirty: (settings) => {
@@ -83,7 +95,7 @@ export const useSettingsDraft = create<SettingsDraftState>((set, get) => ({
   },
   helpDirty: (settings) => {
     if (!settings || !get().helpChat) return false;
-    return JSON.stringify(get().helpChat) !== JSON.stringify(settings.helpChat);
+    return JSON.stringify(get().helpChat) !== JSON.stringify(helpFrom(settings));
   },
   dataDirty: (settings) => {
     if (!settings || !get().data) return false;

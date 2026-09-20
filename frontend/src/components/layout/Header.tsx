@@ -49,7 +49,7 @@ export function Header() {
       <div className="app-drag relative z-10 min-w-2 flex-1 self-stretch" />
       <div className="app-no-drag relative z-10 hidden items-center gap-1 md:flex">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/settings">
+          <Link to="/settings#appearance">
             <Settings className="size-4" />
             {t('shell.settings')}
           </Link>
