@@ -9,7 +9,7 @@ export function KpiRow({ kpis, loading }: { kpis: HistoryKpis; loading: boolean 
   const locale = i18n.language;
   if (loading) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Skeleton className="h-24" />
         <Skeleton className="h-24" />
         <Skeleton className="h-24" />
@@ -47,7 +47,7 @@ export function KpiRow({ kpis, loading }: { kpis: HistoryKpis; loading: boolean 
 
 function Tile({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
-    <Card>
+    <Card className="h-full min-w-0">
       <CardHeader className="pb-1">
         <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>

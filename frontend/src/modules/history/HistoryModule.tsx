@@ -333,7 +333,7 @@ export function HistoryModule() {
   );
 
   return (
-    <div className="mx-auto flex min-h-full max-w-7xl flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
+    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('history.title')}</h1>
       <HistoryRibbon
         selectedCount={selectedIds.length}
@@ -373,7 +373,7 @@ export function HistoryModule() {
       {historyOk ? (
         <>
           <KpiRow kpis={kpis} loading={runsQuery.isLoading} />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid w-full gap-4 lg:grid-cols-2">
             <RunsChart buckets={buckets} />
             <ErrorTop rows={errors} onPick={onPickError} />
           </div>
@@ -410,7 +410,7 @@ export function HistoryModule() {
           ) : null}
           {filter.tab === 'history' ? (
             desktop ? (
-              <div className="grid min-h-[24rem] gap-3 md:grid-cols-2">
+              <div className="grid min-h-[24rem] w-full gap-3 md:grid-cols-2">
                 <Card className="min-w-0 overflow-hidden">{listPane}</Card>
                 <Card className="min-w-0 overflow-hidden">{detailPane}</Card>
               </div>

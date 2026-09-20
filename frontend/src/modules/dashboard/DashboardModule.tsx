@@ -40,7 +40,7 @@ export function DashboardModule() {
   const activeItem = networks.data?.items.find((item) => item.id === activeNetworkId);
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 overflow-x-hidden p-4 pb-24 md:p-6 md:pb-24">
+    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 overflow-x-hidden p-4 pb-24 md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('dashboard.title')}</h1>
       <StatusCard />
       <HelpHintCard onboardingSeen={help.data?.onboardingSeen} loading={help.isLoading} />
@@ -50,7 +50,7 @@ export function DashboardModule() {
         helpConfigured={help.isLoading ? undefined : help.data?.configured === true}
         hasNetwork={networksLoading ? undefined : (networks.data?.items.length ?? 0) > 0}
       />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid w-full gap-4 md:grid-cols-2">
         <ActiveNetworkCard loading={networksLoading} item={activeItem} />
         <RecentNetworksCard loading={networksLoading} items={networks.data?.items ?? []} />
         <RecentRunsCard

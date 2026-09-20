@@ -56,7 +56,7 @@ export function MonitoringModule() {
   }, [clearLogFilter, setSelectedLogId, setSelectedNodeId]);
 
   return (
-    <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
+    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('monitoring.title')}</h1>
       {import.meta.env.DEV ? <DevBar /> : null}
       <StatusBanner
@@ -82,7 +82,7 @@ export function MonitoringModule() {
         <>
           <RunHeader run={run} serviceStatus={serviceStatus} />
           <ResourcesPanel resources={resources} dimmed={dimmed} />
-          <div className="grid max-h-[min(28rem,60vh)] gap-4 md:grid-cols-2 md:items-stretch">
+          <div className="grid w-full max-h-[min(28rem,60vh)] gap-4 md:grid-cols-2 md:items-stretch">
             <div className="order-2 min-h-0 md:order-1">
               <MiniGraph run={run} dimmed={dimmed} />
             </div>
