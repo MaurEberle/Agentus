@@ -19,9 +19,11 @@ class HelpRagChunk:
     embedding: list[float]
     embedding_model_id: str | None
     dimension: int | None
+    locale: str | None = None
 
 
 def _from_row(row: Any) -> HelpRagChunk:
+    keys = row.keys()
     return HelpRagChunk(
         id=row["id"],
         source=row["source"],
@@ -31,6 +33,7 @@ def _from_row(row: Any) -> HelpRagChunk:
         embedding=unpack_f32(row["embedding"]),
         embedding_model_id=row["embedding_model_id"],
         dimension=row["dimension"],
+        locale=row["locale"] if "locale" in keys else None,
     )
 
 
@@ -42,8 +45,8 @@ def replace_all_chunks(chunks: list[HelpRagChunk]) -> None:
                 """
                 INSERT INTO help_chat_rag_chunks (
                   id, source, section, text, file_hash,
-                  embedding, embedding_model_id, dimension
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  embedding, embedding_model_id, dimension, locale
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     chunk.id,
@@ -54,6 +57,7 @@ def replace_all_chunks(chunks: list[HelpRagChunk]) -> None:
                     pack_f32(chunk.embedding),
                     chunk.embedding_model_id,
                     chunk.dimension,
+                    chunk.locale,
                 ),
             )
 

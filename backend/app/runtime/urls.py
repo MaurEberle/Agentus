@@ -8,6 +8,16 @@ from app.settings.defaults import DEFAULT_OLLAMA_BASE_URL
 from app.settings.urls import normalize_ollama_base_url
 
 DEFAULT_XAI_BASE = "https://api.x.ai/v1"
+DEFAULT_OPENAI_BASE = "https://api.openai.com/v1"
+DEFAULT_ANTHROPIC_BASE = "https://api.anthropic.com/v1"
+DEFAULT_GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"
+
+DEFAULT_PROVIDER_BASES: dict[str, str] = {
+    "xai": DEFAULT_XAI_BASE,
+    "openai": DEFAULT_OPENAI_BASE,
+    "anthropic": DEFAULT_ANTHROPIC_BASE,
+    "gemini": DEFAULT_GEMINI_BASE,
+}
 
 
 def ollama_native_root(settings_base: str | None) -> str:
@@ -21,7 +31,7 @@ def ollama_native_root(settings_base: str | None) -> str:
 def _join_api(base: str, suffix: str) -> str:
     root = base.rstrip("/")
     path = suffix.lstrip("/")
-    if root.endswith("/v1"):
+    if root.endswith("/v1") or root.endswith("/openai"):
         return f"{root}/{path}"
     return f"{root}/v1/{path}"
 
@@ -37,8 +47,9 @@ def _provider_base(
         raise RuntimeApiError("runtime.invalidProvider")
     if provider == "ollama":
         return (override_base or ollama_root).rstrip("/")
-    if provider == "xai":
-        return (override_base or DEFAULT_XAI_BASE).rstrip("/")
+    default = DEFAULT_PROVIDER_BASES.get(provider)
+    if default:
+        return (override_base or default).rstrip("/")
     base = (override_base or settings_openai or "").strip()
     if not base:
         raise RuntimeApiError("runtime.missingBaseUrl")
@@ -78,6 +89,24 @@ def embeddings_url(
             settings_openai=settings_openai,
         ),
         "embeddings",
+    )
+
+
+def models_url(
+    provider: Provider,
+    *,
+    ollama_root: str,
+    override_base: str | None,
+    settings_openai: str | None,
+) -> str:
+    return _join_api(
+        _provider_base(
+            provider,
+            ollama_root=ollama_root,
+            override_base=override_base,
+            settings_openai=settings_openai,
+        ),
+        "models",
     )
 
 

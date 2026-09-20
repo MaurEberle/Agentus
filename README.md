@@ -1,8 +1,7 @@
 # Agentus Network
 
-Lokale Desktop-App, mit der sich **Agentennetze** aus LLMs, Tools und Wissen auf dem eigenen PC bauen, starten und auswerten lassen. Oberfläche, HTTP-API, Persistenz, Hilfe-Chat, MCP-Supervisor und Netz-Laufzeit laufen in **einem** Windows-Prozess. Die UI kommt über Loopback in einem **WebView2**-Fenster, nicht aus Chrome und nicht als `file://`.
+Lokale Desktop-App, mit der sich **Agentennetze** aus LLMs, Tools und Wissen auf dem eigenen PC bauen, starten und auswerten lassen. Oberfläche, HTTP-API, Persistenz, Hilfe-Chat, MCP-Supervisor und Netz-Laufzeit laufen in **einem** Windows-Prozess. Die UI kommt über Loopback in einem **WebView2**-Fenster.
 
-Ollama bleibt ein **eigener** Daemon. Dieser Prozess beendet Ollama nicht.
 
 Version: `0.1.0` (eine Quelle: `backend/pyproject.toml`).
 
@@ -17,9 +16,9 @@ Version: `0.1.0` (eine Quelle: `backend/pyproject.toml`).
 | Historie | `/history`, `/history/:runId` | Archiv und Statistik |
 | Einstellungen | `/settings` | Runtime, Zugänge, Hilfe-Chat, MCP, Datenort, About |
 
-Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App und zum Graphen. Er ist nicht der Chat des laufenden Netzes (`chat_input` im Monitoring).
+Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App und zum Graphen.
 
-Sprachen: Deutsch (Default) und Englisch.
+Sprachen: Deutsch (Default), Englisch und Spanisch.
 
 ## Voraussetzungen
 
@@ -102,7 +101,7 @@ UI: `http://localhost:5173`. API: `http://127.0.0.1:8765/api`. OpenAPI `/docs` n
 
 Ohne `DEV` / `NO_HOST` auf Windows startet dasselbe Backend ein WebView2-Fenster und serviert `frontend/dist` (vorher `npm run build` im Frontend). Die API bindet nur Loopback (`127.0.0.1`, `localhost`, `::1`). `0.0.0.0` startet nicht.
 
-Frontend-Mocks sind Default (`VITE_USE_MOCKS` alles außer `false`). Gegen die echte API: `VITE_USE_MOCKS=false`.
+Das Frontend spricht die Python-API (`/api`, Proxy in Vite). Backend mit `AGENTUS_NETWORK_DEV=1` und `AGENTUS_NETWORK_NO_HOST=1` parallel zum Vite-Dev-Server starten.
 
 ```powershell
 cd backend
@@ -130,7 +129,7 @@ Erzeugt unter `dist/`:
 | `Agentus-Network-Setup-{version}-x64.exe` | NSIS Per-User-Setup |
 | `Agentus-Network-Portable-{version}-x64.zip` | derselbe Freeze plus `portable.txt` |
 
-Voraussetzungen: Python 3.12-venv im Backend, `frontend/dist`, NSIS 3 (`makensis` auf PATH oder unter `build/nsis/`). Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` ist in v1 ein Platzhalter.
+Voraussetzungen: Python 3.12-venv im Backend, `frontend/dist`, NSIS 3 (`makensis` auf PATH oder unter `build/nsis/`). Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` (PNG `resources/icons/app.png`).
 
 Mehr: [`installer/README.md`](installer/README.md), Checkliste für eine frische Windows-VM dort.
 

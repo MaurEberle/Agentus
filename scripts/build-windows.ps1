@@ -23,6 +23,16 @@ $Spec = Join-Path $Packaging "agentus_network.spec"
 $Nsi = Join-Path $Installer "Agentus-Network.nsi"
 $Toml = Join-Path $Backend "pyproject.toml"
 
+function Test-PowerShellSyntax {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $tokens = $null
+    $errors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$tokens, [ref]$errors)
+    if ($errors -and $errors.Count -gt 0) {
+        throw "PowerShell parse error in ${Path}: $($errors[0])"
+    }
+}
+
 function Read-ProjectVersion {
     $text = Get-Content -LiteralPath $Toml -Raw -Encoding UTF8
     $match = [regex]::Match($text, '(?m)^version\s*=\s*"([^"]+)"')
@@ -209,6 +219,9 @@ function Invoke-SignIfConfigured {
     }
 }
 
+Test-PowerShellSyntax -Path $FetchUrl
+Test-PowerShellSyntax -Path $PSCommandPath
+
 if (-not $Version) {
     $Version = Read-ProjectVersion
 }
@@ -311,7 +324,7 @@ if (-not $SkipNsis) {
         throw "makensis not found. Install NSIS 3 Unicode and re-run, or pass -SkipNsis."
     }
     Write-Host "makensis $makensis"
-    & $makensis "/DPRODUCT_VERSION=$Version" "/DPRODUCT_VERSION_QUAD=$VersionQuad" $Nsi
+    & $makensis "/DPRODUCT_VERSION=$Version" "/DPRODUCT_VERSION_QUAD=$VersionQuad" "/INPUTCHARSET" "UTF8" $Nsi
     if ($LASTEXITCODE -ne 0) {
         throw "makensis exited $LASTEXITCODE"
     }

@@ -1,8 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 
-export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8765/api';
-
-export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false';
+export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
 export const queryClient = new QueryClient({
   defaultOptions: {

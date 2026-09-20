@@ -3,7 +3,7 @@ import type { ServiceStatus } from '@/store/session';
 export type NodeRuntimeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error';
 export type WaitReason = 'none' | 'llm' | 'tool' | 'human';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type LlmProvider = 'ollama' | 'xai' | 'openai_compat';
+export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
 
 export const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
 export const LOG_BUFFER_SIZE = 2000;
@@ -75,6 +75,9 @@ export type RunSnapshot = {
   networkId: string;
   networkName: string;
   startedAt: string;
+  endedAt?: string;
+  outcome?: 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timeout';
+  archived?: boolean;
   serviceStatus: ServiceStatus;
   errorMessage?: string;
   graph: RunGraph;
@@ -83,6 +86,11 @@ export type RunSnapshot = {
     currentNodeIds: string[];
     dag?: { completed: number; total: number; pendingNodeIds: string[] };
     stepError?: { nodeId: string; message: string };
+    tokens?: {
+      in?: number;
+      out?: number;
+      perSecond?: number;
+    };
   };
   chat?: { messages: ChatMessage[]; generating?: boolean };
 };

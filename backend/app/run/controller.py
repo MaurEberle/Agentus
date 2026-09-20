@@ -10,7 +10,8 @@ from app.common.secrets import mask_obj, mask_text
 from app.common.types import ServiceStatus
 from app.db.engine import utc_now
 from app.db.networks import get_network, touch_network
-from app.db.runs import insert_log, insert_run, update_run
+from app.db.errors import StoreUnavailable
+from app.db.runs import complete_run, get_run, insert_log, insert_run, update_run, upsert_step
 from app.http.errors import AppError
 from app.run.compile import CompiledGraph, compile_document
 from app.run.graph_models import AgentNetworkDocument
@@ -21,6 +22,7 @@ from app.run.mcp_bridge import get_mcp
 from app.run.models import (
     Activity,
     ActivityDag,
+    ActivityTokens,
     ChatMessage,
     LogEvent,
     NodeRuntime,
@@ -60,6 +62,9 @@ class RunController:
         self.conversation: list[ChatMessage] = []
         self._unloads: list[str] = []
         self._help_model: str | None = None
+        self.last_error_node_id: str | None = None
+        self.tokens_in = 0
+        self.tokens_out = 0
         set_run_slice_provider(self.slice)
 
     def reset(self) -> None:
@@ -76,6 +81,9 @@ class RunController:
         self.conversation = []
         self._unloads = []
         self._help_model = None
+        self.last_error_node_id = None
+        self.tokens_in = 0
+        self.tokens_out = 0
         self.stop_event = threading.Event()
         self.abort_generation = threading.Event()
         set_run_slice_provider(self.slice)
@@ -99,6 +107,9 @@ class RunController:
             self.abort_generation.clear()
             self.chat_input_queue = queue.Queue()
             self.conversation = []
+            self.last_error_node_id = None
+            self.tokens_in = 0
+            self.tokens_out = 0
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()
@@ -133,12 +144,19 @@ class RunController:
                 node = compiled.by_id.get(kid)
                 if node and index_node(row.id, node, data_dir=data_dir) == "error":
                     raise AppError("run.knowledge.failed", status_code=409)
-            self._vram_start(compiled, settings)
+            fallback_missing = self._vram_start(compiled, settings)
             server_ids = [sid for ag in compiled.agents.values() for sid, _ in ag.mcp if sid]
             if server_ids and mcp is not None:
                 mcp.open_for(list(dict.fromkeys(server_ids)))
             run_id = str(uuid.uuid4())
             started = utc_now()
+            models: list[dict[str, str]] = []
+            seen_models: set[str] = set()
+            for agent in compiled.agents.values():
+                if not agent.llm.model or agent.llm.model in seen_models:
+                    continue
+                seen_models.add(agent.llm.model)
+                models.append({"provider": agent.llm.provider, "model": agent.llm.model})
             insert_run(
                 id=run_id,
                 network_id=row.id,
@@ -146,7 +164,7 @@ class RunController:
                 started_at=started,
                 outcome="running",
                 graph_snapshot=doc.model_dump(by_alias=True),
-                models=list({ag.llm.model for ag in compiled.agents.values() if ag.llm.model}),
+                models=models,
             )
             touch_network(row.id, last_used_at=started, last_run_id=run_id)
             snapshot = _build_snapshot(compiled, run_id, started, "running")
@@ -157,8 +175,16 @@ class RunController:
                 self.compiled = compiled
                 self.snapshot = snapshot
                 self.service_status = "running"
+            _seed_steps(compiled, run_id)
             publish("service", {"serviceStatus": "running"})
             publish("run", snapshot.model_dump(by_alias=True))
+            if fallback_missing:
+                emit_log("warn", "run.help.fallbackMissing")
+            emit_log(
+                "info",
+                "run.start",
+                payload={"networkId": row.id, "networkName": row.name},
+            )
             start_resources()
             from app.run.harness import run_harness
 
@@ -186,24 +212,66 @@ class RunController:
             if self.service_status in {"stopped", "disconnected"}:
                 return {"serviceStatus": "stopped"}
             self.service_status = "stopping"
+            run_id = self.run_id
         publish("service", {"serviceStatus": "stopping"})
         self.stop_event.set()
+        self.abort_generation.set()
+        if run_id:
+            try:
+                complete_run(run_id, outcome="cancelled", ended_at=utc_now())
+            except Exception:
+                pass
         thread = self.thread
         if thread and thread.is_alive():
             thread.join(timeout=10)
         with self.lock:
             already = self.service_status == "stopped"
         if not already:
-            self.teardown(outcome="cancelled")
-            with self.lock:
-                self.service_status = "stopped"
-            publish("service", {"serviceStatus": "stopped"})
+            self.finish("cancelled")
         return {"serviceStatus": "stopped"}
 
-    def finish(self, outcome: str) -> None:
+    def finish(
+        self,
+        outcome: str,
+        *,
+        error_message: str | None = None,
+        error_class: str | None = None,
+        error_node_id: str | None = None,
+        error_node_name: str | None = None,
+    ) -> None:
         run_id = self.run_id
         if run_id:
-            update_run(run_id, outcome=outcome, ended_at=utc_now())
+            try:
+                row = get_run(run_id)
+            except StoreUnavailable:
+                row = None
+            chat = [item.model_dump(by_alias=True) for item in self.conversation] or None
+            if row is None or row.get("outcome") == "running":
+                fields: dict[str, Any] = {
+                    "outcome": outcome,
+                    "ended_at": utc_now(),
+                    "chat": chat,
+                }
+                if error_message:
+                    fields["error_message"] = error_message
+                if error_class:
+                    fields["error_class"] = error_class
+                if error_node_id:
+                    fields["error_node_id"] = error_node_id
+                if error_node_name:
+                    fields["error_node_name"] = error_node_name
+                try:
+                    complete_run(run_id, **fields)
+                except StoreUnavailable:
+                    pass
+            elif chat and row.get("outcome") == "cancelled" and not row.get("chat"):
+                try:
+                    update_run(run_id, chat=chat)
+                except StoreUnavailable:
+                    pass
+        with self.lock:
+            if self.service_status == "stopped":
+                return
         self.teardown(outcome=outcome)
         with self.lock:
             self.service_status = "stopped"
@@ -239,10 +307,11 @@ class RunController:
         set_help_degraded(False)
         stop_resources()
 
-    def _vram_start(self, compiled: CompiledGraph, settings: Any) -> None:
+    def _vram_start(self, compiled: CompiledGraph, settings: Any) -> bool:
         from app.runtime.errors import RuntimeApiError
-        from app.runtime.ollama import ensure_loaded
+        from app.runtime.ollama import ensure_loaded, list_ollama_models
 
+        fallback_missing = False
         help_chat = settings.help_chat
         if help_chat.provider == "ollama" and help_chat.model.strip():
             set_help_degraded(True)
@@ -252,25 +321,49 @@ class RunController:
                 ensure_loaded(fallback)
                 self._unloads.append(fallback)
             except Exception:
-                emit_log("warn", "run.help.fallbackMissing")
-        models: list[str] = []
-        for agent in compiled.agents.values():
-            if agent.llm.provider == "ollama" and agent.llm.model:
-                if agent.llm.model not in models:
-                    models.append(agent.llm.model)
-        for tag in models:
-            try:
-                ensure_loaded(tag)
-                self._unloads.append(tag)
-            except RuntimeApiError as exc:
-                if exc.error_key == "runtime.modelNotFound":
-                    raise AppError("runtime.modelNotFound", status_code=409) from exc
-                raise AppError("runtime.modelNotFound", status_code=409) from exc
+                fallback_missing = True
         try:
-            ensure_loaded("nomic-embed-text")
-            self._unloads.append("nomic-embed-text")
-        except Exception:
-            pass
+            installed = {item.name for item in list_ollama_models()}
+        except RuntimeApiError as exc:
+            raise AppError(exc.error_key, status_code=409) from exc
+        seen: set[str] = set()
+        for agent in compiled.agents.values():
+            if agent.llm.provider != "ollama" or not agent.llm.model:
+                continue
+            tag = agent.llm.model
+            if tag in seen:
+                continue
+            seen.add(tag)
+            if tag not in installed and f"{tag}:latest" not in installed:
+                raise AppError("runtime.modelNotFound", status_code=409, message=tag)
+        return fallback_missing
+
+    def _chat_payload(self) -> list[dict[str, Any]]:
+        return [item.model_dump(by_alias=True) for item in self.conversation]
+
+    def flush_chat(self, *, generating: bool | None = None) -> None:
+        payload = self._chat_payload()
+        run_id = self.run_id
+        if run_id:
+            try:
+                update_run(run_id, chat=payload or None)
+            except StoreUnavailable:
+                pass
+        snap = self.snapshot
+        if snap is None:
+            return
+        prev = snap.chat if isinstance(snap.chat, dict) else {}
+        gen = bool(prev.get("generating")) if generating is None else generating
+        self.snapshot = snap.model_copy(
+            update={"chat": {"messages": payload, "generating": gen}}
+        )
+
+    def remember_chat(self, msg: ChatMessage, *, generating: bool | None = None) -> None:
+        with self.lock:
+            self.conversation.append(msg)
+            run_id = self.run_id or ""
+        self.flush_chat(generating=generating)
+        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True)})
 
     def send_chat(self, text: str) -> None:
         with self.lock:
@@ -285,11 +378,34 @@ class RunController:
             content=mask_text(text),
             created_at=utc_now(),
         )
-        self.conversation.append(msg)
-        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True)})
+        self.remember_chat(msg, generating=True)
 
     def abort_chat(self) -> None:
         self.abort_generation.set()
+        self.flush_chat(generating=False)
+
+
+def node_label(compiled: CompiledGraph | None, node_id: str | None) -> str | None:
+    if compiled is None or not node_id:
+        return None
+    node = compiled.by_id.get(node_id)
+    if node is None:
+        return None
+    name = str(node.data.get("displayName") or "").strip()
+    return name or node.type
+
+
+def _seed_steps(compiled: CompiledGraph, run_id: str) -> None:
+    for node in compiled.doc.nodes:
+        role = str(node.data.get("role") or "").strip() or None
+        upsert_step(
+            run_id=run_id,
+            node_id=node.id,
+            node_name=node_label(compiled, node.id),
+            role=role,
+            type=node.type,
+            status="idle",
+        )
 
 
 def emit_log(
@@ -297,22 +413,31 @@ def emit_log(
     message: str,
     *,
     node_id: str | None = None,
+    node_name: str | None = None,
     payload: object | None = None,
     stack: str | None = None,
 ) -> None:
     ctrl = get_controller()
     run_id = ctrl.run_id or ""
+    if node_name is None:
+        node_name = node_label(ctrl.compiled, node_id)
     if payload is not None:
         dumped = json.dumps(mask_obj(payload), ensure_ascii=False, default=str)
         if len(dumped) > LOG_PAYLOAD_MAX:
             dumped = dumped[:LOG_PAYLOAD_MAX]
-        payload = json.loads(dumped)
+            try:
+                payload = json.loads(dumped)
+            except json.JSONDecodeError:
+                payload = {"truncated": True}
+        else:
+            payload = json.loads(dumped)
     event = LogEvent(
         id=str(uuid.uuid4()),
         ts=utc_now(),
         level=level,  # type: ignore[arg-type]
         run_id=run_id,
         node_id=node_id,
+        node_name=node_name,
         message=mask_text(message),
         payload=payload,
         stack=mask_text(stack) if stack else None,
@@ -325,6 +450,7 @@ def emit_log(
             ts=event.ts,
             level=level,
             node_id=node_id,
+            node_name=node_name,
             payload=payload,
             stack=event.stack,
         )
@@ -370,6 +496,7 @@ def _build_snapshot(
                 total=total,
                 pending_node_ids=list(compiled.agents),
             ),
+            tokens=ActivityTokens(out=0),
         ),
         chat=chat,
     )

@@ -41,6 +41,56 @@ def test_models_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     assert item["sizeBytes"] == 42
 
 
+def test_resources_host_snapshot(client: TestClient) -> None:
+    response = client.get("/api/runtime/resources")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["scope"] == "host"
+    assert "cpuPercent" in body
+    assert "ramUsedBytes" in body
+    assert "ramTotalBytes" in body
+    assert body["ramTotalBytes"] >= 0
+    assert isinstance(body.get("gpus"), list) or body.get("gpus") is None
+
+
+def test_xai_models_need_credential(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("must not call HTTP")
+
+    install_transport(monkeypatch, handler)
+    response = client.get("/api/runtime/models", params={"provider": "xai"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["messageKey"] == "runtime.missingCredential"
+
+
+def test_xai_models_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    created = client.post(
+        "/api/credentials",
+        json={"name": "xAI", "kind": "xai", "secret": "sk-xai-live"},
+    )
+    assert created.status_code == 201
+    cred_id = created.json()["id"]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers.get("authorization") == "Bearer sk-xai-live"
+        return httpx.Response(
+            200, json={"data": [{"id": "grok-4"}, {"id": "grok-3-mini"}]}
+        )
+
+    install_transport(monkeypatch, handler)
+    response = client.get(
+        "/api/runtime/models",
+        params={"provider": "xai", "credentialId": cred_id},
+    )
+    assert response.status_code == 200
+    names = [item["name"] for item in response.json()["items"]]
+    assert names == ["grok-3-mini", "grok-4"]
+    assert "messageKey" not in response.json()
+    assert "sk-xai-live" not in response.text
+
+
 def test_test_llm_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/chat/completions"):

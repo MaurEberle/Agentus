@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { fileStamp, formatTime, safeFilePart, shortId } from '@/modules/monitoring/model/format';
 import { filterLogs, logHasExtra, nodeDisplayName } from '@/modules/monitoring/model/graph';
+import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { maskSecrets, maskText } from '@/modules/monitoring/model/mask';
 import type { LogEvent, LogLevel, RunSnapshot } from '@/modules/monitoring/model/types';
 import { LOG_LEVELS } from '@/modules/monitoring/model/types';
@@ -124,7 +125,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-36">
           <Label className="text-xs">{t('monitoring.log.level')}</Label>
@@ -199,7 +200,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
       <div
         ref={scroller}
         onScroll={onScroll}
-        className="max-h-[min(28rem,50vh)] min-h-[12rem] overflow-auto rounded-md border bg-muted/20 font-mono text-xs"
+        className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20 font-mono text-xs"
       >
         {visible.length === 0 ? (
           <p className="p-3 font-sans text-sm text-muted-foreground">{t('monitoring.log.empty')}</p>
@@ -230,6 +231,7 @@ function LogRow({
   locale: string;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   const extra = logHasExtra(event);
   const Icon = LEVEL_ICON[event.level];
   return (
@@ -275,7 +277,7 @@ function LogRow({
               event.level === 'warn' && 'font-medium',
             )}
           >
-            {event.message}
+            {formatRunLogMessage(event.message, t, event.payload)}
           </span>
         </span>
       </div>
@@ -326,15 +328,23 @@ function LogDetail({
           </p>
           <div>
             <p className="text-xs text-muted-foreground">{t('monitoring.log.message')}</p>
-            <p className="whitespace-pre-wrap break-words font-mono text-xs">{event.message}</p>
-            <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2" onClick={() => void copy(event.message)}>
+            <p className="whitespace-pre-wrap break-words font-mono text-xs">
+              {formatRunLogMessage(event.message, t, event.payload)}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="mt-1 h-7 px-2"
+              onClick={() => void copy(formatRunLogMessage(event.message, t, event.payload))}
+            >
               {t('monitoring.log.copyLine')}
             </Button>
           </div>
           {payloadText ? (
             <div>
               <p className="text-xs text-muted-foreground">{t('monitoring.log.payload')}</p>
-              <pre className="overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{payloadText}</pre>
+              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{payloadText}</pre>
               <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2" onClick={() => void copy(payloadText)}>
                 {t('monitoring.log.copyPayload')}
               </Button>
@@ -343,7 +353,7 @@ function LogDetail({
           {event.stack ? (
             <div>
               <p className="text-xs text-muted-foreground">{t('monitoring.log.stack')}</p>
-              <pre className="overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{event.stack}</pre>
+              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{event.stack}</pre>
             </div>
           ) : null}
         </div>

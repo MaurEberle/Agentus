@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import type { ChartBucket } from '@/modules/history/model/types';
 
 const COLORS = {
@@ -27,11 +28,11 @@ export function RunsChart({ buckets }: { buckets: ChartBucket[] }) {
   const hasTimeout = buckets.some((item) => item.timeout > 0);
 
   return (
-    <Card className="min-w-0">
-      <CardHeader className="pb-2">
+    <Card className={`${moduleCardClass} min-w-0`}>
+      <CardHeader className="shrink-0 pb-2">
         <CardTitle>{t('history.chart.title')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className={moduleCardBodyClass}>
         {buckets.every((item) => item.succeeded + item.failed + item.cancelled + item.timeout === 0) ? (
           <p className="text-sm text-muted-foreground">{t('history.chart.empty')}</p>
         ) : (

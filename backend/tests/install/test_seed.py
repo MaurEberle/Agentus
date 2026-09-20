@@ -61,6 +61,20 @@ def test_init_seeds_when_help_docs_env_set(tmp_path: Path, monkeypatch) -> None:
     assert (target / SEED_MARKER).is_file()
 
 
+def test_seed_adds_missing_locale_when_marker_exists(tmp_path: Path) -> None:
+    bundled = _mini_corpus(tmp_path)
+    data_dir = tmp_path / "data"
+    seed_help_documents(data_dir, bundled=bundled)
+    target = data_dir / RAG_DIR_NAME
+    guide = target / "de" / "00-user-guide.md"
+    guide.write_text("# Guide\nedited", encoding="utf-8")
+    (bundled / "fr").mkdir()
+    (bundled / "fr" / "00-user-guide.md").write_text("# Guide\nBonjour", encoding="utf-8")
+    seed_help_documents(data_dir, bundled=bundled)
+    assert guide.read_text(encoding="utf-8") == "# Guide\nedited"
+    assert (target / "fr" / "00-user-guide.md").read_text(encoding="utf-8") == "# Guide\nBonjour"
+
+
 def test_bundled_help_docs_pytest_is_none() -> None:
     assert bundled_help_docs() is None
 

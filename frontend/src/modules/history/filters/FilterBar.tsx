@@ -37,7 +37,7 @@ export function FilterBar({
   );
 
   return (
-    <div className="flex flex-wrap items-end gap-2">
+    <div className="flex w-full flex-wrap items-end gap-2">
       <div className="w-36">
         <Label className="text-xs">{t('history.filter.range')}</Label>
         <Select value={filter.range} onValueChange={(value) => onChange({ range: value as RangeKey, page: 1 })}>

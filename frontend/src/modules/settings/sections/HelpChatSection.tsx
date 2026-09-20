@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { ModelCombobox } from '@/components/ModelCombobox';
 import { notify } from '@/lib/notifications';
 import {
   clearHelpChatMessages,
@@ -32,17 +33,92 @@ import {
   useRuntimeModelsQuery,
   useSettingsQuery,
 } from '@/modules/settings/api';
-import { helpChatConfigured, type EmbeddingProvider, type HelpProvider } from '@/modules/settings/model';
+import {
+  EMBEDDING_PROVIDERS,
+  LLM_PROVIDERS,
+  credentialMatchesProvider,
+  embeddingNeedsCredential,
+  helpChatConfigured,
+  helpChatWritePayload,
+  isCloudCatalogProvider,
+  isEmbeddingModelName,
+  type EmbeddingProvider,
+  type HelpChatSettings,
+  type HelpProvider,
+  type LlmProvider,
+  type RuntimeModel,
+} from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useSettingsDraft } from '@/modules/settings/store';
+
+function ModelField({
+  id,
+  label,
+  value,
+  models,
+  useSelect,
+  onChange,
+  emptyLabel,
+  disabled,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  models: RuntimeModel[];
+  useSelect: boolean;
+  onChange: (value: string) => void;
+  emptyLabel: string;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="grid min-w-0 gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      {useSelect ? (
+        <ModelCombobox
+          id={id}
+          value={value}
+          options={models.map((model) => model.name)}
+          onChange={onChange}
+          placeholder={placeholder ?? label}
+          emptyLabel={emptyLabel}
+          noModelsLabel={t('network.inspector.llm.noModels')}
+          useValueLabel={(name) => t('network.inspector.llm.useModel', { name })}
+          disabled={disabled}
+        />
+      ) : (
+        <Input
+          id={id}
+          value={value}
+          disabled={disabled}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </div>
+  );
+}
 
 export function HelpChatSection() {
   const { t } = useTranslation();
   const { data: settings } = useSettingsQuery();
   const { data: credentials } = useCredentialsQuery();
-  const { data: models } = useRuntimeModelsQuery();
   const help = useSettingsDraft((state) => state.helpChat);
   const setHelpChat = useSettingsDraft((state) => state.setHelpChat);
+  const syncHelpChat = useSettingsDraft((state) => state.syncHelpChat);
+  const { data: models } = useRuntimeModelsQuery();
+  const catalogQuery = useRuntimeModelsQuery({
+    provider: (help?.provider || 'ollama') as LlmProvider,
+    credentialId: help?.credentialId,
+    enabled: isCloudCatalogProvider(help?.provider ?? '') && Boolean(help?.credentialId),
+  });
+  const embedCatalogQuery = useRuntimeModelsQuery({
+    provider: (help?.embeddingProvider || 'ollama') as LlmProvider,
+    credentialId: help?.embeddingCredentialId,
+    enabled: embeddingNeedsCredential(help?.embeddingProvider ?? '') && Boolean(help?.embeddingCredentialId),
+  });
   const dirty = useSettingsDraft((state) => state.helpDirty(settings));
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
   const [busy, setBusy] = useState(false);
@@ -53,18 +129,51 @@ export function HelpChatSection() {
     Boolean(settings) &&
     Boolean(help) &&
     (help?.embeddingProvider !== settings?.helpChat.embeddingProvider ||
-      help?.embeddingModel !== settings?.helpChat.embeddingModel);
+      help?.embeddingModel !== settings?.helpChat.embeddingModel ||
+      (help?.embeddingCredentialId || '') !== (settings?.helpChat.embeddingCredentialId || ''));
 
-  const cloudCredentials = (credentials?.items ?? []).filter(
-    (item) => item.kind === 'xai' || item.kind === 'openai_compat',
+  const cloudCredentials = (credentials?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, help?.provider ?? ''),
   );
+  const kindCredentials = (credentials?.items ?? []).filter((item) => item.kind === help?.provider);
   const searchCredentials = (credentials?.items ?? []).filter((item) => item.kind === 'web_search');
+  const runtimeModels = models?.items ?? [];
+  const hasRuntimeModels = runtimeModels.length > 0;
+  const embedModels = runtimeModels.filter((model) => isEmbeddingModelName(model.name));
+  const catalogModels = catalogQuery.data?.items ?? [];
+  const embedCatalogModels = (embedCatalogQuery.data?.items ?? []).filter((model) =>
+    isEmbeddingModelName(model.name),
+  );
+  const emptyLabel = t('settings.helpChat.providerEmpty');
+  const catalogLocked = isCloudCatalogProvider(help?.provider ?? '') && !help?.credentialId;
+  const catalogFailed =
+    isCloudCatalogProvider(help?.provider ?? '') &&
+    Boolean(help?.credentialId) &&
+    !catalogQuery.isFetching &&
+    !catalogQuery.isPending &&
+    catalogModels.length === 0;
+  const embedLocked = embeddingNeedsCredential(help?.embeddingProvider ?? '') && !help?.embeddingCredentialId;
+  const embedCatalogFailed =
+    embeddingNeedsCredential(help?.embeddingProvider ?? '') &&
+    Boolean(help?.embeddingCredentialId) &&
+    !embedCatalogQuery.isFetching &&
+    !embedCatalogQuery.isPending &&
+    embedCatalogModels.length === 0;
+  const embedKindCredentials = (credentials?.items ?? []).filter(
+    (item) => item.kind === help?.embeddingProvider,
+  );
+  const embedCredentials = (credentials?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, help?.embeddingProvider ?? ''),
+  );
 
   async function save() {
     if (!help) return;
     setBusy(true);
     try {
-      await patchSettings({ helpChat: help });
+      const next = await patchSettings({
+        helpChat: helpChatWritePayload(help) as HelpChatSettings,
+      });
+      syncHelpChat(next);
       notify({ titleKey: 'settings.notify.saved', variant: 'success' });
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
@@ -107,52 +216,47 @@ export function HelpChatSection() {
             <Label>{t('settings.helpChat.provider')}</Label>
             <Select
               value={help.provider || 'none'}
-              onValueChange={(value) =>
-                setHelpChat({ provider: value === 'none' ? '' : (value as HelpProvider) })
-              }
+              onValueChange={(value) => {
+                const next = value === 'none' ? '' : (value as HelpProvider);
+                const patch: Partial<typeof help> = { provider: next };
+                if (next !== help.provider) {
+                  patch.model = '';
+                }
+                if (next === 'ollama' || next === '') {
+                  patch.credentialId = undefined;
+                } else if (isCloudCatalogProvider(next)) {
+                  const nextKind = (credentials?.items ?? []).filter((item) => item.kind === next);
+                  const current = (credentials?.items ?? []).find((item) => item.id === help.credentialId);
+                  if (!current || !credentialMatchesProvider(current.kind, next)) {
+                    patch.credentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
+                  }
+                }
+                setHelpChat(patch);
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t('settings.helpChat.providerEmpty')}</SelectItem>
-                <SelectItem value="ollama">Ollama</SelectItem>
-                <SelectItem value="xai">xAI</SelectItem>
-                <SelectItem value="openai_compat">{t('settings.helpChat.openaiCompat')}</SelectItem>
+                {LLM_PROVIDERS.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {t(`providers.${id}`)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="help-model">{t('settings.helpChat.model')}</Label>
-            {help.provider === 'ollama' && (models?.items.length ?? 0) > 0 ? (
-              <Select value={help.model || 'none'} onValueChange={(value) => setHelpChat({ model: value === 'none' ? '' : value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('settings.helpChat.model')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('settings.helpChat.providerEmpty')}</SelectItem>
-                  {models?.items.map((model) => (
-                    <SelectItem key={model.name} value={model.name}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                id="help-model"
-                value={help.model}
-                onChange={(event) => setHelpChat({ model: event.target.value })}
-              />
-            )}
-          </div>
-          {help.provider === 'xai' || help.provider === 'openai_compat' ? (
+          {isCloudCatalogProvider(help.provider) ? (
             <div className="grid gap-1.5">
               <Label>{t('settings.helpChat.credential')}</Label>
               <Select
                 value={help.credentialId ?? 'none'}
                 onValueChange={(value) =>
-                  setHelpChat({ credentialId: value === 'none' ? undefined : value })
+                  setHelpChat({
+                    credentialId: value === 'none' ? undefined : value,
+                    model: '',
+                  })
                 }
               >
                 <SelectTrigger>
@@ -167,36 +271,136 @@ export function HelpChatSection() {
                   ))}
                 </SelectContent>
               </Select>
+              {kindCredentials.length === 0 ? (
+                <p className="text-xs text-destructive">{t('settings.helpChat.noCredentials')}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t('settings.helpChat.credentialHint')}</p>
+              )}
             </div>
+          ) : null}
+          <ModelField
+            id="help-model"
+            label={t('settings.helpChat.model')}
+            value={catalogLocked ? '' : help.model}
+            models={
+              isCloudCatalogProvider(help.provider)
+                ? catalogModels.filter((model) => !isEmbeddingModelName(model.name))
+                : runtimeModels
+            }
+            useSelect={
+              (help.provider === 'ollama' && hasRuntimeModels) ||
+              (isCloudCatalogProvider(help.provider) && Boolean(help.credentialId))
+            }
+            emptyLabel={emptyLabel}
+            disabled={catalogLocked}
+            placeholder={catalogLocked ? t('settings.helpChat.pickCredentialFirst') : undefined}
+            onChange={(value) => setHelpChat({ model: value })}
+          />
+          {catalogFailed ? (
+            <p className="text-xs text-destructive">{t('settings.helpChat.modelsLoadError')}</p>
+          ) : null}
+          {help.provider === 'ollama' ? (
+            <ModelField
+              id="fallback-model"
+              label={t('settings.helpChat.fallback')}
+              value={help.fallbackModel ?? ''}
+              models={runtimeModels.filter((model) => !isEmbeddingModelName(model.name))}
+              useSelect={hasRuntimeModels}
+              emptyLabel={emptyLabel}
+              onChange={(value) => setHelpChat({ fallbackModel: value || undefined })}
+            />
           ) : null}
           <div className="grid gap-1.5">
             <Label>{t('settings.helpChat.embedProvider')}</Label>
             <Select
               value={help.embeddingProvider || 'none'}
-              onValueChange={(value) =>
-                setHelpChat({
-                  embeddingProvider: value === 'none' ? '' : (value as EmbeddingProvider),
-                })
-              }
+              onValueChange={(value) => {
+                const next = value === 'none' ? '' : (value as EmbeddingProvider);
+                const patch: Partial<typeof help> = {
+                  embeddingProvider: next,
+                  embeddingModel: '',
+                };
+                if (!embeddingNeedsCredential(next)) {
+                  patch.embeddingCredentialId = undefined;
+                } else {
+                  const nextKind = (credentials?.items ?? []).filter((item) => item.kind === next);
+                  const current = (credentials?.items ?? []).find(
+                    (item) => item.id === help.embeddingCredentialId,
+                  );
+                  if (!current || !credentialMatchesProvider(current.kind, next)) {
+                    if (help.provider === next && help.credentialId) {
+                      patch.embeddingCredentialId = help.credentialId;
+                    } else {
+                      patch.embeddingCredentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
+                    }
+                  }
+                }
+                setHelpChat(patch);
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t('settings.helpChat.providerEmpty')}</SelectItem>
-                <SelectItem value="ollama">Ollama</SelectItem>
-                <SelectItem value="openai_compat">{t('settings.helpChat.openaiCompat')}</SelectItem>
+                {EMBEDDING_PROVIDERS.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {t(`providers.${id}`)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="embed-model">{t('settings.helpChat.embedModel')}</Label>
-            <Input
-              id="embed-model"
-              value={help.embeddingModel ?? ''}
-              onChange={(event) => setHelpChat({ embeddingModel: event.target.value })}
-            />
-          </div>
+          {embeddingNeedsCredential(help.embeddingProvider || '') ? (
+            <div className="grid gap-1.5">
+              <Label>{t('settings.helpChat.credential')}</Label>
+              <Select
+                value={help.embeddingCredentialId ?? 'none'}
+                onValueChange={(value) =>
+                  setHelpChat({
+                    embeddingCredentialId: value === 'none' ? undefined : value,
+                    embeddingModel: '',
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('settings.helpChat.credentialEmpty')}</SelectItem>
+                  {embedCredentials.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {embedKindCredentials.length === 0 ? (
+                <p className="text-xs text-destructive">{t('settings.helpChat.noCredentials')}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t('settings.helpChat.credentialHint')}</p>
+              )}
+            </div>
+          ) : null}
+          <ModelField
+            id="embed-model"
+            label={t('settings.helpChat.embedModel')}
+            value={embedLocked ? '' : (help.embeddingModel ?? '')}
+            models={
+              embeddingNeedsCredential(help.embeddingProvider || '') ? embedCatalogModels : embedModels
+            }
+            useSelect={
+              (help.embeddingProvider === 'ollama' && hasRuntimeModels) ||
+              (embeddingNeedsCredential(help.embeddingProvider || '') && Boolean(help.embeddingCredentialId))
+            }
+            emptyLabel={emptyLabel}
+            disabled={embedLocked}
+            placeholder={embedLocked ? t('settings.helpChat.pickCredentialFirst') : undefined}
+            onChange={(value) => setHelpChat({ embeddingModel: value || undefined })}
+          />
+          {embedCatalogFailed ? (
+            <p className="text-xs text-destructive">{t('settings.helpChat.modelsLoadError')}</p>
+          ) : null}
           {embedChanged ? (
             <Alert>
               <AlertDescription>{t('settings.helpChat.reindexHint')}</AlertDescription>
@@ -239,14 +443,6 @@ export function HelpChatSection() {
               )}
             </div>
           ) : null}
-          <div className="grid gap-1.5">
-            <Label htmlFor="fallback-model">{t('settings.helpChat.fallback')}</Label>
-            <Input
-              id="fallback-model"
-              value={help.fallbackModel ?? ''}
-              onChange={(event) => setHelpChat({ fallbackModel: event.target.value })}
-            />
-          </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={() => void save()} disabled={!dirty || busy}>
               {t('settings.common.save')}

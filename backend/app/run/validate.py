@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
-from app.common.types import PROVIDERS
+from app.common.types import NEEDS_CREDENTIAL, PROVIDERS
 from app.db.paths import RAG_DIR_NAME
 from app.run.graph_models import AgentNetworkDocument, GraphEdge, GraphNode
 from app.run.models import ValidationError
+from app.tools.file_access_tool import is_forbidden_root
 from app.tools.kinds import FIRST_PARTY_KINDS
 
 _OUT_HANDLES = {
@@ -54,16 +56,19 @@ def _has_cycle(doc: AgentNetworkDocument) -> bool:
 
 
 def _path_ok(source_path: str, data_dir: str) -> bool:
-    if not source_path.strip():
+    """Absolute folder, not a drive root, not the help corpus. data_dir is unused."""
+    del data_dir
+    raw = source_path.strip()
+    if not raw:
+        return False
+    raw = os.path.expanduser(raw)
+    if not os.path.isabs(raw):
         return False
     try:
-        real = os.path.realpath(os.path.normpath(source_path))
-        root = os.path.realpath(data_dir)
-        if os.path.commonpath([real, root]) != root:
-            return False
+        real = os.path.realpath(os.path.normpath(raw))
     except (ValueError, OSError):
         return False
-    if real in {"/", "\\"} or len(os.path.splitdrive(real)[1].strip("\\/")) == 0:
+    if is_forbidden_root(Path(real)):
         return False
     parts = real.replace("\\", "/").split("/")
     if RAG_DIR_NAME in parts:
@@ -143,7 +148,7 @@ def validate_document(
                 errors.append(_err("graph.llm.credential", node.id))
             if not model:
                 errors.append(_err("graph.llm.credential", node.id))
-            if provider in {"xai", "openai_compat"} and not str(node.data.get("credentialId") or "").strip():
+            if provider in NEEDS_CREDENTIAL and not str(node.data.get("credentialId") or "").strip():
                 errors.append(_err("graph.llm.credential", node.id))
         if node.type == "tool":
             kind = str(node.data.get("kind") or "")
@@ -160,6 +165,17 @@ def validate_document(
                     pass
             elif kind and kind not in FIRST_PARTY_KINDS:
                 errors.append(_err("graph.mcp.server", node.id))
+            if kind == "file_access":
+                root = str(node.data.get("rootPath") or "").strip()
+                if not root:
+                    errors.append(_err("graph.fileAccess.root", node.id))
+                else:
+                    try:
+                        root_path = Path(root).expanduser()
+                        if not root_path.is_absolute() or is_forbidden_root(root_path):
+                            errors.append(_err("graph.fileAccess.root", node.id))
+                    except (ValueError, OSError):
+                        errors.append(_err("graph.fileAccess.root", node.id))
         if node.type == "knowledge":
             path = str(node.data.get("sourcePath") or "")
             if not _path_ok(path, data_dir):

@@ -7,7 +7,7 @@ from app.db import init, reset
 from app.db.vault import reset_memory, use_memory
 from app.http.app import create_app
 from app.run.controller import get_controller
-from app.runtime.models import CompletionResult, EmbedResult
+from app.runtime.models import CompletionResult, EmbedResult, OllamaModel
 from app.settings.in_use import reset_mcp_usage_provider
 from app.tools.catalog import reset_mcp_catalog_provider
 
@@ -69,11 +69,16 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     get_controller().reset()
     unloads.clear()
     monkeypatch.setattr("app.runtime.ollama.ensure_loaded", lambda *a, **k: None)
-    monkeypatch.setattr("app.runtime.ollama.unload", lambda *a, **k: unloads.append(a[0] if a else ""))
     monkeypatch.setattr(
-        "app.runtime.completions.complete",
-        lambda req: CompletionResult(content="hi", model=req.model, finish_reason="stop"),
+        "app.runtime.ollama.list_ollama_models",
+        lambda *a, **k: [OllamaModel(name="llama3.2:1b", size_bytes=None)],
     )
+    monkeypatch.setattr("app.runtime.ollama.unload", lambda *a, **k: unloads.append(a[0] if a else ""))
+    def _complete(req, should_abort=None, on_progress=None):
+        return CompletionResult(content="hi", model=req.model, finish_reason="stop")
+
+    monkeypatch.setattr("app.runtime.completions.complete", _complete)
+    monkeypatch.setattr("app.runtime.completions.complete_live", _complete)
     monkeypatch.setattr(
         "app.runtime.embeddings.embed",
         lambda req: EmbedResult(

@@ -106,12 +106,12 @@ def unload(tag: str, *, base_url: str | None = None) -> None:
 
 
 def _generate(
-    tag: str, *, keep_alive: str | int, base_url: str | None
+    tag: str, *, keep_alive: str | int, base_url: str | None, timeout_sec: float = 180.0
 ) -> None:
     url = f"{_root(base_url)}/api/generate"
     body: dict[str, Any] = {"model": tag, "prompt": "", "keep_alive": keep_alive}
     try:
-        with client(timeout_sec=30.0) as http:
+        with client(timeout_sec=timeout_sec) as http:
             response = http.post(url, json=body)
     except Exception as exc:
         if is_transport_error(exc):

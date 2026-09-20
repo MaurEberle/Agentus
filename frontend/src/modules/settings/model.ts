@@ -12,6 +12,9 @@ export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number];
 
 export const CREDENTIAL_KINDS = [
   'xai',
+  'openai',
+  'anthropic',
+  'gemini',
   'openai_compat',
   'web_search',
   'github',
@@ -27,9 +30,30 @@ export const CREDENTIAL_KINDS = [
 
 export type CredentialKind = (typeof CREDENTIAL_KINDS)[number];
 
-export type LlmProvider = 'ollama' | 'xai' | 'openai_compat';
+export const LLM_PROVIDERS = ['ollama', 'xai', 'openai', 'anthropic', 'gemini'] as const;
+
+export type LlmProvider = (typeof LLM_PROVIDERS)[number] | 'openai_compat';
+export const CLOUD_CATALOG_PROVIDERS = ['xai', 'openai', 'anthropic', 'gemini'] as const;
+export type CloudCatalogProvider = (typeof CLOUD_CATALOG_PROVIDERS)[number];
 export type HelpProvider = LlmProvider | '';
-export type EmbeddingProvider = 'ollama' | 'openai_compat' | '';
+export const EMBEDDING_PROVIDERS = ['ollama', 'openai', 'gemini'] as const;
+export type EmbeddingProvider = (typeof EMBEDDING_PROVIDERS)[number] | 'openai_compat' | '';
+
+export function embeddingNeedsCredential(provider: string): boolean {
+  return provider === 'openai' || provider === 'gemini' || provider === 'openai_compat';
+}
+
+export function isCloudCatalogProvider(provider: string): provider is CloudCatalogProvider {
+  return (CLOUD_CATALOG_PROVIDERS as readonly string[]).includes(provider);
+}
+
+export function providerNeedsCredential(provider: string): boolean {
+  return Boolean(provider) && provider !== 'ollama';
+}
+
+export function credentialMatchesProvider(kind: string, provider: string): boolean {
+  return kind === provider || kind === 'token';
+}
 
 export type CredentialListItem = {
   id: string;
@@ -45,6 +69,7 @@ export type HelpChatSettings = {
   credentialId?: string;
   embeddingProvider?: EmbeddingProvider;
   embeddingModel?: string;
+  embeddingCredentialId?: string;
   webSearchEnabled: boolean;
   webSearchCredentialId?: string;
   fallbackModel?: string;
@@ -161,10 +186,53 @@ export function isForbiddenDataRoot(path: string): boolean {
 
 export function helpChatConfigured(help: HelpChatSettings): boolean {
   if (!help.provider || !help.model.trim()) return false;
-  if ((help.provider === 'xai' || help.provider === 'openai_compat') && !help.credentialId) {
+  if (providerNeedsCredential(help.provider) && !help.credentialId) {
     return false;
   }
   return true;
+}
+
+function optionalText(value: string | null | undefined): string {
+  return value?.trim() ? value : '';
+}
+
+export function helpChatSnapshot(help: HelpChatSettings): string {
+  return JSON.stringify({
+    provider: help.provider || '',
+    model: help.model || '',
+    credentialId: providerNeedsCredential(help.provider) ? optionalText(help.credentialId) : '',
+    embeddingProvider: help.embeddingProvider || '',
+    embeddingModel: optionalText(help.embeddingModel),
+    embeddingCredentialId: embeddingNeedsCredential(help.embeddingProvider || '')
+      ? optionalText(help.embeddingCredentialId)
+      : '',
+    webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchCredentialId: help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '',
+    fallbackModel: optionalText(help.fallbackModel),
+  });
+}
+
+export function helpChatWritePayload(help: HelpChatSettings) {
+  const credentialId = providerNeedsCredential(help.provider) ? optionalText(help.credentialId) : '';
+  const embeddingCredentialId = embeddingNeedsCredential(help.embeddingProvider || '')
+    ? optionalText(help.embeddingCredentialId)
+    : '';
+  const webSearchCredentialId = help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '';
+  return {
+    provider: help.provider,
+    model: help.model,
+    credentialId: credentialId || null,
+    embeddingProvider: help.embeddingProvider || '',
+    embeddingModel: optionalText(help.embeddingModel),
+    embeddingCredentialId: embeddingCredentialId || null,
+    webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchCredentialId: webSearchCredentialId || null,
+    fallbackModel: optionalText(help.fallbackModel) || null,
+  };
+}
+
+export function isEmbeddingModelName(name: string): boolean {
+  return name.toLowerCase().includes('embed');
 }
 
 export function defaultHelpChat(): HelpChatSettings {
@@ -181,7 +249,6 @@ export function defaultHelpChat(): HelpChatSettings {
 export function defaultSettings(): AppSettings {
   return {
     ollamaBaseUrl: 'http://127.0.0.1:11434',
-    openaiCompatBaseUrl: 'http://127.0.0.1:1234/v1',
     helpChatFabVisible: true,
     helpChat: defaultHelpChat(),
     activeNetworkId: null,

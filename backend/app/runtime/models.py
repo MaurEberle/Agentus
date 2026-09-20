@@ -64,6 +64,7 @@ class CompletionResult(ApiModel):
 class StreamEvent(ApiModel):
     kind: Literal["delta", "tool_call_delta", "usage", "done", "error"]
     text: str | None = None
+    reasoning: str | None = None
     tool_calls: list[ToolCall] | None = Field(default=None, alias="toolCalls")
     usage: CompletionUsage | None = None
     finish_reason: str | None = Field(default=None, alias="finishReason")
@@ -100,3 +101,4 @@ class RuntimeModelOut(ApiModel):
 
 class RuntimeModelsResponse(ApiModel):
     items: list[RuntimeModelOut]
+    message_key: str | None = Field(default=None, alias="messageKey")

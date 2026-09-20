@@ -10,6 +10,7 @@ from app.db.runs import (
     list_calls,
     list_logs,
     list_runs,
+    list_steps,
     purge_older_than,
 )
 from app.http.app import ApiModel
@@ -30,7 +31,7 @@ class PurgeBody(ApiModel):
 
 @router.get("/runs")
 def get_runs(
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     since: str | None = None,
     networkId: str | None = None,
@@ -57,7 +58,7 @@ def get_runs(
 
 @router.get("/runs/calls")
 def get_calls(
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     networkId: str | None = None,
     outcome: str | None = None,
@@ -81,7 +82,10 @@ def get_one(run_id: str) -> dict[str, Any]:
     row = get_run(run_id)
     if row is None:
         raise AppError("db.notFound", status_code=404)
-    return _camel_run(row)
+    body = _camel_run(row)
+    body["calls"] = [_camel_call(item) for item in list_calls(run_id)]
+    body["steps"] = [_camel_step(item) for item in list_steps(run_id)]
+    return body
 
 
 @router.get("/runs/{run_id}/logs")
@@ -114,18 +118,40 @@ def purge(body: dict[str, Any]) -> dict[str, int]:
 
 
 def _camel_run(row: dict[str, Any]) -> dict[str, Any]:
+    run_id = row["id"]
     return {
-        "id": row["id"],
+        "id": run_id,
+        "runId": run_id,
         "networkId": row["network_id"],
         "networkName": row["network_name"],
         "startedAt": row["started_at"],
         "endedAt": row.get("ended_at"),
         "outcome": row["outcome"],
         "errorMessage": row.get("error_message"),
+        "errorClass": row.get("error_class"),
+        "errorNodeId": row.get("error_node_id"),
+        "errorNodeName": row.get("error_node_name"),
         "graphSnapshot": row.get("graph_snapshot"),
         "chat": row.get("chat"),
-        "models": row.get("models") or [],
+        "models": _camel_models(row.get("models") or []),
+        "calls": [],
+        "steps": [],
     }
+
+
+def _camel_models(models: object) -> list[dict[str, str]]:
+    if not isinstance(models, list):
+        return []
+    items: list[dict[str, str]] = []
+    for item in models:
+        if isinstance(item, str) and item.strip():
+            items.append({"provider": "ollama", "model": item})
+        elif isinstance(item, dict):
+            name = str(item.get("model") or item.get("name") or "").strip()
+            provider = str(item.get("provider") or "ollama").strip() or "ollama"
+            if name:
+                items.append({"provider": provider, "model": name})
+    return items
 
 
 def _camel_log(row: dict[str, Any]) -> dict[str, Any]:
@@ -147,10 +173,24 @@ def _camel_call(row: dict[str, Any]) -> dict[str, Any]:
         "id": row["id"],
         "runId": row["run_id"],
         "nodeId": row.get("node_id"),
+        "nodeName": row.get("node_name"),
         "provider": row["provider"],
         "model": row["model"],
         "ok": row["ok"],
         "durationMs": row.get("duration_ms"),
         "tokensIn": row.get("tokens_in"),
         "tokensOut": row.get("tokens_out"),
+        "errorMessage": row.get("error_message"),
+    }
+
+
+def _camel_step(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "nodeId": row["node_id"],
+        "nodeName": row.get("node_name"),
+        "role": row.get("role"),
+        "type": row.get("type"),
+        "status": row["status"],
+        "waitReason": row.get("wait_reason"),
+        "errorMessage": row.get("error_message"),
     }

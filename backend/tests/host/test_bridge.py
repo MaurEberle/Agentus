@@ -55,4 +55,6 @@ def test_pick_folder_cancel() -> None:
 def test_inject_sets_chrome_host() -> None:
     win = FakeWindow()
     inject_chrome_host(win)
-    assert any("chromeHost" in script for script in win.js)
+    joined = "\n".join(win.js)
+    assert "chromeHost" in joined
+    assert "agentus-chrome-ready" in joined

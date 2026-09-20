@@ -87,7 +87,7 @@ Artefakte in `dist/`:
 | `Agentus-Network-Setup-{version}-x64.exe` | NSIS Per-User-Setup |
 | `Agentus-Network-Portable-{version}-x64.zip` | derselbe Freeze plus `portable.txt` neben der EXE |
 
-Icon `resources/icons/app.ico` ist in v1 ein Platzhalter (Artwork-TODO). Setup braucht NSIS 3 Unicode (`makensis`).
+Icon `resources/icons/app.ico` (PNG-Quelle `app.png`). Setup braucht NSIS 3 Unicode (`makensis`).
 
 ## Prod-Setup
 

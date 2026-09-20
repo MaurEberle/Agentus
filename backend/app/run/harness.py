@@ -1,28 +1,46 @@
 from __future__ import annotations
 
+import traceback
 import time
 import uuid
 from collections import deque
 
 from app.common.secrets import mask_obj
 from app.db.engine import utc_now
-from app.db.runs import insert_call
+from app.db.runs import insert_call, upsert_step
 from app.db.vault import get as vault_get
 from app.run.compile import CompiledGraph
-from app.run.controller import RunController, emit_log
+from app.run.controller import RunController, emit_log, node_label
 from app.run.knowledge import retrieve
-from app.run.limits import DEFAULT_SCORE_MIN, DEFAULT_TOP_K, MAX_AGENT_INVOCATIONS, MAX_TOOL_ROUNDS
+from app.run.limits import (
+    DEFAULT_SCORE_MIN,
+    DEFAULT_TOP_K,
+    MAX_AGENT_INVOCATIONS,
+    MAX_TOOL_ROUNDS,
+    STREAM_IDLE_TIMEOUT_SEC,
+)
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
-from app.run.models import ChatMessage, NodeRuntime
+from app.run.models import ActivityTokens, ChatMessage, NodeRuntime, NodeTokens
 from app.run.sse import publish
+from app.runtime.errors import RuntimeApiError
+from app.runtime.completions import estimate_token_count
 from app.runtime.models import ChatMessage as LlmMessage
 from app.runtime.models import CompletionRequest, CompletionResult
 from app.tools.catalog import openai_tools_for_kinds
 from app.tools import execute as tools_execute
 
 
+def _run_error_class(exc: BaseException) -> str:
+    if isinstance(exc, RuntimeApiError) and exc.error_key == "runtime.timeout":
+        return "timeout"
+    if isinstance(exc, RuntimeApiError) and str(exc.error_key).startswith("runtime."):
+        return "llm_error"
+    return "unknown"
+
+
 def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
     outcome = "failed"
+    fail_exc: BaseException | None = None
     try:
         user_text = _wait_user(ctrl, compiled)
         if ctrl.stop_event.is_set():
@@ -31,6 +49,13 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
         if compiled.chat_input is None:
             emit_log("info", "run.batch.start")
             user_text = user_text or ""
+        elif user_text:
+            emit_log(
+                "info",
+                "run.chat.user",
+                node_id=compiled.chat_input.id,
+                payload={"chars": len(user_text)},
+            )
         conversation: list[LlmMessage] = []
         if user_text:
             conversation.append(LlmMessage(role="user", content=user_text))
@@ -52,6 +77,7 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
             if node.type == "end":
                 end_hit.add(node_id)
                 _set_node(ctrl, node_id, "done")
+                emit_log("debug", "run.end", node_id=node_id)
                 continue
             if node.type == "router":
                 target = _route(compiled, node_id, payload)
@@ -59,6 +85,12 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
                     emit_log("error", "graph.router.noEdge", node_id=node_id)
                     outcome = "failed"
                     return
+                emit_log(
+                    "info",
+                    "run.router",
+                    node_id=node_id,
+                    payload={"target": target},
+                )
                 pending.append((target, payload))
                 continue
             if node.type != "agent":
@@ -82,10 +114,27 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
         else:
             outcome = "failed"
     except Exception as exc:
-        emit_log("error", str(exc))
+        fail_exc = exc
+        emit_log("error", str(exc), stack=traceback.format_exc())
         outcome = "failed"
     finally:
-        ctrl.finish(outcome)
+        if outcome == "succeeded":
+            emit_log("info", "run.succeeded")
+        elif outcome == "cancelled":
+            emit_log("warn", "run.cancelled")
+        else:
+            emit_log("error", "run.failed")
+        extra: dict[str, str] = {}
+        if outcome == "failed" and fail_exc is not None:
+            extra["error_message"] = str(fail_exc)[:500]
+            extra["error_class"] = _run_error_class(fail_exc)
+            node_id = getattr(ctrl, "last_error_node_id", None)
+            if node_id:
+                extra["error_node_id"] = node_id
+                name = node_label(compiled, node_id)
+                if name:
+                    extra["error_node_name"] = name
+        ctrl.finish(outcome, **extra)
 
 
 def _wait_user(ctrl: RunController, compiled: CompiledGraph) -> str | None:
@@ -97,12 +146,14 @@ def _wait_user(ctrl: RunController, compiled: CompiledGraph) -> str | None:
     start = str(data.get("startMessage") or "").strip()
     if require_input:
         _set_node(ctrl, chat.id, "waiting", wait="human")
+        emit_log("info", "run.wait.human", node_id=chat.id)
         return _queue_get(ctrl)
     if start:
         if compiled.chat_input:
             _publish_user(ctrl, start)
         return start
     _set_node(ctrl, chat.id, "waiting", wait="human")
+    emit_log("info", "run.wait.human", node_id=chat.id)
     return _queue_get(ctrl)
 
 
@@ -136,16 +187,29 @@ def _agent_turn(
 ) -> str | None:
     agent = compiled.agents[agent_id]
     _set_node(ctrl, agent_id, "running", wait="llm")
+    emit_log("info", "run.agent.start", node_id=agent_id)
     snippets: list[str] = []
     for kid in agent.knowledge_node_ids:
         node = compiled.by_id.get(kid)
         top_k = int(node.data.get("topK") or DEFAULT_TOP_K) if node else DEFAULT_TOP_K
         score_min = float(node.data.get("scoreThreshold") or DEFAULT_SCORE_MIN) if node else DEFAULT_SCORE_MIN
         for snip in retrieve(
-            compiled.network_id, kid, user_text or " ", top_k=top_k, score_min=score_min
+            compiled.network_id,
+            kid,
+            user_text or " ",
+            top_k=top_k,
+            score_min=score_min,
+            node=compiled.by_id.get(kid),
         ):
             label = f"{snip.title}#{snip.section}" if snip.section else snip.title
             snippets.append(f"- [{label}] {snip.text}")
+    if agent.knowledge_node_ids:
+        emit_log(
+            "debug",
+            "run.knowledge",
+            node_id=agent_id,
+            payload={"count": len(snippets)},
+        )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
     tools = openai_tools_for_kinds(agent.tool_kinds)
@@ -171,17 +235,28 @@ def _agent_turn(
                 infos = [i for i in infos if i.name in allow]
             tools.extend(mcp_openai_tools(server_id, infos))
     secret = None
-    if agent.llm.provider in {"xai", "openai_compat"} and agent.llm.credential_id:
+    if agent.llm.provider != "ollama" and agent.llm.credential_id:
         secret = vault_get(agent.llm.credential_id)
     messages = [LlmMessage(role="system", content=system), *conversation]
     from app.runtime import completions as runtime_completions
 
     rounds = 0
     content = ""
+    llm_node_id = agent.llm.node_id or agent_id
     while rounds <= MAX_TOOL_ROUNDS:
         started = time.perf_counter()
+        emit_log(
+            "info",
+            "run.llm.start",
+            node_id=llm_node_id,
+            payload={
+                "provider": agent.llm.provider,
+                "model": agent.llm.model,
+                "waitReason": "llm",
+            },
+        )
         try:
-            result: CompletionResult = runtime_completions.complete(
+            result: CompletionResult = runtime_completions.complete_live(
                 CompletionRequest(
                     provider=agent.llm.provider,  # type: ignore[arg-type]
                     model=agent.llm.model,
@@ -192,12 +267,27 @@ def _agent_turn(
                     temperature=agent.llm.temperature,
                     max_tokens=agent.llm.max_tokens,
                     tools=tools or None,
-                    timeout_sec=120,
-                )
+                    timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
+                ),
+                should_abort=ctrl.stop_event.is_set,
+                on_progress=lambda out, rate: _publish_tokens(
+                    ctrl,
+                    agent_id,
+                    llm_node_id,
+                    tokens_in=None,
+                    tokens_out=out,
+                    per_second=rate,
+                    committed=False,
+                ),
             )
             ok = True
         except Exception as exc:
-            emit_log("error", str(exc), node_id=agent_id)
+            if isinstance(exc, RuntimeApiError) and (
+                exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
+            ):
+                return None
+            ctrl.last_error_node_id = agent_id
+            emit_log("error", str(exc), node_id=agent_id, stack=traceback.format_exc())
             _set_node(ctrl, agent_id, "error", error=str(exc))
             insert_call(
                 run_id=ctrl.run_id or "",
@@ -205,20 +295,54 @@ def _agent_turn(
                 model=agent.llm.model,
                 ok=False,
                 node_id=agent_id,
+                node_name=node_label(compiled, agent_id),
                 duration_ms=int((time.perf_counter() - started) * 1000),
             )
             raise
         duration_ms = int((time.perf_counter() - started) * 1000)
         usage = result.usage
+        if usage:
+            out_final = usage.completion_tokens
+            in_final = usage.prompt_tokens
+        elif result.content:
+            out_final = estimate_token_count(result.content)
+            in_final = None
+        else:
+            out_final = None
+            in_final = None
+        rate_final = None
+        if out_final is not None and duration_ms > 0:
+            rate_final = out_final / max(duration_ms / 1000.0, 0.05)
+        _publish_tokens(
+            ctrl,
+            agent_id,
+            llm_node_id,
+            tokens_in=in_final,
+            tokens_out=out_final,
+            per_second=rate_final,
+            committed=True,
+        )
         insert_call(
             run_id=ctrl.run_id or "",
             provider=agent.llm.provider,
             model=agent.llm.model,
             ok=ok,
             node_id=agent_id,
+            node_name=node_label(compiled, agent_id),
             duration_ms=duration_ms,
-            tokens_in=usage.prompt_tokens if usage else None,
-            tokens_out=usage.completion_tokens if usage else None,
+            tokens_in=in_final,
+            tokens_out=out_final,
+        )
+        emit_log(
+            "debug",
+            "run.llm.done",
+            node_id=llm_node_id,
+            payload={
+                "model": agent.llm.model,
+                "durationMs": duration_ms,
+                "tokensIn": usage.prompt_tokens if usage else None,
+                "tokensOut": usage.completion_tokens if usage else None,
+            },
         )
         if result.tool_calls and rounds < MAX_TOOL_ROUNDS:
             rounds += 1
@@ -231,6 +355,7 @@ def _agent_turn(
                 )
             )
             for call in result.tool_calls:
+                tool_node_id = agent_id
                 mapped = map_openai_tool_name(call.name)
                 if mapped and mcp:
                     out = mcp.call(mapped[0], mapped[1], _parse_args(call.arguments))
@@ -241,6 +366,7 @@ def _agent_turn(
                         if edge.target == agent_id and edge.target_handle == "tool":
                             tool_node = compiled.by_id.get(edge.source)
                             if tool_node and str(tool_node.data.get("kind")) == call.name:
+                                tool_node_id = tool_node.id
                                 cid = tool_node.data.get("credentialId")
                                 if cid:
                                     cred = vault_get(str(cid))
@@ -256,6 +382,15 @@ def _agent_turn(
                         tool_result = {"ok": False, "error": "unknown tool"}
                 else:
                     tool_result = {"ok": False, "error": f"unknown tool {call.name}"}
+                ok_tool = True
+                if isinstance(tool_result, dict) and tool_result.get("ok") is False:
+                    ok_tool = False
+                emit_log(
+                    "info" if ok_tool else "warn",
+                    "run.tool.call",
+                    node_id=tool_node_id,
+                    payload={"name": call.name, "waitReason": "tool", "ok": ok_tool},
+                )
                 messages.append(
                     LlmMessage(
                         role="tool",
@@ -267,6 +402,7 @@ def _agent_turn(
         content = result.content or ""
         break
     _set_node(ctrl, agent_id, "done")
+    emit_log("info", "run.agent.done", node_id=agent_id)
     if compiled.chat_input and content:
         msg = ChatMessage(
             id=str(uuid.uuid4()),
@@ -275,8 +411,7 @@ def _agent_turn(
             content=content,
             created_at=utc_now(),
         )
-        ctrl.conversation.append(msg)
-        publish("chat", {"runId": ctrl.run_id, "message": msg.model_dump(by_alias=True)})
+        ctrl.remember_chat(msg, generating=False)
         conversation.append(LlmMessage(role="assistant", content=content))
     return content
 
@@ -289,6 +424,54 @@ def _parse_args(raw: str) -> dict:
         return value if isinstance(value, dict) else {}
     except ValueError:
         return {}
+
+
+def _publish_tokens(
+    ctrl: RunController,
+    agent_id: str,
+    llm_node_id: str,
+    *,
+    tokens_in: int | None,
+    tokens_out: int | None,
+    per_second: float | None,
+    committed: bool,
+) -> None:
+    if not ctrl.snapshot:
+        return
+    live_out = 0 if tokens_out is None else tokens_out
+    live_in = 0 if tokens_in is None else tokens_in
+    if committed:
+        if tokens_out is not None:
+            ctrl.tokens_out += tokens_out
+        if tokens_in is not None:
+            ctrl.tokens_in += tokens_in
+        run_out = ctrl.tokens_out
+        run_in = ctrl.tokens_in
+        rate = None
+    else:
+        run_out = ctrl.tokens_out + live_out
+        run_in = ctrl.tokens_in + live_in
+        rate = per_second
+    node_tokens = NodeTokens(
+        in_=tokens_in,
+        out=tokens_out,
+        per_second=rate,
+    )
+    runtime = dict(ctrl.snapshot.nodes_runtime)
+    for nid in {agent_id, llm_node_id}:
+        current = runtime.get(nid, NodeRuntime())
+        runtime[nid] = current.model_copy(update={"tokens": node_tokens})
+    activity = ctrl.snapshot.activity.model_copy(
+        update={
+            "tokens": ActivityTokens(
+                in_=run_in or None,
+                out=run_out,
+                per_second=rate,
+            )
+        }
+    )
+    ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime, "activity": activity})
+    publish("run", ctrl.snapshot.model_dump(by_alias=True))
 
 
 def _set_node(
@@ -307,6 +490,17 @@ def _set_node(
         update={"status": status, "wait_reason": wait, "error": error}
     )
     ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime})
+    node = ctrl.compiled.by_id.get(node_id) if ctrl.compiled else None
+    upsert_step(
+        run_id=ctrl.run_id or "",
+        node_id=node_id,
+        node_name=node_label(ctrl.compiled, node_id),
+        role=str(node.data.get("role") or "").strip() or None if node else None,
+        type=node.type if node else None,
+        status=status,
+        wait_reason=wait,
+        error_message=error,
+    )
     publish("run", ctrl.snapshot.model_dump(by_alias=True))
 
 
@@ -318,5 +512,4 @@ def _publish_user(ctrl: RunController, text: str) -> None:
         content=text,
         created_at=utc_now(),
     )
-    ctrl.conversation.append(msg)
-    publish("chat", {"runId": ctrl.run_id, "message": msg.model_dump(by_alias=True)})
+    ctrl.remember_chat(msg, generating=True)

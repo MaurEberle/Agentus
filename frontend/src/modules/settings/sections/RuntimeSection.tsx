@@ -30,6 +30,7 @@ export function RuntimeSection() {
   const { data: models } = useRuntimeModelsQuery();
   const runtime = useSettingsDraft((state) => state.runtime);
   const setRuntime = useSettingsDraft((state) => state.setRuntime);
+  const syncRuntime = useSettingsDraft((state) => state.syncRuntime);
   const dirty = useSettingsDraft((state) => state.runtimeDirty(settings));
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
   const [pinging, setPinging] = useState(false);
@@ -39,10 +40,11 @@ export function RuntimeSection() {
     if (!runtime) return;
     setSaving(true);
     try {
-      await patchSettings({
+      const next = await patchSettings({
         ollamaBaseUrl: runtime.ollamaBaseUrl.trim(),
-        openaiCompatBaseUrl: runtime.openaiCompatBaseUrl.trim() || undefined,
+        openaiCompatBaseUrl: runtime.openaiCompatBaseUrl.trim(),
       });
+      syncRuntime(next);
       notify({ titleKey: 'settings.notify.saved', variant: 'success' });
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
@@ -79,15 +81,6 @@ export function RuntimeSection() {
             placeholder="http://127.0.0.1:11434"
             value={runtime?.ollamaBaseUrl ?? ''}
             onChange={(event) => setRuntime({ ollamaBaseUrl: event.target.value })}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="compat-url">{t('settings.runtime.openaiCompatUrl')}</Label>
-          <Input
-            id="compat-url"
-            placeholder="http://127.0.0.1:1234/v1"
-            value={runtime?.openaiCompatBaseUrl ?? ''}
-            onChange={(event) => setRuntime({ openaiCompatBaseUrl: event.target.value })}
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Play, Settings, Square, Workflow } from 'lucide-react';
+import { Play, Settings, Square } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -33,25 +34,28 @@ export function Header() {
   const stopDisabled = serviceStatus === 'stopped' || serviceStatus === 'disconnected';
 
   return (
-    <header className="app-drag flex h-12 shrink-0 items-center gap-2 border-b bg-card/80 px-2 backdrop-blur md:px-3">
-      <MobileNav />
+    <header className="relative flex h-12 shrink-0 items-center gap-2 border-b bg-card/80 px-2 backdrop-blur md:px-3">
+      <div className="app-drag absolute inset-0" aria-hidden="true" />
+      <div className="relative z-10">
+        <MobileNav />
+      </div>
       <Link
         to="/dashboard"
-        className="app-no-drag flex items-center gap-2 rounded-md px-1.5 py-1 text-sm font-semibold tracking-tight hover:bg-accent"
+        className="app-no-drag relative z-10 flex items-center gap-2 rounded-md px-1.5 py-1 text-sm font-semibold tracking-tight hover:bg-accent"
       >
-        <Workflow className="size-5 text-primary" />
+        <BrandMark className="size-6" alt={t('app.name')} />
         <span className="hidden sm:inline">{t('app.name')}</span>
       </Link>
-      <div className="min-w-2 flex-1" />
-      <div className="app-no-drag hidden items-center gap-1 md:flex">
+      <div className="app-drag relative z-10 min-w-2 flex-1 self-stretch" />
+      <div className="app-no-drag relative z-10 hidden items-center gap-1 md:flex">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/settings">
+          <Link to="/settings#appearance">
             <Settings className="size-4" />
             {t('shell.settings')}
           </Link>
         </Button>
       </div>
-      <div className="app-no-drag flex items-center gap-1">
+      <div className="app-no-drag relative z-10 flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -103,12 +107,16 @@ export function Header() {
           </SelectContent>
         </Select>
       </div>
-      <NotificationBell />
-      <div className="app-no-drag hidden items-center md:flex">
-        <ThemeToggle compact />
-        <LanguageSwitcher compact />
+      <div className="app-no-drag relative z-10 flex items-center gap-2">
+        <NotificationBell />
+        <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle compact />
+          <LanguageSwitcher compact />
+        </div>
       </div>
-      <WindowControls />
+      <div className="relative z-10">
+        <WindowControls />
+      </div>
     </header>
   );
 }

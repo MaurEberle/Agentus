@@ -1,4 +1,4 @@
-import { isForbiddenDataRoot } from '@/modules/settings/model';
+import { embeddingNeedsCredential, isForbiddenDataRoot } from '@/modules/settings/model';
 import type { McpServerListItem } from '@/modules/settings/model';
 import { connectionAllowed, portKind } from '@/modules/network/schema/ports';
 import type {
@@ -134,13 +134,19 @@ function validateNode(
     if (!asString(node.data.model)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.modelRequired' });
     }
-    if ((provider === 'xai' || provider === 'openai_compat') && !asString(node.data.credentialId)) {
+    if (provider !== 'ollama' && !asString(node.data.credentialId)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.credentialRequired' });
     }
   }
   if (node.type === 'tool') {
     const kind = asString(node.data.kind);
     if (!kind) issues.push({ nodeId: node.id, messageKey: 'network.validation.toolKind' });
+    if (kind === 'file_access') {
+      const root = asString(node.data.rootPath);
+      if (!root || isForbiddenDataRoot(root)) {
+        issues.push({ nodeId: node.id, messageKey: 'network.validation.fileAccessRoot' });
+      }
+    }
     if (kind === 'mcp') {
       const serverId = asString(node.data.mcpServerId);
       const server = options.mcpServers?.find((item) => item.id === serverId);
@@ -152,13 +158,15 @@ function validateNode(
     }
   }
   if (node.type === 'knowledge') {
+    const embedProvider = asString(node.data.embeddingProvider) || 'ollama';
+    if (embeddingNeedsCredential(embedProvider) && !asString(node.data.embeddingCredentialId)) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.credentialRequired' });
+    }
     const path = asString(node.data.sourcePath);
     if (!path) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgePath' });
     } else if (isForbiddenDataRoot(path)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgeRoot' });
-    } else if (options.dataDir && !path.toLowerCase().startsWith(options.dataDir.toLowerCase())) {
-      issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgeSandbox' });
     } else if (options.helpCorpusHint && path.toLowerCase().includes(options.helpCorpusHint.toLowerCase())) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgeHelpCorpus' });
     }

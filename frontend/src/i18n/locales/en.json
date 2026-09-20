@@ -3,6 +3,14 @@
     "name": "Agentus Network",
     "skipToContent": "Skip to content"
   },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "OpenAI-compatible"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "network": "Network",
@@ -30,6 +38,24 @@
     "language": "Language",
     "languageDe": "Deutsch",
     "languageEn": "English",
+    "languageEs": "Español",
+    "languageFr": "Français",
+    "languageTr": "Türkçe",
+    "languagePt": "Português",
+    "languageZh": "中文",
+    "languageJa": "日本語",
+    "languageAr": "العربية",
+    "languageNames": {
+      "de": "German",
+      "en": "English",
+      "es": "Spanish",
+      "fr": "French",
+      "tr": "Turkish",
+      "pt": "Portuguese",
+      "zh": "Chinese",
+      "ja": "Japanese",
+      "ar": "Arabic"
+    },
     "window": {
       "minimize": "Minimize",
       "maximize": "Maximize",
@@ -174,6 +200,9 @@
       "inUseBody": "“{{name}}” is still used by a help profile, network, or MCP server and cannot be deleted.",
       "kindName": {
         "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
         "openai_compat": "OpenAI-compatible",
         "web_search": "Web search",
         "github": "GitHub",
@@ -194,6 +223,9 @@
       "ping": "Check connection",
       "pingOk": "Runtime reachable",
       "pingFail": "Runtime not reachable",
+      "modelNotFound": "Model not found or could not be loaded: {{name}}",
+      "timeout": "No progress from the model ({{name}}). Aborted after silence, not a total time limit.",
+      "unreachable": "Ollama is not reachable ({{name}}).",
       "models": "Installed models",
       "modelsEmpty": "No models, or the runtime is unavailable.",
       "modelName": "Model",
@@ -214,6 +246,10 @@
       "model": "Chat model",
       "credential": "Credential",
       "credentialEmpty": "No credential",
+      "credentialHint": "Choose a valid API key first. Models are loaded afterwards.",
+      "noCredentials": "No credential for this provider — add a matching entry under Credentials.",
+      "pickCredentialFirst": "Choose a valid API key first",
+      "modelsLoadError": "Could not load models. Check the API key.",
       "embedProvider": "Embedding provider",
       "embedModel": "Embedding model",
       "reindexHint": "Rebuild the index after changing embeddings.",
@@ -518,6 +554,8 @@
     },
     "palette": {
       "title": "Palette",
+      "collapse": "Collapse palette",
+      "expand": "Expand palette",
       "search": "Search nodes",
       "chat_input": "Chat input",
       "chat_inputHint": "At most one. Start text and required input for the run.",
@@ -546,6 +584,8 @@
     },
     "inspector": {
       "title": "Inspector",
+      "collapse": "Collapse inspector",
+      "expand": "Expand inspector",
       "displayName": "Display name",
       "multi": "{{count}} nodes selected",
       "graph": {
@@ -562,6 +602,10 @@
         "model": "Model",
         "credential": "Credential",
         "credentialEmpty": "No credential",
+        "credentialHint": "Choose a valid API key first. Models are loaded afterwards.",
+        "noCredentials": "No credential for this provider yet.",
+        "pickCredentialFirst": "Choose a valid API key first",
+        "modelsLoadError": "Could not load models. Check the API key.",
         "baseUrl": "Base URL",
         "ping": "Test connection",
         "pingOk": "Model responded",
@@ -583,10 +627,16 @@
           "web_search": "Web search",
           "datetime": "Date/time",
           "calculator": "Calculator",
+          "file_access": "File access",
           "mcp": "MCP"
         },
         "method": "Method",
         "url": "URL",
+        "rootPath": "Root folder",
+        "pickRoot": "Folder",
+        "allowWrite": "Allow write",
+        "allowDelete": "Allow delete",
+        "fileAccessHint": "The agent may only read, write, and delete under this folder.",
         "credential": "Credential",
         "mcpServer": "MCP server",
         "mcpEmpty": "No server",
@@ -596,11 +646,14 @@
       "knowledge": {
         "path": "Source folder",
         "pick": "Folder",
+        "embedProvider": "Embedding provider",
+        "embedModel": "Embedding model",
         "topK": "topK",
         "score": "Score threshold",
         "reindex": "Rebuild index",
         "reindexOk": "Index rebuilt",
-        "reindexFail": "Index failed"
+        "reindexFail": "Index failed",
+        "reindexHint": "Rebuild the index after changing embeddings."
       },
       "router": {
         "branches": "Branches",
@@ -663,6 +716,7 @@
       "toolKind": "Tool kind is missing.",
       "mcpServer": "Choose an enabled MCP server.",
       "mcpRoot": "This MCP server needs a root path in Settings.",
+      "fileAccessRoot": "File access needs a folder that is not a drive root.",
       "knowledgePath": "Source folder is required.",
       "knowledgeRoot": "Drive or system root is not allowed.",
       "knowledgeSandbox": "Path must be under the data folder.",
@@ -816,6 +870,7 @@
       "stoppedBody": "Start the service from the header.",
       "stoppedActive": "Active network: {{name}}",
       "stoppedNoNetwork": "No network in quick select.",
+      "lastRunBody": "No active run. Showing the last saved run.",
       "disconnectedTitle": "Disconnected from the service",
       "disconnectedBody": "Reconnecting. Last known values are dimmed.",
       "startingTitle": "Service is starting",
@@ -824,6 +879,7 @@
       "errorBody": "{{message}}"
     },
     "header": {
+      "lastRun": "Last run",
       "runId": "Run ID",
       "started": "Started",
       "duration": "Duration",
@@ -894,6 +950,8 @@
       "tokensIn": "Input",
       "tokensOut": "Output",
       "perSecond": "{{value}} tokens/s",
+      "rate": "Tokens/s",
+      "runTotal": "Run total",
       "context": "Context {{used}} / {{max}}"
     },
     "tabs": {
@@ -955,6 +1013,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-compatible"
     },
     "mock": {
@@ -1062,6 +1123,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-compatible"
     },
     "list": {
@@ -1155,6 +1219,51 @@
       "exported": "Export started",
       "exportError": "Export failed",
       "error": "Action failed"
+    }
+  },
+  "runLog": {
+    "run": {
+      "start": "Run started ({{networkName}})",
+      "wait": {
+        "human": "Waiting for input"
+      },
+      "chat": {
+        "user": "User message"
+      },
+      "batch": {
+        "start": "Batch run started"
+      },
+      "agent": {
+        "start": "Agent started",
+        "done": "Agent finished"
+      },
+      "knowledge": "Knowledge search ({{count}} hits)",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM finished ({{durationMs}} ms)"
+      },
+      "tool": {
+        "call": "Tool {{name}}"
+      },
+      "router": "Router → {{target}}",
+      "end": "End reached",
+      "succeeded": "Run succeeded",
+      "failed": "Run failed",
+      "cancelled": "Run cancelled",
+      "interrupted": "Run interrupted (app closed)",
+      "help": {
+        "fallbackMissing": "Help fallback model is missing"
+      },
+      "stepLimit": "Step limit reached"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "Router has no matching edge"
+      }
+    },
+    "runtime": {
+      "timeout": "No progress from the model",
+      "unreachable": "Runtime unreachable"
     }
   }
 }

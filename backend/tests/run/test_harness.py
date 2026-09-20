@@ -36,7 +36,10 @@ def test_execute_first_party_allowlist(monkeypatch, api_env) -> None:
             )
         return CompletionResult(content="done", model=req.model, finish_reason="stop")
 
-    monkeypatch.setattr("app.runtime.completions.complete", _complete)
+    monkeypatch.setattr(
+        "app.runtime.completions.complete_live",
+        lambda req, should_abort=None, on_progress=None: _complete(req),
+    )
     monkeypatch.setattr("app.tools.execute.execute_first_party", _exec)
     doc = mini_doc(startMessage="go")
     doc["nodes"].append(
@@ -69,9 +72,13 @@ def test_execute_first_party_allowlist(monkeypatch, api_env) -> None:
         )
     )
     patch_settings(AppSettingsPatch(active_network_id="net-1"))
-    get_controller().start()
+    run_id = get_controller().start()["runId"]
     thread = get_controller().thread
     if thread:
         thread.join(timeout=5)
     assert "calculator" in called
     assert "http" not in called
+    from app.db.runs import list_logs
+
+    messages = [row["message"] for row in list_logs(run_id)]
+    assert "run.tool.call" in messages

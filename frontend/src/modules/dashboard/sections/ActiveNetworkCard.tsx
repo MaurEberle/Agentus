@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRelative } from '@/lib/relativeTime';
 import { validationBadgeVariant, type NetworkListItem } from '@/modules/dashboard/model';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import { useAppStore } from '@/store';
 
 export function ActiveNetworkCard({
@@ -22,7 +23,7 @@ export function ActiveNetworkCard({
 
   if (loading) {
     return (
-      <Card>
+      <Card className={moduleCardClass}>
         <CardHeader>
           <Skeleton className="h-4 w-36" />
         </CardHeader>
@@ -34,11 +35,11 @@ export function ActiveNetworkCard({
   }
 
   return (
-    <Card>
+    <Card className={moduleCardClass}>
       <CardHeader>
         <CardTitle>{t('dashboard.active.title')}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className={`${moduleCardBodyClass} space-y-3`}>
         {!activeNetworkId || !network ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{t('dashboard.active.empty')}</p>

@@ -17,6 +17,7 @@ import { LogPanel } from '@/modules/monitoring/log/LogPanel';
 import { ResourcesPanel } from '@/modules/monitoring/resources/ResourcesPanel';
 import { RunHeader } from '@/modules/monitoring/run-header/RunHeader';
 import { useMonitoringStore } from '@/modules/monitoring/store';
+import { moduleCardClass, modulePaneHeightClass } from '@/modules/moduleCard';
 
 export function MonitoringModule() {
   const { t } = useTranslation();
@@ -37,7 +38,7 @@ export function MonitoringModule() {
   const clearLogFilter = useMonitoringStore((state) => state.clearLogFilter);
 
   const chat = hasChatInput(run?.graph);
-  const stopped = serviceStatus === 'stopped' || (!run && serviceStatus !== 'disconnected' && serviceStatus !== 'error');
+  const empty = !run;
   const dimmed = serviceStatus === 'disconnected' || serviceStatus === 'starting' || serviceStatus === 'stopping';
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export function MonitoringModule() {
   }, [clearLogFilter, setSelectedLogId, setSelectedNodeId]);
 
   return (
-    <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
+    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 p-4 pb-24 [overflow-anchor:none] md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('monitoring.title')}</h1>
       {import.meta.env.DEV ? <DevBar /> : null}
       <StatusBanner
@@ -64,9 +65,15 @@ export function MonitoringModule() {
         errorMessage={lastErrorMessage}
         adapterErrorKey={adapterErrorKey}
       />
-      {stopped ? (
-        <Card>
-          <CardContent className="space-y-2 p-6">
+      {run?.archived ? (
+        <Alert>
+          <AlertTitle>{t('monitoring.header.lastRun')}</AlertTitle>
+          <AlertDescription>{t('monitoring.empty.lastRunBody')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {empty ? (
+        <Card className={moduleCardClass}>
+          <CardContent className="space-y-2 overflow-y-auto p-6">
             <p className="font-medium">{t('monitoring.empty.stoppedTitle')}</p>
             <p className="text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</p>
             {activeNetworkId ? (
@@ -81,16 +88,16 @@ export function MonitoringModule() {
       ) : run ? (
         <>
           <RunHeader run={run} serviceStatus={serviceStatus} />
-          <ResourcesPanel resources={resources} dimmed={dimmed} />
-          <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
-            <div className="order-2 min-h-0 md:order-1">
+          {resources || !run.archived ? <ResourcesPanel resources={resources} dimmed={dimmed} /> : null}
+          <div className={cn('grid w-full gap-4 md:grid-cols-2 md:items-stretch', modulePaneHeightClass)}>
+            <div className="order-2 h-full min-h-0 md:order-1">
               <MiniGraph run={run} dimmed={dimmed} />
             </div>
-            <div className="order-1 md:order-2">
+            <div className="order-1 h-full min-h-0 md:order-2">
               <ActivityPanel run={run} dimmed={dimmed} />
             </div>
           </div>
-          <Card className="flex min-h-[320px] flex-col">
+          <Card className={cn(moduleCardClass, 'min-h-[16rem]')}>
             <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.log')}>
               {chat ? (
                 <TabButton active={tab === 'chat'} onClick={() => setTab('chat')}>
@@ -111,8 +118,8 @@ export function MonitoringModule() {
           </Card>
         </>
       ) : (
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</CardContent>
+        <Card className={moduleCardClass}>
+          <CardContent className="overflow-y-auto p-6 text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</CardContent>
         </Card>
       )}
     </div>

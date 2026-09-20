@@ -11,7 +11,7 @@ from app.db.bootstrap import (
     save_window,
     set_data_dir,
 )
-from app.db.engine import close_all, open_all, reset, transaction
+from app.db.engine import close_all, open_all, reset, transaction, utc_now
 from app.db.errors import (
     ConfigError,
     NotFound,
@@ -22,12 +22,48 @@ from app.db.errors import (
 from app.db.paths import APP_DIR_NAME, RAG_DIR_NAME, default_data_dir, local_app_data
 
 
+_atexit_registered = False
+
+
+def _persist_on_exit() -> None:
+    try:
+        from app.db.runs import complete_run
+        from app.run.controller import get_controller
+
+        ctrl = get_controller()
+        if ctrl.is_busy() and ctrl.run_id:
+            ctrl.stop_event.set()
+            ctrl.abort_generation.set()
+            complete_run(ctrl.run_id, outcome="cancelled", ended_at=utc_now())
+    except Exception:
+        pass
+    try:
+        from app.db.runs import abandon_orphaned_runs
+
+        abandon_orphaned_runs()
+    except Exception:
+        pass
+
+
 def init() -> Bootstrap:
     bootstrap = load_bootstrap()
     from app.db.engine import set_bootstrap
 
     set_bootstrap(bootstrap)
     open_all()
+    try:
+        from app.db.runs import abandon_orphaned_runs, repair_interrupted_ended_at
+
+        abandon_orphaned_runs()
+        repair_interrupted_ended_at()
+    except Exception:
+        pass
+    global _atexit_registered
+    if not _atexit_registered:
+        import atexit
+
+        atexit.register(_persist_on_exit)
+        _atexit_registered = True
     try:
         from app.install_seed import bundled_help_docs, seed_help_documents
 

@@ -1,5 +1,4 @@
 import i18n from '@/i18n';
-import { mockApplyService, peekMockSession } from '@/api/mocks';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 import { queryClient } from '@/api/client';
@@ -183,8 +182,28 @@ function hostResources(cloud: boolean): ResourceSnapshot {
   };
 }
 
+function peekSession() {
+  const state = useAppStore.getState();
+  return {
+    activeNetworkId: state.activeNetworkId,
+    activeNetworkName: state.activeNetworkName ?? undefined,
+    serviceStatus: state.serviceStatus,
+    runId: state.runId ?? undefined,
+    startedAt: undefined as string | undefined,
+  };
+}
+
+function applyService(status: ServiceStatus, extra?: { runId?: string | null; keepRun?: boolean }) {
+  const store = useAppStore.getState();
+  store.setServiceStatus(status);
+  if (extra?.runId === null) store.setRunId(null);
+  else if (extra?.runId) store.setRunId(extra.runId);
+  else if (!extra?.keepRun && (status === 'stopped' || status === 'disconnected')) store.setRunId(null);
+  return peekSession();
+}
+
 function sessionMeta() {
-  const session = peekMockSession();
+  const session = peekSession();
   return {
     networkId: session.activeNetworkId ?? 'net-demo',
     networkName: session.activeNetworkName ?? 'Demo-Netz',
@@ -243,6 +262,11 @@ function buildRun(status: ServiceStatus, flavor: Flavor): RunSnapshot {
       currentNodeIds: wait ? ['chat-1'] : status === 'error' ? ['agent-1'] : ['llm-1', 'agent-1'],
       dag: flavor === 'nochat' ? { completed: 1, total: 4, pendingNodeIds: ['agent-1', 'tool-1', 'end-1'] } : undefined,
       stepError,
+      tokens: {
+        in: llmRuntime(flavor).tokens?.in,
+        out: llmRuntime(flavor).tokens?.out ?? 0,
+        perSecond: status === 'running' && !wait ? llmRuntime(flavor).tokens?.perSecond : undefined,
+      },
     },
     chat:
       flavor === 'nochat'
@@ -364,7 +388,7 @@ function statusOf(scenario: MockScenario): ServiceStatus {
 
 function syncAppSession(status: ServiceStatus) {
   const keep = status === 'disconnected' || status === 'error' || status === 'starting' || status === 'stopping';
-  const session = mockApplyService(status, {
+  const session = applyService(status, {
     runId: engine.run?.runId,
     keepRun: keep,
   });
@@ -375,7 +399,7 @@ function syncAppSession(status: ServiceStatus) {
 }
 
 function followSession() {
-  const session = peekMockSession();
+  const session = peekSession();
   if (session.serviceStatus === engine.serviceStatus) return;
   applyStatus(session.serviceStatus, engine.flavor);
 }
@@ -400,8 +424,17 @@ function tick() {
       },
     };
   }
-  engine.run = { ...engine.run, nodesRuntime: runtime };
-  emit({ type: 'run', run: { nodesRuntime: runtime, activity: engine.run.activity } });
+  const llmTokens = runtime['llm-1']?.tokens;
+  const activity = {
+    ...engine.run.activity,
+    tokens: {
+      in: llmTokens?.in,
+      out: llmTokens?.out ?? engine.run.activity.tokens?.out ?? 0,
+      perSecond: llm?.status === 'running' ? llmTokens?.perSecond : undefined,
+    },
+  };
+  engine.run = { ...engine.run, nodesRuntime: runtime, activity };
+  emit({ type: 'run', run: { nodesRuntime: runtime, activity } });
 
   if (engine.tick % 2 === 0) {
     const nodes = [
@@ -536,7 +569,7 @@ export function createMockHandle(): MonitoringHandle {
       };
     },
     getSnapshot() {
-      const session = peekMockSession();
+      const session = peekSession();
       if (session.serviceStatus !== engine.serviceStatus && listeners.size === 0) {
         engine.serviceStatus = session.serviceStatus;
         if (session.serviceStatus === 'running') {

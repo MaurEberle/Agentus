@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
 import type { ResourceSnapshot } from '@/modules/monitoring/model/types';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 
 function Meter({
   label,
@@ -69,12 +70,12 @@ export function ResourcesPanel({
       : 0;
 
   return (
-    <Card className={cn(dimmed && 'opacity-60')}>
+    <Card className={cn(moduleCardClass, dimmed && 'opacity-60')}>
       <CardHeader className="pb-2">
         <CardTitle>{t('monitoring.resources.title')}</CardTitle>
         <CardDescription>{t('monitoring.resources.hostHint')}</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-3">
+      <CardContent className={cn(moduleCardBodyClass, 'grid gap-4 sm:grid-cols-3')}>
         <div className="space-y-2">
           <Meter
             label={t('monitoring.resources.cpu')}
@@ -94,7 +95,7 @@ export function ResourcesPanel({
                 {t('monitoring.resources.cpuCores')}
               </Button>
               {coresOpen ? (
-                <ul className="mt-1 space-y-1">
+                <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto">
                   {resources.cpuPerCore.map((value, index) => (
                     <li key={index}>
                       <Meter label={`${index + 1}`} percent={value} alarm locale={locale} />

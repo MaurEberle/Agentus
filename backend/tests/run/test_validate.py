@@ -41,3 +41,22 @@ def test_knowledge_drive_root() -> None:
     )
     errors = validate_document(AgentNetworkDocument.model_validate(raw), data_dir="C:/data")
     assert any(e.message_key == "graph.knowledge.path" for e in errors)
+
+
+def test_knowledge_outside_data_dir_ok(tmp_path) -> None:
+    folder = tmp_path / "stories"
+    folder.mkdir()
+    raw = mini_doc()
+    raw["nodes"].append(
+        {
+            "id": "kn",
+            "type": "knowledge",
+            "position": {"x": 0, "y": 0},
+            "data": {"sourcePath": str(folder)},
+        }
+    )
+    errors = validate_document(
+        AgentNetworkDocument.model_validate(raw),
+        data_dir=str(tmp_path / "data"),
+    )
+    assert not any(e.message_key == "graph.knowledge.path" for e in errors)

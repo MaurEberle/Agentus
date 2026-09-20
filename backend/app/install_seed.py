@@ -29,10 +29,25 @@ def bundled_help_docs() -> Path | None:
     return path if path.is_dir() else None
 
 
+def _copy_bundled_files(bundled: Path, target: Path, *, overwrite: bool) -> None:
+    for src in bundled.rglob("*"):
+        if src.is_symlink() or not src.is_file():
+            continue
+        rel = src.relative_to(bundled)
+        dest = target / rel
+        if dest.exists() and not overwrite:
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+
+
 def seed_help_documents(data_dir: Path, *, bundled: Path) -> None:
     target = Path(data_dir) / RAG_DIR_NAME
     target.mkdir(parents=True, exist_ok=True)
+    if not bundled.is_dir():
+        return
     if (target / SEED_MARKER).is_file():
+        _copy_bundled_files(bundled, target, overwrite=False)
         return
     existing = [
         p
@@ -41,13 +56,5 @@ def seed_help_documents(data_dir: Path, *, bundled: Path) -> None:
     ]
     if existing:
         return
-    if not bundled.is_dir():
-        return
-    for src in bundled.rglob("*"):
-        if src.is_symlink() or not src.is_file():
-            continue
-        rel = src.relative_to(bundled)
-        dest = target / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+    _copy_bundled_files(bundled, target, overwrite=True)
     (target / SEED_MARKER).write_text("1\n", encoding="utf-8")

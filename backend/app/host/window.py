@@ -6,9 +6,15 @@ import threading
 import time
 from typing import Any
 
-from app.db.bootstrap import WindowGeom, load_bootstrap, save_window
+from app.db.bootstrap import WindowGeom, save_window
 from app.host.bridge import ChromeHostApi, inject_chrome_host
-from app.host.geometry import MIN_H, MIN_W, from_bootstrap
+from app.host.geometry import MIN_H, MIN_W, start_placement
+from app.host.native_frame import (
+    configure_webview,
+    enable_frameless_resize,
+    resolve_app_icon,
+    set_window_icon,
+)
 from app.host.server import start_uvicorn, stop_uvicorn, wait_health
 from app.host.single_instance import WINDOW_TITLE, acquire, release
 
@@ -48,11 +54,11 @@ def _save_geom(window: Any) -> None:
 
 
 def on_closing(server: Any, port: int) -> bool:
+    _ = (server, port)
     try:
-        from app.common.http import client
+        from app.run.controller import get_controller
 
-        with client(timeout_sec=8.0) as http:
-            http.post(f"http://127.0.0.1:{port}/api/run/stop")
+        get_controller().stop()
     except Exception:
         pass
     return True
@@ -65,12 +71,12 @@ def run_host(host: str, port: int) -> None:
     try:
         import webview
 
+        configure_webview(webview)
         server = start_uvicorn(host, port)
         wait_health("127.0.0.1", port)
-        bootstrap = load_bootstrap()
-        geom = from_bootstrap(bootstrap.window)
-        maximized = bool(bootstrap.window.maximized)
+        geom, maximized = start_placement()
         api = ChromeHostApi()
+        icon_path = resolve_app_icon()
         win = webview.create_window(
             title=WINDOW_TITLE,
             url=f"http://127.0.0.1:{port}/",
@@ -88,6 +94,8 @@ def run_host(host: str, port: int) -> None:
         api._window = win
 
         def _shown() -> None:
+            enable_frameless_resize(win)
+            set_window_icon(win, icon_path)
             if maximized:
                 win.maximize()
 
@@ -109,7 +117,7 @@ def run_host(host: str, port: int) -> None:
         win.events.resized += _resized
         win.events.loaded += _loaded
         try:
-            webview.start(gui="edgechromium", debug=_dev())
+            webview.start(gui="edgechromium", debug=_dev(), icon=icon_path)
         except Exception as exc:
             raise SystemExit("host.webview2.missing") from exc
     finally:

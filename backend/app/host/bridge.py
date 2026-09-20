@@ -45,7 +45,10 @@ class ChromeHostApi:
 
 def inject_chrome_host(window: Any) -> None:
     try:
-        window.evaluate_js("window.chromeHost = window.pywebview.api;")
+        window.evaluate_js(
+            "window.chromeHost = window.pywebview.api;"
+            "window.dispatchEvent(new CustomEvent('agentus-chrome-ready'));"
+        )
         window.evaluate_js("window.open = function(){ return null; };")
     except Exception:
         pass

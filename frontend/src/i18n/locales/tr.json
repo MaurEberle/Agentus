@@ -1,0 +1,1269 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "İçeriğe atla"
+  },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "OpenAI uyumlu"
+  },
+  "nav": {
+    "dashboard": "Kontrol paneli",
+    "network": "Ağ",
+    "networks": "Kitaplık",
+    "monitoring": "İzleme",
+    "history": "Geçmiş",
+    "settings": "Ayarlar",
+    "openMenu": "Gezintiyi aç",
+    "closeMenu": "Gezintiyi kapat",
+    "collapse": "Kenar çubuğunu daralt",
+    "expand": "Kenar çubuğunu genişlet",
+    "main": "Ana gezinme"
+  },
+  "shell": {
+    "start": "Başlat",
+    "stop": "Durdur",
+    "quickSelect": "Hızlı seçim",
+    "quickSelectPlaceholder": "Ağ seç",
+    "noNetwork": "Ağ yok",
+    "settings": "Ayarlar",
+    "theme": "Görünüm",
+    "themeLight": "Açık",
+    "themeDark": "Koyu",
+    "themeSystem": "Sistem",
+    "language": "Dil",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "languageFr": "Français",
+    "languageTr": "Türkçe",
+    "languagePt": "Português",
+    "languageZh": "中文",
+    "languageJa": "日本語",
+    "languageAr": "العربية",
+    "languageNames": {
+      "de": "Almanca",
+      "en": "İngilizce",
+      "es": "İspanyolca",
+      "fr": "Fransızca",
+      "tr": "Türkçe",
+      "pt": "Portekizce",
+      "zh": "Çince",
+      "ja": "Japonca",
+      "ar": "Arapça"
+    },
+    "window": {
+      "minimize": "Simge durumuna küçült",
+      "maximize": "Ekranı kapla",
+      "restore": "Geri yükle",
+      "close": "Kapat"
+    }
+  },
+  "status": {
+    "stopped": "Durduruldu",
+    "starting": "Başlatılıyor",
+    "running": "Çalışıyor",
+    "stopping": "Durduruluyor",
+    "disconnected": "Bağlantı kesildi",
+    "error": "Hata"
+  },
+  "notifications": {
+    "title": "Bildirimler",
+    "empty": "Bildirim yok",
+    "markRead": "Okundu işaretle",
+    "markAllRead": "Tümünü okundu işaretle",
+    "clear": "Temizle",
+    "open": "Bildirimleri aç",
+    "unreadCount": "{{count}} okunmamış"
+  },
+  "folderPicker": {
+    "title": "Klasör seç",
+    "description": "Bu bilgisayarda bir klasör seçin. Tam yol alana yazılır.",
+    "select": "Seç",
+    "cancel": "İptal",
+    "close": "Kapat",
+    "up": "Üst klasör",
+    "empty": "Alt klasör yok",
+    "error": "Bu klasör okunamadı.",
+    "unavailable": "Dosya sistemi bu oturumda kullanılamıyor.",
+    "loading": "Klasörler yükleniyor…",
+    "path": "Yol",
+    "places": {
+      "home": "Kullanıcı klasörü",
+      "desktop": "Masaüstü",
+      "documents": "Belgeler",
+      "downloads": "İndirilenler"
+    }
+  },
+  "notify": {
+    "welcome": {
+      "title": "Agentus Network’e hoş geldiniz",
+      "desc": "Bir ağ seçin ve üst çubuktan bir çalıştırma başlatın."
+    },
+    "runStarting": {
+      "title": "Çalıştırma başlatılıyor",
+      "desc": "Etkin ağ başlıyor."
+    },
+    "runRunning": {
+      "title": "Ağ çalışıyor",
+      "desc": "{{name}} etkin."
+    },
+    "runStopping": {
+      "title": "Çalıştırma durduruluyor",
+      "desc": "Ağ durduruluyor."
+    },
+    "runStopped": {
+      "title": "Çalıştırma durdu",
+      "desc": "Ağ durduruldu."
+    },
+    "runConflict": {
+      "title": "Başlatılamıyor",
+      "desc": "Zaten bir ağ çalışıyor."
+    },
+    "runError": {
+      "title": "Çalıştırma başarısız",
+      "desc": "Başlatma veya durdurma başarısız oldu."
+    },
+    "noNetwork": {
+      "title": "Ağ seçilmedi",
+      "desc": "Önce hızlı seçimden bir ağ seçin."
+    },
+    "networkSelected": {
+      "title": "Etkin ağ",
+      "desc": "{{name}} seçildi."
+    },
+    "networkCleared": {
+      "title": "Etkin ağ yok",
+      "desc": "Hızlı seçim temizlendi."
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "Bu modül bir sonraki adımda uygulanacak."
+  },
+  "notFound": {
+    "title": "Sayfa bulunamadı",
+    "body": "Bu yol yok.",
+    "back": "Kontrol paneline dön"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "unsaved": {
+      "title": "Kaydedilmemiş değişiklikler",
+      "body": "Bazı alanlar henüz kaydedilmedi. Atıp devam edilsin mi?",
+      "stay": "Kal",
+      "leave": "At"
+    },
+    "common": {
+      "save": "Kaydet",
+      "cancel": "İptal",
+      "delete": "Sil",
+      "edit": "Düzenle",
+      "close": "Kapat",
+      "actions": "Eylemler"
+    },
+    "nav": {
+      "appearance": "Görünüm",
+      "credentials": "Kimlik bilgileri",
+      "runtime": "Çalışma zamanı",
+      "help-chat": "Yardım sohbeti",
+      "mcp": "MCP sunucuları",
+      "data": "Veri",
+      "about": "Hakkında"
+    },
+    "appearance": {
+      "lead": "Renk ve dil, üst çubuk dahil uygulamanın her yerinde geçerlidir.",
+      "fab": "Yardım düğmesi",
+      "fabHint": "Yardım widget’ını sağ altta gösterir. Yapılandırma Yardım sohbeti altındadır."
+    },
+    "credentials": {
+      "lead": "Bulut modelleri, web araması ve MCP için adlı kimlik bilgileri. Kaydettikten sonra yalnızca maske görünür.",
+      "create": "Kimlik bilgisi ekle",
+      "createTitle": "Kimlik bilgisi ekle",
+      "editTitle": "Kimlik bilgisini değiştir",
+      "empty": "Henüz kimlik bilgisi yok.",
+      "name": "Ad",
+      "kind": "Tür",
+      "mask": "Maske",
+      "secret": "Gizli",
+      "secretHint": "Gizli yalnızca bir kez gönderilir. Listede sonra yalnızca maske görünür.",
+      "secretUnchanged": "Mevcut gizliyi korumak için boş bırakın",
+      "deleteTitle": "Kimlik bilgisi silinsin mi?",
+      "deleteBody": "“{{name}}” kaldırılacak. Gizli artık kullanılamaz.",
+      "inUseTitle": "Kimlik bilgisi kullanılıyor",
+      "inUseBody": "“{{name}}” hâlâ bir yardım profiline, ağa veya MCP sunucusuna bağlı ve silinemez.",
+      "kindName": {
+        "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
+        "openai_compat": "OpenAI uyumlu",
+        "web_search": "Web araması",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "Belirteç"
+      }
+    },
+    "runtime": {
+      "lead": "Yerel Ollama URL’si. Sınama ve model listesi tarayıcıdan değil, uygulama API’si üzerinden gider.",
+      "ollamaUrl": "Ollama temel URL’si",
+      "openaiCompatUrl": "OpenAI uyumlu temel URL",
+      "ping": "Bağlantıyı denetle",
+      "pingOk": "Çalışma zamanına erişildi",
+      "pingFail": "Çalışma zamanına erişilemiyor",
+      "modelNotFound": "Model bulunamadı veya yüklenemedi: {{name}}",
+      "timeout": "Modelden ilerleme yok ({{name}}). Toplam süre değil, sessizlik sonrası iptal.",
+      "unreachable": "Ollama’ya erişilemiyor ({{name}}).",
+      "models": "Yüklü modeller",
+      "modelsEmpty": "Model yok veya çalışma zamanına erişilemiyor.",
+      "modelName": "Model",
+      "modelSize": "Boyut",
+      "status": {
+        "unknown": "Bilinmiyor",
+        "ok": "Tamam",
+        "error": "Hata"
+      }
+    },
+    "helpChat": {
+      "lead": "Yardım widget’ının tek yapılandırması. Sağlayıcı veya model eksikse tamamlanmamıştır.",
+      "configured": "Yapılandırıldı",
+      "incomplete": "Eksik",
+      "provider": "Sohbet sağlayıcısı",
+      "providerEmpty": "Ayarlanmadı",
+      "openaiCompat": "OpenAI uyumlu",
+      "model": "Sohbet modeli",
+      "credential": "Kimlik bilgisi",
+      "credentialEmpty": "Kimlik bilgisi yok",
+      "credentialHint": "Önce geçerli bir API anahtarı seçin. Modeller ardından yüklenir.",
+      "noCredentials": "Bu sağlayıcı için kimlik bilgisi yok — Kimlik bilgileri altında uygun bir kayıt ekleyin.",
+      "pickCredentialFirst": "Önce geçerli bir API anahtarı seçin",
+      "modelsLoadError": "Modeller yüklenemedi. API anahtarını denetleyin.",
+      "embedProvider": "Gömme sağlayıcısı",
+      "embedModel": "Gömme modeli",
+      "reindexHint": "Gömme değiştirdikten sonra dizini yeniden oluşturun.",
+      "webSearch": "Web araması",
+      "webSearchHint": "İsteğe bağlı. Arama kimlik bilgisi olmadan sohbet yapılandırılabilir; arama kapalı kalır.",
+      "webSearchCredential": "Arama kimlik bilgisi",
+      "webSearchMissing": "Kimlik bilgisi yok — Kimlik bilgileri altında web araması kaydı ekleyin.",
+      "fallback": "Tasarruflu model (isteğe bağlı)",
+      "ping": "Bağlantıyı denetle",
+      "pingOk": "Yardım sohbetine erişildi",
+      "pingFail": "Yardım sohbetine erişilemiyor",
+      "clear": "Geçmişi temizle",
+      "clearTitle": "Yardım geçmişi silinsin mi?",
+      "clearBody": "Yardım sohbetindeki tüm iletiler kaldırılır. Profil kalır.",
+      "reindex": "Dizini yeniden oluştur",
+      "resetOnboarding": "Karşılama ekranını yeniden göster"
+    },
+    "mcp": {
+      "lead": "Tarifler ve özel sunucular. Varsayılan: kapalı. Yardım bu sunucuları kullanmaz.",
+      "recipes": "Tarifler",
+      "servers": "Yapılandırılmış sunucular",
+      "empty": "Henüz MCP sunucusu yok.",
+      "enable": "Etkinleştir",
+      "added": "Eklendi",
+      "custom": "Özel",
+      "customCreate": "Özel sunucu",
+      "transport": "Aktarım",
+      "enabled": "Etkin",
+      "status": "Durum",
+      "probe": "Sonda",
+      "presetHint": "Tarife göre kimlik bilgileri ve isteğe bağlı kök yolu. Kaydetmek sunucuyu hemen oluşturur.",
+      "officeHint": "Office, PDF ve Office biçimlerini bir araya getirir. Tekil hazır ayarları yalnızca gerekirse birlikte açın.",
+      "rootPath": "Kök yolu",
+      "untrusted": "Bilinmeyen bir süreç verilen yetkilerle başlatılır. Yalnızca güvenilir komutlar kullanın.",
+      "command": "Komut",
+      "args": "Argümanlar",
+      "url": "URL",
+      "deleteTitle": "Sunucu silinsin mi?",
+      "deleteBody": "Bu özel sunucu yapılandırması kaldırılacak.",
+      "pingOk": "MCP sunucusu yanıt verdi",
+      "pingError": "MCP sondası başarısız",
+      "runtimeMissing": "Çalışma zamanı yok (Node, npx, Docker veya uvx).",
+      "statusName": {
+        "unknown": "Bilinmiyor",
+        "ok": "Tamam",
+        "error": "Hata",
+        "runtime_missing": "Çalışma zamanı yok"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "Dosya sistemi",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "Veri klasörü ve depo durumu. SQL tarayıcısı yok, gizli yok.",
+      "dir": "Veri klasörü",
+      "pick": "Klasör seç",
+      "busy": "Bir ağ başlarken, çalışırken veya dururken klasör değiştirilemez.",
+      "invalidRoot": "Sürücü veya sistem kökü izinli değil.",
+      "stores": "Depolar",
+      "storeName": "Depo",
+      "fileName": "Dosya",
+      "retentionLabel": "Geçmiş saklama",
+      "copy": "İçeriği yeni klasöre kopyala",
+      "confirmTitle": "Veri klasörünü değiştir",
+      "confirmBody": "Eski klasör korunur. Boş hedef oluşturun veya mevcut depo dosyalarını kullanın.",
+      "source": {
+        "env": "Klasör bir ortam değişkeninden gelir ve salt okunurdur.",
+        "portable": "Taşınabilir kip: veri klasörü sabittir ve salt okunurdur."
+      },
+      "store": {
+        "settings": "Ayarlar",
+        "help": "Yardım",
+        "workspace": "Çalışma alanı",
+        "history": "Geçmiş"
+      },
+      "storeState": {
+        "ok": "Tamam",
+        "missing": "Eksik",
+        "error": "Hata"
+      },
+      "retention": {
+        "30": "30 gün",
+        "90": "90 gün",
+        "365": "365 gün",
+        "unlimited": "Sınırsız"
+      }
+    },
+    "about": {
+      "lead": "Sürümler ve kısa durum, gizli olmadan.",
+      "uiVersion": "Arayüz sürümü",
+      "apiVersion": "API sürümü",
+      "runtime": "Ollama",
+      "dataFolder": "Veri klasörü",
+      "storesOk": "Depolara erişildi"
+    },
+    "notify": {
+      "saved": "Ayarlar kaydedildi",
+      "saveError": "Kaydetme başarısız",
+      "credentialCreated": "Kimlik bilgisi oluşturuldu",
+      "credentialUpdated": "Kimlik bilgisi güncellendi",
+      "credentialDeleted": "Kimlik bilgisi silindi",
+      "credentialInUse": "Kimlik bilgisi hâlâ kullanılıyor",
+      "helpCleared": "Yardım geçmişi temizlendi",
+      "reindexed": "Yardım dizini yeniden oluşturuldu",
+      "onboardingReset": "Yardım bir sonraki açılışta karşılama ekranını gösterir",
+      "mcpSaved": "MCP sunucusu kaydedildi",
+      "mcpDeleted": "MCP sunucusu silindi",
+      "dataDirOk": "Veri klasörü güncellendi"
+    }
+  },
+  "helpChat": {
+    "title": "Yardım",
+    "fab": {
+      "open": "Yardımı aç",
+      "close": "Yardımı kapat"
+    },
+    "onboarding": {
+      "title": "Uygulama yardımı",
+      "body": "Bu sohbet uygulamayı ve grafik kurmayı açıklar. Çalışan bir ajan ağıyla konuşmaz. Yapılandırma Ayarlar altındadır.",
+      "configure": "Şimdi yapılandır",
+      "later": "Sonra"
+    },
+    "status": {
+      "unconfigured": "Kapalı",
+      "ready": "Hazır",
+      "degraded": "Tasarruf kipi",
+      "generating": "Yanıtlıyor",
+      "error": "Hata"
+    },
+    "action": {
+      "send": "Gönder",
+      "stop": "Durdur",
+      "settings": "Yardım ayarları",
+      "close": "Yardımı kapat"
+    },
+    "input": {
+      "placeholder": "Uygulama veya grafik hakkında sorun…"
+    },
+    "empty": "Henüz ileti yok. Kullanım hakkında bir şey sorun.",
+    "unconfigured": {
+      "body": "Yardım henüz yapılandırılmadı. Sağlayıcı ve modeli Ayarlar altında belirleyin.",
+      "cta": "Ayarlara git"
+    },
+    "sources": {
+      "rag": "Belge",
+      "web": "Web"
+    },
+    "error": {
+      "generic": "Yardım yanıtı başarısız oldu."
+    },
+    "resize": {
+      "width": "Genişliği değiştir",
+      "height": "Yüksekliği değiştir"
+    },
+    "mock": {
+      "reply": "Bu, yardımın **örnek yanıtıdır**. Çalışan ağı değil, uygulamayı açıklar. `Ayarlar` altında sağlayıcı ve modeli yapılandırırsınız.",
+      "ragTitle": "Hızlı başlangıç",
+      "ragSection": "Yardım sohbeti",
+      "webTitle": "Ollama belgeler"
+    }
+  },
+  "dashboard": {
+    "title": "Kontrol paneli",
+    "status": {
+      "title": "Durum",
+      "noNetwork": "Etkin ağ yok",
+      "openLibrary": "Kitaplığa git",
+      "runningSince": "{{time}} beri çalışıyor",
+      "openMonitoring": "İzleme"
+    },
+    "helpHint": {
+      "title": "Uygulama yardımı",
+      "body": "Yardım uygulamayı ve grafik kurmayı açıklar. Ajan ağıyla konuşmaz. Düğme sağ alttadır.",
+      "open": "Yardımı aç",
+      "dismiss": "Anladım"
+    },
+    "setup": {
+      "title": "Kurulum",
+      "ollama": "Ollama’ya erişilemiyor",
+      "help": "Yardım profili eksik",
+      "networks": "Henüz ağ yok",
+      "runtimeLink": "Çalışma zamanını denetle",
+      "helpLink": "Yardımı yapılandır",
+      "createNetwork": "Yeni ağ",
+      "importNetwork": "Ağ içe aktar"
+    },
+    "active": {
+      "title": "Etkin ağ",
+      "empty": "Etkin ağ seçilmedi.",
+      "edit": "Düzenle",
+      "library": "Kitaplık",
+      "create": "Yeni ağ",
+      "stats": "{{nodes}} düğüm · {{edges}} kenar",
+      "updated": "Güncellendi {{time}}"
+    },
+    "validationStatus": {
+      "valid": "Geçerli",
+      "invalid": "Geçersiz",
+      "unknown": "Bilinmiyor"
+    },
+    "validation": {
+      "missingModel": "En az bir LLM düğümünün bir modele ihtiyacı var."
+    },
+    "recent": {
+      "title": "Son kullanılanlar",
+      "empty": "Henüz ağ yok.",
+      "create": "Yeni ağ"
+    },
+    "runs": {
+      "title": "Son çalıştırmalar",
+      "empty": "Henüz çalıştırma yok.",
+      "storeError": "Geçmiş deposu kullanılamıyor.",
+      "openData": "Veriyi denetle"
+    },
+    "outcome": {
+      "running": "Çalışıyor",
+      "succeeded": "Başarılı",
+      "failed": "Başarısız",
+      "cancelled": "İptal",
+      "timeout": "Zaman aşımı"
+    },
+    "week": {
+      "title": "Son 7 gün",
+      "runs": "Çalıştırmalar",
+      "succeeded": "Başarılı",
+      "failed": "Başarısız",
+      "openHistory": "Geçmiş"
+    },
+    "environment": {
+      "title": "Ortam",
+      "ollamaOk": "Ollama erişilebilir",
+      "ollamaFail": "Ollama erişilemez",
+      "models_one": "{{count}} model",
+      "models_other": "{{count}} model",
+      "storeIssue": "{{store}} sağlıklı değil.",
+      "openData": "Veri",
+      "degraded": "Tasarruf kipi"
+    },
+    "quick": {
+      "title": "Hızlı erişim",
+      "create": "Yeni ağ",
+      "import": "İçe aktar",
+      "runtime": "Çalışma zamanı"
+    },
+    "duration": {
+      "seconds": "{{count}} sn",
+      "minutes": "{{minutes}} dk {{seconds}} sn",
+      "hours": "{{hours}} sa {{minutes}} dk"
+    },
+    "error": {
+      "load": "Kontrol paneli verileri yüklenemedi.",
+      "networks": "Ağlar yüklenemedi.",
+      "runs": "Çalıştırmalar yüklenemedi.",
+      "networkMissing": "Ağ bulunamadı"
+    }
+  },
+  "network": {
+    "untitled": "Adsız ağ",
+    "copySuffix": "(Kopya)",
+    "badge": {
+      "valid": "Geçerli",
+      "invalid": "Geçersiz",
+      "active": "Etkin",
+      "running": "Çalışıyor"
+    },
+    "ribbon": {
+      "new": "Yeni",
+      "save": "Kaydet",
+      "saveAs": "Farklı kaydet",
+      "load": "Aç",
+      "duplicate": "Çoğalt",
+      "export": "Dışa aktar",
+      "validate": "Doğrula",
+      "undo": "Geri al",
+      "redo": "Yinele",
+      "library": "Kitaplık",
+      "view": "Görünüm"
+    },
+    "view": {
+      "fit": "Sığdır",
+      "snap": "Hizala",
+      "grid": "Izgara",
+      "minimap": "Minikart"
+    },
+    "palette": {
+      "title": "Palet",
+      "collapse": "Paleti daralt",
+      "expand": "Paleti genişlet",
+      "search": "Düğüm ara",
+      "chat_input": "Sohbet girişi",
+      "chat_inputHint": "En fazla bir tane. Başlangıç metni ve çalıştırma için zorunlu alan.",
+      "llm": "LLM",
+      "llmHint": "Model ve sağlayıcı. Ajan llm bağlantı noktasına kenar.",
+      "agent": "Ajan",
+      "agentHint": "Sistem istemi. LLM, ileti, araçlar ve bilgi kenarlarla.",
+      "tool": "Araç",
+      "toolHint": "Katalog türü, isteğe bağlı MCP.",
+      "knowledge": "Bilgi",
+      "knowledgeHint": "Kaynak klasör, yalnızca ajan knowledge bağlantı noktasına.",
+      "router": "Yönlendirici",
+      "routerHint": "İletileri koşullara göre ayırır.",
+      "end": "Son",
+      "endHint": "En az bir tane. Çalıştırmayı bitirir."
+    },
+    "ports": {
+      "message": "İleti",
+      "llm": "LLM",
+      "tool": "Araç",
+      "knowledge": "Bilgi",
+      "handoff": "Devretme",
+      "default": "Varsayılan",
+      "in": "Giriş",
+      "out": "Çıkış"
+    },
+    "inspector": {
+      "title": "Denetçi",
+      "collapse": "Denetçiyi daralt",
+      "expand": "Denetçiyi genişlet",
+      "displayName": "Görünen ad",
+      "multi": "{{count}} düğüm seçildi",
+      "graph": {
+        "title": "Ağ",
+        "name": "Ad",
+        "description": "Açıklama",
+        "tags": "Etiketler",
+        "stats": "{{nodes}} düğüm · {{edges}} kenar",
+        "noIssues": "Doğrulama hatası yok."
+      },
+      "llm": {
+        "provider": "Sağlayıcı",
+        "openaiCompat": "OpenAI uyumlu",
+        "model": "Model",
+        "credential": "Kimlik bilgisi",
+        "credentialEmpty": "Kimlik bilgisi yok",
+        "credentialHint": "Önce geçerli bir API anahtarı seçin. Modeller ardından yüklenir.",
+        "noCredentials": "Bu sağlayıcı için kimlik bilgisi yok.",
+        "pickCredentialFirst": "Önce geçerli bir API anahtarı seçin",
+        "modelsLoadError": "Modeller yüklenemedi. API anahtarını denetleyin.",
+        "baseUrl": "Temel URL",
+        "ping": "Bağlantıyı dene",
+        "pingOk": "Model yanıt verdi",
+        "pingFail": "Deneme başarısız",
+        "advanced": "Gelişmiş",
+        "noModels": "Yüklenmiş model yok.",
+        "useModel": "“{{name}}” kullan",
+        "temperature": "Sıcaklık",
+        "maxTokens": "En fazla belirteç"
+      },
+      "agent": {
+        "hint": "LLM, araçlar ve bilgi alanlardan değil kenarlardan gelir.",
+        "systemPrompt": "Sistem istemi"
+      },
+      "tool": {
+        "kind": "Tür",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "Web araması",
+          "datetime": "Tarih/saat",
+          "calculator": "Hesap makinesi",
+          "file_access": "Dosya erişimi",
+          "mcp": "MCP"
+        },
+        "method": "Yöntem",
+        "url": "URL",
+        "rootPath": "Kök klasör",
+        "pickRoot": "Klasör",
+        "allowWrite": "Yazmaya izin ver",
+        "allowDelete": "Silmeye izin ver",
+        "fileAccessHint": "Ajan yalnızca bu klasör altında okuyabilir, yazabilir ve silebilir.",
+        "credential": "Kimlik bilgisi",
+        "mcpServer": "MCP sunucusu",
+        "mcpEmpty": "Sunucu yok",
+        "mcpHint": "Varsayılan: sunucunun tüm araçları. Sunucuları Ayarlar’da oluşturun.",
+        "mcpSettings": "MCP ayarları"
+      },
+      "knowledge": {
+        "path": "Kaynak klasör",
+        "pick": "Klasör",
+        "embedProvider": "Gömme sağlayıcısı",
+        "embedModel": "Gömme modeli",
+        "topK": "topK",
+        "score": "Puan eşiği",
+        "reindex": "Dizini yenile",
+        "reindexOk": "Dizin yenilendi",
+        "reindexFail": "Dizin başarısız",
+        "reindexHint": "Gömme değiştirdikten sonra dizini yeniden oluşturun."
+      },
+      "router": {
+        "branches": "Dallar",
+        "branchName": "Ad",
+        "condition": "Koşul",
+        "add": "Dal ekle"
+      },
+      "chat": {
+        "placeholder": "Yer tutucu",
+        "startMessage": "Başlangıç metni",
+        "requireInput": "Giriş gerekli"
+      }
+    },
+    "load": {
+      "title": "Ağ aç",
+      "body": "Kayıtlı bir ağ seçin. Toplu işlem, silme ve içe aktarma kitaplıktadır.",
+      "search": "Ara",
+      "sortUpdated": "Güncellendi",
+      "sortName": "Ad",
+      "sortUsed": "Son kullanım",
+      "open": "Aç",
+      "preview": "{{nodes}} düğüm · {{edges}} kenar"
+    },
+    "empty": {
+      "body": "Paletten bir düğümü yüzeye sürükleyin veya kayıtlı bir ağ açın.",
+      "insert": "Palet"
+    },
+    "context": {
+      "insert": "Ekle",
+      "fit": "Sığdır",
+      "duplicate": "Çoğalt",
+      "delete": "Sil"
+    },
+    "dialog": {
+      "close": "Kapat",
+      "cancel": "İptal",
+      "nameTitle": "Ağı adlandır"
+    },
+    "dirty": {
+      "title": "Kaydedilmemiş değişiklikler",
+      "body": "Açık ağ değişti. Kaydet, at veya iptal?",
+      "save": "Kaydet",
+      "discard": "At",
+      "cancel": "İptal"
+    },
+    "readonly": {
+      "title": "Salt okunur",
+      "body": "Bu ağ çalışıyor. Düzenlemeden önce üst çubuktan durdurun."
+    },
+    "validation": {
+      "nameRequired": "Ad boş olamaz.",
+      "tooManyChatInputs": "En fazla bir sohbet girişi.",
+      "endRequired": "En az bir son düğümü.",
+      "danglingEdge": "Kenar eksik bir düğüme işaret ediyor.",
+      "edgeType": "Bu bağlantı tür olarak uyumlu değil.",
+      "agentLlm": "Her ajan tam olarak bir LLM kenarına ihtiyaç duyar.",
+      "agentMessage": "Her ajan gelen bir iletiye ihtiyaç duyar.",
+      "modelRequired": "Model zorunludur.",
+      "credentialRequired": "Bulut sağlayıcısı bir kimlik bilgisi ister.",
+      "toolKind": "Araç türü eksik.",
+      "mcpServer": "Etkin bir MCP sunucusu seçin.",
+      "mcpRoot": "Bu MCP sunucusunun Ayarlar’da bir kök yoluna ihtiyacı var.",
+      "fileAccessRoot": "Dosya erişimi, sürücü kökü olmayan bir klasör ister.",
+      "knowledgePath": "Kaynak klasör zorunludur.",
+      "knowledgeRoot": "Sürücü veya sistem kökü izinli değil.",
+      "knowledgeSandbox": "Yol veri klasörünün altında olmalıdır.",
+      "knowledgeHelpCorpus": "Yardım derlemi ağ bilgisi değildir.",
+      "knowledgeTarget": "Bilgiyi yalnızca ajan knowledge bağlantı noktasına bağlayın.",
+      "cycle": "Döngülere izin verilmez.",
+      "knowledge": {
+        "missing": "Dizin yok.",
+        "stale": "Dizin eski.",
+        "error": "Dizin hatası."
+      }
+    },
+    "notify": {
+      "saved": "Ağ kaydedildi",
+      "saveError": "Kaydetme başarısız",
+      "duplicated": "Kopya açıldı",
+      "valid": "Ağ geçerli",
+      "invalid": "Ağda doğrulama hataları var"
+    },
+    "error": {
+      "missing": "Ağ bulunamadı"
+    },
+    "catalog": {
+      "firstParty": "First-party"
+    }
+  },
+  "networks": {
+    "title": "Kitaplık",
+    "copySuffix": "(Kopya)",
+    "ribbon": {
+      "new": "Yeni",
+      "open": "Aç",
+      "duplicate": "Çoğalt",
+      "rename": "Yeniden adlandır",
+      "tags": "Etiket ekle",
+      "activate": "Etkin yap",
+      "delete": "Sil",
+      "import": "İçe aktar",
+      "export": "Dışa aktar",
+      "refresh": "Yenile",
+      "more": "Diğer eylemler",
+      "needOne": "Tam olarak bir ağ seçin.",
+      "needSome": "En az bir ağ seçin.",
+      "needValid": "Yalnızca geçerli bir ağ etkin olabilir.",
+      "alreadyActive": "Bu ağ zaten etkin.",
+      "runningBlocked": "Çalışan bir ağ silinemez."
+    },
+    "filter": {
+      "search": "Ad, açıklama, etiket ara",
+      "sort": {
+        "name": "Ad",
+        "updatedAt": "Güncellendi",
+        "lastUsedAt": "Son kullanım"
+      },
+      "direction": "Sıralama yönü",
+      "tags": "Etiketler",
+      "tagsHint": "Birden fazla etiket: VEYA",
+      "noTags": "Etiket yok",
+      "onlyValid": "Yalnızca geçerli",
+      "onlyActive": "Yalnızca etkin"
+    },
+    "list": {
+      "selectAll": "Görünenlerin tümünü seç",
+      "name": "Ad",
+      "description": "Açıklama",
+      "status": "Durum",
+      "graph": "Grafik",
+      "updated": "Güncellendi",
+      "lastUsed": "Son kullanım",
+      "counts": "{{nodes}} düğüm · {{edges}} kenar"
+    },
+    "badge": {
+      "valid": "Geçerli",
+      "invalid": "Geçersiz",
+      "unknown": "Bilinmiyor",
+      "active": "Etkin",
+      "running": "Çalışıyor",
+      "credentialMissing": "Kimlik bilgisi yok"
+    },
+    "detail": {
+      "title": "Ayrıntılar",
+      "none": "Ağ seçilmedi.",
+      "multi": "{{count}} seçildi",
+      "noDescription": "Açıklama yok.",
+      "lastRun": "Son çalıştırma"
+    },
+    "empty": {
+      "library": "Henüz kayıtlı ağ yok.",
+      "filter": "Bu süzgeçler için sonuç yok.",
+      "clearFilters": "Süzgeçleri temizle"
+    },
+    "error": {
+      "title": "Liste yüklenmedi",
+      "body": "Kitaplık yüklenemedi.",
+      "missing": "Ağ bulunamadı",
+      "running": "Çalışan bir ağ silinemez."
+    },
+    "dialog": {
+      "close": "Kapat",
+      "cancel": "İptal",
+      "save": "Kaydet"
+    },
+    "rename": {
+      "title": "Yeniden adlandır",
+      "body": "Yalnızca ad ve açıklama; grafik değişmez.",
+      "name": "Ad",
+      "description": "Açıklama"
+    },
+    "tags": {
+      "title": "Etiket ekle",
+      "body": "Etiketler {{count}} ağa eklenir. Mevcut etiketler kalır.",
+      "label": "Etiketler",
+      "placeholder": "ops, prod",
+      "add": "Ekle"
+    },
+    "delete": {
+      "title": "Ağları sil",
+      "body": "Bu ağın çalışma alanı dizini de silinir. Diskteki kaynak dosyalar kalır. Yardım deposu ve geçmiş çalıştırmaları etkilenmez.",
+      "none": "Hiçbir ağ silinemez.",
+      "runningSkipped": "Çalışıyor, silinmedi: {{names}}",
+      "activeWarning": "En az bir etkin ağ dahil. Hızlı seçim temizlenecek."
+    },
+    "import": {
+      "unreadable": "Bazı dosyalar okunamadı.",
+      "unreadableNames": "{{names}}",
+      "schema": "schemaVersion desteklenmiyor.",
+      "secrets": "İçe aktarma dosyalarındaki gizliler atıldı.",
+      "collisionTitle": "Ad zaten kullanılıyor",
+      "collisionBody": "Dosyayı yeniden adlandırın veya atlayın. İptal yalnızca bu dosyalar için geçerlidir.",
+      "skip": "Bu dosyayı atla",
+      "include": "Yine de içe aktar",
+      "continue": "İçe aktar"
+    },
+    "notify": {
+      "error": "Eylem başarısız",
+      "duplicated": "Kopya kitaplığa eklendi",
+      "renamed": "Üst veriler kaydedildi",
+      "tagged": "Etiketler eklendi",
+      "deleted": "Ağlar silindi",
+      "imported": "{{count}} ağ içe aktarıldı",
+      "exported": "Dışa aktarma başladı"
+    }
+  },
+  "monitoring": {
+    "title": "İzleme",
+    "close": "Kapat",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "empty": {
+      "stoppedTitle": "Çalıştırma yok",
+      "stoppedBody": "Hizmeti üst çubuktan başlatın.",
+      "stoppedActive": "Etkin ağ: {{name}}",
+      "stoppedNoNetwork": "Hızlı seçimde ağ yok.",
+      "lastRunBody": "Etkin çalıştırma yok. Son kaydedilen çalıştırma gösteriliyor.",
+      "disconnectedTitle": "Hizmet bağlantısı kesildi",
+      "disconnectedBody": "Yeniden bağlanılıyor. Son değerler soluk.",
+      "startingTitle": "Hizmet başlıyor",
+      "stoppingTitle": "Hizmet duruyor",
+      "errorTitle": "Hizmet hatası",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "lastRun": "Son çalıştırma",
+      "runId": "Çalıştırma kimliği",
+      "started": "Başlangıç",
+      "duration": "Süre",
+      "step": "Adım",
+      "runningCount": "{{count}} çalışıyor",
+      "noLlm": "Etkin LLM yok",
+      "activeLlms": "Etkin LLM’ler",
+      "otherNodes": "Diğer düğümler",
+      "local": "yerel",
+      "cloud": "bulut"
+    },
+    "resources": {
+      "title": "Ana bilgisayar kaynakları",
+      "hostHint": "Yalnızca uygulama süreci değil, bu makinenin sistem değerleri.",
+      "cpu": "CPU",
+      "cpuCores": "Çekirdek",
+      "ram": "Bellek",
+      "gpu": "GPU",
+      "vram": "VRAM",
+      "noGpu": "GPU yok",
+      "noGpuHint": "Yerel hızlandırıcı algılanmadı. Bulut çalıştırmalarında bu beklenir.",
+      "usedOf": "{{used}} / {{total}}"
+    },
+    "graph": {
+      "title": "Ağ (yalnızca okuma)",
+      "fit": "Sığdır",
+      "filterChip": "Düğüm {{name}}",
+      "clearFilter": "Süzgeci temizle",
+      "detailTitle": "Düğüm ayrıntısı",
+      "role": "Rol",
+      "status": "Durum",
+      "wait": "Beklenen",
+      "lastMessage": "Son ileti",
+      "error": "Hata",
+      "model": "Model",
+      "provider": "Sağlayıcı",
+      "tokens": "Belirteç"
+    },
+    "nodeType": {
+      "chat_input": "Giriş",
+      "llm": "LLM",
+      "agent": "Ajan",
+      "tool": "Araç",
+      "knowledge": "Bilgi",
+      "router": "Yönlendirici",
+      "end": "Son"
+    },
+    "nodeStatus": {
+      "idle": "Boşta",
+      "waiting": "Bekliyor",
+      "running": "Çalışıyor",
+      "done": "Bitti",
+      "error": "Hata"
+    },
+    "wait": {
+      "none": "Bekleme yok",
+      "llm": "LLM",
+      "tool": "Araç",
+      "human": "Giriş"
+    },
+    "activity": {
+      "title": "Etkinlik",
+      "current": "Geçerli düğümler",
+      "none": "Etkin düğüm yok",
+      "dag": "Adım {{completed}} / {{total}}",
+      "pending": "Beklemede",
+      "stepError": "Adım hatası",
+      "tokensIn": "Giriş",
+      "tokensOut": "Çıkış",
+      "perSecond": "{{value}} belirteç/sn",
+      "rate": "Belirteç/sn",
+      "runTotal": "Çalıştırma toplamı",
+      "context": "Bağlam {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "Sohbet",
+      "log": "Günlük"
+    },
+    "chat": {
+      "placeholder": "İleti…",
+      "send": "Gönder",
+      "stop": "Üretimi durdur",
+      "waitInput": "İlk iletiyi yazın. Grafik giriş bekliyor.",
+      "empty": "Bu çalıştırmada henüz ileti yok.",
+      "disabled": "Sohbet yalnızca çalıştırma sırasında."
+    },
+    "log": {
+      "pause": "Duraklat",
+      "resume": "Sürdür",
+      "jumpLatest": "En yenilere git",
+      "newCount": "{{count}} yeni",
+      "search": "Günlükte ara",
+      "level": "Düzey",
+      "levelFrom": "{{level}} ve üzeri",
+      "node": "Düğüm",
+      "allNodes": "Tüm düğümler",
+      "errorsOnly": "Yalnızca hatalar",
+      "export": "Dışa aktar",
+      "empty": "Bu süzgeç için günlük satırı yok.",
+      "detailTitle": "Günlük ayrıntısı",
+      "payload": "Yük",
+      "stack": "Yığın",
+      "message": "İleti",
+      "copyLine": "Satırı kopyala",
+      "copyPayload": "Yükü kopyala"
+    },
+    "level": {
+      "debug": "Hata ayıklama",
+      "info": "Bilgi",
+      "warn": "Uyarı",
+      "error": "Hata"
+    },
+    "notify": {
+      "runStarted": "Çalıştırma başladı",
+      "runStopped": "Çalıştırma durdu",
+      "stepFailed": "Adım başarısız",
+      "disconnected": "Hizmete erişilemiyor"
+    },
+    "dev": {
+      "label": "Sahte senaryo",
+      "stopped": "Durduruldu",
+      "disconnected": "Bağlantı kesildi",
+      "starting": "Başlatılıyor",
+      "stopping": "Durduruluyor",
+      "running": "Çalışıyor (sohbet)",
+      "nochat": "Çalışıyor (sohbetsiz)",
+      "cloud": "Bulut / GPU yok",
+      "error": "Hata",
+      "wait": "Giriş bekleniyor"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "OpenAI uyumlu"
+    },
+    "mock": {
+      "userLine": "Son çalıştırmayı kısaca özetle.",
+      "chatReply": "Çalıştırma etkin. Bu asistan yardımdan değil ağdan yanıtlar.",
+      "lastLlm": "Belirteçler üretiliyor.",
+      "lastAgent": "LLM bekleniyor.",
+      "lastTool": "Araç çağrısı istendi.",
+      "waitInput": "Grafik ilk iletiyi bekliyor.",
+      "stepError": "Araç çağrısı başarısız.",
+      "serviceError": "Hizmet adımı iptal etti.",
+      "log": {
+        "start": "Çalıştırma kabul edildi.",
+        "debug": "İstem hazırlandı.",
+        "agent": "Ajan çalışıyor.",
+        "warn": "Araç yavaş yanıt veriyor.",
+        "secret": "Request with apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} ilerleme bildiriyor.",
+        "user": "Kullanıcı satırı kabul edildi.",
+        "assistant": "Yanıt tamamlandı."
+      }
+    }
+  },
+  "history": {
+    "title": "Geçmiş",
+    "close": "Kapat",
+    "copy": "Kopyala",
+    "ribbon": {
+      "refresh": "Yenile",
+      "delete": "Sil",
+      "export": "Günlükleri dışa aktar",
+      "purge": "90 günden eskileri sil"
+    },
+    "filter": {
+      "range": "Aralık",
+      "today": "Bugün",
+      "days7": "7 gün",
+      "days30": "30 gün",
+      "custom": "Özel",
+      "from": "Başlangıç",
+      "to": "Bitiş",
+      "network": "Ağ",
+      "allNetworks": "Tüm ağlar",
+      "model": "Model",
+      "allModels": "Tüm modeller",
+      "search": "Ara",
+      "searchHint": "Çalıştırma kimliği, ağ, hata",
+      "reset": "Süzgeçleri sıfırla"
+    },
+    "outcome": {
+      "running": "Çalışıyor",
+      "succeeded": "Başarılı",
+      "failed": "Başarısız",
+      "cancelled": "İptal",
+      "timeout": "Zaman aşımı"
+    },
+    "kpi": {
+      "runs": "Çalıştırmalar",
+      "runsHint": "Yalnızca tamamlanan çalıştırmalar",
+      "succeeded": "Başarılı",
+      "failed": "Başarısız",
+      "failedFoot": "İptal {{cancelled}} · Zaman aşımı {{timeout}}",
+      "medianDuration": "Medyan süre",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95, 20 çalıştırmadan"
+    },
+    "chart": {
+      "title": "Güne göre çalıştırmalar",
+      "empty": "Bu aralıkta tamamlanmış çalıştırma yok."
+    },
+    "errors": {
+      "title": "Sık hatalar",
+      "empty": "Bu süzgeçte hata yok."
+    },
+    "errorClass": {
+      "timeout": "Zaman aşımı",
+      "tool_error": "Araç",
+      "llm_error": "LLM",
+      "validation": "Doğrulama",
+      "service": "Hizmet",
+      "unknown": "Bilinmiyor"
+    },
+    "tab": {
+      "history": "Geçmiş",
+      "model": "Modele göre",
+      "network": "Ağa göre"
+    },
+    "table": {
+      "model": "Model",
+      "provider": "Sağlayıcı",
+      "calls": "Çağrılar",
+      "ok": "Tamam",
+      "callErrors": "Hatalar",
+      "errorRate": "Hata oranı",
+      "median": "Medyan süre",
+      "tokensIn": "Giren belirteç",
+      "tokensOut": "Çıkan belirteç",
+      "network": "Ağ",
+      "runs": "Çalıştırmalar",
+      "succeeded": "Başarılı",
+      "failed": "Başarısız",
+      "cancelled": "İptal",
+      "topErrorNode": "En sık hata düğümü"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "OpenAI uyumlu"
+    },
+    "list": {
+      "selectAll": "Görünenleri seç",
+      "runId": "Çalıştırma kimliği",
+      "network": "Ağ",
+      "started": "Başlangıç",
+      "duration": "Süre",
+      "outcome": "Sonuç",
+      "error": "Hata",
+      "models": "Modeller",
+      "live": "Canlı görüntüle",
+      "page": "Sayfa {{page}} / {{pages}}",
+      "prev": "Önceki",
+      "next": "Sonraki"
+    },
+    "detail": {
+      "title": "Çalıştırma",
+      "none": "Listeden bir çalıştırma seçin.",
+      "missing": "Bu çalıştırma yok.",
+      "error": "Hata",
+      "exportLog": "Günlüğü dışa aktar",
+      "tabLog": "Günlük",
+      "tabSteps": "Adımlar",
+      "tabChat": "Sohbet"
+    },
+    "graph": {
+      "fit": "Sığdır"
+    },
+    "log": {
+      "level": "Düzey",
+      "search": "Günlükte ara",
+      "node": "Düğüm",
+      "allNodes": "Tüm düğümler",
+      "errorsOnly": "Yalnızca hatalar",
+      "empty": "Bu süzgeç için günlük satırı yok.",
+      "detailTitle": "Günlük ayrıntısı"
+    },
+    "level": {
+      "debug": "Hata ayıklama",
+      "info": "Bilgi",
+      "warn": "Uyarı",
+      "error": "Hata"
+    },
+    "steps": {
+      "node": "Düğüm",
+      "role": "Rol",
+      "status": "Durum",
+      "error": "Hata",
+      "empty": "Kayıtlı adım yok."
+    },
+    "nodeStatus": {
+      "idle": "Boşta",
+      "waiting": "Bekliyor",
+      "running": "Çalışıyor",
+      "done": "Bitti",
+      "error": "Hata"
+    },
+    "calls": {
+      "ok": "Tamam",
+      "yes": "Evet",
+      "no": "Hayır",
+      "empty": "LLM çağrısı yok."
+    },
+    "empty": {
+      "none": "Geçmiş deposunda henüz çalıştırma yok.",
+      "filtered": "Bu süzgeç için sonuç yok."
+    },
+    "error": {
+      "store": "Geçmiş deposu kullanılamıyor.",
+      "openData": "Ayarlar · Veri",
+      "api": "Geçmiş yüklenemedi.",
+      "runningDelete": "Çalışan çalıştırmalar silinemez."
+    },
+    "delete": {
+      "title": "Çalıştırmaları sil",
+      "body": "{{count}} seçili çalıştırma arşivden kaldırılacak. Çalışanlar kalır.",
+      "confirm": "Sil",
+      "cancel": "İptal"
+    },
+    "retention": {
+      "title": "Eski çalıştırmaları sil",
+      "body": "90 günden eski {{count}} çalıştırma silinecek.",
+      "confirm": "Sil"
+    },
+    "notify": {
+      "deleted": "{{count}} çalıştırma silindi",
+      "runningDelete": "Çalışan çalıştırmalar silinemez",
+      "runningSkipped": "En az bir çalışan kayıt atlandı",
+      "purged": "{{count}} eski çalıştırma silindi",
+      "exported": "Dışa aktarma başladı",
+      "exportError": "Dışa aktarma başarısız",
+      "error": "Eylem başarısız"
+    }
+  },
+  "runLog": {
+    "run": {
+      "start": "Çalıştırma başladı ({{networkName}})",
+      "wait": {
+        "human": "Giriş bekleniyor"
+      },
+      "chat": {
+        "user": "Kullanıcı iletisi"
+      },
+      "batch": {
+        "start": "Toplu çalıştırma başladı"
+      },
+      "agent": {
+        "start": "Ajan başladı",
+        "done": "Ajan bitti"
+      },
+      "knowledge": "Bilgi araması ({{count}} sonuç)",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM bitti ({{durationMs}} ms)"
+      },
+      "tool": {
+        "call": "Araç {{name}}"
+      },
+      "router": "Yönlendirici → {{target}}",
+      "end": "Sona ulaşıldı",
+      "succeeded": "Çalıştırma başarılı",
+      "failed": "Çalıştırma başarısız",
+      "cancelled": "Çalıştırma iptal edildi",
+      "interrupted": "Çalıştırma kesildi (uygulama kapatıldı)",
+      "help": {
+        "fallbackMissing": "Yardım yedek modeli yok"
+      },
+      "stepLimit": "Adım sınırına ulaşıldı"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "Yönlendiricide eşleşen kenar yok"
+      }
+    },
+    "runtime": {
+      "timeout": "Modelden ilerleme yok",
+      "unreachable": "Çalışma zamanına erişilemiyor"
+    }
+  }
+}

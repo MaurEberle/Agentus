@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from app.common.http import client
 from app.common.types import Provider
 from app.runtime.errors import (
     RuntimeApiError,
+    is_timeout_error,
     is_transport_error,
     map_http_status,
     raise_for_status,
     raise_transport,
     response_json,
+    transport_error_key,
 )
 from app.runtime.models import (
     ChatMessage,
@@ -39,10 +42,17 @@ def resolve_secret(req_secret: str | None, credential_id: str | None) -> str | N
     return None
 
 
+ANTHROPIC_VERSION = "2023-06-01"
+
+
 def request_headers(provider: Provider, secret: str | None) -> dict[str, str]:
     headers = {"Content-Type": "application/json"}
-    if provider != "ollama" and secret:
-        headers["Authorization"] = f"Bearer {secret}"
+    if provider == "ollama" or not secret:
+        return headers
+    headers["Authorization"] = f"Bearer {secret}"
+    if provider == "anthropic":
+        headers["x-api-key"] = secret
+        headers["anthropic-version"] = ANTHROPIC_VERSION
     return headers
 
 
@@ -107,6 +117,9 @@ def _payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
         body["tools"] = req.tools
     if req.provider == "ollama" and req.ollama_options:
         body["options"] = req.ollama_options
+    if stream:
+        # OpenAI/Ollama omit `usage` on stream chunks unless this is set.
+        body["stream_options"] = {"include_usage": True}
     return body
 
 
@@ -131,18 +144,44 @@ def _parse_tool_calls(raw: object) -> list[ToolCall]:
     return calls
 
 
+def _int_field(raw: dict[str, Any], *names: str) -> int | None:
+    for name in names:
+        if name not in raw or raw[name] is None:
+            continue
+        try:
+            return int(raw[name])
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def _parse_usage(raw: object) -> CompletionUsage | None:
     if not isinstance(raw, dict):
         return None
-    if "prompt_tokens" not in raw or "completion_tokens" not in raw:
+    prompt = _int_field(raw, "prompt_tokens", "input_tokens", "prompt_eval_count")
+    completion = _int_field(raw, "completion_tokens", "output_tokens", "eval_count")
+    if prompt is None and completion is None:
         return None
-    try:
-        return CompletionUsage(
-            prompt_tokens=int(raw["prompt_tokens"]),
-            completion_tokens=int(raw["completion_tokens"]),
-        )
-    except (TypeError, ValueError):
-        return None
+    return CompletionUsage(prompt_tokens=prompt or 0, completion_tokens=completion or 0)
+
+
+def _usage_nonzero(usage: CompletionUsage | None) -> bool:
+    return bool(usage and (usage.prompt_tokens or usage.completion_tokens))
+
+
+def _delta_reasoning(delta: dict[str, Any]) -> str:
+    for key in ("reasoning", "reasoning_content", "thinking"):
+        value = delta.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
+def estimate_token_count(text: str) -> int:
+    """Cheap live estimate until the provider sends ``usage`` (~4 chars/token)."""
+    if not text:
+        return 0
+    return max(1, (len(text) + 3) // 4)
 
 
 def complete(req: CompletionRequest) -> CompletionResult:
@@ -176,7 +215,7 @@ def complete(req: CompletionRequest) -> CompletionResult:
         finish_reason=first.get("finish_reason")
         if isinstance(first.get("finish_reason"), str)
         else None,
-        usage=_parse_usage(body.get("usage")),
+        usage=_parse_usage(body.get("usage")) or _parse_usage(body),
         model=str(body.get("model") or req.model),
     )
 
@@ -232,20 +271,27 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
                 for line in response.iter_lines():
                     text = line.decode("utf-8") if isinstance(line, bytes) else str(line)
                     text = text.strip()
-                    if not text.startswith("data:"):
+                    if not text:
                         continue
-                    data = text[5:].strip()
+                    if text.startswith("data:"):
+                        data = text[5:].strip()
+                    elif text.startswith("{"):
+                        data = text
+                    else:
+                        continue
                     if data == "[DONE]":
                         break
                     try:
                         chunk = json.loads(data)
                     except ValueError:
-                        yield StreamEvent(kind="error", error_key="runtime.badRequest")
-                        return
+                        if text.startswith("data:"):
+                            yield StreamEvent(kind="error", error_key="runtime.badRequest")
+                            return
+                        continue
                     if not isinstance(chunk, dict):
                         continue
-                    chunk_usage = _parse_usage(chunk.get("usage"))
-                    if chunk_usage is not None:
+                    chunk_usage = _parse_usage(chunk.get("usage")) or _parse_usage(chunk)
+                    if _usage_nonzero(chunk_usage):
                         usage = chunk_usage
                         yield StreamEvent(kind="usage", usage=usage)
                     choices = chunk.get("choices")
@@ -256,8 +302,13 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
                         finish = first["finish_reason"]
                     delta = first.get("delta") if isinstance(first.get("delta"), dict) else {}
                     piece = delta.get("content")
-                    if isinstance(piece, str) and piece:
-                        yield StreamEvent(kind="delta", text=piece)
+                    reasoning = _delta_reasoning(delta)
+                    if (isinstance(piece, str) and piece) or reasoning:
+                        yield StreamEvent(
+                            kind="delta",
+                            text=piece if isinstance(piece, str) and piece else None,
+                            reasoning=reasoning or None,
+                        )
                     if delta.get("tool_calls"):
                         calls = _accumulate_tool_delta(acc, delta.get("tool_calls"))
                         yield StreamEvent(kind="tool_call_delta", tool_calls=calls)
@@ -265,8 +316,8 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
         yield StreamEvent(kind="error", error_key=exc.error_key)
         return
     except Exception as exc:
-        if is_transport_error(exc):
-            yield StreamEvent(kind="error", error_key="runtime.unreachable")
+        if is_timeout_error(exc) or is_transport_error(exc):
+            yield StreamEvent(kind="error", error_key=transport_error_key(exc))
             return
         yield StreamEvent(kind="error", error_key="runtime.badRequest")
         return
@@ -279,6 +330,79 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
         ]
         or None,
         usage=usage,
+    )
+
+
+def complete_live(
+    req: CompletionRequest,
+    *,
+    should_abort: Callable[[], bool] | None = None,
+    on_progress: Callable[[int, float], None] | None = None,
+) -> CompletionResult:
+    """Stream a completion. ``timeout_sec`` is idle time without a chunk, not total duration."""
+    texts: list[str] = []
+    tool_calls: list[ToolCall] = []
+    usage: CompletionUsage | None = None
+    finish: str | None = None
+    estimated_out = 0
+    started = time.perf_counter()
+    last_progress = 0.0
+    emitted_progress = False
+
+    def _emit(out: int) -> None:
+        nonlocal last_progress, emitted_progress
+        if on_progress is None:
+            return
+        now = time.perf_counter()
+        if emitted_progress and now - last_progress < 0.25:
+            return
+        elapsed = max(now - started, 0.05)
+        last_progress = now
+        emitted_progress = True
+        on_progress(out, out / elapsed)
+
+    for event in complete_stream(req):
+        if should_abort and should_abort():
+            raise RuntimeApiError("run.cancelled")
+        if event.kind == "delta":
+            if event.text:
+                texts.append(event.text)
+                estimated_out += estimate_token_count(event.text)
+            if event.reasoning:
+                estimated_out += estimate_token_count(event.reasoning)
+            live = usage.completion_tokens if (usage and usage.completion_tokens) else estimated_out
+            if live:
+                _emit(live)
+        elif event.kind == "tool_call_delta" and event.tool_calls:
+            tool_calls = event.tool_calls
+        elif event.kind == "usage" and _usage_nonzero(event.usage):
+            usage = event.usage
+            live = usage.completion_tokens if usage and usage.completion_tokens else estimated_out
+            if live:
+                _emit(live)
+        elif event.kind == "error":
+            raise RuntimeApiError(event.error_key or "runtime.badRequest")
+        elif event.kind == "done":
+            if event.tool_calls:
+                tool_calls = event.tool_calls
+            if _usage_nonzero(event.usage):
+                usage = event.usage
+            finish = event.finish_reason
+    if usage is None or (usage.completion_tokens == 0 and estimated_out):
+        usage = CompletionUsage(
+            prompt_tokens=usage.prompt_tokens if usage else 0,
+            completion_tokens=estimated_out,
+        )
+    out = usage.completion_tokens if usage and usage.completion_tokens else estimated_out
+    if on_progress is not None and out:
+        elapsed = max(time.perf_counter() - started, 0.05)
+        on_progress(out, out / elapsed)
+    return CompletionResult(
+        content="".join(texts) or None,
+        tool_calls=tool_calls,
+        finish_reason=finish,
+        usage=usage if _usage_nonzero(usage) else None,
+        model=req.model,
     )
 
 

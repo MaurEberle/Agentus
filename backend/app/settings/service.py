@@ -52,6 +52,8 @@ _HELP_CHAT_KEYS = {
     "embedding_provider": "embeddingProvider",
     "embeddingModel": "embeddingModel",
     "embedding_model": "embeddingModel",
+    "embeddingCredentialId": "embeddingCredentialId",
+    "embedding_credential_id": "embeddingCredentialId",
     "webSearchEnabled": "webSearchEnabled",
     "web_search_enabled": "webSearchEnabled",
     "webSearchCredentialId": "webSearchCredentialId",

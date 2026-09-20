@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { filterLogs, logHasExtra } from '@/modules/monitoring/model/graph';
+import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { maskSecrets, maskText } from '@/modules/monitoring/model/mask';
 import { DetailOverlay } from '@/modules/monitoring/overlay/DetailOverlay';
 import { formatTime } from '@/modules/history/model/format';
@@ -148,6 +149,7 @@ function LogRow({
   locale: string;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   const extra = logHasExtra(event);
   const Icon = LEVEL_ICON[event.level];
   return (
@@ -185,7 +187,7 @@ function LogRow({
         <span className="min-w-0">
           {event.nodeName ? <span className="mr-2 text-muted-foreground">{event.nodeName}</span> : null}
           <span className={cn(event.level === 'error' && 'font-medium text-destructive')}>
-            {maskText(event.message)}
+            {formatRunLogMessage(event.message, t, event.payload)}
           </span>
         </span>
       </div>
@@ -204,6 +206,7 @@ function LogDetail({
 }) {
   const { t } = useTranslation();
   const extra = event ? logHasExtra(event) : false;
+  const messageText = event ? formatRunLogMessage(event.message, t, event.payload) : '';
   const payloadText =
     event?.payload === undefined
       ? ''
@@ -224,7 +227,7 @@ function LogDetail({
           <p className="text-xs text-muted-foreground">
             {formatTime(event.ts, locale)} · {event.level} · {event.runId}
           </p>
-          <p className="whitespace-pre-wrap font-mono text-xs">{event.message}</p>
+          <p className="whitespace-pre-wrap font-mono text-xs">{messageText}</p>
           {payloadText ? (
             <pre className="overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{payloadText}</pre>
           ) : null}

@@ -12,7 +12,7 @@ from app.common.types import (
 
 def test_providers_have_no_lmstudio() -> None:
     assert "lmstudio" not in PROVIDERS
-    assert set(PROVIDERS) == {"ollama", "xai", "openai_compat"}
+    assert set(PROVIDERS) == {"ollama", "xai", "openai", "anthropic", "gemini", "openai_compat"}
     assert PROVIDERS == get_args(Provider)
 
 
@@ -23,5 +23,6 @@ def test_store_ids() -> None:
 
 def test_credential_kinds_include_postgres_for_mcp() -> None:
     assert "postgres" in CREDENTIAL_KINDS
+    assert {"openai", "anthropic", "gemini", "xai"} <= set(CREDENTIAL_KINDS)
     assert CREDENTIAL_KINDS == get_args(CredentialKind)
     assert "lmstudio" not in CREDENTIAL_KINDS

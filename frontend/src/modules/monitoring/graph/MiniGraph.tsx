@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -16,9 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { nodeDisplayName } from '@/modules/monitoring/model/graph';
 import type { RunSnapshot } from '@/modules/monitoring/model/types';
-import { StatusNode, type StatusFlowNode } from '@/modules/monitoring/graph/StatusNode';
+import { StatusNode, statusNodeSize, type StatusFlowNode } from '@/modules/monitoring/graph/StatusNode';
 import { NodeDetail } from '@/modules/monitoring/graph/NodeDetail';
+import { useFitGraph } from '@/modules/monitoring/graph/useFitGraph';
 import { useMonitoringStore } from '@/modules/monitoring/store';
+import { asGraphNode } from '@/modules/network/model/document';
+import { toRfHandlePair } from '@/modules/network/canvas/handles';
 
 const nodeTypes = { status: StatusNode };
 
@@ -44,23 +47,26 @@ function GraphInner({
   const setLogNodeId = useMonitoringStore((state) => state.setLogNodeId);
   const setTab = useMonitoringStore((state) => state.setTab);
   const clearLogFilter = useMonitoringStore((state) => state.clearLogFilter);
-  const { fitView } = useReactFlow();
-
   const nodes: Node[] = useMemo(
     () =>
       run.graph.nodes.map((node) => {
         const runtime = run.nodesRuntime[node.id];
+        const size = statusNodeSize(node.type, node.data, node.id);
         return {
           id: node.id,
           type: 'status',
           position: node.position,
           selected: selectedNodeId === node.id,
+          className: 'overflow-visible',
+          width: size.width,
+          height: size.height,
           data: {
             displayName: nodeDisplayName(node),
             nodeType: node.type,
             role: runtime?.role,
             status: runtime?.status ?? 'idle',
             waitReason: runtime?.waitReason,
+            nodeData: node.data,
           },
         } satisfies StatusFlowNode;
       }),
@@ -69,20 +75,27 @@ function GraphInner({
 
   const edges: Edge[] = useMemo(
     () =>
-      run.graph.edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle,
-      })),
-    [run.graph.edges],
+      run.graph.edges.map((edge) => {
+        const sourceNode = run.graph.nodes.find((node) => node.id === edge.source);
+        const targetNode = run.graph.nodes.find((node) => node.id === edge.target);
+        const handles = toRfHandlePair(
+          sourceNode ? asGraphNode(sourceNode) : undefined,
+          targetNode ? asGraphNode(targetNode) : undefined,
+          edge,
+        );
+        return {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: handles.sourceHandle,
+          targetHandle: handles.targetHandle,
+        };
+      }),
+    [run.graph.edges, run.graph.nodes],
   );
 
   const graphKey = `${run.runId}:${run.graph.nodes.map((node) => node.id).join(',')}`;
-  useEffect(() => {
-    void fitView({ padding: 0.2 });
-  }, [fitView, graphKey]);
+  const paneRef = useFitGraph(graphKey, nodes.length);
 
   const onNodeClick = useCallback(
     (_: unknown, node: Node) => {
@@ -99,10 +112,10 @@ function GraphInner({
   );
 
   return (
-    <div className={cn('relative h-[280px] md:h-full md:min-h-[320px]', dimmed && 'opacity-60')}>
+    <div ref={paneRef} className={cn('absolute inset-0', dimmed && 'opacity-60')}>
       <FitButton />
       <ReactFlow
-        className="monitoring-flow"
+        className="monitoring-flow h-full w-full"
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -112,6 +125,10 @@ function GraphInner({
         panOnDrag
         zoomOnScroll
         fitView
+        fitViewOptions={{ padding: 0.2 }}
+        onInit={(instance) => {
+          void instance.fitView({ padding: 0.2, duration: 0 });
+        }}
         proOptions={{ hideAttribution: true }}
         onNodeClick={onNodeClick}
         onPaneClick={() => setSelectedNodeId(null)}
@@ -129,11 +146,11 @@ function GraphInner({
 export function MiniGraph({ run, dimmed }: { run: RunSnapshot; dimmed?: boolean }) {
   const { t } = useTranslation();
   return (
-    <Card className="flex min-h-0 flex-col">
-      <CardHeader className="pb-2">
+    <Card className="flex h-full max-h-[1000px] min-h-0 flex-col overflow-hidden">
+      <CardHeader className="shrink-0 pb-2">
         <CardTitle>{t('monitoring.graph.title')}</CardTitle>
       </CardHeader>
-      <CardContent className="min-h-0 flex-1 p-0 pb-3">
+      <CardContent className="relative min-h-0 flex-1 p-0">
         <ReactFlowProvider>
           <GraphInner run={run} dimmed={dimmed} />
         </ReactFlowProvider>

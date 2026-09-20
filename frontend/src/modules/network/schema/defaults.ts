@@ -6,13 +6,13 @@ export function defaultData(type: NodeType): Record<string, unknown> {
     case 'chat_input':
       return { displayName: '', placeholder: '', startMessage: '', requireInput: false };
     case 'llm':
-      return { displayName: '', provider: 'ollama', model: 'llama3.2:1b' };
+      return { displayName: '', provider: 'ollama', model: '' };
     case 'agent':
       return { displayName: '', systemPrompt: '' };
     case 'tool':
       return { displayName: '', kind: 'datetime' };
     case 'knowledge':
-      return { displayName: '', sourcePath: '', topK: 5 };
+      return { displayName: '', sourcePath: '', topK: 5, embeddingProvider: 'ollama', embeddingModel: '' };
     case 'router':
       return {
         displayName: '',

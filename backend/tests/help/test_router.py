@@ -38,7 +38,7 @@ def test_clear(client: TestClient, monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.help.pipeline.retrieve_scored",
-        lambda q: [],
+        lambda q, locale=None: [],
     )
     monkeypatch.setattr(
         "app.runtime.completions.complete_stream",

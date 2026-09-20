@@ -1,0 +1,1269 @@
+{
+  "app": {
+    "name": "Agentus Network",
+    "skipToContent": "تخطي إلى المحتوى"
+  },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "متوافق مع OpenAI"
+  },
+  "nav": {
+    "dashboard": "لوحة المعلومات",
+    "network": "الشبكة",
+    "networks": "المكتبة",
+    "monitoring": "المراقبة",
+    "history": "السجل",
+    "settings": "الإعدادات",
+    "openMenu": "فتح التنقل",
+    "closeMenu": "إغلاق التنقل",
+    "collapse": "طي الشريط الجانبي",
+    "expand": "توسيع الشريط الجانبي",
+    "main": "التنقل الرئيسي"
+  },
+  "shell": {
+    "start": "بدء",
+    "stop": "إيقاف",
+    "quickSelect": "اختيار سريع",
+    "quickSelectPlaceholder": "اختر شبكة",
+    "noNetwork": "لا توجد شبكة",
+    "settings": "الإعدادات",
+    "theme": "المظهر",
+    "themeLight": "فاتح",
+    "themeDark": "داكن",
+    "themeSystem": "النظام",
+    "language": "اللغة",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "languageFr": "Français",
+    "languageTr": "Türkçe",
+    "languagePt": "Português",
+    "languageZh": "中文",
+    "languageJa": "日本語",
+    "languageAr": "العربية",
+    "languageNames": {
+      "de": "الألمانية",
+      "en": "الإنجليزية",
+      "es": "الإسبانية",
+      "fr": "الفرنسية",
+      "tr": "التركية",
+      "pt": "البرتغالية",
+      "zh": "الصينية",
+      "ja": "اليابانية",
+      "ar": "العربية"
+    },
+    "window": {
+      "minimize": "تصغير",
+      "maximize": "تكبير",
+      "restore": "استعادة",
+      "close": "إغلاق"
+    }
+  },
+  "status": {
+    "stopped": "متوقف",
+    "starting": "يبدأ",
+    "running": "قيد التشغيل",
+    "stopping": "يتوقف",
+    "disconnected": "غير متصل",
+    "error": "خطأ"
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "empty": "لا توجد إشعارات",
+    "markRead": "وضع علامة مقروء",
+    "markAllRead": "تعليم الكل كمقروء",
+    "clear": "مسح",
+    "open": "فتح الإشعارات",
+    "unreadCount": "{{count}} غير مقروء"
+  },
+  "folderPicker": {
+    "title": "اختيار مجلد",
+    "description": "اختر مجلدًا على هذا الحاسوب. يُدرج المسار الكامل في الحقل.",
+    "select": "اختيار",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "up": "المجلد الأعلى",
+    "empty": "لا توجد مجلدات فرعية",
+    "error": "تعذّر قراءة هذا المجلد.",
+    "unavailable": "نظام الملفات غير متاح في هذه الجلسة.",
+    "loading": "جارٍ تحميل المجلدات…",
+    "path": "المسار",
+    "places": {
+      "home": "مجلد المستخدم",
+      "desktop": "سطح المكتب",
+      "documents": "المستندات",
+      "downloads": "التنزيلات"
+    }
+  },
+  "notify": {
+    "welcome": {
+      "title": "مرحبًا بك في Agentus Network",
+      "desc": "اختر شبكة وابدأ تشغيلًا من الشريط العلوي."
+    },
+    "runStarting": {
+      "title": "جارٍ بدء التشغيل",
+      "desc": "الشبكة النشطة تبدأ."
+    },
+    "runRunning": {
+      "title": "الشبكة قيد التشغيل",
+      "desc": "{{name}} نشطة."
+    },
+    "runStopping": {
+      "title": "جارٍ إيقاف التشغيل",
+      "desc": "يتم إيقاف الشبكة."
+    },
+    "runStopped": {
+      "title": "توقّف التشغيل",
+      "desc": "تم إيقاف الشبكة."
+    },
+    "runConflict": {
+      "title": "تعذّر البدء",
+      "desc": "هناك شبكة قيد التشغيل بالفعل."
+    },
+    "runError": {
+      "title": "فشل التشغيل",
+      "desc": "فشل البدء أو الإيقاف."
+    },
+    "noNetwork": {
+      "title": "لم تُختر شبكة",
+      "desc": "اختر أولًا شبكة من الاختيار السريع."
+    },
+    "networkSelected": {
+      "title": "الشبكة النشطة",
+      "desc": "تم اختيار {{name}}."
+    },
+    "networkCleared": {
+      "title": "لا توجد شبكة نشطة",
+      "desc": "تم تفريغ الاختيار السريع."
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Agentus Network"
+  },
+  "stub": {
+    "body": "سيُنفَّذ هذا الوحدة في الخطوة التالية."
+  },
+  "notFound": {
+    "title": "الصفحة غير موجودة",
+    "body": "هذا المسار غير موجود.",
+    "back": "العودة إلى لوحة المعلومات"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "unsaved": {
+      "title": "تغييرات غير محفوظة",
+      "body": "بعض الحقول لم تُحفظ بعد. هل تريد التجاهل والمتابعة؟",
+      "stay": "البقاء",
+      "leave": "تجاهل"
+    },
+    "common": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "edit": "تحرير",
+      "close": "إغلاق",
+      "actions": "إجراءات"
+    },
+    "nav": {
+      "appearance": "المظهر",
+      "credentials": "بيانات الاعتماد",
+      "runtime": "وقت التشغيل",
+      "help-chat": "دردشة المساعدة",
+      "mcp": "خوادم MCP",
+      "data": "البيانات",
+      "about": "حول"
+    },
+    "appearance": {
+      "lead": "ينطبق اللون واللغة في كل التطبيق بما في ذلك الشريط العلوي.",
+      "fab": "زر المساعدة",
+      "fabHint": "يعرض ودجة المساعدة أسفل اليمين. الإعداد يبقى تحت دردشة المساعدة."
+    },
+    "credentials": {
+      "lead": "بيانات اعتماد مسماة للنماذج السحابية والبحث على الويب وMCP. بعد الحفظ يظهر القناع فقط.",
+      "create": "إضافة اعتماد",
+      "createTitle": "إضافة اعتماد",
+      "editTitle": "استبدال الاعتماد",
+      "empty": "لا توجد بيانات اعتماد بعد.",
+      "name": "الاسم",
+      "kind": "النوع",
+      "mask": "القناع",
+      "secret": "السر",
+      "secretHint": "يُرسل السر مرة واحدة. تعرض القائمة بعدها القناع فقط.",
+      "secretUnchanged": "اتركه فارغًا للإبقاء على السر الحالي",
+      "deleteTitle": "حذف الاعتماد؟",
+      "deleteBody": "ستُزال «{{name}}». لن يعود السر متاحًا.",
+      "inUseTitle": "الاعتماد قيد الاستخدام",
+      "inUseBody": "«{{name}}» ما زالت مرتبطة بملف مساعدة أو شبكة أو خادم MCP ولا يمكن حذفها.",
+      "kindName": {
+        "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
+        "openai_compat": "متوافق مع OpenAI",
+        "web_search": "بحث الويب",
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "postgres": "Postgres",
+        "token": "رمز"
+      }
+    },
+    "runtime": {
+      "lead": "عنوان Ollama المحلي. الفحص وقائمة النماذج عبر واجهة التطبيق وليس مباشرة من المتصفح.",
+      "ollamaUrl": "عنوان أساس Ollama",
+      "openaiCompatUrl": "عنوان أساس متوافق مع OpenAI",
+      "ping": "فحص الاتصال",
+      "pingOk": "وقت التشغيل متاح",
+      "pingFail": "وقت التشغيل غير متاح",
+      "modelNotFound": "النموذج غير موجود أو لا يمكن تحميله: {{name}}",
+      "timeout": "لا تقدم من النموذج ({{name}}). أُلغي بعد الصمت لا بعد مدة إجمالية.",
+      "unreachable": "Ollama غير متاح ({{name}}).",
+      "models": "النماذج المثبّتة",
+      "modelsEmpty": "لا نماذج، أو وقت التشغيل غير متاح.",
+      "modelName": "النموذج",
+      "modelSize": "الحجم",
+      "status": {
+        "unknown": "غير معروف",
+        "ok": "حسنًا",
+        "error": "خطأ"
+      }
+    },
+    "helpChat": {
+      "lead": "الإعداد الوحيد لودجة المساعدة. غير مكتمل إن نقص المزوّد أو النموذج.",
+      "configured": "مُعدّ",
+      "incomplete": "غير مكتمل",
+      "provider": "مزوّد الدردشة",
+      "providerEmpty": "غير معيّن",
+      "openaiCompat": "متوافق مع OpenAI",
+      "model": "نموذج الدردشة",
+      "credential": "الاعتماد",
+      "credentialEmpty": "بدون اعتماد",
+      "credentialHint": "اختر أولًا مفتاح API صالحًا. تُحمَّل النماذج بعد ذلك.",
+      "noCredentials": "لا اعتماد لهذا المزوّد — أضف إدخالًا مناسبًا تحت بيانات الاعتماد.",
+      "pickCredentialFirst": "اختر أولًا مفتاح API صالحًا",
+      "modelsLoadError": "تعذّر تحميل النماذج. تحقق من مفتاح API.",
+      "embedProvider": "مزوّد التضمين",
+      "embedModel": "نموذج التضمين",
+      "reindexHint": "أعد بناء الفهرس بعد تغيير التضمينات.",
+      "webSearch": "بحث الويب",
+      "webSearchHint": "اختياري. بدون اعتماد بحث يمكن إعداد الدردشة؛ يبقى البحث معطّلًا.",
+      "webSearchCredential": "اعتماد البحث",
+      "webSearchMissing": "الاعتماد ناقص — أضف إدخال بحث ويب تحت بيانات الاعتماد.",
+      "fallback": "نموذج اقتصادي (اختياري)",
+      "ping": "فحص الاتصال",
+      "pingOk": "دردشة المساعدة متاحة",
+      "pingFail": "دردشة المساعدة غير متاحة",
+      "clear": "مسح السجل",
+      "clearTitle": "مسح سجل المساعدة؟",
+      "clearBody": "ستُحذف كل رسائل دردشة المساعدة. يبقى الملف الشخصي.",
+      "reindex": "إعادة بناء الفهرس",
+      "resetOnboarding": "إظهار الترحيب مجددًا"
+    },
+    "mcp": {
+      "lead": "وصفات وخوادم مخصصة. الافتراضي: غير نشط. المساعدة لا تستخدم هذه الخوادم.",
+      "recipes": "الوصفات",
+      "servers": "الخوادم المُعدّة",
+      "empty": "لا توجد خوادم MCP بعد.",
+      "enable": "تفعيل",
+      "added": "مضاف",
+      "custom": "مخصص",
+      "customCreate": "خادم مخصص",
+      "transport": "النقل",
+      "enabled": "نشط",
+      "status": "الحالة",
+      "probe": "فحص",
+      "presetHint": "بيانات اعتماد ومسار جذر اختياري حسب الوصفة. الحفظ ينشئ الخادم فورًا.",
+      "officeHint": "Office يجمع PDF وتنسيقات Office. فعّل الإعدادات الفردية بالتوازي عند الحاجة فقط.",
+      "rootPath": "مسار الجذر",
+      "untrusted": "ستُشغَّل عملية غير معروفة بالصلاحيات المحددة. استخدم أوامر موثوقة فقط.",
+      "command": "الأمر",
+      "args": "الوسائط",
+      "url": "URL",
+      "deleteTitle": "حذف الخادم؟",
+      "deleteBody": "ستُزال إعدادات هذا الخادم المخصص.",
+      "pingOk": "استجاب خادم MCP",
+      "pingError": "فشل فحص MCP",
+      "runtimeMissing": "وقت التشغيل ناقص (Node أو npx أو Docker أو uvx).",
+      "statusName": {
+        "unknown": "غير معروف",
+        "ok": "حسنًا",
+        "error": "خطأ",
+        "runtime_missing": "وقت التشغيل ناقص"
+      },
+      "recipe": {
+        "github": "GitHub",
+        "azure": "Azure",
+        "gitlab": "GitLab",
+        "filesystem": "نظام الملفات",
+        "git": "Git",
+        "playwright": "Playwright",
+        "postgres": "Postgres",
+        "context7": "Context7",
+        "slack": "Slack",
+        "notion": "Notion",
+        "atlassian": "Atlassian",
+        "linear": "Linear",
+        "fetch": "Fetch",
+        "sentry": "Sentry",
+        "pdf": "PDF",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "word": "Word",
+        "office": "Office"
+      }
+    },
+    "data": {
+      "lead": "مجلد البيانات وحالة المخازن. لا متصفح SQL ولا أسرار.",
+      "dir": "مجلد البيانات",
+      "pick": "اختيار مجلد",
+      "busy": "تغيير المجلد محظور أثناء بدء الشبكة أو تشغيلها أو إيقافها.",
+      "invalidRoot": "جذر القرص أو النظام غير مسموح.",
+      "stores": "المخازن",
+      "storeName": "المخزن",
+      "fileName": "الملف",
+      "retentionLabel": "الاحتفاظ بالسجل",
+      "copy": "نسخ المحتوى إلى المجلد الجديد",
+      "confirmTitle": "تغيير مجلد البيانات",
+      "confirmBody": "يُبقى المجلد القديم. أنشئ هدفًا فارغًا أو استخدم ملفات المخزن الموجودة.",
+      "source": {
+        "env": "المجلد يأتي من متغير بيئة وهو للقراءة فقط.",
+        "portable": "الوضع المحمول: مجلد البيانات ثابت وللقراءة فقط."
+      },
+      "store": {
+        "settings": "الإعدادات",
+        "help": "المساعدة",
+        "workspace": "مساحة العمل",
+        "history": "السجل"
+      },
+      "storeState": {
+        "ok": "حسنًا",
+        "missing": "ناقص",
+        "error": "خطأ"
+      },
+      "retention": {
+        "30": "30 يومًا",
+        "90": "90 يومًا",
+        "365": "365 يومًا",
+        "unlimited": "غير محدود"
+      }
+    },
+    "about": {
+      "lead": "الإصدارات وحالة موجزة دون أسرار.",
+      "uiVersion": "إصدار الواجهة",
+      "apiVersion": "إصدار واجهة البرمجة",
+      "runtime": "Ollama",
+      "dataFolder": "مجلد البيانات",
+      "storesOk": "المخازن متاحة"
+    },
+    "notify": {
+      "saved": "تم حفظ الإعدادات",
+      "saveError": "فشل الحفظ",
+      "credentialCreated": "تم إنشاء الاعتماد",
+      "credentialUpdated": "تم تحديث الاعتماد",
+      "credentialDeleted": "تم حذف الاعتماد",
+      "credentialInUse": "الاعتماد ما زال مستخدمًا",
+      "helpCleared": "تم مسح سجل المساعدة",
+      "reindexed": "أُعيد بناء فهرس المساعدة",
+      "onboardingReset": "سيظهر الترحيب في المرة التالية التي تُفتح فيها المساعدة",
+      "mcpSaved": "تم حفظ خادم MCP",
+      "mcpDeleted": "تم حذف خادم MCP",
+      "dataDirOk": "تم تحديث مجلد البيانات"
+    }
+  },
+  "helpChat": {
+    "title": "المساعدة",
+    "fab": {
+      "open": "فتح المساعدة",
+      "close": "إغلاق المساعدة"
+    },
+    "onboarding": {
+      "title": "مساعدة التطبيق",
+      "body": "تشرح هذه الدردشة التطبيق وإعداد الرسوم. لا تتحدث مع شبكة وكلاء قيد التشغيل. الإعداد موجود في الإعدادات.",
+      "configure": "الإعداد الآن",
+      "later": "لاحقًا"
+    },
+    "status": {
+      "unconfigured": "معطّل",
+      "ready": "جاهز",
+      "degraded": "وضع التوفير",
+      "generating": "يجيب",
+      "error": "خطأ"
+    },
+    "action": {
+      "send": "إرسال",
+      "stop": "إيقاف",
+      "settings": "إعدادات المساعدة",
+      "close": "إغلاق المساعدة"
+    },
+    "input": {
+      "placeholder": "سؤال عن التطبيق أو الرسم…"
+    },
+    "empty": "لا رسائل بعد. اسأل عن طريقة الاستخدام.",
+    "unconfigured": {
+      "body": "المساعدة غير مُعدّة بعد. عيّن المزوّد والنموذج في الإعدادات.",
+      "cta": "إلى الإعدادات"
+    },
+    "sources": {
+      "rag": "مستند",
+      "web": "ويب"
+    },
+    "error": {
+      "generic": "فشلت إجابة المساعدة."
+    },
+    "resize": {
+      "width": "تغيير العرض",
+      "height": "تغيير الارتفاع"
+    },
+    "mock": {
+      "reply": "هذه **إجابة نموذجية** من المساعدة. تشرح التطبيق لا الشبكة قيد التشغيل. تحت `الإعدادات` تضبط المزوّد والنموذج.",
+      "ragTitle": "دليل سريع",
+      "ragSection": "دردشة المساعدة",
+      "webTitle": "وثائق Ollama"
+    }
+  },
+  "dashboard": {
+    "title": "لوحة المعلومات",
+    "status": {
+      "title": "الحالة",
+      "noNetwork": "لا توجد شبكة نشطة",
+      "openLibrary": "فتح المكتبة",
+      "runningSince": "قيد التشغيل منذ {{time}}",
+      "openMonitoring": "المراقبة"
+    },
+    "helpHint": {
+      "title": "مساعدة التطبيق",
+      "body": "تشرح المساعدة التطبيق وإعداد الرسوم. لا تتحدث مع شبكة الوكلاء. الزر أسفل اليمين.",
+      "open": "فتح المساعدة",
+      "dismiss": "حسنًا"
+    },
+    "setup": {
+      "title": "الإعداد",
+      "ollama": "Ollama غير متاح",
+      "help": "ملف المساعدة غير مكتمل",
+      "networks": "لا توجد شبكة بعد",
+      "runtimeLink": "فحص وقت التشغيل",
+      "helpLink": "إعداد المساعدة",
+      "createNetwork": "شبكة جديدة",
+      "importNetwork": "استيراد شبكة"
+    },
+    "active": {
+      "title": "الشبكة النشطة",
+      "empty": "لم تُختر شبكة نشطة.",
+      "edit": "تحرير",
+      "library": "المكتبة",
+      "create": "شبكة جديدة",
+      "stats": "{{nodes}} عقد · {{edges}} حواف",
+      "updated": "عُدّل {{time}}"
+    },
+    "validationStatus": {
+      "valid": "صالح",
+      "invalid": "غير صالح",
+      "unknown": "غير معروف"
+    },
+    "validation": {
+      "missingModel": "عقدة LLM واحدة على الأقل تحتاج إلى نموذج."
+    },
+    "recent": {
+      "title": "المستخدمة مؤخرًا",
+      "empty": "لا توجد شبكات بعد.",
+      "create": "شبكة جديدة"
+    },
+    "runs": {
+      "title": "آخر التشغيلات",
+      "empty": "لا توجد تشغيلات بعد.",
+      "storeError": "مخزن السجل غير متاح.",
+      "openData": "فحص البيانات"
+    },
+    "outcome": {
+      "running": "قيد التشغيل",
+      "succeeded": "نجاح",
+      "failed": "فشل",
+      "cancelled": "أُلغي",
+      "timeout": "انتهت المهلة"
+    },
+    "week": {
+      "title": "آخر 7 أيام",
+      "runs": "تشغيلات",
+      "succeeded": "ناجحة",
+      "failed": "فاشلة",
+      "openHistory": "السجل"
+    },
+    "environment": {
+      "title": "البيئة",
+      "ollamaOk": "Ollama متاح",
+      "ollamaFail": "Ollama غير متاح",
+      "models_one": "نموذج {{count}}",
+      "models_other": "{{count}} نماذج",
+      "storeIssue": "{{store}} ليست بحالة جيدة.",
+      "openData": "البيانات",
+      "degraded": "وضع التوفير"
+    },
+    "quick": {
+      "title": "وصول سريع",
+      "create": "شبكة جديدة",
+      "import": "استيراد",
+      "runtime": "وقت التشغيل"
+    },
+    "duration": {
+      "seconds": "{{count}} ث",
+      "minutes": "{{minutes}} د {{seconds}} ث",
+      "hours": "{{hours}} س {{minutes}} د"
+    },
+    "error": {
+      "load": "تعذّر تحميل بيانات لوحة المعلومات.",
+      "networks": "تعذّر تحميل الشبكات.",
+      "runs": "تعذّر تحميل التشغيلات.",
+      "networkMissing": "الشبكة غير موجودة"
+    }
+  },
+  "network": {
+    "untitled": "شبكة بلا اسم",
+    "copySuffix": "(نسخة)",
+    "badge": {
+      "valid": "صالح",
+      "invalid": "غير صالح",
+      "active": "نشط",
+      "running": "قيد التشغيل"
+    },
+    "ribbon": {
+      "new": "جديد",
+      "save": "حفظ",
+      "saveAs": "حفظ باسم",
+      "load": "فتح",
+      "duplicate": "تكرار",
+      "export": "تصدير",
+      "validate": "تحقق",
+      "undo": "تراجع",
+      "redo": "إعادة",
+      "library": "المكتبة",
+      "view": "عرض"
+    },
+    "view": {
+      "fit": "ملاءمة",
+      "snap": "محاذاة",
+      "grid": "شبكة",
+      "minimap": "خريطة مصغرة"
+    },
+    "palette": {
+      "title": "لوحة العناصر",
+      "collapse": "طي اختيار العناصر",
+      "expand": "توسيع اختيار العناصر",
+      "search": "البحث عن عقد",
+      "chat_input": "إدخال دردشة",
+      "chat_inputHint": "واحدة على الأكثر. نص البداية وحقل إلزامي للتشغيل.",
+      "llm": "LLM",
+      "llmHint": "النموذج والمزوّد. حافة إلى منفذ llm للوكيل.",
+      "agent": "وكيل",
+      "agentHint": "موجّه النظام. LLM والرسالة والأدوات والمعرفة عبر الحواف.",
+      "tool": "أداة",
+      "toolHint": "نوع الكتالوج، MCP اختياري.",
+      "knowledge": "معرفة",
+      "knowledgeHint": "مجلد المصدر، إلى منفذ knowledge للوكيل فقط.",
+      "router": "موجّه",
+      "routerHint": "يفرّع الرسائل حسب الشروط.",
+      "end": "نهاية",
+      "endHint": "واحدة على الأقل. تُنهي التشغيل."
+    },
+    "ports": {
+      "message": "رسالة",
+      "llm": "LLM",
+      "tool": "أداة",
+      "knowledge": "معرفة",
+      "handoff": "تسليم",
+      "default": "افتراضي",
+      "in": "مدخل",
+      "out": "مخرج"
+    },
+    "inspector": {
+      "title": "المفتش",
+      "collapse": "طي المفتش",
+      "expand": "توسيع المفتش",
+      "displayName": "الاسم المعروض",
+      "multi": "تم اختيار {{count}} عقد",
+      "graph": {
+        "title": "الشبكة",
+        "name": "الاسم",
+        "description": "الوصف",
+        "tags": "الوسوم",
+        "stats": "{{nodes}} عقد · {{edges}} حواف",
+        "noIssues": "لا أخطاء تحقق."
+      },
+      "llm": {
+        "provider": "المزوّد",
+        "openaiCompat": "متوافق مع OpenAI",
+        "model": "النموذج",
+        "credential": "الاعتماد",
+        "credentialEmpty": "بدون اعتماد",
+        "credentialHint": "اختر أولًا مفتاح API صالحًا. تُحمَّل النماذج بعد ذلك.",
+        "noCredentials": "لا اعتماد لهذا المزوّد بعد.",
+        "pickCredentialFirst": "اختر أولًا مفتاح API صالحًا",
+        "modelsLoadError": "تعذّر تحميل النماذج. تحقق من مفتاح API.",
+        "baseUrl": "عنوان الأساس",
+        "ping": "اختبار الاتصال",
+        "pingOk": "استجاب النموذج",
+        "pingFail": "فشل الاختبار",
+        "advanced": "متقدم",
+        "noModels": "لم تُحمَّل نماذج.",
+        "useModel": "استخدام «{{name}}»",
+        "temperature": "درجة الحرارة",
+        "maxTokens": "أقصى رموز"
+      },
+      "agent": {
+        "hint": "LLM والأدوات والمعرفة تأتي من الحواف لا من الحقول.",
+        "systemPrompt": "موجّه النظام"
+      },
+      "tool": {
+        "kind": "النوع",
+        "kindName": {
+          "http": "HTTP",
+          "web_search": "بحث الويب",
+          "datetime": "التاريخ/الوقت",
+          "calculator": "آلة حاسبة",
+          "file_access": "الوصول إلى الملفات",
+          "mcp": "MCP"
+        },
+        "method": "الطريقة",
+        "url": "URL",
+        "rootPath": "المجلد الجذر",
+        "pickRoot": "مجلد",
+        "allowWrite": "السماح بالكتابة",
+        "allowDelete": "السماح بالحذف",
+        "fileAccessHint": "يجوز للوكيل القراءة والكتابة والحذف تحت هذا المجلد فقط.",
+        "credential": "الاعتماد",
+        "mcpServer": "خادم MCP",
+        "mcpEmpty": "لا خادم",
+        "mcpHint": "الافتراضي: كل أدوات الخادم. أنشئ الخوادم في الإعدادات.",
+        "mcpSettings": "إعدادات MCP"
+      },
+      "knowledge": {
+        "path": "مجلد المصدر",
+        "pick": "مجلد",
+        "embedProvider": "مزوّد التضمين",
+        "embedModel": "نموذج التضمين",
+        "topK": "topK",
+        "score": "عتبة الدرجة",
+        "reindex": "إعادة بناء الفهرس",
+        "reindexOk": "أُعيد بناء الفهرس",
+        "reindexFail": "فشل الفهرس",
+        "reindexHint": "أعد بناء الفهرس بعد تغيير التضمينات."
+      },
+      "router": {
+        "branches": "الفروع",
+        "branchName": "الاسم",
+        "condition": "الشرط",
+        "add": "إضافة فرع"
+      },
+      "chat": {
+        "placeholder": "عنصر نائب",
+        "startMessage": "نص البداية",
+        "requireInput": "الإدخال مطلوب"
+      }
+    },
+    "load": {
+      "title": "فتح شبكة",
+      "body": "اختر شبكة محفوظة. الإجراءات الجماعية والحذف والاستيراد في المكتبة.",
+      "search": "بحث",
+      "sortUpdated": "عُدّل",
+      "sortName": "الاسم",
+      "sortUsed": "آخر استخدام",
+      "open": "فتح",
+      "preview": "{{nodes}} عقد · {{edges}} حواف"
+    },
+    "empty": {
+      "body": "اسحب عقدة من اللوحة إلى السطح أو افتح شبكة محفوظة.",
+      "insert": "لوحة العناصر"
+    },
+    "context": {
+      "insert": "إدراج",
+      "fit": "ملاءمة",
+      "duplicate": "تكرار",
+      "delete": "حذف"
+    },
+    "dialog": {
+      "close": "إغلاق",
+      "cancel": "إلغاء",
+      "nameTitle": "تسمية الشبكة"
+    },
+    "dirty": {
+      "title": "تغييرات غير محفوظة",
+      "body": "الشبكة المفتوحة معدّلة. حفظ أو تجاهل أو إلغاء؟",
+      "save": "حفظ",
+      "discard": "تجاهل",
+      "cancel": "إلغاء"
+    },
+    "readonly": {
+      "title": "للقراءة فقط",
+      "body": "هذه الشبكة قيد التشغيل. أوقفها من الشريط العلوي قبل التحرير."
+    },
+    "validation": {
+      "nameRequired": "لا يجوز أن يكون الاسم فارغًا.",
+      "tooManyChatInputs": "إدخال دردشة واحد على الأكثر.",
+      "endRequired": "عقدة نهاية واحدة على الأقل.",
+      "danglingEdge": "الحافة تشير إلى عقدة مفقودة.",
+      "edgeType": "هذا الاتصال غير متوافق نوعًا.",
+      "agentLlm": "كل وكيل يحتاج إلى حافة LLM واحدة بالضبط.",
+      "agentMessage": "كل وكيل يحتاج إلى رسالة واردة.",
+      "modelRequired": "النموذج إلزامي.",
+      "credentialRequired": "المزوّد السحابي يحتاج إلى اعتماد.",
+      "toolKind": "نوع الأداة ناقص.",
+      "mcpServer": "اختر خادم MCP نشطًا.",
+      "mcpRoot": "يحتاج خادم MCP هذا إلى مسار جذر في الإعدادات.",
+      "fileAccessRoot": "الوصول إلى الملفات يحتاج إلى مجلد ليس جذر القرص.",
+      "knowledgePath": "مجلد المصدر إلزامي.",
+      "knowledgeRoot": "جذر القرص أو النظام غير مسموح.",
+      "knowledgeSandbox": "يجب أن يقع المسار تحت مجلد البيانات.",
+      "knowledgeHelpCorpus": "مجموعة المساعدة ليست معرفة شبكة.",
+      "knowledgeTarget": "اربط المعرفة بمنفذ knowledge للوكيل فقط.",
+      "cycle": "الدورات غير مسموحة.",
+      "knowledge": {
+        "missing": "الفهرس ناقص.",
+        "stale": "الفهرس قديم.",
+        "error": "خطأ في الفهرس."
+      }
+    },
+    "notify": {
+      "saved": "تم حفظ الشبكة",
+      "saveError": "فشل الحفظ",
+      "duplicated": "فُتحت النسخة",
+      "valid": "الشبكة صالحة",
+      "invalid": "الشبكة فيها أخطاء تحقق"
+    },
+    "error": {
+      "missing": "الشبكة غير موجودة"
+    },
+    "catalog": {
+      "firstParty": "طرف أول"
+    }
+  },
+  "networks": {
+    "title": "المكتبة",
+    "copySuffix": "(نسخة)",
+    "ribbon": {
+      "new": "جديد",
+      "open": "فتح",
+      "duplicate": "تكرار",
+      "rename": "إعادة تسمية",
+      "tags": "إضافة وسوم",
+      "activate": "تعيين كنشط",
+      "delete": "حذف",
+      "import": "استيراد",
+      "export": "تصدير",
+      "refresh": "تحديث",
+      "more": "إجراءات أخرى",
+      "needOne": "اختر شبكة واحدة بالضبط.",
+      "needSome": "اختر شبكة واحدة على الأقل.",
+      "needValid": "شبكة صالحة فقط يمكن أن تصبح نشطة.",
+      "alreadyActive": "هذه الشبكة نشطة بالفعل.",
+      "runningBlocked": "لا يمكن حذف شبكة قيد التشغيل."
+    },
+    "filter": {
+      "search": "بحث بالاسم والوصف والوسوم",
+      "sort": {
+        "name": "الاسم",
+        "updatedAt": "عُدّل",
+        "lastUsedAt": "آخر استخدام"
+      },
+      "direction": "اتجاه الفرز",
+      "tags": "الوسوم",
+      "tagsHint": "وسوم متعددة: أو",
+      "noTags": "لا وسوم",
+      "onlyValid": "الصالحة فقط",
+      "onlyActive": "النشطة فقط"
+    },
+    "list": {
+      "selectAll": "تحديد كل الظاهر",
+      "name": "الاسم",
+      "description": "الوصف",
+      "status": "الحالة",
+      "graph": "الرسم",
+      "updated": "عُدّل",
+      "lastUsed": "آخر استخدام",
+      "counts": "{{nodes}} عقد · {{edges}} حواف"
+    },
+    "badge": {
+      "valid": "صالح",
+      "invalid": "غير صالح",
+      "unknown": "غير معروف",
+      "active": "نشط",
+      "running": "قيد التشغيل",
+      "credentialMissing": "الاعتماد ناقص"
+    },
+    "detail": {
+      "title": "التفاصيل",
+      "none": "لم تُختر شبكة.",
+      "multi": "تم اختيار {{count}}",
+      "noDescription": "لا وصف.",
+      "lastRun": "آخر تشغيل"
+    },
+    "empty": {
+      "library": "لا توجد شبكات محفوظة بعد.",
+      "filter": "لا نتائج لهذه المرشحات.",
+      "clearFilters": "إزالة المرشحات"
+    },
+    "error": {
+      "title": "لم تُحمَّل القائمة",
+      "body": "تعذّر تحميل المكتبة.",
+      "missing": "الشبكة غير موجودة",
+      "running": "لا يمكن حذف شبكة قيد التشغيل."
+    },
+    "dialog": {
+      "close": "إغلاق",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "rename": {
+      "title": "إعادة تسمية",
+      "body": "الاسم والوصف فقط دون تغيير الرسم.",
+      "name": "الاسم",
+      "description": "الوصف"
+    },
+    "tags": {
+      "title": "إضافة وسوم",
+      "body": "تُضاف الوسوم إلى {{count}} شبكات. تبقى الوسوم الحالية.",
+      "label": "الوسوم",
+      "placeholder": "ops, prod",
+      "add": "إضافة"
+    },
+    "delete": {
+      "title": "حذف الشبكات",
+      "body": "يُحذف أيضًا فهرس مساحة العمل لهذه الشبكة. تبقى ملفات المصدر على القرص. مخزن المساعدة وتشغيلات السجل لا تُمس.",
+      "none": "لا يمكن حذف أي شبكة.",
+      "runningSkipped": "قيد التشغيل ولن تُحذف: {{names}}",
+      "activeWarning": "تتضمن شبكة نشطة واحدة على الأقل. سيُفرَّغ الاختيار السريع."
+    },
+    "import": {
+      "unreadable": "تعذّر قراءة بعض الملفات.",
+      "unreadableNames": "{{names}}",
+      "schema": "schemaVersion غير مدعوم.",
+      "secrets": "أُهملت الأسرار في ملفات الاستيراد.",
+      "collisionTitle": "الاسم مستخدم بالفعل",
+      "collisionBody": "أعد التسمية أو تخطَّ الملف. الإلغاء ينطبق على هذه الملفات فقط.",
+      "skip": "تخطي هذا الملف",
+      "include": "الاستيراد على أي حال",
+      "continue": "استيراد"
+    },
+    "notify": {
+      "error": "فشل الإجراء",
+      "duplicated": "أُضيفت نسخة إلى المكتبة",
+      "renamed": "حُفظت البيانات الوصفية",
+      "tagged": "أُضيفت الوسوم",
+      "deleted": "حُذفت الشبكات",
+      "imported": "استُوردت {{count}} شبكات",
+      "exported": "بدأ التصدير"
+    }
+  },
+  "monitoring": {
+    "title": "المراقبة",
+    "close": "إغلاق",
+    "copy": "نسخ",
+    "copied": "نُسخ",
+    "empty": {
+      "stoppedTitle": "لا تشغيل",
+      "stoppedBody": "ابدأ الخدمة من الشريط العلوي.",
+      "stoppedActive": "الشبكة النشطة: {{name}}",
+      "stoppedNoNetwork": "لا شبكة في الاختيار السريع.",
+      "lastRunBody": "لا تشغيل نشط. يُعرض آخر تشغيل محفوظ.",
+      "disconnectedTitle": "انقطع الاتصال بالخدمة",
+      "disconnectedBody": "جارٍ إعادة الاتصال. القيم الأخيرة باهتة.",
+      "startingTitle": "الخدمة تبدأ",
+      "stoppingTitle": "الخدمة تتوقف",
+      "errorTitle": "خطأ في الخدمة",
+      "errorBody": "{{message}}"
+    },
+    "header": {
+      "lastRun": "آخر تشغيل",
+      "runId": "معرّف التشغيل",
+      "started": "البدء",
+      "duration": "المدة",
+      "step": "الخطوة",
+      "runningCount": "{{count}} قيد التشغيل",
+      "noLlm": "لا LLM نشط",
+      "activeLlms": "نماذج LLM النشطة",
+      "otherNodes": "عقد أخرى",
+      "local": "محلي",
+      "cloud": "سحابة"
+    },
+    "resources": {
+      "title": "موارد المضيف",
+      "hostHint": "قيم النظام لهذا الجهاز، وليس عملية التطبيق فقط.",
+      "cpu": "المعالج",
+      "cpuCores": "النوى",
+      "ram": "الذاكرة",
+      "gpu": "GPU",
+      "vram": "ذاكرة الفيديو",
+      "noGpu": "لا GPU",
+      "noGpuHint": "لم يُكتشف مسرّع محلي. هذا متوقع في تشغيلات السحابة.",
+      "usedOf": "{{used}} من {{total}}"
+    },
+    "graph": {
+      "title": "الشبكة (للقراءة فقط)",
+      "fit": "ملاءمة",
+      "filterChip": "العقدة {{name}}",
+      "clearFilter": "إزالة المرشح",
+      "detailTitle": "تفاصيل العقدة",
+      "role": "الدور",
+      "status": "الحالة",
+      "wait": "ينتظر",
+      "lastMessage": "آخر رسالة",
+      "error": "خطأ",
+      "model": "النموذج",
+      "provider": "المزوّد",
+      "tokens": "الرموز"
+    },
+    "nodeType": {
+      "chat_input": "إدخال",
+      "llm": "LLM",
+      "agent": "وكيل",
+      "tool": "أداة",
+      "knowledge": "معرفة",
+      "router": "موجّه",
+      "end": "نهاية"
+    },
+    "nodeStatus": {
+      "idle": "خامل",
+      "waiting": "منتظر",
+      "running": "قيد التشغيل",
+      "done": "منتهٍ",
+      "error": "خطأ"
+    },
+    "wait": {
+      "none": "لا انتظار",
+      "llm": "LLM",
+      "tool": "أداة",
+      "human": "إدخال"
+    },
+    "activity": {
+      "title": "النشاط",
+      "current": "العقد الحالية",
+      "none": "لا عقدة نشطة",
+      "dag": "الخطوة {{completed}} من {{total}}",
+      "pending": "معلّق",
+      "stepError": "خطأ في الخطوة",
+      "tokensIn": "إدخال",
+      "tokensOut": "إخراج",
+      "perSecond": "{{value}} رمز/ث",
+      "rate": "رمز/ث",
+      "runTotal": "إجمالي التشغيل",
+      "context": "السياق {{used}} / {{max}}"
+    },
+    "tabs": {
+      "chat": "دردشة",
+      "log": "سجل"
+    },
+    "chat": {
+      "placeholder": "رسالة…",
+      "send": "إرسال",
+      "stop": "إيقاف التوليد",
+      "waitInput": "اكتب الرسالة الأولى. الرسم ينتظر إدخالًا.",
+      "empty": "لا رسائل في هذا التشغيل بعد.",
+      "disabled": "الدردشة أثناء التشغيل فقط."
+    },
+    "log": {
+      "pause": "إيقاف مؤقت",
+      "resume": "متابعة",
+      "jumpLatest": "إلى الأحدث",
+      "newCount": "{{count}} جديد",
+      "search": "البحث في السجل",
+      "level": "المستوى",
+      "levelFrom": "من {{level}}",
+      "node": "العقدة",
+      "allNodes": "كل العقد",
+      "errorsOnly": "الأخطاء فقط",
+      "export": "تصدير",
+      "empty": "لا أسطر سجل لهذا المرشح.",
+      "detailTitle": "تفاصيل السجل",
+      "payload": "الحمولة",
+      "stack": "المكدس",
+      "message": "الرسالة",
+      "copyLine": "نسخ السطر",
+      "copyPayload": "نسخ الحمولة"
+    },
+    "level": {
+      "debug": "تصحيح",
+      "info": "معلومة",
+      "warn": "تحذير",
+      "error": "خطأ"
+    },
+    "notify": {
+      "runStarted": "بدأ التشغيل",
+      "runStopped": "توقف التشغيل",
+      "stepFailed": "فشلت الخطوة",
+      "disconnected": "الخدمة غير متاحة"
+    },
+    "dev": {
+      "label": "سيناريو تجريبي",
+      "stopped": "متوقف",
+      "disconnected": "غير متصل",
+      "starting": "يبدأ",
+      "stopping": "يتوقف",
+      "running": "قيد التشغيل (دردشة)",
+      "nochat": "قيد التشغيل (بدون دردشة)",
+      "cloud": "سحابة / بدون GPU",
+      "error": "خطأ",
+      "wait": "ينتظر إدخالًا"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "متوافق مع OpenAI"
+    },
+    "mock": {
+      "userLine": "لخّص آخر تشغيل باختصار.",
+      "chatReply": "التشغيل نشط. يجيب هذا المساعد من الشبكة لا من المساعدة.",
+      "lastLlm": "تُنتَج الرموز.",
+      "lastAgent": "ينتظر LLM.",
+      "lastTool": "طُلب استدعاء أداة.",
+      "waitInput": "الرسم ينتظر الرسالة الأولى.",
+      "stepError": "فشل استدعاء الأداة.",
+      "serviceError": "أوقفت الخدمة الخطوة.",
+      "log": {
+        "start": "قُبل التشغيل.",
+        "debug": "أُعدّ الموجّه.",
+        "agent": "الوكيل يعمل.",
+        "warn": "الأداة تستجيب ببطء.",
+        "secret": "Request with apiKey=sk-live-demo-should-mask",
+        "tick": "{{node}} يبلغ عن تقدم.",
+        "user": "قُبل سطر المستخدم.",
+        "assistant": "اكتملت الإجابة."
+      }
+    }
+  },
+  "history": {
+    "title": "السجل",
+    "close": "إغلاق",
+    "copy": "نسخ",
+    "ribbon": {
+      "refresh": "تحديث",
+      "delete": "حذف",
+      "export": "تصدير السجلات",
+      "purge": "حذف الأقدم من 90 يومًا"
+    },
+    "filter": {
+      "range": "المدى",
+      "today": "اليوم",
+      "days7": "7 أيام",
+      "days30": "30 يومًا",
+      "custom": "مخصص",
+      "from": "من",
+      "to": "إلى",
+      "network": "الشبكة",
+      "allNetworks": "كل الشبكات",
+      "model": "النموذج",
+      "allModels": "كل النماذج",
+      "search": "بحث",
+      "searchHint": "معرّف التشغيل، الشبكة، الخطأ",
+      "reset": "إعادة تعيين المرشحات"
+    },
+    "outcome": {
+      "running": "قيد التشغيل",
+      "succeeded": "نجاح",
+      "failed": "فشل",
+      "cancelled": "أُلغي",
+      "timeout": "انتهت المهلة"
+    },
+    "kpi": {
+      "runs": "تشغيلات",
+      "runsHint": "التشغيلات المكتملة فقط",
+      "succeeded": "نجاح",
+      "failed": "فشل",
+      "failedFoot": "أُلغي {{cancelled}} · مهلة {{timeout}}",
+      "medianDuration": "المدة الوسيطة",
+      "p95": "p95 {{value}}",
+      "p95Hidden": "p95 من 20 تشغيلًا"
+    },
+    "chart": {
+      "title": "تشغيلات حسب اليوم",
+      "empty": "لا تشغيلات مكتملة في هذا المدى."
+    },
+    "errors": {
+      "title": "أكثر الأخطاء",
+      "empty": "لا أخطاء في هذا المرشح."
+    },
+    "errorClass": {
+      "timeout": "انتهت المهلة",
+      "tool_error": "أداة",
+      "llm_error": "LLM",
+      "validation": "تحقق",
+      "service": "خدمة",
+      "unknown": "غير معروف"
+    },
+    "tab": {
+      "history": "السجل",
+      "model": "حسب النموذج",
+      "network": "حسب الشبكة"
+    },
+    "table": {
+      "model": "النموذج",
+      "provider": "المزوّد",
+      "calls": "الاستدعاءات",
+      "ok": "حسنًا",
+      "callErrors": "أخطاء",
+      "errorRate": "معدل الخطأ",
+      "median": "المدة الوسيطة",
+      "tokensIn": "رموز داخلة",
+      "tokensOut": "رموز خارجة",
+      "network": "الشبكة",
+      "runs": "تشغيلات",
+      "succeeded": "نجاح",
+      "failed": "فشل",
+      "cancelled": "أُلغي",
+      "topErrorNode": "أكثر عقدة خطأ"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
+      "openai_compat": "متوافق مع OpenAI"
+    },
+    "list": {
+      "selectAll": "تحديد الظاهر",
+      "runId": "معرّف التشغيل",
+      "network": "الشبكة",
+      "started": "البدء",
+      "duration": "المدة",
+      "outcome": "النتيجة",
+      "error": "خطأ",
+      "models": "النماذج",
+      "live": "عرض مباشر",
+      "page": "صفحة {{page}} من {{pages}}",
+      "prev": "السابق",
+      "next": "التالي"
+    },
+    "detail": {
+      "title": "تشغيل",
+      "none": "اختر تشغيلًا من القائمة.",
+      "missing": "هذا التشغيل غير موجود.",
+      "error": "خطأ",
+      "exportLog": "تصدير السجل",
+      "tabLog": "سجل",
+      "tabSteps": "خطوات",
+      "tabChat": "دردشة"
+    },
+    "graph": {
+      "fit": "ملاءمة"
+    },
+    "log": {
+      "level": "المستوى",
+      "search": "البحث في السجل",
+      "node": "العقدة",
+      "allNodes": "كل العقد",
+      "errorsOnly": "الأخطاء فقط",
+      "empty": "لا أسطر سجل لهذا المرشح.",
+      "detailTitle": "تفاصيل السجل"
+    },
+    "level": {
+      "debug": "تصحيح",
+      "info": "معلومة",
+      "warn": "تحذير",
+      "error": "خطأ"
+    },
+    "steps": {
+      "node": "العقدة",
+      "role": "الدور",
+      "status": "الحالة",
+      "error": "خطأ",
+      "empty": "لا خطوات محفوظة."
+    },
+    "nodeStatus": {
+      "idle": "خامل",
+      "waiting": "منتظر",
+      "running": "قيد التشغيل",
+      "done": "منتهٍ",
+      "error": "خطأ"
+    },
+    "calls": {
+      "ok": "حسنًا",
+      "yes": "نعم",
+      "no": "لا",
+      "empty": "لا استدعاءات LLM."
+    },
+    "empty": {
+      "none": "لا تشغيلات في مخزن السجل بعد.",
+      "filtered": "لا نتائج لهذا المرشح."
+    },
+    "error": {
+      "store": "مخزن السجل غير متاح.",
+      "openData": "الإعدادات · البيانات",
+      "api": "تعذّر تحميل السجل.",
+      "runningDelete": "لا يمكن حذف التشغيلات الجارية."
+    },
+    "delete": {
+      "title": "حذف التشغيلات",
+      "body": "ستُزال {{count}} تشغيلات محددة من الأرشيف. تبقى الجارية.",
+      "confirm": "حذف",
+      "cancel": "إلغاء"
+    },
+    "retention": {
+      "title": "حذف التشغيلات الأقدم",
+      "body": "ستُحذف {{count}} تشغيلات أقدم من 90 يومًا.",
+      "confirm": "حذف"
+    },
+    "notify": {
+      "deleted": "حُذفت {{count}} تشغيلات",
+      "runningDelete": "لا يمكن حذف التشغيلات الجارية",
+      "runningSkipped": "تُخطّي إدخال جارٍ واحد على الأقل",
+      "purged": "حُذفت {{count}} تشغيلات قديمة",
+      "exported": "بدأ التصدير",
+      "exportError": "فشل التصدير",
+      "error": "فشل الإجراء"
+    }
+  },
+  "runLog": {
+    "run": {
+      "start": "بدأ التشغيل ({{networkName}})",
+      "wait": {
+        "human": "ينتظر إدخالًا"
+      },
+      "chat": {
+        "user": "رسالة المستخدم"
+      },
+      "batch": {
+        "start": "بدأ تشغيل الدفعة"
+      },
+      "agent": {
+        "start": "بدأ الوكيل",
+        "done": "انتهى الوكيل"
+      },
+      "knowledge": "بحث المعرفة ({{count}} نتائج)",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "انتهى LLM ({{durationMs}} مللي ثانية)"
+      },
+      "tool": {
+        "call": "أداة {{name}}"
+      },
+      "router": "موجّه → {{target}}",
+      "end": "وُصلت النهاية",
+      "succeeded": "نجح التشغيل",
+      "failed": "فشل التشغيل",
+      "cancelled": "أُلغي التشغيل",
+      "interrupted": "قُطع التشغيل (أُغلق التطبيق)",
+      "help": {
+        "fallbackMissing": "نموذج احتياطي المساعدة ناقص"
+      },
+      "stepLimit": "وُصل حد الخطوات"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "الموجّه بلا حافة مطابقة"
+      }
+    },
+    "runtime": {
+      "timeout": "لا تقدم من النموذج",
+      "unreachable": "وقت التشغيل غير متاح"
+    }
+  }
+}

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from app.db.engine import utc_now
+from app.db.paths import RAG_DIR_NAME
 from app.db.network_rag import (
     CollectionMeta,
     RagChunk,
@@ -24,6 +25,19 @@ from app.help.retrieve import cosine
 from app.run.graph_models import GraphNode
 from app.run.limits import DEFAULT_EMBED_MODEL, DEFAULT_SCORE_MIN, DEFAULT_TOP_K, KNOWLEDGE_CHUNK_CHARS
 from app.runtime.models import EmbedRequest
+
+_EMBED_PROVIDERS = frozenset({"ollama", "openai", "gemini", "openai_compat"})
+
+
+def _embed_args(node: GraphNode) -> tuple[str, str, str | None]:
+    provider = str(node.data.get("embeddingProvider") or "ollama").strip() or "ollama"
+    if provider not in _EMBED_PROVIDERS:
+        provider = "ollama"
+    model = str(node.data.get("embeddingModel") or "").strip() or DEFAULT_EMBED_MODEL
+    credential_id = str(node.data.get("embeddingCredentialId") or "").strip() or None
+    if provider == "ollama":
+        credential_id = None
+    return provider, model, credential_id
 
 
 @dataclass
@@ -50,16 +64,22 @@ def status_for_network(network_id: str) -> list[dict[str, str]]:
 
 
 def _safe_files(root: Path, data_dir: str) -> list[Path]:
-    data_root = Path(os.path.realpath(data_dir))
-    if not root.exists():
+    del data_dir
+    try:
+        source_root = Path(os.path.realpath(root))
+    except OSError:
+        return []
+    if not source_root.is_dir():
+        return []
+    if RAG_DIR_NAME in source_root.as_posix().replace("\\", "/").split("/"):
         return []
     out: list[Path] = []
-    for path in root.rglob("*"):
+    for path in source_root.rglob("*"):
         if not path.is_file():
             continue
         try:
             resolved = path.resolve()
-            resolved.relative_to(data_root)
+            resolved.relative_to(source_root)
         except (OSError, ValueError):
             continue
         suffix = path.suffix.lower()
@@ -110,7 +130,7 @@ def index_node(
         title = path.stem
         for piece in chunk_markdown(raw, title, file_hash):
             texts.append((piece.title, piece.section, piece.text, piece.file_hash))
-    model = DEFAULT_EMBED_MODEL
+    provider, model, credential_id = _embed_args(node)
     existing = get_collection(network_id, node.id)
     combo = digest.hexdigest()
     if (
@@ -140,7 +160,8 @@ def index_node(
             EmbedRequest(
                 texts=[t[2] for t in texts],
                 model=model,
-                provider="ollama",
+                provider=provider,  # type: ignore[arg-type]
+                credential_id=credential_id,
             )
         )
     except Exception:
@@ -193,15 +214,25 @@ def retrieve(
     *,
     top_k: int = DEFAULT_TOP_K,
     score_min: float = DEFAULT_SCORE_MIN,
+    node: GraphNode | None = None,
 ) -> list[Snippet]:
     from app.runtime.embeddings import embed
 
     chunks = list_chunks(network_id, node_id)
     if not chunks:
         return []
+    if node is not None:
+        provider, model, credential_id = _embed_args(node)
+    else:
+        provider, model, credential_id = "ollama", (chunks[0].embedding_model_id or DEFAULT_EMBED_MODEL), None
     try:
         result = embed(
-            EmbedRequest(texts=[query], model=DEFAULT_EMBED_MODEL, provider="ollama")
+            EmbedRequest(
+                texts=[query],
+                model=model,
+                provider=provider,  # type: ignore[arg-type]
+                credential_id=credential_id,
+            )
         )
     except Exception:
         return []

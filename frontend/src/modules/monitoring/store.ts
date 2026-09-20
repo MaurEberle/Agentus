@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { notify } from '@/lib/notifications';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
+import { loadLatestHistoryRun } from '@/modules/monitoring/model/archive';
 import {
   applyChatDelta,
   hasChatInput,
@@ -110,13 +111,17 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   clearLogFilter: () => set({ logNodeId: null }),
 }));
 
+function tabForRun(run: RunSnapshot | null, preferred: MonitoringTab): MonitoringTab {
+  if (preferred === 'chat' && hasChatInput(run?.graph)) return 'chat';
+  return 'log';
+}
+
 function resetForRun(run: RunSnapshot | null): Partial<MonitoringState> {
-  const chat = hasChatInput(run?.graph);
   return {
     logs: [],
     chatMessages: run?.chat?.messages ?? [],
     chatGenerating: Boolean(run?.chat?.generating),
-    tab: chat ? 'chat' : 'log',
+    tab: tabForRun(run, useMonitoringStore.getState().tab),
     logQuery: '',
     logNodeId: null,
     logErrorsOnly: false,
@@ -125,6 +130,31 @@ function resetForRun(run: RunSnapshot | null): Partial<MonitoringState> {
     selectedLogId: null,
     selectedNodeId: null,
   };
+}
+
+export async function hydrateLastRun() {
+  const busy = () => {
+    const status = useAppStore.getState().serviceStatus;
+    return status === 'running' || status === 'starting';
+  };
+  if (busy()) return;
+  try {
+    const loaded = await loadLatestHistoryRun();
+    if (!loaded || busy()) return;
+    const now = useMonitoringStore.getState();
+    if (now.run && !now.run.archived) return;
+    if (now.run?.archived && now.run.runId === loaded.run.runId && now.logs.length > 0) return;
+    useMonitoringStore.setState({
+      run: loaded.run,
+      logs: loaded.logs,
+      lastErrorMessage: loaded.run.errorMessage ?? now.lastErrorMessage,
+      ...resetForRun(loaded.run),
+      chatMessages: loaded.run.chat?.messages ?? [],
+      chatGenerating: false,
+    });
+  } catch {
+    /* keep current snapshot */
+  }
 }
 
 export function hydrateMonitoring(snapshot: {
@@ -139,11 +169,12 @@ export function hydrateMonitoring(snapshot: {
   useMonitoringStore.setState({
     run: snapshot.run,
     resources: snapshot.resources,
+    logs: [],
     chatMessages: snapshot.run?.chat?.messages ?? [],
     chatGenerating: Boolean(snapshot.run?.chat?.generating),
     adapterErrorKey: null,
     lastErrorMessage: snapshot.run?.errorMessage ?? null,
-    tab: hasChatInput(snapshot.run?.graph) ? 'chat' : 'log',
+    tab: tabForRun(snapshot.run, useMonitoringStore.getState().tab),
   });
 }
 
@@ -164,13 +195,14 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       lastErrorMessage: evt.errorMessage ?? (evt.serviceStatus === 'error' ? current.lastErrorMessage : null),
       adapterErrorKey: evt.serviceStatus === 'disconnected' ? 'monitoring.empty.disconnectedTitle' : null,
       run:
-        current.run && evt.serviceStatus !== 'stopped'
-          ? { ...current.run, serviceStatus: evt.serviceStatus, errorMessage: evt.errorMessage }
-          : evt.serviceStatus === 'stopped'
-            ? null
+        current.run && evt.serviceStatus === 'stopped'
+          ? { ...current.run, archived: true, serviceStatus: 'stopped' }
+          : current.run
+            ? { ...current.run, serviceStatus: evt.serviceStatus, errorMessage: evt.errorMessage }
             : current.run,
       resources: evt.serviceStatus === 'stopped' ? null : current.resources,
     });
+    if (evt.serviceStatus === 'stopped') void hydrateLastRun();
     return;
   }
 
@@ -180,6 +212,8 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
   }
 
   if (evt.type === 'log') {
+    if (current.run?.archived && evt.log.runId && evt.log.runId !== current.run.runId) return;
+    if (current.logs.some((item) => item.id === evt.log.id)) return;
     const masked = maskLog(evt.log);
     const log: LogEvent = { ...evt.log, ...masked };
     const logs = [...current.logs, log];
@@ -192,6 +226,7 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
   }
 
   if (evt.type === 'chat') {
+    if (current.run?.archived && evt.runId && evt.runId !== current.run.runId) return;
     let messages = current.chatMessages;
     let generating = current.chatGenerating;
     if (evt.message) {
@@ -212,7 +247,13 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
 
   if (evt.type === 'run') {
     const prevId = current.run?.runId;
-    const merged = mergeRunSnapshot(current.run, evt.run);
+    const status = evt.run.serviceStatus ?? app.serviceStatus;
+    const fromArchive =
+      Boolean(current.run?.archived && evt.run.runId && evt.run.runId !== current.run.runId);
+    const merged = mergeRunSnapshot(fromArchive ? null : current.run, {
+      ...evt.run,
+      archived: status === 'stopped',
+    });
     if (!merged) return;
     const isNew = Boolean(merged.runId && merged.runId !== prevId);
     app.setRunId(merged.runId);
@@ -227,12 +268,28 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       toastOnce(stepKey, 'monitoring.notify.stepFailed', 'error');
     }
     if (!step) lastStepKey = '';
+    const incoming = merged.chat?.messages ?? [];
+    let chatMessages = current.chatMessages;
+    let chatGenerating = current.chatGenerating;
+    if (isNew) {
+      chatMessages = incoming;
+      chatGenerating = Boolean(merged.chat?.generating);
+    } else if (incoming.length > 0) {
+      let next = chatMessages;
+      for (const message of incoming) {
+        next = upsertChat(next, { ...message, content: maskText(message.content) });
+      }
+      chatMessages = next;
+      if (typeof merged.chat?.generating === 'boolean') {
+        chatGenerating = merged.chat.generating;
+      }
+    }
     useMonitoringStore.setState({
       run: merged,
       lastErrorMessage: merged.errorMessage ?? current.lastErrorMessage,
       ...(isNew ? resetForRun(merged) : null),
-      chatMessages: isNew ? (merged.chat?.messages ?? []) : current.chatMessages,
-      chatGenerating: isNew ? Boolean(merged.chat?.generating) : current.chatGenerating,
+      chatMessages,
+      chatGenerating,
     });
   }
 }

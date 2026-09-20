@@ -12,7 +12,14 @@ export function WindowControls() {
   const setWindowMaximized = useAppStore((state) => state.setWindowMaximized);
 
   useEffect(() => {
-    if (host) setWindowMaximized(host.isMaximized());
+    if (!host) return;
+    let cancelled = false;
+    void Promise.resolve(host.isMaximized()).then((value) => {
+      if (!cancelled) setWindowMaximized(Boolean(value));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [host, setWindowMaximized]);
 
   if (!host) return null;

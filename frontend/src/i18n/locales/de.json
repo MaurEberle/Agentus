@@ -3,6 +3,14 @@
     "name": "Agentus Network",
     "skipToContent": "Zum Inhalt springen"
   },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "OpenAI-kompatibel"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "network": "Netzwerk",
@@ -30,6 +38,24 @@
     "language": "Sprache",
     "languageDe": "Deutsch",
     "languageEn": "English",
+    "languageEs": "Español",
+    "languageFr": "Français",
+    "languageTr": "Türkçe",
+    "languagePt": "Português",
+    "languageZh": "中文",
+    "languageJa": "日本語",
+    "languageAr": "العربية",
+    "languageNames": {
+      "de": "Deutsch",
+      "en": "Englisch",
+      "es": "Spanisch",
+      "fr": "Französisch",
+      "tr": "Türkisch",
+      "pt": "Portugiesisch",
+      "zh": "Chinesisch",
+      "ja": "Japanisch",
+      "ar": "Arabisch"
+    },
     "window": {
       "minimize": "Minimieren",
       "maximize": "Maximieren",
@@ -174,6 +200,9 @@
       "inUseBody": "„{{name}}“ ist noch einem Hilfe-Profil, Netz oder MCP-Server zugeordnet und kann nicht gelöscht werden.",
       "kindName": {
         "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
         "openai_compat": "OpenAI-kompatibel",
         "web_search": "Websuche",
         "github": "GitHub",
@@ -194,6 +223,9 @@
       "ping": "Verbindung prüfen",
       "pingOk": "Runtime erreichbar",
       "pingFail": "Runtime nicht erreichbar",
+      "modelNotFound": "Modell nicht gefunden oder nicht ladbar: {{name}}",
+      "timeout": "Kein Fortschritt vom Modell ({{name}}). Abbruch nach Stille, nicht nach Gesamtdauer.",
+      "unreachable": "Ollama ist nicht erreichbar ({{name}}).",
       "models": "Installierte Modelle",
       "modelsEmpty": "Keine Modelle oder Runtime nicht erreichbar.",
       "modelName": "Modell",
@@ -214,6 +246,10 @@
       "model": "Chat-Modell",
       "credential": "Zugang",
       "credentialEmpty": "Keinen Zugang wählen",
+      "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die Modelle geladen.",
+      "noCredentials": "Kein Zugang für diesen Provider — lege unter Zugänge einen passenden Eintrag an.",
+      "pickCredentialFirst": "Zuerst einen gültigen API-Key wählen",
+      "modelsLoadError": "Modelle konnten nicht geladen werden. Prüfe den API-Key.",
       "embedProvider": "Embedding-Provider",
       "embedModel": "Embedding-Modell",
       "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen.",
@@ -518,6 +554,8 @@
     },
     "palette": {
       "title": "Palette",
+      "collapse": "Elementauswahl einklappen",
+      "expand": "Elementauswahl ausklappen",
       "search": "Knoten suchen",
       "chat_input": "Chat-Eingabe",
       "chat_inputHint": "Höchstens eine. Starttext und Pflichtfeld für den Lauf.",
@@ -546,6 +584,8 @@
     },
     "inspector": {
       "title": "Inspector",
+      "collapse": "Inspector einklappen",
+      "expand": "Inspector ausklappen",
       "displayName": "Anzeigename",
       "multi": "{{count}} Knoten ausgewählt",
       "graph": {
@@ -562,6 +602,10 @@
         "model": "Modell",
         "credential": "Zugang",
         "credentialEmpty": "Kein Zugang",
+        "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die Modelle geladen.",
+        "noCredentials": "Kein Zugang für diesen Provider vorhanden.",
+        "pickCredentialFirst": "Zuerst einen gültigen API-Key wählen",
+        "modelsLoadError": "Modelle konnten nicht geladen werden. Prüfe den API-Key.",
         "baseUrl": "Basis-URL",
         "ping": "Verbindung prüfen",
         "pingOk": "Modell antwortet",
@@ -583,10 +627,16 @@
           "web_search": "Websuche",
           "datetime": "Datum/Zeit",
           "calculator": "Rechner",
+          "file_access": "Dateizugriff",
           "mcp": "MCP"
         },
         "method": "Methode",
         "url": "URL",
+        "rootPath": "Wurzelordner",
+        "pickRoot": "Ordner",
+        "allowWrite": "Schreiben erlauben",
+        "allowDelete": "Löschen erlauben",
+        "fileAccessHint": "Der Agent darf nur unter diesem Ordner lesen, schreiben und löschen.",
         "credential": "Zugang",
         "mcpServer": "MCP-Server",
         "mcpEmpty": "Kein Server",
@@ -596,11 +646,14 @@
       "knowledge": {
         "path": "Quellenordner",
         "pick": "Ordner",
+        "embedProvider": "Embedding-Provider",
+        "embedModel": "Embedding-Modell",
         "topK": "topK",
         "score": "Score-Schwelle",
         "reindex": "Index neu",
         "reindexOk": "Index neu aufgebaut",
-        "reindexFail": "Index fehlgeschlagen"
+        "reindexFail": "Index fehlgeschlagen",
+        "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen."
       },
       "router": {
         "branches": "Zweige",
@@ -663,6 +716,7 @@
       "toolKind": "Werkzeug-Art fehlt.",
       "mcpServer": "Aktiven MCP-Server wählen.",
       "mcpRoot": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "fileAccessRoot": "Dateizugriff braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "knowledgePath": "Quellenordner ist Pflicht.",
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
       "knowledgeSandbox": "Pfad muss unter dem Datenordner liegen.",
@@ -816,6 +870,7 @@
       "stoppedBody": "Starte den Dienst über die Kopfzeile.",
       "stoppedActive": "Aktives Netz: {{name}}",
       "stoppedNoNetwork": "Kein Netz in der Schnellwahl.",
+      "lastRunBody": "Kein aktiver Lauf. Angezeigt wird der letzte gespeicherte Lauf.",
       "disconnectedTitle": "Getrennt vom Dienst",
       "disconnectedBody": "Die Verbindung wird erneut aufgebaut. Letzte Werte sind ausgegraut.",
       "startingTitle": "Dienst startet",
@@ -824,6 +879,7 @@
       "errorBody": "{{message}}"
     },
     "header": {
+      "lastRun": "Letzter Lauf",
       "runId": "Lauf-ID",
       "started": "Start",
       "duration": "Dauer",
@@ -894,6 +950,8 @@
       "tokensIn": "Eingabe",
       "tokensOut": "Ausgabe",
       "perSecond": "{{value}} Token/s",
+      "rate": "Token/s",
+      "runTotal": "Lauf gesamt",
       "context": "Kontext {{used}} / {{max}}"
     },
     "tabs": {
@@ -955,6 +1013,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-kompatibel"
     },
     "mock": {
@@ -1062,6 +1123,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-kompatibel"
     },
     "list": {
@@ -1155,6 +1219,51 @@
       "exported": "Export gestartet",
       "exportError": "Export fehlgeschlagen",
       "error": "Aktion fehlgeschlagen"
+    }
+  },
+  "runLog": {
+    "run": {
+      "start": "Lauf gestartet ({{networkName}})",
+      "wait": {
+        "human": "Wartet auf Eingabe"
+      },
+      "chat": {
+        "user": "Nutzereingabe"
+      },
+      "batch": {
+        "start": "Batch-Lauf gestartet"
+      },
+      "agent": {
+        "start": "Agent gestartet",
+        "done": "Agent fertig"
+      },
+      "knowledge": "Wissenssuche ({{count}} Treffer)",
+      "llm": {
+        "start": "LLM {{model}}",
+        "done": "LLM fertig ({{durationMs}} ms)"
+      },
+      "tool": {
+        "call": "Werkzeug {{name}}"
+      },
+      "router": "Router → {{target}}",
+      "end": "Ende erreicht",
+      "succeeded": "Lauf erfolgreich",
+      "failed": "Lauf fehlgeschlagen",
+      "cancelled": "Lauf abgebrochen",
+      "interrupted": "Lauf unterbrochen (App beendet)",
+      "help": {
+        "fallbackMissing": "Hilfe-Fallback-Modell fehlt"
+      },
+      "stepLimit": "Schrittlimit erreicht"
+    },
+    "graph": {
+      "router": {
+        "noEdge": "Router ohne passende Kante"
+      }
+    },
+    "runtime": {
+      "timeout": "Kein Fortschritt vom Modell",
+      "unreachable": "Runtime nicht erreichbar"
     }
   }
 }

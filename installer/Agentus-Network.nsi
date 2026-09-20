@@ -28,6 +28,8 @@ CRCCheck on
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "..\dist\Agentus-Network-Setup-${PRODUCT_VERSION}-x64.exe"
+Icon "..\resources\icons\app.ico"
+UninstallIcon "..\resources\icons\app.ico"
 InstallDir "$LOCALAPPDATA\Programs\Agentus-Network"
 InstallDirRegKey HKCU "${REG_UNINSTALL}" "InstallLocation"
 BrandingText "${PRODUCT_NAME}"
@@ -82,8 +84,9 @@ Function .onInit
   ${If} $2 != ""
     ${VersionCompare} $2 "${PRODUCT_VERSION}" $3
     ${If} $3 == 1
-      IfSilent +2
-      MessageBox MB_OK|MB_ICONSTOP "Eine neuere Version ($2) ist bereits installiert."
+      ${IfNot} ${Silent}
+        MessageBox MB_OK|MB_ICONSTOP "Eine neuere Version ($2) ist bereits installiert."
+      ${EndIf}
       Abort
     ${EndIf}
   ${EndIf}
@@ -97,30 +100,33 @@ Function .onVerifyInstDir
 FunctionEnd
 
 Function StrContains
-  Exch $R1
+  ; stack in: haystack, needle (top). stack out: "1" or "0".
+  ; Exch on an empty stack is invalid opcode; first Exch parks old $R0.
+  Exch $R0
   Exch
-  Exch $R2
+  Exch $R1
+  Push $R2
   Push $R3
   Push $R4
-  StrLen $R3 $R1
-  StrCpy $R0 0
-loop:
-  StrCpy $R4 $R2 $R3 $R0
-  StrCmp $R4 "" notfound
-  StrCmp $R4 $R1 found
-  IntOp $R0 $R0 + 1
-  Goto loop
-found:
-  StrCpy $R0 1
-  Goto done
-notfound:
-  StrCpy $R0 0
-done:
-  Pop $R4
-  Pop $R3
-  Pop $R2
-  Pop $R1
-  Exch $R0
+  StrLen $R2 $R0
+  StrCpy $R3 0
+  loop:
+    StrCpy $R4 $R1 $R2 $R3
+    StrCmp $R4 "" notfound
+    StrCmp $R4 $R0 found
+    IntOp $R3 $R3 + 1
+    Goto loop
+  found:
+    StrCpy $R0 "1"
+    Goto restore
+  notfound:
+    StrCpy $R0 "0"
+  restore:
+    Pop $R4
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Exch $R0
 FunctionEnd
 
 Function LogLine
@@ -177,15 +183,18 @@ Function DetectOllama
   Pop $0
   ${If} $0 == 0
     Pop $0
+    Pop $0
     Push 1
     Return
   ${EndIf}
   Pop $0
   IfFileExists "$LOCALAPPDATA\Ollama\ollama.exe" ollama_yes 0
   IfFileExists "$LOCALAPPDATA\Programs\Ollama\ollama.exe" ollama_yes 0
+  Pop $0
   Push 0
   Return
 ollama_yes:
+  Pop $0
   Push 1
 FunctionEnd
 
@@ -194,8 +203,11 @@ Function WaitOllama
   Push $1
   Push $2
   StrCpy $0 0
+  Push "waiting for ollama on 11434"
+  Call LogLine
 wait_loop:
-  nsExec::ExecToStack '"$SYSDIR\curl.exe" -s -o NUL --max-time 2 http://127.0.0.1:11434/'
+  DetailPrint "waiting for ollama ($0/60)"
+  nsExec::ExecToStack '"$SYSDIR\curl.exe" -s -o NUL --max-time 2 --noproxy 127.0.0.1 http://127.0.0.1:11434/'
   Pop $1
   Pop $2
   ${If} $1 == 0
@@ -220,7 +232,7 @@ wait_loop:
 FunctionEnd
 
 Function StartOllamaIfNeeded
-  nsExec::ExecToStack '"$SYSDIR\curl.exe" -s -o NUL --max-time 2 http://127.0.0.1:11434/'
+  nsExec::ExecToStack '"$SYSDIR\curl.exe" -s -o NUL --max-time 2 --noproxy 127.0.0.1 http://127.0.0.1:11434/'
   Pop $0
   Pop $1
   ${If} $0 == 0
@@ -228,26 +240,32 @@ Function StartOllamaIfNeeded
     Call LogLine
     Return
   ${EndIf}
+  IfFileExists "$LOCALAPPDATA\Programs\Ollama\ollama app.exe" start_app_prog 0
   IfFileExists "$LOCALAPPDATA\Ollama\ollama app.exe" start_app 0
-  IfFileExists "$LOCALAPPDATA\Ollama\ollama.exe" start_exe 0
   IfFileExists "$LOCALAPPDATA\Programs\Ollama\ollama.exe" start_prog 0
+  IfFileExists "$LOCALAPPDATA\Ollama\ollama.exe" start_exe 0
   Push "ollama exe not found to start"
   Call LogLine
+  Return
+start_app_prog:
+  Push "starting Programs\Ollama\ollama app.exe --hide --fast-startup"
+  Call LogLine
+  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start "" "$LOCALAPPDATA\Programs\Ollama\ollama app.exe" --hide --fast-startup'
   Return
 start_app:
   Push "starting ollama app.exe --hide --fast-startup"
   Call LogLine
-  nsExec::ExecToLog 'powershell -NoProfile -WindowStyle Hidden -Command "Start-Process -FilePath ([IO.Path]::Combine($$env:LOCALAPPDATA,''Ollama'',''ollama app.exe'')) -ArgumentList ''--hide'',''--fast-startup'' -WindowStyle Hidden"'
+  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start "" "$LOCALAPPDATA\Ollama\ollama app.exe" --hide --fast-startup'
   Return
 start_exe:
   Push "starting ollama serve"
   Call LogLine
-  nsExec::ExecToLog 'powershell -NoProfile -WindowStyle Hidden -Command "Start-Process -FilePath ([IO.Path]::Combine($$env:LOCALAPPDATA,''Ollama'',''ollama.exe'')) -ArgumentList ''serve'' -WindowStyle Hidden"'
+  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start /MIN "" "$LOCALAPPDATA\Ollama\ollama.exe" serve'
   Return
 start_prog:
-  Push "starting Programs\\Ollama serve"
+  Push "starting Programs\Ollama serve"
   Call LogLine
-  nsExec::ExecToLog 'powershell -NoProfile -WindowStyle Hidden -Command "Start-Process -FilePath ([IO.Path]::Combine($$env:LOCALAPPDATA,''Programs'',''Ollama'',''ollama.exe'')) -ArgumentList ''serve'' -WindowStyle Hidden"'
+  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start /MIN "" "$LOCALAPPDATA\Programs\Ollama\ollama.exe" serve'
 FunctionEnd
 
 Section "Anwendungsdateien" SecApp
@@ -266,7 +284,8 @@ Section "Anwendungsdateien" SecApp
   WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr HKCU "${REG_UNINSTALL}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKCU "${REG_UNINSTALL}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXE}"
+  File "/oname=app.ico" "..\resources\icons\app.ico"
+  WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayIcon" "$INSTDIR\app.ico"
   WriteRegStr HKCU "${REG_UNINSTALL}" "UninstallString" '"$INSTDIR\uninst.exe"'
   WriteRegDWORD HKCU "${REG_UNINSTALL}" "NoModify" 1
   WriteRegDWORD HKCU "${REG_UNINSTALL}" "NoRepair" 1
@@ -274,11 +293,11 @@ SectionEnd
 
 Section "Startmenü-Verknüpfung" SecStart
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\app.ico" 0
 SectionEnd
 
 Section /o "Desktop-Verknüpfung" SecDesktop
-  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\app.ico" 0
 SectionEnd
 
 Section "WebView2 (falls fehlend)" SecWebView
@@ -298,8 +317,9 @@ Section "WebView2 (falls fehlend)" SecWebView
     Push "webview2 bootstrapper exit $1"
     Call LogLine
     ${If} $1 != 0
-      IfSilent +2
-      MessageBox MB_OK|MB_ICONEXCLAMATION "WebView2-Runtime konnte nicht installiert werden (Exit $1). Die App-Dateien bleiben. Der Host zeigt host.webview2.missing."
+      ${IfNot} ${Silent}
+        MessageBox MB_OK|MB_ICONEXCLAMATION "WebView2-Runtime konnte nicht installiert werden (Exit $1). Die App-Dateien bleiben. Der Host zeigt host.webview2.missing."
+      ${EndIf}
     ${EndIf}
   ${EndIf}
 SectionEnd
@@ -326,8 +346,9 @@ Section "Ollama (falls fehlend)" SecOllama
     Push "OllamaSetup exit $1"
     Call LogLine
     ${If} $1 != 0
-      IfSilent +2
-      MessageBox MB_OK|MB_ICONEXCLAMATION "Ollama-Setup endete mit Exit $1. Die App-Dateien bleiben. Die Dashboard-Setup-Karte zeigt den Runtime-Status."
+      ${IfNot} ${Silent}
+        MessageBox MB_OK|MB_ICONEXCLAMATION "Ollama-Setup endete mit Exit $1. Die App-Dateien bleiben. Die Dashboard-Setup-Karte zeigt den Runtime-Status."
+      ${EndIf}
     ${EndIf}
     ollama_skip:
   ${EndIf}

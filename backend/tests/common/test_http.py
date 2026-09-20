@@ -17,6 +17,12 @@ def test_client_custom_timeout() -> None:
         assert c.timeout.read == 3.0
 
 
+def test_client_long_timeout_keeps_short_connect() -> None:
+    with client(timeout_sec=600.0) as c:
+        assert c.timeout.read == 600.0
+        assert c.timeout.connect == 10.0
+
+
 def test_client_sends_user_agent() -> None:
     seen: list[str] = []
 

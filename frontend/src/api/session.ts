@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ApiError, apiFetch, queryClient, USE_MOCKS } from '@/api/client';
-import { mockGetSession, mockSetActiveNetwork, mockStartRun, mockStopRun } from '@/api/mocks';
+import { ApiError, apiFetch, queryClient } from '@/api/client';
 import type { NetworkOption, SessionDto, StartRunResponse, StopRunResponse } from '@/api/types';
+import i18n from '@/i18n';
 import { notify } from '@/lib/notifications';
 import { listNetworkSummaries } from '@/modules/dashboard/api';
 import { useAppStore } from '@/store';
@@ -10,8 +10,71 @@ import type { ServiceStatus } from '@/store/session';
 
 const BUSY: ServiceStatus[] = ['starting', 'running', 'stopping'];
 
+const START_ERROR_DESC: Record<string, string> = {
+  'run.busy': 'notify.runConflict.desc',
+  'run.noActiveNetwork': 'notify.noNetwork.desc',
+  'run.knowledge.failed': 'network.inspector.knowledge.reindexFail',
+  'runtime.modelNotFound': 'settings.runtime.modelNotFound',
+  'runtime.timeout': 'settings.runtime.timeout',
+  'runtime.unreachable': 'settings.runtime.unreachable',
+  'runtime.upstream': 'settings.runtime.unreachable',
+  'graph.knowledge.path': 'network.validation.knowledgePath',
+  'graph.knowledge.helpCorpus': 'network.validation.knowledgeHelpCorpus',
+  'graph.fileAccess.root': 'network.validation.fileAccessRoot',
+  'graph.cycle': 'network.validation.cycle',
+  'graph.agent.noLlm': 'network.validation.agentLlm',
+  'graph.llm.credential': 'network.validation.modelRequired',
+  'graph.end.missing': 'network.validation.endRequired',
+  'graph.chatInput.duplicate': 'network.validation.tooManyChatInputs',
+  'graph.edge.invalid': 'network.validation.edgeType',
+};
+
+function notifyStartError(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    notify({
+      titleKey: 'notify.runError.title',
+      descriptionKey: 'notify.runError.desc',
+      variant: 'error',
+    });
+    return;
+  }
+  if (error.messageKey === 'run.busy') {
+    notify({
+      titleKey: 'notify.runConflict.title',
+      descriptionKey: 'notify.runConflict.desc',
+      variant: 'error',
+    });
+    return;
+  }
+  const details =
+    error.messageKey === 'run.invalidNetwork'
+      ? (error.message ?? '')
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean)
+      : [];
+  const candidates = [...details, error.messageKey].filter(Boolean) as string[];
+  let descriptionKey = 'notify.runError.desc';
+  for (const key of candidates) {
+    const mapped = START_ERROR_DESC[key] ?? key;
+    if (i18n.exists(mapped)) {
+      descriptionKey = mapped;
+      break;
+    }
+  }
+  const values =
+    error.messageKey?.startsWith('runtime.') && error.message
+      ? { name: error.message }
+      : undefined;
+  notify({
+    titleKey: 'notify.runError.title',
+    descriptionKey,
+    values,
+    variant: 'error',
+  });
+}
+
 export async function getSession(): Promise<SessionDto> {
-  if (USE_MOCKS) return mockGetSession();
   return apiFetch<SessionDto>('/session');
 }
 
@@ -20,12 +83,10 @@ export async function listNetworks(): Promise<{ items: NetworkOption[] }> {
 }
 
 export async function selectActiveNetwork(networkId: string | null) {
-  const session = USE_MOCKS
-    ? await mockSetActiveNetwork(networkId)
-    : await apiFetch<SessionDto>('/session/active-network', {
-        method: 'PUT',
-        body: JSON.stringify({ networkId }),
-      });
+  const session = await apiFetch<SessionDto>('/session/active-network', {
+    method: 'PUT',
+    body: JSON.stringify({ networkId }),
+  });
 
   useAppStore.getState().hydrateSession(session);
   void queryClient.invalidateQueries({ queryKey: ['session'] });
@@ -74,9 +135,7 @@ export async function startActiveRun() {
   });
 
   try {
-    const result: StartRunResponse = USE_MOCKS
-      ? await mockStartRun()
-      : await apiFetch<StartRunResponse>('/run/start', { method: 'POST' });
+    const result: StartRunResponse = await apiFetch<StartRunResponse>('/run/start', { method: 'POST' });
     store.setServiceStatus(result.serviceStatus);
     store.setRunId(result.runId);
     notify({
@@ -90,20 +149,8 @@ export async function startActiveRun() {
     void queryClient.invalidateQueries({ queryKey: ['networks'] });
     void queryClient.invalidateQueries({ queryKey: ['help-chat', 'status'] });
   } catch (error) {
-    store.setServiceStatus('error');
-    if (error instanceof ApiError && error.status === 409) {
-      notify({
-        titleKey: 'notify.runConflict.title',
-        descriptionKey: 'notify.runConflict.desc',
-        variant: 'error',
-      });
-      return;
-    }
-    notify({
-      titleKey: 'notify.runError.title',
-      descriptionKey: 'notify.runError.desc',
-      variant: 'error',
-    });
+    store.setServiceStatus('stopped');
+    notifyStartError(error);
   }
 }
 
@@ -121,9 +168,7 @@ export async function stopActiveRun() {
   });
 
   try {
-    const result: StopRunResponse = USE_MOCKS
-      ? await mockStopRun()
-      : await apiFetch<StopRunResponse>('/run/stop', { method: 'POST' });
+    const result: StopRunResponse = await apiFetch<StopRunResponse>('/run/stop', { method: 'POST' });
     store.setServiceStatus(result.serviceStatus);
     store.setRunId(null);
     notify({

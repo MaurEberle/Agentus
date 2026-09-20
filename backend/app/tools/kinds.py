@@ -1,4 +1,4 @@
 from typing import Literal, get_args
 
-FirstPartyKind = Literal["http", "web_search", "datetime", "calculator"]
+FirstPartyKind = Literal["http", "web_search", "datetime", "calculator", "file_access"]
 FIRST_PARTY_KINDS: tuple[FirstPartyKind, ...] = get_args(FirstPartyKind)

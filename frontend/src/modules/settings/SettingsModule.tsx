@@ -82,8 +82,16 @@ export function SettingsModule() {
   const leaveToRef = useRef<string | null>(null);
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    const fromHash = currentLocation.hash.replace(/^#/, '');
+    const toHash = nextLocation.hash.replace(/^#/, '');
+    const sectionRedirect =
+      currentLocation.pathname === nextLocation.pathname &&
+      currentLocation.pathname === '/settings' &&
+      !fromHash &&
+      (toHash === 'appearance' || toHash === 'help-chat' || toHash === 'chatbot');
     const block =
       !allowLeaveRef.current &&
+      !sectionRedirect &&
       dirtyRef.current &&
       (currentLocation.pathname !== nextLocation.pathname ||
         currentLocation.hash !== nextLocation.hash);

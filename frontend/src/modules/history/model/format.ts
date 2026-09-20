@@ -42,7 +42,8 @@ export function formatTime(iso: string, locale: string): string {
   return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function shortId(id: string, keep = 8): string {
+export function shortId(id: string | undefined, keep = 8): string {
+  if (!id) return '—';
   return id.length <= keep ? id : id.slice(0, keep);
 }
 
@@ -55,7 +56,16 @@ export function parseModelKey(value: string): { model: string; provider: LlmProv
   if (at <= 0) return null;
   const model = value.slice(0, at);
   const provider = value.slice(at + 1);
-  if (provider !== 'ollama' && provider !== 'xai' && provider !== 'openai_compat') return null;
+  if (
+    provider !== 'ollama' &&
+    provider !== 'xai' &&
+    provider !== 'openai' &&
+    provider !== 'anthropic' &&
+    provider !== 'gemini' &&
+    provider !== 'openai_compat'
+  ) {
+    return null;
+  }
   if (!model) return null;
   return { model, provider };
 }

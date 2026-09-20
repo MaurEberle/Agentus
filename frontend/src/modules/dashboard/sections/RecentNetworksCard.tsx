@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRelative } from '@/lib/relativeTime';
 import { recentNetworks, type NetworkListItem } from '@/modules/dashboard/model';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 
 export function RecentNetworksCard({
   loading,
@@ -18,7 +19,7 @@ export function RecentNetworksCard({
 
   if (loading) {
     return (
-      <Card>
+      <Card className={moduleCardClass}>
         <CardHeader>
           <Skeleton className="h-4 w-40" />
         </CardHeader>
@@ -31,11 +32,11 @@ export function RecentNetworksCard({
   }
 
   return (
-    <Card>
+    <Card className={moduleCardClass}>
       <CardHeader>
         <CardTitle>{t('dashboard.recent.title')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className={moduleCardBodyClass}>
         {recent.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{t('dashboard.recent.empty')}</p>

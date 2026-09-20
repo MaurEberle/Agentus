@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import { Link, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
 import { useAppStore } from '@/store';
@@ -42,6 +44,28 @@ import {
 
 type DirtyAction = 'new' | 'load' | 'library' | 'leave';
 
+function useLocalFlag(key: string, fallback = false) {
+  const [value, setValue] = useState(() => {
+    try {
+      return window.localStorage.getItem(key) === '1';
+    } catch {
+      return fallback;
+    }
+  });
+  const setFlag = useCallback(
+    (next: boolean) => {
+      setValue(next);
+      try {
+        window.localStorage.setItem(key, next ? '1' : '0');
+      } catch {
+        /* ignore quota */
+      }
+    },
+    [key],
+  );
+  return [value, setFlag] as const;
+}
+
 export function NetworkModule() {
   return (
     <ReactFlowProvider>
@@ -66,6 +90,8 @@ function NetworkEditor() {
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [paletteCollapsed, setPaletteCollapsed] = useLocalFlag('agentus.network.paletteCollapsed');
+  const [inspectorCollapsed, setInspectorCollapsed] = useLocalFlag('agentus.network.inspectorCollapsed');
   const [loadOpen, setLoadOpen] = useState(false);
   const [nameOpen, setNameOpen] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -416,13 +442,72 @@ function NetworkEditor() {
       ) : null}
       <div className="flex min-h-0 flex-1">
         {isDesktop ? (
-          <aside className="hidden w-52 shrink-0 border-r p-2 md:block">{palette}</aside>
+          <aside
+            className={cn(
+              'hidden shrink-0 flex-col border-r md:flex',
+              paletteCollapsed ? 'w-11' : 'w-52',
+            )}
+          >
+            <div className={cn('flex items-center p-1', paletteCollapsed ? 'justify-center' : 'justify-between px-2')}>
+              {paletteCollapsed ? null : (
+                <span className="truncate text-xs font-medium text-muted-foreground">{t('network.palette.title')}</span>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0"
+                aria-label={t(paletteCollapsed ? 'network.palette.expand' : 'network.palette.collapse')}
+                title={t(paletteCollapsed ? 'network.palette.expand' : 'network.palette.collapse')}
+                onClick={() => setPaletteCollapsed(!paletteCollapsed)}
+              >
+                {paletteCollapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
+              </Button>
+            </div>
+            <div className={cn('min-h-0 flex-1', paletteCollapsed ? 'px-1 pb-2' : 'p-2 pt-0')}>
+              <Palette disabled={readOnly} insertAt={insertPosition} compact={paletteCollapsed} />
+            </div>
+          </aside>
         ) : null}
         <div className="min-h-0 min-w-0 flex-1">
-          <FlowCanvas readOnly={readOnly} onRequestInsert={() => setPaletteOpen(true)} />
+          <FlowCanvas
+            readOnly={readOnly}
+            onRequestInsert={() => setPaletteOpen(true)}
+            onOpenInspector={() => {
+              setInspectorCollapsed(false);
+              if (!isDesktop) setInspectorOpen(true);
+            }}
+          />
         </div>
         {isDesktop ? (
-          <aside className="hidden w-80 shrink-0 overflow-auto border-l md:block">{inspector}</aside>
+          <aside
+            className={cn(
+              'hidden min-w-0 shrink-0 flex-col border-l md:flex',
+              inspectorCollapsed ? 'w-11' : 'w-80',
+            )}
+          >
+            <div className={cn('flex items-center p-1', inspectorCollapsed ? 'justify-center' : 'justify-between px-2')}>
+              {inspectorCollapsed ? null : (
+                <span className="truncate text-xs font-medium text-muted-foreground">
+                  {t('network.inspector.title')}
+                </span>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0"
+                aria-label={t(inspectorCollapsed ? 'network.inspector.expand' : 'network.inspector.collapse')}
+                title={t(inspectorCollapsed ? 'network.inspector.expand' : 'network.inspector.collapse')}
+                onClick={() => setInspectorCollapsed(!inspectorCollapsed)}
+              >
+                {inspectorCollapsed ? <ChevronsLeft className="size-4" /> : <ChevronsRight className="size-4" />}
+              </Button>
+            </div>
+            {inspectorCollapsed ? null : (
+              <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">{inspector}</div>
+            )}
+          </aside>
         ) : null}
       </div>
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>

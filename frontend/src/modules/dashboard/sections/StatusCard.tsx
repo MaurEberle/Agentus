@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRelative } from '@/lib/relativeTime';
 import { serviceBadgeVariant } from '@/modules/dashboard/model';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import { useAppStore } from '@/store';
 
 export function StatusCard() {
@@ -19,7 +20,7 @@ export function StatusCard() {
   const live = serviceStatus === 'running' || serviceStatus === 'starting';
 
   return (
-    <Card>
+    <Card className={moduleCardClass}>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle>{t('dashboard.status.title')}</CardTitle>
         {isLoading ? (
@@ -28,7 +29,7 @@ export function StatusCard() {
           <Badge variant={serviceBadgeVariant(serviceStatus)}>{t(`status.${serviceStatus}`)}</Badge>
         )}
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <CardContent className={`${moduleCardBodyClass} flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
         <div className="space-y-1 text-sm">
           {activeNetworkId ? (
             <p className="font-medium">{activeNetworkName ?? activeNetworkId}</p>

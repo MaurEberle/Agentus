@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { countWeekStats, type RunSummary } from '@/modules/dashboard/model';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 
 export function WeekStatsCard({
   loading,
@@ -19,7 +20,7 @@ export function WeekStatsCard({
 
   if (loading) {
     return (
-      <Card>
+      <Card className={moduleCardClass}>
         <CardHeader>
           <Skeleton className="h-4 w-36" />
         </CardHeader>
@@ -31,14 +32,14 @@ export function WeekStatsCard({
   }
 
   return (
-    <Card>
+    <Card className={moduleCardClass}>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle>{t('dashboard.week.title')}</CardTitle>
         <Button asChild size="sm" variant="ghost">
           <Link to="/history">{t('dashboard.week.openHistory')}</Link>
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className={moduleCardBodyClass}>
         <dl className="grid grid-cols-3 gap-2 text-center">
           <div>
             <dt className="text-xs text-muted-foreground">{t('dashboard.week.runs')}</dt>

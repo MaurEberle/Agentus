@@ -1,29 +1,38 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, ChevronDown } from 'lucide-react';
+import { ModelCombobox } from '@/components/ModelCombobox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { pickFolderPath } from '@/lib/pickFolder';
 import {
   useEditorCredentialsQuery,
-  useEditorModelsQuery,
   useMcpServersQuery,
   reindexNetworkKnowledge,
   testLlmConnection,
 } from '@/modules/network/api';
+import { useRuntimeModelsQuery } from '@/modules/settings/api';
 import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
-import { isForbiddenDataRoot } from '@/modules/settings/model';
+import {
+  EMBEDDING_PROVIDERS,
+  LLM_PROVIDERS,
+  credentialMatchesProvider,
+  embeddingNeedsCredential,
+  isCloudCatalogProvider,
+  isEmbeddingModelName,
+  isForbiddenDataRoot,
+  providerNeedsCredential,
+  type EmbeddingProvider,
+  type LlmProvider,
+} from '@/modules/settings/model';
 
 export function Inspector({
   issues,
@@ -128,7 +137,7 @@ export function Inspector({
   }
 
   return (
-    <div className="space-y-4 p-3">
+    <div className="min-w-0 space-y-4 overflow-x-hidden p-3">
       <h2 className="text-sm font-semibold">{t(`network.palette.${node.type}`)}</h2>
       <DisplayNameField node={node} readOnly={readOnly} />
       {node.type === 'llm' ? <LlmFields node={node} readOnly={readOnly} /> : null}
@@ -146,102 +155,9 @@ export function Inspector({
   );
 }
 
-function ModelCombobox({
-  value,
-  options,
-  disabled,
-  onChange,
-}: {
-  value: string;
-  options: string[];
-  disabled?: boolean;
-  onChange: (value: string) => void;
-}) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(value);
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
-
-  const query = draft.trim().toLowerCase();
-  const filtered = query ? options.filter((item) => item.toLowerCase().includes(query)) : options;
-  const exact = options.some((item) => item.toLowerCase() === query);
-
-  function commit(next: string) {
-    onChange(next);
-    setOpen(false);
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className="h-8 w-full justify-between px-2.5 font-normal"
-        >
-          <span className={cn('truncate', !value && 'text-muted-foreground')}>
-            {value || t('network.inspector.llm.model')}
-          </span>
-          <ChevronDown className="size-4 shrink-0 opacity-60" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={4} className="z-[80] w-[var(--radix-popover-trigger-width)] p-1">
-        <Input
-          value={draft}
-          autoFocus
-          disabled={disabled}
-          placeholder={t('network.inspector.llm.model')}
-          className="mb-1 h-8"
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              commit(draft.trim());
-            }
-          }}
-        />
-        <ul className="max-h-48 overflow-auto">
-          {filtered.map((item) => (
-            <li key={item}>
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                onClick={() => commit(item)}
-              >
-                <Check className={cn('size-3.5 shrink-0', item === value ? 'opacity-100' : 'opacity-0')} />
-                <span className="truncate">{item}</span>
-              </button>
-            </li>
-          ))}
-          {query && !exact ? (
-            <li>
-              <button
-                type="button"
-                className="flex w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                onClick={() => commit(draft.trim())}
-              >
-                {t('network.inspector.llm.useModel', { name: draft.trim() })}
-              </button>
-            </li>
-          ) : null}
-          {filtered.length === 0 && !query ? (
-            <li className="px-2 py-1.5 text-sm text-muted-foreground">{t('network.inspector.llm.noModels')}</li>
-          ) : null}
-        </ul>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid gap-1.5">
+    <div className="grid min-w-0 gap-1.5">
       <Label>{label}</Label>
       {children}
     </div>
@@ -264,11 +180,73 @@ function DisplayNameField({ node, readOnly }: { node: GraphNode; readOnly: boole
 function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
-  const models = useEditorModelsQuery();
   const [advanced, setAdvanced] = useState(false);
   const [pinging, setPinging] = useState(false);
   const provider = String(node.data.provider ?? 'ollama');
   const model = String(node.data.model ?? '');
+  const credentialId = String(node.data.credentialId ?? '') || undefined;
+  const catalogProvider = isCloudCatalogProvider(provider);
+  const matchingCredentials = (credentials.data?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, provider),
+  );
+  const kindCredentials = (credentials.data?.items ?? []).filter((item) => item.kind === provider);
+  const ollamaModels = useRuntimeModelsQuery({ enabled: provider === 'ollama' });
+  const catalogModels = useRuntimeModelsQuery({
+    provider: provider as LlmProvider,
+    credentialId,
+    enabled: catalogProvider && Boolean(credentialId),
+  });
+
+  const modelOptions = useMemo(() => {
+    const items =
+      provider === 'ollama'
+        ? (ollamaModels.data?.items ?? [])
+        : catalogProvider
+          ? (catalogModels.data?.items ?? [])
+          : [];
+    return items.map((item) => item.name).filter((name) => !isEmbeddingModelName(name));
+  }, [catalogModels.data?.items, catalogProvider, ollamaModels.data?.items, provider]);
+  const modelsLoading =
+    provider === 'ollama'
+      ? ollamaModels.isPending || ollamaModels.isFetching
+      : catalogProvider
+        ? catalogModels.isPending || catalogModels.isFetching
+        : false;
+  const modelLocked = catalogProvider && !credentialId;
+
+  useEffect(() => {
+    if (readOnly || modelLocked || modelsLoading) return;
+    if (modelOptions.length === 0) {
+      if (model) editorUpdateNodeData(node.id, { model: '' });
+      return;
+    }
+    if (!modelOptions.includes(model)) {
+      editorUpdateNodeData(node.id, { model: modelOptions[0] });
+    }
+  }, [model, modelLocked, modelOptions, modelsLoading, node.id, readOnly]);
+  const catalogFailed =
+    catalogProvider &&
+    Boolean(credentialId) &&
+    !catalogModels.isFetching &&
+    !catalogModels.isPending &&
+    (catalogModels.data?.items.length ?? 0) === 0;
+
+  function setProvider(next: string) {
+    const patch: Record<string, unknown> = { provider: next };
+    if (next !== provider) {
+      patch.model = '';
+    }
+    if (next === 'ollama') {
+      patch.credentialId = undefined;
+    } else if (isCloudCatalogProvider(next)) {
+      const current = matchingCredentials.find((item) => item.id === credentialId);
+      const nextKind = (credentials.data?.items ?? []).filter((item) => item.kind === next);
+      if (!current || !credentialMatchesProvider(current.kind, next)) {
+        patch.credentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
+      }
+    }
+    editorUpdateNodeData(node.id, patch);
+  }
 
   async function ping() {
     setPinging(true);
@@ -277,7 +255,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         provider,
         model,
         baseUrl: String(node.data.baseUrl ?? '') || undefined,
-        credentialId: String(node.data.credentialId ?? '') || undefined,
+        credentialId,
       });
       notify({
         titleKey: result.messageKey ?? (result.ok ? 'network.inspector.llm.pingOk' : 'network.inspector.llm.pingFail'),
@@ -288,68 +266,85 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     }
   }
 
-  return (
-    <>
-      <Field label={t('network.inspector.llm.provider')}>
+  const credentialField =
+    providerNeedsCredential(provider) ? (
+      <Field label={t('network.inspector.llm.credential')}>
         <Select
-          value={provider}
+          value={credentialId ?? 'none'}
           disabled={readOnly}
-          onValueChange={(value) => editorUpdateNodeData(node.id, { provider: value })}
+          onValueChange={(value) =>
+            editorUpdateNodeData(node.id, {
+              credentialId: value === 'none' ? undefined : value,
+              ...(catalogProvider ? { model: '' } : {}),
+            })
+          }
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ollama">Ollama</SelectItem>
-            <SelectItem value="xai">xAI</SelectItem>
-            <SelectItem value="openai_compat">{t('network.inspector.llm.openaiCompat')}</SelectItem>
+            <SelectItem value="none">{t('network.inspector.llm.credentialEmpty')}</SelectItem>
+            {matchingCredentials.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {catalogProvider && kindCredentials.length === 0 ? (
+          <p className="text-xs text-destructive">
+            {t('network.inspector.llm.noCredentials')}{' '}
+            <Link to="/settings#credentials" className="underline">
+              {t('nav.settings')}
+            </Link>
+          </p>
+        ) : catalogProvider ? (
+          <p className="text-xs text-muted-foreground">{t('network.inspector.llm.credentialHint')}</p>
+        ) : null}
+      </Field>
+    ) : null;
+
+  return (
+    <>
+      <Field label={t('network.inspector.llm.provider')}>
+        <Select value={provider} disabled={readOnly} onValueChange={setProvider}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LLM_PROVIDERS.map((id) => (
+              <SelectItem key={id} value={id}>
+                {t(`providers.${id}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </Field>
+      {catalogProvider ? credentialField : null}
       <Field label={t('network.inspector.llm.model')}>
         <ModelCombobox
-          value={model}
-          options={(models.data?.items ?? []).map((item) => item.name)}
-          disabled={readOnly}
+          value={modelLocked ? '' : model}
+          options={modelOptions}
+          disabled={readOnly || modelLocked}
+          restrictToOptions
+          placeholder={
+            modelLocked ? t('network.inspector.llm.pickCredentialFirst') : t('network.inspector.llm.model')
+          }
+          noModelsLabel={t('network.inspector.llm.noModels')}
           onChange={(value) => editorUpdateNodeData(node.id, { model: value })}
         />
+        {catalogFailed ? (
+          <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
+        ) : null}
       </Field>
-      {provider !== 'ollama' ? (
-        <Field label={t('network.inspector.llm.credential')}>
-          <Select
-            value={String(node.data.credentialId ?? 'none')}
-            disabled={readOnly}
-            onValueChange={(value) =>
-              editorUpdateNodeData(node.id, { credentialId: value === 'none' ? undefined : value })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t('network.inspector.llm.credentialEmpty')}</SelectItem>
-              {(credentials.data?.items ?? [])
-                .filter((item) => item.kind === provider || item.kind === 'token')
-                .map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      ) : null}
-      {provider === 'openai_compat' ? (
-        <Field label={t('network.inspector.llm.baseUrl')}>
-          <Input
-            value={String(node.data.baseUrl ?? '')}
-            disabled={readOnly}
-            onChange={(event) => editorUpdateNodeData(node.id, { baseUrl: event.target.value })}
-          />
-        </Field>
-      ) : null}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-        <Button type="button" size="sm" variant="outline" disabled={pinging || !model} onClick={() => void ping()}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pinging || !model || modelLocked}
+          onClick={() => void ping()}
+        >
           {t('network.inspector.llm.ping')}
         </Button>
         <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setAdvanced((v) => !v)}>
@@ -411,7 +406,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   const credentials = useEditorCredentialsQuery();
   const mcp = useMcpServersQuery();
   const kind = String(node.data.kind ?? 'datetime');
-  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'mcp'] as const;
+  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access', 'mcp'] as const;
   const enabledServers = (mcp.data?.items ?? []).filter((item) => item.enabled);
 
   return (
@@ -475,6 +470,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
           </Select>
         </Field>
       ) : null}
+      {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
       {kind === 'mcp' ? (
         <>
           <Field label={t('network.inspector.tool.mcpServer')}>
@@ -508,11 +504,116 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   );
 }
 
+function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
+  const allowWrite = node.data.allowWrite !== false;
+  const allowDelete = node.data.allowDelete !== false;
+
+  function applyPath(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed) return;
+    editorUpdateNodeData(node.id, { rootPath: trimmed });
+    if (isForbiddenDataRoot(trimmed)) {
+      notify({ titleKey: 'network.validation.fileAccessRoot', variant: 'error' });
+    }
+  }
+
+  async function pick() {
+    setPicking(true);
+    try {
+      const path = await pickFolderPath();
+      if (path) applyPath(path);
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  return (
+    <>
+      <Field label={t('network.inspector.tool.rootPath')}>
+        <div className="flex gap-2">
+          <Input
+            value={String(node.data.rootPath ?? '')}
+            disabled={readOnly}
+            spellCheck={false}
+            autoComplete="off"
+            title={String(node.data.rootPath ?? '')}
+            className="min-w-0 font-mono text-xs"
+            onChange={(event) => editorUpdateNodeData(node.id, { rootPath: event.target.value })}
+          />
+          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} onClick={() => void pick()}>
+            {t('network.inspector.tool.pickRoot')}
+          </Button>
+        </div>
+      </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.tool.fileAccessHint')}</p>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={allowWrite}
+          disabled={readOnly}
+          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowWrite: value === true })}
+        />
+        {t('network.inspector.tool.allowWrite')}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={allowDelete}
+          disabled={readOnly}
+          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowDelete: value === true })}
+        />
+        {t('network.inspector.tool.allowDelete')}
+      </label>
+    </>
+  );
+}
+
 function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const document = useNetworkEditor((state) => state.document);
+  const credentials = useEditorCredentialsQuery();
   const [reindexing, setReindexing] = useState(false);
   const [picking, setPicking] = useState(false);
+  const embedProvider = (String(node.data.embeddingProvider ?? 'ollama') || 'ollama') as EmbeddingProvider;
+  const embedModel = String(node.data.embeddingModel ?? '');
+  const embedCredentialId = String(node.data.embeddingCredentialId ?? '') || undefined;
+  const embedNeedsCred = embeddingNeedsCredential(embedProvider);
+  const ollamaModels = useRuntimeModelsQuery({ enabled: embedProvider === 'ollama' });
+  const embedCatalog = useRuntimeModelsQuery({
+    provider: embedProvider as LlmProvider,
+    credentialId: embedCredentialId,
+    enabled: embedNeedsCred && Boolean(embedCredentialId),
+  });
+  const embedOptions = useMemo(() => {
+    const items = embedProvider === 'ollama' ? (ollamaModels.data?.items ?? []) : (embedCatalog.data?.items ?? []);
+    return items.map((item) => item.name).filter((name) => isEmbeddingModelName(name));
+  }, [embedCatalog.data?.items, embedProvider, ollamaModels.data?.items]);
+  const embedLoading =
+    embedProvider === 'ollama'
+      ? ollamaModels.isPending || ollamaModels.isFetching
+      : embedCatalog.isPending || embedCatalog.isFetching;
+  const embedLocked = embedNeedsCred && !embedCredentialId;
+  const embedFailed =
+    embedNeedsCred &&
+    Boolean(embedCredentialId) &&
+    !embedCatalog.isFetching &&
+    !embedCatalog.isPending &&
+    embedOptions.length === 0;
+  const embedKindCredentials = (credentials.data?.items ?? []).filter((item) => item.kind === embedProvider);
+  const embedCredentials = (credentials.data?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, embedProvider),
+  );
+
+  useEffect(() => {
+    if (readOnly || embedLocked || embedLoading) return;
+    if (embedOptions.length === 0) {
+      if (embedModel) editorUpdateNodeData(node.id, { embeddingModel: '' });
+      return;
+    }
+    if (!embedOptions.includes(embedModel)) {
+      editorUpdateNodeData(node.id, { embeddingModel: embedOptions[0] });
+    }
+  }, [embedLoading, embedLocked, embedModel, embedOptions, node.id, readOnly]);
 
   function applyPath(path: string) {
     const trimmed = path.trim();
@@ -549,6 +650,92 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
 
   return (
     <>
+      <Field label={t('network.inspector.knowledge.embedProvider')}>
+        <Select
+          value={embedProvider || 'ollama'}
+          disabled={readOnly}
+          onValueChange={(value) => {
+            const next = value as EmbeddingProvider;
+            const patch: Record<string, unknown> = {
+              embeddingProvider: next,
+              embeddingModel: '',
+            };
+            if (!embeddingNeedsCredential(next)) {
+              patch.embeddingCredentialId = undefined;
+            } else {
+              const nextKind = (credentials.data?.items ?? []).filter((item) => item.kind === next);
+              const current = (credentials.data?.items ?? []).find((item) => item.id === embedCredentialId);
+              if (!current || !credentialMatchesProvider(current.kind, next)) {
+                patch.embeddingCredentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
+              }
+            }
+            editorUpdateNodeData(node.id, patch);
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {EMBEDDING_PROVIDERS.map((id) => (
+              <SelectItem key={id} value={id}>
+                {t(`providers.${id}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      {embedNeedsCred ? (
+        <Field label={t('network.inspector.llm.credential')}>
+          <Select
+            value={embedCredentialId ?? 'none'}
+            disabled={readOnly}
+            onValueChange={(value) =>
+              editorUpdateNodeData(node.id, {
+                embeddingCredentialId: value === 'none' ? undefined : value,
+                embeddingModel: '',
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t('network.inspector.llm.credentialEmpty')}</SelectItem>
+              {embedCredentials.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {embedKindCredentials.length === 0 ? (
+            <p className="text-xs text-destructive">
+              {t('network.inspector.llm.noCredentials')}{' '}
+              <Link to="/settings#credentials" className="underline">
+                {t('nav.settings')}
+              </Link>
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t('network.inspector.llm.credentialHint')}</p>
+          )}
+        </Field>
+      ) : null}
+      <Field label={t('network.inspector.knowledge.embedModel')}>
+        <ModelCombobox
+          value={embedLocked ? '' : embedModel}
+          options={embedOptions}
+          disabled={readOnly || embedLocked}
+          restrictToOptions
+          placeholder={
+            embedLocked ? t('network.inspector.llm.pickCredentialFirst') : t('network.inspector.knowledge.embedModel')
+          }
+          noModelsLabel={t('network.inspector.llm.noModels')}
+          onChange={(value) => editorUpdateNodeData(node.id, { embeddingModel: value })}
+        />
+        {embedFailed ? (
+          <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
+        ) : null}
+      </Field>
       <Field label={t('network.inspector.knowledge.path')}>
         <div className="flex gap-2">
           <Input
@@ -586,6 +773,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
           }
         />
       </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.reindexHint')}</p>
       <Button type="button" size="sm" variant="outline" disabled={!document.id || reindexing} onClick={() => void reindex()}>
         {t('network.inspector.knowledge.reindex')}
       </Button>

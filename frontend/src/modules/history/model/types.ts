@@ -1,6 +1,6 @@
 export type RunOutcome = 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timeout';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type LlmProvider = 'ollama' | 'xai' | 'openai_compat';
+export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
 export type ErrorClass = 'timeout' | 'tool_error' | 'llm_error' | 'validation' | 'service' | 'unknown';
 export type RangeKey = 'today' | '7d' | '30d' | 'custom';
 export type HistoryTab = 'history' | 'model' | 'network';

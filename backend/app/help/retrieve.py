@@ -2,11 +2,24 @@ from __future__ import annotations
 
 import math
 
-from app.db.help_rag import list_all_chunks
+from app.db.help_rag import HelpRagChunk, list_all_chunks
 from app.help.index import SCORE_MIN, TOP_K
+from app.help.locales import resolve_help_locale
 from app.help.models import HelpSource
 from app.help.status import get_settings_merged
 from app.runtime.models import EmbedRequest
+
+
+def _chunks_for_locale(chunks: list[HelpRagChunk], locale: str | None) -> list[HelpRagChunk]:
+    wanted = resolve_help_locale(locale)
+    unscoped = [chunk for chunk in chunks if not chunk.locale]
+    localized = [chunk for chunk in chunks if chunk.locale == wanted]
+    if not localized and wanted != "de":
+        localized = [chunk for chunk in chunks if chunk.locale == "de"]
+    if not localized and wanted != "en":
+        localized = [chunk for chunk in chunks if chunk.locale == "en"]
+    pooled = localized + unscoped
+    return pooled if pooled else chunks
 
 
 def cosine(a: list[float], b: list[float]) -> float:
@@ -24,17 +37,21 @@ def cosine(a: list[float], b: list[float]) -> float:
     return dot / (math.sqrt(na) * math.sqrt(nb))
 
 
-def retrieve_scored(query: str) -> list[tuple[float, HelpSource]]:
-    chunks = list_all_chunks()
+def retrieve_scored(query: str, locale: str | None = None) -> list[tuple[float, HelpSource]]:
+    chunks = _chunks_for_locale(list_all_chunks(), locale)
     if not chunks:
         return []
     settings = get_settings_merged()
     help_chat = settings.help_chat
     provider = help_chat.embedding_provider or "ollama"
     model = help_chat.embedding_model.strip() or "nomic-embed-text"
-    if provider == "xai":
+    if provider == "xai" or provider == "anthropic":
         return []
-    credential_id = help_chat.credential_id if provider == "openai_compat" else None
+    credential_id = None
+    if provider != "ollama":
+        credential_id = help_chat.embedding_credential_id or (
+            help_chat.credential_id if help_chat.provider == provider else None
+        )
     from app.runtime.embeddings import embed
 
     try:
@@ -70,5 +87,5 @@ def retrieve_scored(query: str) -> list[tuple[float, HelpSource]]:
     return scored[:TOP_K]
 
 
-def retrieve(query: str) -> list[HelpSource]:
-    return [source for _score, source in retrieve_scored(query)]
+def retrieve(query: str, locale: str | None = None) -> list[HelpSource]:
+    return [source for _score, source in retrieve_scored(query, locale)]

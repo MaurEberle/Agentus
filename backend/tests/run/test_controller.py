@@ -55,6 +55,29 @@ def test_start_succeeds_and_teardown_unloads(client: TestClient) -> None:
     assert get_help_degraded() is False
 
 
+def test_run_persists_logs_steps_and_chat(client: TestClient) -> None:
+    _save_mini(startMessage="go")
+    response = client.post("/api/run/start")
+    assert response.status_code == 200
+    run_id = response.json()["runId"]
+    thread = get_controller().thread
+    if thread:
+        thread.join(timeout=5)
+    time.sleep(0.05)
+    logs = client.get(f"/api/runs/{run_id}/logs").json()["items"]
+    messages = [row["message"] for row in logs]
+    assert "run.start" in messages
+    assert "run.chat.user" in messages
+    assert "run.llm.start" in messages
+    assert "run.agent.done" in messages
+    assert "run.succeeded" in messages
+    assert any(row.get("nodeId") for row in logs)
+    detail = client.get(f"/api/runs/{run_id}").json()
+    assert detail["steps"]
+    assert detail["calls"]
+    assert detail["chat"]
+
+
 def test_start_busy(client: TestClient) -> None:
     _save_mini(requireInput=True)
     first = client.post("/api/run/start")
@@ -64,6 +87,17 @@ def test_start_busy(client: TestClient) -> None:
     assert second.json()["messageKey"] == "run.busy"
     assert is_run_busy() is True
     client.post("/api/run/stop")
+
+
+def test_finish_does_not_overwrite_cancelled(client: TestClient) -> None:
+    _save_mini(requireInput=True)
+    client.post("/api/run/start")
+    run_id = get_controller().run_id
+    client.post("/api/run/stop")
+    get_controller().finish("succeeded")
+    listed = client.get("/api/runs").json()["items"]
+    assert listed[0]["id"] == run_id
+    assert listed[0]["outcome"] == "cancelled"
 
 
 def test_stop_while_waiting(client: TestClient) -> None:
@@ -76,6 +110,30 @@ def test_stop_while_waiting(client: TestClient) -> None:
     listed = client.get("/api/runs").json()["items"]
     assert listed[0]["outcome"] == "cancelled"
     assert get_help_degraded() is False
+
+
+def test_chat_persisted_while_running(client: TestClient) -> None:
+    _save_mini(requireInput=True)
+    start = client.post("/api/run/start")
+    assert start.status_code == 200
+    run_id = get_controller().run_id
+    assert run_id
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        snap = client.get("/api/run").json()
+        if snap and snap.get("serviceStatus") == "running":
+            break
+        time.sleep(0.05)
+    chat = client.post("/api/run/chat", json={"text": "hello from user"})
+    assert chat.status_code == 204
+    stored = client.get(f"/api/runs/{run_id}").json()
+    assert isinstance(stored.get("chat"), list)
+    assert stored["chat"][0]["role"] == "user"
+    assert "hello from user" in stored["chat"][0]["content"]
+    live = client.get("/api/run").json()
+    messages = (live.get("chat") or {}).get("messages") or []
+    assert messages and messages[0]["role"] == "user"
+    client.post("/api/run/stop")
 
 
 def test_chat_without_chat_input(client: TestClient) -> None:

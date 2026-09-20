@@ -61,7 +61,7 @@ def help_send(body: HelpSendBody):
         raise AppError("help.empty", status_code=400)
     if not get_status().configured:
         raise AppError("help.unconfigured", status_code=400)
-    return sse_response(send_stream(stripped))
+    return sse_response(send_stream(stripped, body.locale))
 
 
 @router.post("/help-chat/abort", status_code=204)
