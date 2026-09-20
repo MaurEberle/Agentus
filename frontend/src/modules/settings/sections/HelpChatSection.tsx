@@ -275,6 +275,17 @@ export function HelpChatSection() {
           {catalogFailed ? (
             <p className="text-xs text-destructive">{t('settings.helpChat.modelsLoadError')}</p>
           ) : null}
+          {help.provider === 'ollama' ? (
+            <ModelField
+              id="fallback-model"
+              label={t('settings.helpChat.fallback')}
+              value={help.fallbackModel ?? ''}
+              models={runtimeModels.filter((model) => !isEmbeddingModelName(model.name))}
+              useSelect={hasRuntimeModels}
+              emptyLabel={emptyLabel}
+              onChange={(value) => setHelpChat({ fallbackModel: value || undefined })}
+            />
+          ) : null}
           {help.provider === 'openai_compat' ? (
             <div className="grid gap-1.5">
               <Label>{t('settings.helpChat.credential')}</Label>
@@ -371,15 +382,6 @@ export function HelpChatSection() {
               )}
             </div>
           ) : null}
-          <ModelField
-            id="fallback-model"
-            label={t('settings.helpChat.fallback')}
-            value={help.fallbackModel ?? ''}
-            models={runtimeModels}
-            useSelect={help.provider === 'ollama' && hasRuntimeModels}
-            emptyLabel={emptyLabel}
-            onChange={(value) => setHelpChat({ fallbackModel: value || undefined })}
-          />
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={() => void save()} disabled={!dirty || busy}>
               {t('settings.common.save')}
