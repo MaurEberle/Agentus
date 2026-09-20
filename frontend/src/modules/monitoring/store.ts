@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { notify } from '@/lib/notifications';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
+import { loadLatestHistoryRun } from '@/modules/monitoring/model/archive';
 import {
   applyChatDelta,
   hasChatInput,
@@ -127,6 +128,31 @@ function resetForRun(run: RunSnapshot | null): Partial<MonitoringState> {
   };
 }
 
+export async function hydrateLastRun() {
+  const busy = () => {
+    const status = useAppStore.getState().serviceStatus;
+    return status === 'running' || status === 'starting';
+  };
+  if (busy()) return;
+  try {
+    const loaded = await loadLatestHistoryRun();
+    if (!loaded || busy()) return;
+    const now = useMonitoringStore.getState();
+    if (now.run && !now.run.archived) return;
+    if (now.run?.archived && now.run.runId === loaded.run.runId && now.logs.length > 0) return;
+    useMonitoringStore.setState({
+      run: loaded.run,
+      logs: loaded.logs,
+      lastErrorMessage: loaded.run.errorMessage ?? now.lastErrorMessage,
+      ...resetForRun(loaded.run),
+      chatMessages: loaded.run.chat?.messages ?? [],
+      chatGenerating: false,
+    });
+  } catch {
+    /* keep current snapshot */
+  }
+}
+
 export function hydrateMonitoring(snapshot: {
   serviceStatus: ServiceStatus;
   run: RunSnapshot | null;
@@ -139,6 +165,7 @@ export function hydrateMonitoring(snapshot: {
   useMonitoringStore.setState({
     run: snapshot.run,
     resources: snapshot.resources,
+    logs: [],
     chatMessages: snapshot.run?.chat?.messages ?? [],
     chatGenerating: Boolean(snapshot.run?.chat?.generating),
     adapterErrorKey: null,
@@ -164,13 +191,14 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       lastErrorMessage: evt.errorMessage ?? (evt.serviceStatus === 'error' ? current.lastErrorMessage : null),
       adapterErrorKey: evt.serviceStatus === 'disconnected' ? 'monitoring.empty.disconnectedTitle' : null,
       run:
-        current.run && evt.serviceStatus !== 'stopped'
-          ? { ...current.run, serviceStatus: evt.serviceStatus, errorMessage: evt.errorMessage }
-          : evt.serviceStatus === 'stopped'
-            ? null
+        current.run && evt.serviceStatus === 'stopped'
+          ? { ...current.run, archived: true, serviceStatus: 'stopped' }
+          : current.run
+            ? { ...current.run, serviceStatus: evt.serviceStatus, errorMessage: evt.errorMessage }
             : current.run,
       resources: evt.serviceStatus === 'stopped' ? null : current.resources,
     });
+    if (evt.serviceStatus === 'stopped') void hydrateLastRun();
     return;
   }
 
@@ -180,6 +208,7 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
   }
 
   if (evt.type === 'log') {
+    if (current.run?.archived && evt.log.runId && evt.log.runId !== current.run.runId) return;
     if (current.logs.some((item) => item.id === evt.log.id)) return;
     const masked = maskLog(evt.log);
     const log: LogEvent = { ...evt.log, ...masked };
@@ -193,6 +222,7 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
   }
 
   if (evt.type === 'chat') {
+    if (current.run?.archived && evt.runId && evt.runId !== current.run.runId) return;
     let messages = current.chatMessages;
     let generating = current.chatGenerating;
     if (evt.message) {
@@ -213,7 +243,13 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
 
   if (evt.type === 'run') {
     const prevId = current.run?.runId;
-    const merged = mergeRunSnapshot(current.run, evt.run);
+    const status = evt.run.serviceStatus ?? app.serviceStatus;
+    const fromArchive =
+      Boolean(current.run?.archived && evt.run.runId && evt.run.runId !== current.run.runId);
+    const merged = mergeRunSnapshot(fromArchive ? null : current.run, {
+      ...evt.run,
+      archived: status === 'stopped',
+    });
     if (!merged) return;
     const isNew = Boolean(merged.runId && merged.runId !== prevId);
     app.setRunId(merged.runId);

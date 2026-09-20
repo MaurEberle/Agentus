@@ -75,6 +75,9 @@ export type RunSnapshot = {
   networkId: string;
   networkName: string;
   startedAt: string;
+  endedAt?: string;
+  outcome?: 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timeout';
+  archived?: boolean;
   serviceStatus: ServiceStatus;
   errorMessage?: string;
   graph: RunGraph;

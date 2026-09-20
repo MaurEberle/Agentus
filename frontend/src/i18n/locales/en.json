@@ -853,6 +853,7 @@
       "stoppedBody": "Start the service from the header.",
       "stoppedActive": "Active network: {{name}}",
       "stoppedNoNetwork": "No network in quick select.",
+      "lastRunBody": "No active run. Showing the last saved run.",
       "disconnectedTitle": "Disconnected from the service",
       "disconnectedBody": "Reconnecting. Last known values are dimmed.",
       "startingTitle": "Service is starting",
@@ -861,6 +862,7 @@
       "errorBody": "{{message}}"
     },
     "header": {
+      "lastRun": "Last run",
       "runId": "Run ID",
       "started": "Started",
       "duration": "Duration",

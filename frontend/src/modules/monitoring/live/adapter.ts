@@ -3,7 +3,7 @@ import { createMockHandle } from '@/modules/monitoring/live/mock';
 import { createSseHandle } from '@/modules/monitoring/live/sse';
 import { parseMockScenario } from '@/modules/monitoring/model/graph';
 import type { MonitoringHandle } from '@/modules/monitoring/model/types';
-import { applyMonitoringEvent, hydrateMonitoring, useMonitoringStore } from '@/modules/monitoring/store';
+import { applyMonitoringEvent, hydrateLastRun, hydrateMonitoring, useMonitoringStore } from '@/modules/monitoring/store';
 
 let handle: MonitoringHandle | null = null;
 
@@ -20,6 +20,7 @@ export function useLiveMonitoring(mockQuery: string | null) {
     handle = scenario ? createMockHandle() : createSseHandle();
     if (scenario) handle.setMockScenario?.(scenario);
     hydrateMonitoring(handle.getSnapshot());
+    if (!scenario && !handle.getSnapshot().run) void hydrateLastRun();
     const stop = handle.subscribe(applyMonitoringEvent);
     return () => {
       stop();

@@ -853,6 +853,7 @@
       "stoppedBody": "Inicia el servicio desde la cabecera.",
       "stoppedActive": "Red activa: {{name}}",
       "stoppedNoNetwork": "Ninguna red en la selección rápida.",
+      "lastRunBody": "No hay una ejecución activa. Se muestra la última ejecución guardada.",
       "disconnectedTitle": "Desconectado del servicio",
       "disconnectedBody": "Reconectando. Los últimos valores se muestran atenuados.",
       "startingTitle": "El servicio está arrancando",
@@ -861,6 +862,7 @@
       "errorBody": "{{message}}"
     },
     "header": {
+      "lastRun": "Última ejecución",
       "runId": "ID de ejecución",
       "started": "Inicio",
       "duration": "Duración",

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { outcomeBadgeVariant } from '@/modules/history/model/format';
 import { formatDateTime, formatDuration, serviceBadgeVariant, shortId } from '@/modules/monitoring/model/format';
 import { activeLlms, activeNonLlm } from '@/modules/monitoring/model/graph';
 import type { RunSnapshot } from '@/modules/monitoring/model/types';
@@ -32,7 +33,9 @@ export function RunHeader({
   const { t, i18n } = useTranslation();
   const now = useNow(1000);
   const [copied, setCopied] = useState(false);
-  const duration = formatDuration(now - Date.parse(run.startedAt));
+  const startMs = Date.parse(run.startedAt);
+  const endMs = run.endedAt ? Date.parse(run.endedAt) : run.archived ? startMs : now;
+  const duration = formatDuration(Math.max(0, endMs - startMs));
   const llms = activeLlms(run.nodesRuntime);
   const others = activeNonLlm(run.graph, run.nodesRuntime);
   const runningCount = Object.values(run.nodesRuntime).filter((node) => node.status === 'running').length;
@@ -62,7 +65,16 @@ export function RunHeader({
               {t('monitoring.header.started')}: {formatDateTime(run.startedAt, i18n.language)}
             </p>
           </div>
-          <Badge variant={serviceBadgeVariant(serviceStatus)}>{t(`status.${serviceStatus}`)}</Badge>
+          {run.archived ? (
+            <>
+              <Badge variant="secondary">{t('monitoring.header.lastRun')}</Badge>
+              {run.outcome ? (
+                <Badge variant={outcomeBadgeVariant(run.outcome)}>{t(`history.outcome.${run.outcome}`)}</Badge>
+              ) : null}
+            </>
+          ) : (
+            <Badge variant={serviceBadgeVariant(serviceStatus)}>{t(`status.${serviceStatus}`)}</Badge>
+          )}
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>{t('monitoring.header.runId')}</span>
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">{shortId(run.runId)}</code>

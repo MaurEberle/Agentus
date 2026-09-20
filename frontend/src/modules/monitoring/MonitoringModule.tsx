@@ -38,7 +38,7 @@ export function MonitoringModule() {
   const clearLogFilter = useMonitoringStore((state) => state.clearLogFilter);
 
   const chat = hasChatInput(run?.graph);
-  const stopped = serviceStatus === 'stopped' || (!run && serviceStatus !== 'disconnected' && serviceStatus !== 'error');
+  const empty = !run;
   const dimmed = serviceStatus === 'disconnected' || serviceStatus === 'starting' || serviceStatus === 'stopping';
 
   useEffect(() => {
@@ -65,7 +65,13 @@ export function MonitoringModule() {
         errorMessage={lastErrorMessage}
         adapterErrorKey={adapterErrorKey}
       />
-      {stopped ? (
+      {run?.archived ? (
+        <Alert>
+          <AlertTitle>{t('monitoring.header.lastRun')}</AlertTitle>
+          <AlertDescription>{t('monitoring.empty.lastRunBody')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {empty ? (
         <Card className={moduleCardClass}>
           <CardContent className="space-y-2 overflow-y-auto p-6">
             <p className="font-medium">{t('monitoring.empty.stoppedTitle')}</p>
@@ -82,7 +88,7 @@ export function MonitoringModule() {
       ) : run ? (
         <>
           <RunHeader run={run} serviceStatus={serviceStatus} />
-          <ResourcesPanel resources={resources} dimmed={dimmed} />
+          {resources || !run.archived ? <ResourcesPanel resources={resources} dimmed={dimmed} /> : null}
           <div className={cn('grid w-full gap-4 md:grid-cols-2 md:items-stretch', modulePaneHeightClass)}>
             <div className="order-2 h-full min-h-0 md:order-1">
               <MiniGraph run={run} dimmed={dimmed} />

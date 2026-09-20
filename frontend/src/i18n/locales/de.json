@@ -853,6 +853,7 @@
       "stoppedBody": "Starte den Dienst über die Kopfzeile.",
       "stoppedActive": "Aktives Netz: {{name}}",
       "stoppedNoNetwork": "Kein Netz in der Schnellwahl.",
+      "lastRunBody": "Kein aktiver Lauf. Angezeigt wird der letzte gespeicherte Lauf.",
       "disconnectedTitle": "Getrennt vom Dienst",
       "disconnectedBody": "Die Verbindung wird erneut aufgebaut. Letzte Werte sind ausgegraut.",
       "startingTitle": "Dienst startet",
@@ -861,6 +862,7 @@
       "errorBody": "{{message}}"
     },
     "header": {
+      "lastRun": "Letzter Lauf",
       "runId": "Lauf-ID",
       "started": "Start",
       "duration": "Dauer",
