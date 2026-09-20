@@ -5,6 +5,7 @@ from typing import Any
 from app.common.secrets import mask_obj
 from app.tools.calculator_tool import run as run_calculator
 from app.tools.datetime_tool import run as run_datetime
+from app.tools.file_access_tool import run as run_file_access
 from app.tools.http_tool import run as run_http
 from app.tools.models import ExecuteResult
 from app.tools.web_search_tool import run as run_web_search
@@ -26,6 +27,8 @@ def execute_first_party(
             result = run_datetime(config, args)
         elif kind == "calculator":
             result = run_calculator(config, args)
+        elif kind == "file_access":
+            result = run_file_access(config, args)
         else:
             return ExecuteResult(ok=False, error_key="tools.unknownKind")
     except (KeyboardInterrupt, SystemExit):

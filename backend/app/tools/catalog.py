@@ -57,11 +57,42 @@ CALCULATOR_SCHEMA: dict[str, Any] = {
     },
 }
 
+FILE_ACCESS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["action", "path"],
+    "properties": {
+        "action": {
+            "type": "string",
+            "enum": ["list", "stat", "read", "write", "mkdir", "delete"],
+            "description": "Filesystem operation under the configured root",
+        },
+        "path": {
+            "type": "string",
+            "description": "Path relative to the tool root, or '.' for the root itself",
+        },
+        "content": {
+            "type": "string",
+            "description": "File contents for write (utf-8 text or base64)",
+        },
+        "encoding": {
+            "type": "string",
+            "enum": ["utf-8", "base64"],
+            "description": "utf-8 (default) or base64 for binary",
+        },
+        "recursive": {
+            "type": "boolean",
+            "description": "Create missing parent directories for mkdir",
+        },
+    },
+}
+
 _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     "http": "Fetch an http or https URL and return status, headers, and body.",
     "web_search": "Search the web via Brave Search and return titles, URLs, and snippets.",
     "datetime": "Return the current time in an IANA timezone (default UTC).",
     "calculator": "Evaluate a basic arithmetic expression and return the number.",
+    "file_access": "Read and write files and directories under the configured root. Actions: list, stat, read, write, mkdir, delete.",
 }
 
 _mcp_provider: Callable[[], list[CatalogGroup]] | None = None
@@ -115,6 +146,15 @@ def list_first_party_tools() -> list[CatalogTool]:
             credential_kind=None,
             title_key="tools.kind.calculator",
             description_key="tools.kind.calculator.desc",
+        ),
+        CatalogTool(
+            name="file_access",
+            kind="file_access",
+            description=_MODEL_DESCRIPTIONS["file_access"],
+            json_schema=FILE_ACCESS_SCHEMA,
+            credential_kind=None,
+            title_key="tools.kind.fileAccess",
+            description_key="tools.kind.fileAccess.desc",
         ),
     ]
 

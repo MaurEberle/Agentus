@@ -53,7 +53,7 @@ export type AgentNodeData = {
   systemPrompt?: string;
 };
 
-export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'mcp';
+export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'mcp';
 
 export type ToolNodeData = {
   displayName?: string;
@@ -63,6 +63,9 @@ export type ToolNodeData = {
   mcpToolNames?: string[];
   method?: string;
   url?: string;
+  rootPath?: string;
+  allowWrite?: boolean;
+  allowDelete?: boolean;
 };
 
 export type KnowledgeNodeData = {

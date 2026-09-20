@@ -141,6 +141,12 @@ function validateNode(
   if (node.type === 'tool') {
     const kind = asString(node.data.kind);
     if (!kind) issues.push({ nodeId: node.id, messageKey: 'network.validation.toolKind' });
+    if (kind === 'file_access') {
+      const root = asString(node.data.rootPath);
+      if (!root || isForbiddenDataRoot(root)) {
+        issues.push({ nodeId: node.id, messageKey: 'network.validation.fileAccessRoot' });
+      }
+    }
     if (kind === 'mcp') {
       const serverId = asString(node.data.mcpServerId);
       const server = options.mcpServers?.find((item) => item.id === serverId);

@@ -383,7 +383,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   const credentials = useEditorCredentialsQuery();
   const mcp = useMcpServersQuery();
   const kind = String(node.data.kind ?? 'datetime');
-  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'mcp'] as const;
+  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access', 'mcp'] as const;
   const enabledServers = (mcp.data?.items ?? []).filter((item) => item.enabled);
 
   return (
@@ -447,6 +447,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
           </Select>
         </Field>
       ) : null}
+      {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
       {kind === 'mcp' ? (
         <>
           <Field label={t('network.inspector.tool.mcpServer')}>
@@ -476,6 +477,70 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
           </Button>
         </>
       ) : null}
+    </>
+  );
+}
+
+function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
+  const allowWrite = node.data.allowWrite !== false;
+  const allowDelete = node.data.allowDelete !== false;
+
+  function applyPath(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed) return;
+    editorUpdateNodeData(node.id, { rootPath: trimmed });
+    if (isForbiddenDataRoot(trimmed)) {
+      notify({ titleKey: 'network.validation.fileAccessRoot', variant: 'error' });
+    }
+  }
+
+  async function pick() {
+    setPicking(true);
+    try {
+      const path = await pickFolderPath();
+      if (path) applyPath(path);
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  return (
+    <>
+      <Field label={t('network.inspector.tool.rootPath')}>
+        <div className="flex gap-2">
+          <Input
+            value={String(node.data.rootPath ?? '')}
+            disabled={readOnly}
+            spellCheck={false}
+            autoComplete="off"
+            title={String(node.data.rootPath ?? '')}
+            className="min-w-0 font-mono text-xs"
+            onChange={(event) => editorUpdateNodeData(node.id, { rootPath: event.target.value })}
+          />
+          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} onClick={() => void pick()}>
+            {t('network.inspector.tool.pickRoot')}
+          </Button>
+        </div>
+      </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.tool.fileAccessHint')}</p>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={allowWrite}
+          disabled={readOnly}
+          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowWrite: value === true })}
+        />
+        {t('network.inspector.tool.allowWrite')}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={allowDelete}
+          disabled={readOnly}
+          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowDelete: value === true })}
+        />
+        {t('network.inspector.tool.allowDelete')}
+      </label>
     </>
   );
 }

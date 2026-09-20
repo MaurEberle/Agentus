@@ -8,6 +8,7 @@ from app.common.types import NEEDS_CREDENTIAL, PROVIDERS
 from app.db.paths import RAG_DIR_NAME
 from app.run.graph_models import AgentNetworkDocument, GraphEdge, GraphNode
 from app.run.models import ValidationError
+from app.tools.file_access_tool import is_forbidden_root
 from app.tools.kinds import FIRST_PARTY_KINDS
 
 _OUT_HANDLES = {
@@ -160,6 +161,19 @@ def validate_document(
                     pass
             elif kind and kind not in FIRST_PARTY_KINDS:
                 errors.append(_err("graph.mcp.server", node.id))
+            if kind == "file_access":
+                root = str(node.data.get("rootPath") or "").strip()
+                if not root:
+                    errors.append(_err("graph.fileAccess.root", node.id))
+                else:
+                    from pathlib import Path
+
+                    try:
+                        root_path = Path(root).expanduser()
+                        if not root_path.is_absolute() or is_forbidden_root(root_path):
+                            errors.append(_err("graph.fileAccess.root", node.id))
+                    except (ValueError, OSError):
+                        errors.append(_err("graph.fileAccess.root", node.id))
         if node.type == "knowledge":
             path = str(node.data.get("sourcePath") or "")
             if not _path_ok(path, data_dir):

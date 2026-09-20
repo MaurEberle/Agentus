@@ -12,7 +12,7 @@ def test_list_catalog_groups_first_party_only() -> None:
     assert groups[0].id == "firstParty"
     names = [tool.name for tool in groups[0].tools]
     kinds = [tool.kind for tool in groups[0].tools]
-    assert names == ["http", "web_search", "datetime", "calculator"]
+    assert names == ["http", "web_search", "datetime", "calculator", "file_access"]
     assert names == kinds
 
 
@@ -36,5 +36,7 @@ def test_http_catalog_route() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["groups"][0]["id"] == "firstParty"
-    assert len(body["groups"][0]["tools"]) == 4
+    assert len(body["groups"][0]["tools"]) == 5
+    names = [tool["name"] for tool in body["groups"][0]["tools"]]
+    assert "file_access" in names
     assert "jsonSchema" in body["groups"][0]["tools"][0]
