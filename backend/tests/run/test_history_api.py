@@ -17,7 +17,16 @@ def test_list_limit(client: TestClient) -> None:
         )
     response = client.get("/api/runs?limit=5")
     assert response.status_code == 200
-    assert len(response.json()["items"]) <= 5
+    body = response.json()
+    assert len(body["items"]) <= 5
+    assert body["items"][0]["runId"] == body["items"][0]["id"]
+    assert isinstance(body["items"][0]["models"], list)
+
+
+def test_list_accepts_stats_limit(client: TestClient) -> None:
+    response = client.get("/api/runs?limit=500")
+    assert response.status_code == 200
+    assert "items" in response.json()
 
 
 def test_delete_running_forbidden(client: TestClient) -> None:

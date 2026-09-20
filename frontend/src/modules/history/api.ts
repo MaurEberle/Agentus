@@ -1,4 +1,5 @@
 import { apiFetch } from '@/api/client';
+import { normalizeRun, normalizeRunDetail } from '@/modules/history/model/normalize';
 import type { LlmCall, LogEvent, LogFilter, RunDetail, RunListFilter, RunSummary } from '@/modules/history/model/types';
 
 function queryString(filter: RunListFilter): string {
@@ -17,12 +18,14 @@ function queryString(filter: RunListFilter): string {
 }
 
 export async function listRuns(filter: RunListFilter = {}): Promise<{ items: RunSummary[]; total: number }> {
-  return apiFetch(`/runs${queryString(filter)}`);
+  const body = await apiFetch<{ items: RunSummary[]; total: number }>(`/runs${queryString(filter)}`);
+  return { items: (body.items ?? []).map(normalizeRun), total: body.total ?? 0 };
 }
 
 export async function getRun(runId: string): Promise<RunDetail | null> {
   try {
-    return await apiFetch<RunDetail>(`/runs/${encodeURIComponent(runId)}`);
+    const raw = await apiFetch<RunDetail>(`/runs/${encodeURIComponent(runId)}`);
+    return normalizeRunDetail(raw);
   } catch {
     return null;
   }

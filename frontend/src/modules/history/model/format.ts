@@ -42,7 +42,8 @@ export function formatTime(iso: string, locale: string): string {
   return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function shortId(id: string, keep = 8): string {
+export function shortId(id: string | undefined, keep = 8): string {
+  if (!id) return '—';
   return id.length <= keep ? id : id.slice(0, keep);
 }
 

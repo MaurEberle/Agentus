@@ -139,6 +139,13 @@ class RunController:
                 mcp.open_for(list(dict.fromkeys(server_ids)))
             run_id = str(uuid.uuid4())
             started = utc_now()
+            models: list[dict[str, str]] = []
+            seen_models: set[str] = set()
+            for agent in compiled.agents.values():
+                if not agent.llm.model or agent.llm.model in seen_models:
+                    continue
+                seen_models.add(agent.llm.model)
+                models.append({"provider": agent.llm.provider, "model": agent.llm.model})
             insert_run(
                 id=run_id,
                 network_id=row.id,
@@ -146,7 +153,7 @@ class RunController:
                 started_at=started,
                 outcome="running",
                 graph_snapshot=doc.model_dump(by_alias=True),
-                models=list({ag.llm.model for ag in compiled.agents.values() if ag.llm.model}),
+                models=models,
             )
             touch_network(row.id, last_used_at=started, last_run_id=run_id)
             snapshot = _build_snapshot(compiled, run_id, started, "running")

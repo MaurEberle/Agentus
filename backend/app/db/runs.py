@@ -132,7 +132,10 @@ def _run_filters(
         clauses.append(
             f"""
             (
-              EXISTS (SELECT 1 FROM json_each({alias}.models) AS j WHERE j.value = ?)
+              EXISTS (
+                SELECT 1 FROM json_each({alias}.models) AS j
+                WHERE j.value = ? OR json_extract(j.value, '$.model') = ?
+              )
               OR EXISTS (
                 SELECT 1 FROM llm_calls c
                 WHERE c.run_id = {alias}.id AND c.model = ?
@@ -140,7 +143,7 @@ def _run_filters(
             )
             """
         )
-        params.extend([model, model])
+        params.extend([model, model, model])
     if q:
         like = f"%{q}%"
         clauses.append(

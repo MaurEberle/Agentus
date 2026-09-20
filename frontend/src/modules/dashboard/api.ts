@@ -9,6 +9,7 @@ import {
 } from '@/modules/dashboard/model';
 import { listNetworkSummaries } from '@/modules/network/api';
 import { pingRuntime, useRuntimeModelsQuery, useStoresQuery } from '@/modules/settings/api';
+import { normalizeRun } from '@/modules/history/model/normalize';
 
 export { listNetworkSummaries };
 
@@ -17,7 +18,8 @@ export async function listRuns(filter: RunListFilter = {}): Promise<{ items: Run
   if (filter.limit != null) params.set('limit', String(filter.limit));
   if (filter.since) params.set('since', filter.since);
   const query = params.toString();
-  return apiFetch<{ items: RunSummary[]; total: number }>(`/runs${query ? `?${query}` : ''}`);
+  const body = await apiFetch<{ items: RunSummary[]; total: number }>(`/runs${query ? `?${query}` : ''}`);
+  return { items: (body.items ?? []).map(normalizeRun), total: body.total ?? 0 };
 }
 
 export function useNetworksQuery() {
