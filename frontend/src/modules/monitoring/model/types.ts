@@ -83,6 +83,11 @@ export type RunSnapshot = {
     currentNodeIds: string[];
     dag?: { completed: number; total: number; pendingNodeIds: string[] };
     stepError?: { nodeId: string; message: string };
+    tokens?: {
+      in?: number;
+      out?: number;
+      perSecond?: number;
+    };
   };
   chat?: { messages: ChatMessage[]; generating?: boolean };
 };

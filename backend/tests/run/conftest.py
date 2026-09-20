@@ -74,7 +74,7 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
         lambda *a, **k: [OllamaModel(name="llama3.2:1b", size_bytes=None)],
     )
     monkeypatch.setattr("app.runtime.ollama.unload", lambda *a, **k: unloads.append(a[0] if a else ""))
-    def _complete(req, should_abort=None):
+    def _complete(req, should_abort=None, on_progress=None):
         return CompletionResult(content="hi", model=req.model, finish_reason="stop")
 
     monkeypatch.setattr("app.runtime.completions.complete", _complete)

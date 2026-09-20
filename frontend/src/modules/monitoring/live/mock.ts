@@ -262,6 +262,11 @@ function buildRun(status: ServiceStatus, flavor: Flavor): RunSnapshot {
       currentNodeIds: wait ? ['chat-1'] : status === 'error' ? ['agent-1'] : ['llm-1', 'agent-1'],
       dag: flavor === 'nochat' ? { completed: 1, total: 4, pendingNodeIds: ['agent-1', 'tool-1', 'end-1'] } : undefined,
       stepError,
+      tokens: {
+        in: llmRuntime(flavor).tokens?.in,
+        out: llmRuntime(flavor).tokens?.out ?? 0,
+        perSecond: status === 'running' && !wait ? llmRuntime(flavor).tokens?.perSecond : undefined,
+      },
     },
     chat:
       flavor === 'nochat'
@@ -419,8 +424,17 @@ function tick() {
       },
     };
   }
-  engine.run = { ...engine.run, nodesRuntime: runtime };
-  emit({ type: 'run', run: { nodesRuntime: runtime, activity: engine.run.activity } });
+  const llmTokens = runtime['llm-1']?.tokens;
+  const activity = {
+    ...engine.run.activity,
+    tokens: {
+      in: llmTokens?.in,
+      out: llmTokens?.out ?? engine.run.activity.tokens?.out ?? 0,
+      perSecond: llm?.status === 'running' ? llmTokens?.perSecond : undefined,
+    },
+  };
+  engine.run = { ...engine.run, nodesRuntime: runtime, activity };
+  emit({ type: 'run', run: { nodesRuntime: runtime, activity } });
 
   if (engine.tick % 2 === 0) {
     const nodes = [

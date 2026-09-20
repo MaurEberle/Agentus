@@ -12,12 +12,21 @@ WaitReason = Literal["none", "llm", "tool", "human"]
 LogLevel = Literal["debug", "info", "warn", "error"]
 
 
+class NodeTokens(ApiModel):
+    in_: int | None = Field(default=None, alias="in")
+    out: int | None = None
+    per_second: float | None = Field(default=None, alias="perSecond")
+    context_used: int | None = Field(default=None, alias="contextUsed")
+    context_max: int | None = Field(default=None, alias="contextMax")
+
+
 class NodeRuntime(ApiModel):
     status: NodeRuntimeStatus = "idle"
     role: str | None = None
     wait_reason: WaitReason | None = Field(default=None, alias="waitReason")
     last_message: str | None = Field(default=None, alias="lastMessage")
     error: str | None = None
+    tokens: NodeTokens | None = None
 
 
 class RunGraphNode(ApiModel):
@@ -54,9 +63,16 @@ class ActivityDag(ApiModel):
     pending_node_ids: list[str] = Field(alias="pendingNodeIds")
 
 
+class ActivityTokens(ApiModel):
+    in_: int | None = Field(default=None, alias="in")
+    out: int | None = None
+    per_second: float | None = Field(default=None, alias="perSecond")
+
+
 class Activity(ApiModel):
     current_node_ids: list[str] = Field(default_factory=list, alias="currentNodeIds")
     dag: ActivityDag | None = None
+    tokens: ActivityTokens | None = None
 
 
 class RunSnapshot(ApiModel):

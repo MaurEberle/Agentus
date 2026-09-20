@@ -25,7 +25,10 @@ def test_retrieve_before_complete_adds_context(monkeypatch, api_env) -> None:
         captured.append(req.messages[0].content or "")
         return CompletionResult(content="hi", model=req.model, finish_reason="stop")
 
-    monkeypatch.setattr("app.runtime.completions.complete_live", lambda req, should_abort=None: _complete(req))
+    monkeypatch.setattr(
+        "app.runtime.completions.complete_live",
+        lambda req, should_abort=None, on_progress=None: _complete(req),
+    )
     monkeypatch.setattr(
         "app.run.harness.retrieve",
         lambda *a, **k: [

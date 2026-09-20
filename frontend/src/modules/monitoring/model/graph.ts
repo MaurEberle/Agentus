@@ -69,6 +69,33 @@ export function mergeRunSnapshot(
   };
 }
 
+export function runTokenStats(run: RunSnapshot): {
+  out: number;
+  in?: number;
+  perSecond?: number;
+} {
+  const fromActivity = run.activity.tokens;
+  if (fromActivity && (fromActivity.out !== undefined || fromActivity.perSecond !== undefined)) {
+    return {
+      out: fromActivity.out ?? 0,
+      in: fromActivity.in,
+      perSecond: fromActivity.perSecond,
+    };
+  }
+  let out = 0;
+  let inn = 0;
+  let rate: number | undefined;
+  for (const node of Object.values(run.nodesRuntime)) {
+    if (!node.tokens) continue;
+    if (node.tokens.out) out += node.tokens.out;
+    if (node.tokens.in) inn += node.tokens.in;
+    if (node.tokens.perSecond !== undefined && (node.status === 'running' || node.status === 'waiting')) {
+      rate = node.tokens.perSecond;
+    }
+  }
+  return { out, in: inn || undefined, perSecond: rate };
+}
+
 export function activeLlms(runtime: Record<string, NodeRuntime>): NodeRuntime['llm'][] {
   const list: NodeRuntime['llm'][] = [];
   for (const node of Object.values(runtime)) {

@@ -20,9 +20,10 @@ from app.run.limits import (
     STREAM_IDLE_TIMEOUT_SEC,
 )
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
-from app.run.models import ChatMessage, NodeRuntime
+from app.run.models import ActivityTokens, ChatMessage, NodeRuntime, NodeTokens
 from app.run.sse import publish
 from app.runtime.errors import RuntimeApiError
+from app.runtime.completions import estimate_token_count
 from app.runtime.models import ChatMessage as LlmMessage
 from app.runtime.models import CompletionRequest, CompletionResult
 from app.tools.catalog import openai_tools_for_kinds
@@ -269,6 +270,15 @@ def _agent_turn(
                     timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
                 ),
                 should_abort=ctrl.stop_event.is_set,
+                on_progress=lambda out, rate: _publish_tokens(
+                    ctrl,
+                    agent_id,
+                    llm_node_id,
+                    tokens_in=None,
+                    tokens_out=out,
+                    per_second=rate,
+                    committed=False,
+                ),
             )
             ok = True
         except Exception as exc:
@@ -291,6 +301,27 @@ def _agent_turn(
             raise
         duration_ms = int((time.perf_counter() - started) * 1000)
         usage = result.usage
+        if usage:
+            out_final = usage.completion_tokens
+            in_final = usage.prompt_tokens
+        elif result.content:
+            out_final = estimate_token_count(result.content)
+            in_final = None
+        else:
+            out_final = None
+            in_final = None
+        rate_final = None
+        if out_final is not None and duration_ms > 0:
+            rate_final = out_final / max(duration_ms / 1000.0, 0.05)
+        _publish_tokens(
+            ctrl,
+            agent_id,
+            llm_node_id,
+            tokens_in=in_final,
+            tokens_out=out_final,
+            per_second=rate_final,
+            committed=True,
+        )
         insert_call(
             run_id=ctrl.run_id or "",
             provider=agent.llm.provider,
@@ -299,8 +330,8 @@ def _agent_turn(
             node_id=agent_id,
             node_name=node_label(compiled, agent_id),
             duration_ms=duration_ms,
-            tokens_in=usage.prompt_tokens if usage else None,
-            tokens_out=usage.completion_tokens if usage else None,
+            tokens_in=in_final,
+            tokens_out=out_final,
         )
         emit_log(
             "debug",
@@ -394,6 +425,54 @@ def _parse_args(raw: str) -> dict:
         return value if isinstance(value, dict) else {}
     except ValueError:
         return {}
+
+
+def _publish_tokens(
+    ctrl: RunController,
+    agent_id: str,
+    llm_node_id: str,
+    *,
+    tokens_in: int | None,
+    tokens_out: int | None,
+    per_second: float | None,
+    committed: bool,
+) -> None:
+    if not ctrl.snapshot:
+        return
+    live_out = 0 if tokens_out is None else tokens_out
+    live_in = 0 if tokens_in is None else tokens_in
+    if committed:
+        if tokens_out is not None:
+            ctrl.tokens_out += tokens_out
+        if tokens_in is not None:
+            ctrl.tokens_in += tokens_in
+        run_out = ctrl.tokens_out
+        run_in = ctrl.tokens_in
+        rate = None
+    else:
+        run_out = ctrl.tokens_out + live_out
+        run_in = ctrl.tokens_in + live_in
+        rate = per_second
+    node_tokens = NodeTokens(
+        in_=tokens_in,
+        out=tokens_out,
+        per_second=rate,
+    )
+    runtime = dict(ctrl.snapshot.nodes_runtime)
+    for nid in {agent_id, llm_node_id}:
+        current = runtime.get(nid, NodeRuntime())
+        runtime[nid] = current.model_copy(update={"tokens": node_tokens})
+    activity = ctrl.snapshot.activity.model_copy(
+        update={
+            "tokens": ActivityTokens(
+                in_=run_in or None,
+                out=run_out,
+                per_second=rate,
+            )
+        }
+    )
+    ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime, "activity": activity})
+    publish("run", ctrl.snapshot.model_dump(by_alias=True))
 
 
 def _set_node(

@@ -21,6 +21,7 @@ from app.run.mcp_bridge import get_mcp
 from app.run.models import (
     Activity,
     ActivityDag,
+    ActivityTokens,
     ChatMessage,
     LogEvent,
     NodeRuntime,
@@ -61,6 +62,8 @@ class RunController:
         self._unloads: list[str] = []
         self._help_model: str | None = None
         self.last_error_node_id: str | None = None
+        self.tokens_in = 0
+        self.tokens_out = 0
         set_run_slice_provider(self.slice)
 
     def reset(self) -> None:
@@ -78,6 +81,8 @@ class RunController:
         self._unloads = []
         self._help_model = None
         self.last_error_node_id = None
+        self.tokens_in = 0
+        self.tokens_out = 0
         self.stop_event = threading.Event()
         self.abort_generation = threading.Event()
         set_run_slice_provider(self.slice)
@@ -102,6 +107,8 @@ class RunController:
             self.chat_input_queue = queue.Queue()
             self.conversation = []
             self.last_error_node_id = None
+            self.tokens_in = 0
+            self.tokens_out = 0
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()
@@ -441,6 +448,7 @@ def _build_snapshot(
                 total=total,
                 pending_node_ids=list(compiled.agents),
             ),
+            tokens=ActivityTokens(out=0),
         ),
         chat=chat,
     )

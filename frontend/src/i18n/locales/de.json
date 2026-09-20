@@ -931,6 +931,8 @@
       "tokensIn": "Eingabe",
       "tokensOut": "Ausgabe",
       "perSecond": "{{value}} Token/s",
+      "rate": "Token/s",
+      "runTotal": "Lauf gesamt",
       "context": "Kontext {{used}} / {{max}}"
     },
     "tabs": {
