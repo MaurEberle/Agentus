@@ -20,6 +20,8 @@ export type { AppLanguage } from '@/i18n/languages';
 export {
   APP_LANGUAGES,
   LANGUAGE_LABEL_KEYS,
+  LANGUAGE_NAME_KEYS,
+  formatLanguageOptionLabel,
   isAppLanguage,
   languageDirection,
   resolveAppLanguage,

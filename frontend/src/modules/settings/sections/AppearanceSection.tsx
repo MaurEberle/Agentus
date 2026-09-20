@@ -1,13 +1,40 @@
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { LanguageFlag } from '@/components/layout/LanguageFlag';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { APP_LANGUAGES, LANGUAGE_LABEL_KEYS, isAppLanguage, resolveAppLanguage, setAppLanguage } from '@/i18n';
+import {
+  APP_LANGUAGES,
+  LANGUAGE_LABEL_KEYS,
+  LANGUAGE_NAME_KEYS,
+  formatLanguageOptionLabel,
+  isAppLanguage,
+  resolveAppLanguage,
+  setAppLanguage,
+  type AppLanguage,
+} from '@/i18n';
 import { notify } from '@/lib/notifications';
 import { patchSettings } from '@/modules/settings/api';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useAppStore } from '@/store';
+
+function LanguageOptionLabel({ code }: { code: AppLanguage }) {
+  const { t } = useTranslation();
+  const label = formatLanguageOptionLabel(t(LANGUAGE_LABEL_KEYS[code]), t(LANGUAGE_NAME_KEYS[code]));
+  return (
+    <span className="flex min-w-0 items-center gap-2 text-left">
+      <LanguageFlag code={code} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
 
 export function AppearanceSection() {
   const { t, i18n } = useTranslation();
@@ -41,23 +68,26 @@ export function AppearanceSection() {
             ))}
           </RadioGroup>
         </fieldset>
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-medium">{t('shell.language')}</legend>
-          <RadioGroup
+        <div className="space-y-2">
+          <Label htmlFor="settings-language">{t('shell.language')}</Label>
+          <Select
             value={language}
             onValueChange={(value) => {
               if (isAppLanguage(value)) void setAppLanguage(value);
             }}
-            className="grid gap-2 sm:grid-cols-2"
           >
-            {APP_LANGUAGES.map((code) => (
-              <label key={code} className="flex items-center gap-2 text-sm">
-                <RadioGroupItem value={code} id={`lang-${code}`} />
-                <span>{t(LANGUAGE_LABEL_KEYS[code])}</span>
-              </label>
-            ))}
-          </RadioGroup>
-        </fieldset>
+            <SelectTrigger id="settings-language" className="max-w-sm">
+              <LanguageOptionLabel code={language} />
+            </SelectTrigger>
+            <SelectContent>
+              {APP_LANGUAGES.map((code) => (
+                <SelectItem key={code} value={code}>
+                  <LanguageOptionLabel code={code} />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex items-center justify-between gap-4 rounded-md border p-3">
           <div>
             <Label htmlFor="fab-toggle">{t('settings.appearance.fab')}</Label>

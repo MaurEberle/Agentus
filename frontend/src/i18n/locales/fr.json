@@ -45,6 +45,17 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageNames": {
+      "de": "Allemand",
+      "en": "Anglais",
+      "es": "Espagnol",
+      "fr": "Français",
+      "tr": "Turc",
+      "pt": "Portugais",
+      "zh": "Chinois",
+      "ja": "Japonais",
+      "ar": "Arabe"
+    },
     "window": {
       "minimize": "Réduire",
       "maximize": "Agrandir",

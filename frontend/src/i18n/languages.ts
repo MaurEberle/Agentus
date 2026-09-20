@@ -14,6 +14,25 @@ export const LANGUAGE_LABEL_KEYS: Record<AppLanguage, `shell.language${Capitaliz
   ar: 'shell.languageAr',
 };
 
+export const LANGUAGE_NAME_KEYS: Record<AppLanguage, `shell.languageNames.${AppLanguage}`> = {
+  de: 'shell.languageNames.de',
+  en: 'shell.languageNames.en',
+  es: 'shell.languageNames.es',
+  fr: 'shell.languageNames.fr',
+  tr: 'shell.languageNames.tr',
+  pt: 'shell.languageNames.pt',
+  zh: 'shell.languageNames.zh',
+  ja: 'shell.languageNames.ja',
+  ar: 'shell.languageNames.ar',
+};
+
+export function formatLanguageOptionLabel(native: string, translated: string): string {
+  const own = native.trim();
+  const local = translated.trim();
+  if (!local || local === own) return own;
+  return `${own} (${local})`;
+}
+
 const RTL_LANGUAGES: ReadonlySet<AppLanguage> = new Set(['ar']);
 
 export function isAppLanguage(value: string | undefined): value is AppLanguage {

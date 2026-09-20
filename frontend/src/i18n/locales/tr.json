@@ -45,6 +45,17 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageNames": {
+      "de": "Almanca",
+      "en": "İngilizce",
+      "es": "İspanyolca",
+      "fr": "Fransızca",
+      "tr": "Türkçe",
+      "pt": "Portekizce",
+      "zh": "Çince",
+      "ja": "Japonca",
+      "ar": "Arapça"
+    },
     "window": {
       "minimize": "Simge durumuna küçült",
       "maximize": "Ekranı kapla",
