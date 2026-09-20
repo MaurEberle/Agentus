@@ -82,11 +82,11 @@ export function MonitoringModule() {
         <>
           <RunHeader run={run} serviceStatus={serviceStatus} />
           <ResourcesPanel resources={resources} dimmed={dimmed} />
-          <div className="grid w-full max-h-[min(28rem,60vh)] gap-4 md:grid-cols-2 md:items-stretch">
-            <div className="order-2 min-h-0 md:order-1">
+          <div className="grid h-[min(28rem,55vh)] w-full gap-4 md:grid-cols-2 md:items-stretch">
+            <div className="order-2 h-full min-h-0 md:order-1">
               <MiniGraph run={run} dimmed={dimmed} />
             </div>
-            <div className="order-1 md:order-2">
+            <div className="order-1 h-full min-h-0 md:order-2">
               <ActivityPanel run={run} dimmed={dimmed} />
             </div>
           </div>

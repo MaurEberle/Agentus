@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { nodeDisplayName } from '@/modules/monitoring/model/graph';
 import type { RunSnapshot } from '@/modules/monitoring/model/types';
-import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
+import { moduleCardBodyClass } from '@/modules/moduleCard';
 
 export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: boolean }) {
   const { t } = useTranslation();
@@ -26,7 +26,7 @@ export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: bool
   const errorNode = stepError ? run.graph.nodes.find((item) => item.id === stepError.nodeId) : null;
 
   return (
-    <Card className={cn(moduleCardClass, dimmed && 'opacity-60')}>
+    <Card className={cn('flex h-full min-h-0 flex-col overflow-hidden', dimmed && 'opacity-60')}>
       <CardHeader className="pb-2">
         <CardTitle>{t('monitoring.activity.title')}</CardTitle>
       </CardHeader>
