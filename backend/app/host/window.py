@@ -6,9 +6,9 @@ import threading
 import time
 from typing import Any
 
-from app.db.bootstrap import WindowGeom, load_bootstrap, save_window
+from app.db.bootstrap import WindowGeom, save_window
 from app.host.bridge import ChromeHostApi, inject_chrome_host
-from app.host.geometry import MIN_H, MIN_W, from_bootstrap
+from app.host.geometry import MIN_H, MIN_W, start_placement
 from app.host.native_frame import (
     configure_webview,
     enable_frameless_resize,
@@ -74,9 +74,7 @@ def run_host(host: str, port: int) -> None:
         configure_webview(webview)
         server = start_uvicorn(host, port)
         wait_health("127.0.0.1", port)
-        bootstrap = load_bootstrap()
-        geom = from_bootstrap(bootstrap.window)
-        maximized = bool(bootstrap.window.maximized)
+        geom, maximized = start_placement()
         api = ChromeHostApi()
         icon_path = resolve_app_icon()
         win = webview.create_window(
