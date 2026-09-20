@@ -37,6 +37,23 @@ export type StatusNodeData = {
 
 export type StatusFlowNode = Node<StatusNodeData, 'status'>;
 
+export function statusNodeSize(nodeType: string, nodeData?: Record<string, unknown>, id = '_') {
+  const graph = asGraphNode({
+    id,
+    type: nodeType,
+    position: { x: 0, y: 0 },
+    data: nodeData ?? {},
+  });
+  const ports = graph ? portsFor(graph) : [];
+  return {
+    width: 176,
+    height: nodeMinHeightPx(
+      ports.filter((port) => port.direction === 'in').length,
+      ports.filter((port) => port.direction === 'out').length,
+    ),
+  };
+}
+
 const STATUS_CLASS: Record<NodeRuntimeStatus, string> = {
   idle: 'border-border',
   waiting: 'border-warning',

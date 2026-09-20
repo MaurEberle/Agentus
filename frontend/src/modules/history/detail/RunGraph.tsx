@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -11,7 +11,8 @@ import {
 } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { StatusNode, type StatusFlowNode } from '@/modules/monitoring/graph/StatusNode';
+import { StatusNode, statusNodeSize, type StatusFlowNode } from '@/modules/monitoring/graph/StatusNode';
+import { useFitGraph } from '@/modules/monitoring/graph/useFitGraph';
 import type { GraphSnapshot, RunStep } from '@/modules/history/model/types';
 import { asGraphNode } from '@/modules/network/model/document';
 import { toRfHandlePair } from '@/modules/network/canvas/handles';
@@ -35,7 +36,6 @@ function FitButton() {
 }
 
 function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
-  const { fitView } = useReactFlow();
   const statusById = useMemo(() => {
     const map = new Map(steps?.map((step) => [step.nodeId, step]) ?? []);
     return map;
@@ -49,11 +49,14 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
           typeof node.data.displayName === 'string' && node.data.displayName.trim()
             ? node.data.displayName
             : node.type;
+        const size = statusNodeSize(node.type, node.data, node.id);
         return {
           id: node.id,
           type: 'status',
           position: node.position,
           className: 'overflow-visible',
+          width: size.width,
+          height: size.height,
           data: {
             displayName: name,
             nodeType: node.type,
@@ -88,15 +91,16 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
     [graph.edges, graph.nodes],
   );
 
-  useEffect(() => {
-    void fitView({ padding: 0.2 });
-  }, [fitView, graph.nodes]);
+  const paneRef = useFitGraph(
+    graph.nodes.map((node) => node.id).join(','),
+    nodes.length,
+  );
 
   return (
-    <div className="relative h-56">
+    <div ref={paneRef} className="relative h-56">
       <FitButton />
       <ReactFlow
-        className="monitoring-flow"
+        className="monitoring-flow h-full w-full"
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -105,6 +109,10 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
         elementsSelectable={false}
         panOnDrag
         fitView
+        fitViewOptions={{ padding: 0.2 }}
+        onInit={(instance) => {
+          void instance.fitView({ padding: 0.2, duration: 0 });
+        }}
         proOptions={{ hideAttribution: true }}
         minZoom={0.3}
         maxZoom={1.4}
