@@ -32,9 +32,86 @@ import {
   useRuntimeModelsQuery,
   useSettingsQuery,
 } from '@/modules/settings/api';
-import { helpChatConfigured, type EmbeddingProvider, type HelpProvider } from '@/modules/settings/model';
+import {
+  helpChatConfigured,
+  isEmbeddingModelName,
+  type EmbeddingProvider,
+  type HelpProvider,
+  type RuntimeModel,
+} from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useSettingsDraft } from '@/modules/settings/store';
+
+function RuntimeModelSelect({
+  id,
+  value,
+  models,
+  onChange,
+  placeholder,
+  emptyLabel,
+}: {
+  id?: string;
+  value: string;
+  models: RuntimeModel[];
+  onChange: (value: string) => void;
+  placeholder?: string;
+  emptyLabel: string;
+}) {
+  const names = new Set(models.map((model) => model.name));
+  const options = value && !names.has(value) ? [{ name: value }, ...models] : models;
+
+  return (
+    <Select value={value || 'none'} onValueChange={(next) => onChange(next === 'none' ? '' : next)}>
+      <SelectTrigger id={id}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">{emptyLabel}</SelectItem>
+        {options.map((model) => (
+          <SelectItem key={model.name} value={model.name}>
+            {model.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function ModelField({
+  id,
+  label,
+  value,
+  models,
+  useSelect,
+  onChange,
+  emptyLabel,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  models: RuntimeModel[];
+  useSelect: boolean;
+  onChange: (value: string) => void;
+  emptyLabel: string;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      {useSelect ? (
+        <RuntimeModelSelect
+          id={id}
+          value={value}
+          models={models}
+          onChange={onChange}
+          placeholder={label}
+          emptyLabel={emptyLabel}
+        />
+      ) : (
+        <Input id={id} value={value} onChange={(event) => onChange(event.target.value)} />
+      )}
+    </div>
+  );
+}
 
 export function HelpChatSection() {
   const { t } = useTranslation();
@@ -59,6 +136,10 @@ export function HelpChatSection() {
     (item) => item.kind === 'xai' || item.kind === 'openai_compat',
   );
   const searchCredentials = (credentials?.items ?? []).filter((item) => item.kind === 'web_search');
+  const runtimeModels = models?.items ?? [];
+  const hasRuntimeModels = runtimeModels.length > 0;
+  const embedModels = runtimeModels.filter((model) => isEmbeddingModelName(model.name));
+  const emptyLabel = t('settings.helpChat.providerEmpty');
 
   async function save() {
     if (!help) return;
@@ -122,30 +203,15 @@ export function HelpChatSection() {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="help-model">{t('settings.helpChat.model')}</Label>
-            {help.provider === 'ollama' && (models?.items.length ?? 0) > 0 ? (
-              <Select value={help.model || 'none'} onValueChange={(value) => setHelpChat({ model: value === 'none' ? '' : value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('settings.helpChat.model')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('settings.helpChat.providerEmpty')}</SelectItem>
-                  {models?.items.map((model) => (
-                    <SelectItem key={model.name} value={model.name}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                id="help-model"
-                value={help.model}
-                onChange={(event) => setHelpChat({ model: event.target.value })}
-              />
-            )}
-          </div>
+          <ModelField
+            id="help-model"
+            label={t('settings.helpChat.model')}
+            value={help.model}
+            models={runtimeModels}
+            useSelect={help.provider === 'ollama' && hasRuntimeModels}
+            emptyLabel={emptyLabel}
+            onChange={(value) => setHelpChat({ model: value })}
+          />
           {help.provider === 'xai' || help.provider === 'openai_compat' ? (
             <div className="grid gap-1.5">
               <Label>{t('settings.helpChat.credential')}</Label>
@@ -189,14 +255,15 @@ export function HelpChatSection() {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="embed-model">{t('settings.helpChat.embedModel')}</Label>
-            <Input
-              id="embed-model"
-              value={help.embeddingModel ?? ''}
-              onChange={(event) => setHelpChat({ embeddingModel: event.target.value })}
-            />
-          </div>
+          <ModelField
+            id="embed-model"
+            label={t('settings.helpChat.embedModel')}
+            value={help.embeddingModel ?? ''}
+            models={embedModels}
+            useSelect={help.embeddingProvider === 'ollama' && hasRuntimeModels}
+            emptyLabel={emptyLabel}
+            onChange={(value) => setHelpChat({ embeddingModel: value || undefined })}
+          />
           {embedChanged ? (
             <Alert>
               <AlertDescription>{t('settings.helpChat.reindexHint')}</AlertDescription>
@@ -239,14 +306,15 @@ export function HelpChatSection() {
               )}
             </div>
           ) : null}
-          <div className="grid gap-1.5">
-            <Label htmlFor="fallback-model">{t('settings.helpChat.fallback')}</Label>
-            <Input
-              id="fallback-model"
-              value={help.fallbackModel ?? ''}
-              onChange={(event) => setHelpChat({ fallbackModel: event.target.value })}
-            />
-          </div>
+          <ModelField
+            id="fallback-model"
+            label={t('settings.helpChat.fallback')}
+            value={help.fallbackModel ?? ''}
+            models={runtimeModels}
+            useSelect={help.provider === 'ollama' && hasRuntimeModels}
+            emptyLabel={emptyLabel}
+            onChange={(value) => setHelpChat({ fallbackModel: value || undefined })}
+          />
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={() => void save()} disabled={!dirty || busy}>
               {t('settings.common.save')}

@@ -167,6 +167,10 @@ export function helpChatConfigured(help: HelpChatSettings): boolean {
   return true;
 }
 
+export function isEmbeddingModelName(name: string): boolean {
+  return name.toLowerCase().includes('embed');
+}
+
 export function defaultHelpChat(): HelpChatSettings {
   return {
     provider: 'ollama',
