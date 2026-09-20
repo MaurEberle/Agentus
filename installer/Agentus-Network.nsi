@@ -28,6 +28,8 @@ CRCCheck on
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "..\dist\Agentus-Network-Setup-${PRODUCT_VERSION}-x64.exe"
+Icon "..\resources\icons\app.ico"
+UninstallIcon "..\resources\icons\app.ico"
 InstallDir "$LOCALAPPDATA\Programs\Agentus-Network"
 InstallDirRegKey HKCU "${REG_UNINSTALL}" "InstallLocation"
 BrandingText "${PRODUCT_NAME}"

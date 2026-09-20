@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BrandMark } from '@/components/BrandMark';
 import { LightMarkdown } from '@/components/help-chat/markdown';
 import type { HelpMessage, HelpSource } from '@/components/help-chat/model';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -46,21 +47,24 @@ function Bubble({
   });
   const isUser = message.role === 'user';
   return (
-    <article className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
-      <div
-        className={cn(
-          'max-w-[92%] rounded-lg px-3 py-2',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
-        )}
-      >
-        {isUser ? (
-          <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
-        ) : (
-          <LightMarkdown text={message.content} />
-        )}
-        {!isUser && message.sources ? <Sources sources={message.sources} /> : null}
+    <article className={cn('flex gap-2', isUser ? 'flex-row-reverse' : 'flex-row')}>
+      {!isUser ? <BrandMark className="mt-0.5 size-7" alt="" /> : <span className="size-7 shrink-0" />}
+      <div className={cn('flex min-w-0 flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
+        <div
+          className={cn(
+            'max-w-full rounded-lg px-3 py-2',
+            isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+          )}
+        >
+          {isUser ? (
+            <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
+          ) : (
+            <LightMarkdown text={message.content} />
+          )}
+          {!isUser && message.sources ? <Sources sources={message.sources} /> : null}
+        </div>
+        <time className="text-[11px] text-muted-foreground">{time}</time>
       </div>
-      <time className="text-[11px] text-muted-foreground">{time}</time>
     </article>
   );
 }

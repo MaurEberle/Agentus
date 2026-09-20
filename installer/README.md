@@ -10,7 +10,7 @@ Build:
 
 Vendor-Dateien (nicht committen): `installer/vendor/` laut `vendor.lock.json`. WebView2-Bootstrapper wird ins Setup gepackt. `OllamaSetup.exe` (~1,4 GB) wird **zur Install-Zeit** geladen und gehasht, nicht ins Repo.
 
-`resources/icons/app.ico` ist ein Platzhalter (TODO: finales Artwork).
+`resources/icons/app.ico` ist das App-Icon (Quelle `resources/icons/app.png`).
 
 ## Silent
 

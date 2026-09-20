@@ -129,7 +129,7 @@ Erzeugt unter `dist/`:
 | `Agentus-Network-Setup-{version}-x64.exe` | NSIS Per-User-Setup |
 | `Agentus-Network-Portable-{version}-x64.zip` | derselbe Freeze plus `portable.txt` |
 
-Voraussetzungen: Python 3.12-venv im Backend, `frontend/dist`, NSIS 3 (`makensis` auf PATH oder unter `build/nsis/`). Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` ist in v1 ein Platzhalter.
+Voraussetzungen: Python 3.12-venv im Backend, `frontend/dist`, NSIS 3 (`makensis` auf PATH oder unter `build/nsis/`). Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` (PNG `resources/icons/app.png`).
 
 Mehr: [`installer/README.md`](installer/README.md), Checkliste für eine frische Windows-VM dort.
 

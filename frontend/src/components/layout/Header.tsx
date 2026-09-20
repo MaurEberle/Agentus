@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Play, Settings, Square, Workflow } from 'lucide-react';
+import { Play, Settings, Square } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -42,7 +43,7 @@ export function Header() {
         to="/dashboard"
         className="app-no-drag relative z-10 flex items-center gap-2 rounded-md px-1.5 py-1 text-sm font-semibold tracking-tight hover:bg-accent"
       >
-        <Workflow className="size-5 text-primary" />
+        <BrandMark className="size-6" alt={t('app.name')} />
         <span className="hidden sm:inline">{t('app.name')}</span>
       </Link>
       <div className="app-drag relative z-10 min-w-2 flex-1 self-stretch" />
