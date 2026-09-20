@@ -422,7 +422,9 @@ function NetworkEditor() {
           <FlowCanvas readOnly={readOnly} onRequestInsert={() => setPaletteOpen(true)} />
         </div>
         {isDesktop ? (
-          <aside className="hidden w-80 shrink-0 overflow-auto border-l md:block">{inspector}</aside>
+          <aside className="hidden w-80 min-w-0 shrink-0 overflow-x-hidden overflow-y-auto border-l md:block">
+            {inspector}
+          </aside>
         ) : null}
       </div>
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>

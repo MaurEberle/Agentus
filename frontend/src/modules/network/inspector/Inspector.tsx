@@ -136,7 +136,7 @@ export function Inspector({
   }
 
   return (
-    <div className="space-y-4 p-3">
+    <div className="min-w-0 space-y-4 overflow-x-hidden p-3">
       <h2 className="text-sm font-semibold">{t(`network.palette.${node.type}`)}</h2>
       <DisplayNameField node={node} readOnly={readOnly} />
       {node.type === 'llm' ? <LlmFields node={node} readOnly={readOnly} /> : null}
@@ -197,9 +197,10 @@ function ModelCombobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="h-8 w-full justify-between px-2.5 font-normal"
+          title={value || undefined}
+          className="h-8 w-full min-w-0 max-w-full justify-between overflow-hidden px-2.5 text-left font-normal"
         >
-          <span className={cn('truncate', !value && 'text-muted-foreground')}>
+          <span className={cn('min-w-0 flex-1 truncate text-left', !value && 'text-muted-foreground')}>
             {value || placeholder || t('network.inspector.llm.model')}
           </span>
           <ChevronDown className="size-4 shrink-0 opacity-60" />
@@ -226,11 +227,12 @@ function ModelCombobox({
             <li key={item}>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                title={item}
                 onClick={() => commit(item)}
               >
                 <Check className={cn('size-3.5 shrink-0', item === value ? 'opacity-100' : 'opacity-0')} />
-                <span className="truncate">{item}</span>
+                <span className="min-w-0 flex-1 truncate">{item}</span>
               </button>
             </li>
           ))}
@@ -256,7 +258,7 @@ function ModelCombobox({
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid gap-1.5">
+    <div className="grid min-w-0 gap-1.5">
       <Label>{label}</Label>
       {children}
     </div>
