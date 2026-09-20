@@ -107,12 +107,12 @@ export function Header() {
           </SelectContent>
         </Select>
       </div>
-      <div className="relative z-10">
+      <div className="app-no-drag relative z-10 flex items-center gap-2">
         <NotificationBell />
-      </div>
-      <div className="app-no-drag relative z-10 hidden items-center md:flex">
-        <ThemeToggle compact />
-        <LanguageSwitcher compact />
+        <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle compact />
+          <LanguageSwitcher compact />
+        </div>
       </div>
       <div className="relative z-10">
         <WindowControls />
