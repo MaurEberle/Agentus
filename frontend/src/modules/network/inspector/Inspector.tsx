@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown } from 'lucide-react';
@@ -23,7 +23,7 @@ import type { GraphNode, ValidationIssue } from '@/modules/network/model/documen
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
-import { isForbiddenDataRoot } from '@/modules/settings/model';
+import { isEmbeddingModelName, isForbiddenDataRoot } from '@/modules/settings/model';
 
 export function Inspector({
   issues,
@@ -159,23 +159,27 @@ function ModelCombobox({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(value);
+  const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
-
-  const query = draft.trim().toLowerCase();
-  const filtered = query ? options.filter((item) => item.toLowerCase().includes(query)) : options;
-  const exact = options.some((item) => item.toLowerCase() === query);
+  const names = value && !options.includes(value) ? [value, ...options] : options;
+  const query = search.trim().toLowerCase();
+  const filtered = query ? names.filter((item) => item.toLowerCase().includes(query)) : names;
+  const exact = names.some((item) => item.toLowerCase() === query);
 
   function commit(next: string) {
     onChange(next);
     setOpen(false);
+    setSearch('');
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setSearch('');
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -193,16 +197,17 @@ function ModelCombobox({
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={4} className="z-[80] w-[var(--radix-popover-trigger-width)] p-1">
         <Input
-          value={draft}
+          value={search}
           autoFocus
           disabled={disabled}
           placeholder={t('network.inspector.llm.model')}
           className="mb-1 h-8"
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault();
-              commit(draft.trim());
+              const next = search.trim();
+              if (next) commit(next);
             }
           }}
         />
@@ -224,9 +229,9 @@ function ModelCombobox({
               <button
                 type="button"
                 className="flex w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                onClick={() => commit(draft.trim())}
+                onClick={() => commit(search.trim())}
               >
-                {t('network.inspector.llm.useModel', { name: draft.trim() })}
+                {t('network.inspector.llm.useModel', { name: search.trim() })}
               </button>
             </li>
           ) : null}
@@ -309,7 +314,13 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       <Field label={t('network.inspector.llm.model')}>
         <ModelCombobox
           value={model}
-          options={(models.data?.items ?? []).map((item) => item.name)}
+          options={
+            provider === 'ollama'
+              ? (models.data?.items ?? [])
+                  .map((item) => item.name)
+                  .filter((name) => !isEmbeddingModelName(name))
+              : []
+          }
           disabled={readOnly}
           onChange={(value) => editorUpdateNodeData(node.id, { model: value })}
         />
