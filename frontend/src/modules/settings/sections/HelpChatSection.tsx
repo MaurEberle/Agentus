@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { ModelCombobox } from '@/components/ModelCombobox';
 import { notify } from '@/lib/notifications';
 import {
   clearHelpChatMessages,
@@ -48,47 +49,6 @@ import {
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useSettingsDraft } from '@/modules/settings/store';
 
-function RuntimeModelSelect({
-  id,
-  value,
-  models,
-  onChange,
-  placeholder,
-  emptyLabel,
-  disabled,
-}: {
-  id?: string;
-  value: string;
-  models: RuntimeModel[];
-  onChange: (value: string) => void;
-  placeholder?: string;
-  emptyLabel: string;
-  disabled?: boolean;
-}) {
-  const names = new Set(models.map((model) => model.name));
-  const options = value && !names.has(value) ? [{ name: value }, ...models] : models;
-
-  return (
-    <Select
-      value={value || 'none'}
-      disabled={disabled}
-      onValueChange={(next) => onChange(next === 'none' ? '' : next)}
-    >
-      <SelectTrigger id={id}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">{emptyLabel}</SelectItem>
-        {options.map((model) => (
-          <SelectItem key={model.name} value={model.name}>
-            {model.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
 function ModelField({
   id,
   label,
@@ -110,17 +70,20 @@ function ModelField({
   disabled?: boolean;
   placeholder?: string;
 }) {
+  const { t } = useTranslation();
   return (
-    <div className="grid gap-1.5">
+    <div className="grid min-w-0 gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       {useSelect ? (
-        <RuntimeModelSelect
+        <ModelCombobox
           id={id}
           value={value}
-          models={models}
+          options={models.map((model) => model.name)}
           onChange={onChange}
           placeholder={placeholder ?? label}
           emptyLabel={emptyLabel}
+          noModelsLabel={t('network.inspector.llm.noModels')}
+          useValueLabel={(name) => t('network.inspector.llm.useModel', { name })}
           disabled={disabled}
         />
       ) : (
