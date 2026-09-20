@@ -24,8 +24,9 @@ export function HelpChatFab({
     <Button
       ref={buttonRef}
       type="button"
+      variant="ghost"
       size="icon"
-      className="app-no-drag relative size-12 rounded-full bg-card p-1.5 shadow-lg ring-1 ring-border hover:bg-accent"
+      className="app-no-drag relative size-[52px] rounded-full border border-border bg-white p-1 shadow-md hover:bg-white hover:shadow-lg"
       aria-label={open ? t('helpChat.fab.close') : t('helpChat.fab.open')}
       aria-expanded={open}
       onClick={onClick}
