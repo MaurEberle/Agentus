@@ -1,4 +1,4 @@
-import { isForbiddenDataRoot } from '@/modules/settings/model';
+import { embeddingNeedsCredential, isForbiddenDataRoot } from '@/modules/settings/model';
 import type { McpServerListItem } from '@/modules/settings/model';
 import { connectionAllowed, portKind } from '@/modules/network/schema/ports';
 import type {
@@ -158,6 +158,10 @@ function validateNode(
     }
   }
   if (node.type === 'knowledge') {
+    const embedProvider = asString(node.data.embeddingProvider) || 'ollama';
+    if (embeddingNeedsCredential(embedProvider) && !asString(node.data.embeddingCredentialId)) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.credentialRequired' });
+    }
     const path = asString(node.data.sourcePath);
     if (!path) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgePath' });

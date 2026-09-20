@@ -12,7 +12,7 @@ export function defaultData(type: NodeType): Record<string, unknown> {
     case 'tool':
       return { displayName: '', kind: 'datetime' };
     case 'knowledge':
-      return { displayName: '', sourcePath: '', topK: 5 };
+      return { displayName: '', sourcePath: '', topK: 5, embeddingProvider: 'ollama', embeddingModel: '' };
     case 'router':
       return {
         displayName: '',

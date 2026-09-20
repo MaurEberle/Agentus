@@ -73,6 +73,9 @@ export type KnowledgeNodeData = {
   sourcePath: string;
   topK?: number;
   scoreThreshold?: number;
+  embeddingProvider?: string;
+  embeddingModel?: string;
+  embeddingCredentialId?: string;
 };
 
 export type RouterNodeData = {

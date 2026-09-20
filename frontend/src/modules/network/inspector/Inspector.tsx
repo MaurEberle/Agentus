@@ -22,12 +22,15 @@ import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
 import {
+  EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
   credentialMatchesProvider,
+  embeddingNeedsCredential,
   isCloudCatalogProvider,
   isEmbeddingModelName,
   isForbiddenDataRoot,
   providerNeedsCredential,
+  type EmbeddingProvider,
   type LlmProvider,
 } from '@/modules/settings/model';
 
@@ -568,8 +571,49 @@ function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boole
 function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const document = useNetworkEditor((state) => state.document);
+  const credentials = useEditorCredentialsQuery();
   const [reindexing, setReindexing] = useState(false);
   const [picking, setPicking] = useState(false);
+  const embedProvider = (String(node.data.embeddingProvider ?? 'ollama') || 'ollama') as EmbeddingProvider;
+  const embedModel = String(node.data.embeddingModel ?? '');
+  const embedCredentialId = String(node.data.embeddingCredentialId ?? '') || undefined;
+  const embedNeedsCred = embeddingNeedsCredential(embedProvider);
+  const ollamaModels = useRuntimeModelsQuery({ enabled: embedProvider === 'ollama' });
+  const embedCatalog = useRuntimeModelsQuery({
+    provider: embedProvider as LlmProvider,
+    credentialId: embedCredentialId,
+    enabled: embedNeedsCred && Boolean(embedCredentialId),
+  });
+  const embedOptions = useMemo(() => {
+    const items = embedProvider === 'ollama' ? (ollamaModels.data?.items ?? []) : (embedCatalog.data?.items ?? []);
+    return items.map((item) => item.name).filter((name) => isEmbeddingModelName(name));
+  }, [embedCatalog.data?.items, embedProvider, ollamaModels.data?.items]);
+  const embedLoading =
+    embedProvider === 'ollama'
+      ? ollamaModels.isPending || ollamaModels.isFetching
+      : embedCatalog.isPending || embedCatalog.isFetching;
+  const embedLocked = embedNeedsCred && !embedCredentialId;
+  const embedFailed =
+    embedNeedsCred &&
+    Boolean(embedCredentialId) &&
+    !embedCatalog.isFetching &&
+    !embedCatalog.isPending &&
+    embedOptions.length === 0;
+  const embedKindCredentials = (credentials.data?.items ?? []).filter((item) => item.kind === embedProvider);
+  const embedCredentials = (credentials.data?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, embedProvider),
+  );
+
+  useEffect(() => {
+    if (readOnly || embedLocked || embedLoading) return;
+    if (embedOptions.length === 0) {
+      if (embedModel) editorUpdateNodeData(node.id, { embeddingModel: '' });
+      return;
+    }
+    if (!embedOptions.includes(embedModel)) {
+      editorUpdateNodeData(node.id, { embeddingModel: embedOptions[0] });
+    }
+  }, [embedLoading, embedLocked, embedModel, embedOptions, node.id, readOnly]);
 
   function applyPath(path: string) {
     const trimmed = path.trim();
@@ -606,6 +650,92 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
 
   return (
     <>
+      <Field label={t('network.inspector.knowledge.embedProvider')}>
+        <Select
+          value={embedProvider || 'ollama'}
+          disabled={readOnly}
+          onValueChange={(value) => {
+            const next = value as EmbeddingProvider;
+            const patch: Record<string, unknown> = {
+              embeddingProvider: next,
+              embeddingModel: '',
+            };
+            if (!embeddingNeedsCredential(next)) {
+              patch.embeddingCredentialId = undefined;
+            } else {
+              const nextKind = (credentials.data?.items ?? []).filter((item) => item.kind === next);
+              const current = (credentials.data?.items ?? []).find((item) => item.id === embedCredentialId);
+              if (!current || !credentialMatchesProvider(current.kind, next)) {
+                patch.embeddingCredentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
+              }
+            }
+            editorUpdateNodeData(node.id, patch);
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {EMBEDDING_PROVIDERS.map((id) => (
+              <SelectItem key={id} value={id}>
+                {t(`providers.${id}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      {embedNeedsCred ? (
+        <Field label={t('network.inspector.llm.credential')}>
+          <Select
+            value={embedCredentialId ?? 'none'}
+            disabled={readOnly}
+            onValueChange={(value) =>
+              editorUpdateNodeData(node.id, {
+                embeddingCredentialId: value === 'none' ? undefined : value,
+                embeddingModel: '',
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t('network.inspector.llm.credentialEmpty')}</SelectItem>
+              {embedCredentials.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {embedKindCredentials.length === 0 ? (
+            <p className="text-xs text-destructive">
+              {t('network.inspector.llm.noCredentials')}{' '}
+              <Link to="/settings#credentials" className="underline">
+                {t('nav.settings')}
+              </Link>
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t('network.inspector.llm.credentialHint')}</p>
+          )}
+        </Field>
+      ) : null}
+      <Field label={t('network.inspector.knowledge.embedModel')}>
+        <ModelCombobox
+          value={embedLocked ? '' : embedModel}
+          options={embedOptions}
+          disabled={readOnly || embedLocked}
+          restrictToOptions
+          placeholder={
+            embedLocked ? t('network.inspector.llm.pickCredentialFirst') : t('network.inspector.knowledge.embedModel')
+          }
+          noModelsLabel={t('network.inspector.llm.noModels')}
+          onChange={(value) => editorUpdateNodeData(node.id, { embeddingModel: value })}
+        />
+        {embedFailed ? (
+          <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
+        ) : null}
+      </Field>
       <Field label={t('network.inspector.knowledge.path')}>
         <div className="flex gap-2">
           <Input
@@ -643,6 +773,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
           }
         />
       </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.reindexHint')}</p>
       <Button type="button" size="sm" variant="outline" disabled={!document.id || reindexing} onClick={() => void reindex()}>
         {t('network.inspector.knowledge.reindex')}
       </Button>

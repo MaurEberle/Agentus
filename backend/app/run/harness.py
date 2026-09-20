@@ -166,7 +166,12 @@ def _agent_turn(
         top_k = int(node.data.get("topK") or DEFAULT_TOP_K) if node else DEFAULT_TOP_K
         score_min = float(node.data.get("scoreThreshold") or DEFAULT_SCORE_MIN) if node else DEFAULT_SCORE_MIN
         for snip in retrieve(
-            compiled.network_id, kid, user_text or " ", top_k=top_k, score_min=score_min
+            compiled.network_id,
+            kid,
+            user_text or " ",
+            top_k=top_k,
+            score_min=score_min,
+            node=compiled.by_id.get(kid),
         ):
             label = f"{snip.title}#{snip.section}" if snip.section else snip.title
             snippets.append(f"- [{label}] {snip.text}")

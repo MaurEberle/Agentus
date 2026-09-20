@@ -626,11 +626,14 @@
       "knowledge": {
         "path": "Carpeta de origen",
         "pick": "Carpeta",
+        "embedProvider": "Proveedor de embeddings",
+        "embedModel": "Modelo de embeddings",
         "topK": "topK",
         "score": "Umbral de puntuación",
         "reindex": "Reconstruir índice",
         "reindexOk": "Índice reconstruido",
-        "reindexFail": "El índice ha fallado"
+        "reindexFail": "El índice ha fallado",
+        "reindexHint": "Reconstruye el índice tras cambiar los embeddings."
       },
       "router": {
         "branches": "Ramas",

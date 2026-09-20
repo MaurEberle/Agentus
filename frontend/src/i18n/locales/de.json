@@ -626,11 +626,14 @@
       "knowledge": {
         "path": "Quellenordner",
         "pick": "Ordner",
+        "embedProvider": "Embedding-Provider",
+        "embedModel": "Embedding-Modell",
         "topK": "topK",
         "score": "Score-Schwelle",
         "reindex": "Index neu",
         "reindexOk": "Index neu aufgebaut",
-        "reindexFail": "Index fehlgeschlagen"
+        "reindexFail": "Index fehlgeschlagen",
+        "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen."
       },
       "router": {
         "branches": "Zweige",

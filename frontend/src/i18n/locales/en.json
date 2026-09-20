@@ -626,11 +626,14 @@
       "knowledge": {
         "path": "Source folder",
         "pick": "Folder",
+        "embedProvider": "Embedding provider",
+        "embedModel": "Embedding model",
         "topK": "topK",
         "score": "Score threshold",
         "reindex": "Rebuild index",
         "reindexOk": "Index rebuilt",
-        "reindexFail": "Index failed"
+        "reindexFail": "Index failed",
+        "reindexHint": "Rebuild the index after changing embeddings."
       },
       "router": {
         "branches": "Branches",
