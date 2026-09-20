@@ -41,3 +41,22 @@ def test_clamp_tiny_width(monkeypatch) -> None:
     rect = clamp_to_visible(Rect(x=100, y=100, w=100, h=100))
     assert rect.w >= MIN_W
     assert rect.h >= MIN_H
+
+
+def test_degenerate_work_area_does_not_recurse(monkeypatch) -> None:
+    monkeypatch.setattr("app.host.geometry.work_area", lambda: Rect(0, 0, 0, 0))
+    rect = default_rect()
+    assert rect.w >= MIN_W
+    assert rect.h >= MIN_H
+    off = clamp_to_visible(Rect(x=-9000, y=-9000, w=800, h=600))
+    assert off.w >= MIN_W
+    assert off.h >= MIN_H
+
+
+def test_tiny_work_area_does_not_recurse(monkeypatch) -> None:
+    monkeypatch.setattr("app.host.geometry.work_area", lambda: Rect(0, 0, 10, 10))
+    rect = default_rect()
+    assert rect.w >= MIN_W
+    assert rect.h >= MIN_H
+    assert rect.x == 0
+    assert rect.y == 0

@@ -38,7 +38,7 @@ finally {
 $have = (Get-FileHash -LiteralPath $partial -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($have -ne $expected) {
     Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
-    throw "sha256 mismatch for $OutFile: got $have expected $expected"
+    throw "sha256 mismatch for ${OutFile}: got ${have} expected ${expected}"
 }
 Move-Item -LiteralPath $partial -Destination $OutFile -Force
 Write-Host "saved $OutFile"

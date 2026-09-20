@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 MIN_W, MIN_H = 800, 560
 MARGIN = 24
+_FALLBACK_W, _FALLBACK_H = 1280, 720
 
 
 @dataclass
@@ -15,39 +16,28 @@ class Rect:
 
 
 def work_area() -> Rect:
+    fallback = Rect(0, 0, _FALLBACK_W, _FALLBACK_H)
     try:
         import ctypes
         from ctypes import wintypes
 
-        SPI_GETWORKAREA = 16
         rect = wintypes.RECT()
-        ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(rect), 0)
-        return Rect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+        ok = ctypes.windll.user32.SystemParametersInfoW(16, 0, ctypes.byref(rect), 0)
+        if not ok:
+            return fallback
+        w = int(rect.right) - int(rect.left)
+        h = int(rect.bottom) - int(rect.top)
+        if w <= 0 or h <= 0:
+            return fallback
+        return Rect(int(rect.left), int(rect.top), w, h)
     except Exception:
-        return Rect(0, 0, 1280, 720)
+        return fallback
 
 
-def default_rect() -> Rect:
-    area = work_area()
-    w = max(MIN_W, area.w - 2 * MARGIN)
-    h = max(MIN_H, area.h - 2 * MARGIN)
-    x = area.x + MARGIN
-    y = area.y + MARGIN
-    return clamp_to_visible(Rect(x, y, w, h))
-
-
-def clamp_to_visible(r: Rect) -> Rect:
-    area = work_area()
+def _fit(area: Rect, r: Rect) -> Rect:
+    """Pin r onto area. Never calls default_rect (avoids recursion)."""
     w = max(MIN_W, r.w)
     h = max(MIN_H, r.h)
-    intersects = not (
-        r.x + r.w <= area.x
-        or r.x >= area.x + area.w
-        or r.y + r.h <= area.y
-        or r.y >= area.y + area.h
-    )
-    if not intersects:
-        return default_rect()
     x = min(max(r.x, area.x), area.x + max(0, area.w - MIN_W))
     y = min(max(r.y, area.y), area.y + max(0, area.h - MIN_H))
     if x + w > area.x + area.w:
@@ -57,6 +47,28 @@ def clamp_to_visible(r: Rect) -> Rect:
     x = max(area.x, x)
     y = max(area.y, y)
     return Rect(x, y, w, h)
+
+
+def default_rect() -> Rect:
+    area = work_area()
+    w = max(MIN_W, area.w - 2 * MARGIN)
+    h = max(MIN_H, area.h - 2 * MARGIN)
+    x = area.x + MARGIN
+    y = area.y + MARGIN
+    return _fit(area, Rect(x, y, w, h))
+
+
+def clamp_to_visible(r: Rect) -> Rect:
+    area = work_area()
+    intersects = not (
+        r.x + r.w <= area.x
+        or r.x >= area.x + area.w
+        or r.y + r.h <= area.y
+        or r.y >= area.y + area.h
+    )
+    if not intersects:
+        return default_rect()
+    return _fit(area, r)
 
 
 def from_bootstrap(window) -> Rect:
