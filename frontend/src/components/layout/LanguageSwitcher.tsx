@@ -1,14 +1,13 @@
-import { Languages } from 'lucide-react';
+import { Check, Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { APP_LANGUAGES, LANGUAGE_LABEL_KEYS, isAppLanguage, resolveAppLanguage, setAppLanguage } from '@/i18n';
+import { APP_LANGUAGES, LANGUAGE_LABEL_KEYS, resolveAppLanguage, setAppLanguage } from '@/i18n';
 
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { t, i18n } = useTranslation();
@@ -23,19 +22,22 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
           <span className="sr-only">{t('shell.language')}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="app-no-drag">
-        <DropdownMenuRadioGroup
-          value={current}
-          onValueChange={(value) => {
-            if (isAppLanguage(value)) void setAppLanguage(value);
-          }}
-        >
-          {APP_LANGUAGES.map((code) => (
-            <DropdownMenuRadioItem key={code} value={code}>
-              {t(LANGUAGE_LABEL_KEYS[code])}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+      <DropdownMenuContent align="end" className="app-no-drag min-w-40">
+        {APP_LANGUAGES.map((code) => (
+          <DropdownMenuItem
+            key={code}
+            className="gap-2"
+            onClick={() => {
+              void setAppLanguage(code);
+            }}
+          >
+            <span className="flex size-4 shrink-0 items-center justify-center text-[10px] font-semibold uppercase leading-none">
+              {code}
+            </span>
+            <span className="flex-1">{t(LANGUAGE_LABEL_KEYS[code])}</span>
+            {current === code ? <Check className="size-4 shrink-0" /> : <span className="size-4 shrink-0" />}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
