@@ -1,5 +1,4 @@
 import i18n from '@/i18n';
-import { mockApplyService, peekMockSession } from '@/api/mocks';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 import { queryClient } from '@/api/client';
@@ -183,8 +182,28 @@ function hostResources(cloud: boolean): ResourceSnapshot {
   };
 }
 
+function peekSession() {
+  const state = useAppStore.getState();
+  return {
+    activeNetworkId: state.activeNetworkId,
+    activeNetworkName: state.activeNetworkName ?? undefined,
+    serviceStatus: state.serviceStatus,
+    runId: state.runId ?? undefined,
+    startedAt: undefined as string | undefined,
+  };
+}
+
+function applyService(status: ServiceStatus, extra?: { runId?: string | null; keepRun?: boolean }) {
+  const store = useAppStore.getState();
+  store.setServiceStatus(status);
+  if (extra?.runId === null) store.setRunId(null);
+  else if (extra?.runId) store.setRunId(extra.runId);
+  else if (!extra?.keepRun && (status === 'stopped' || status === 'disconnected')) store.setRunId(null);
+  return peekSession();
+}
+
 function sessionMeta() {
-  const session = peekMockSession();
+  const session = peekSession();
   return {
     networkId: session.activeNetworkId ?? 'net-demo',
     networkName: session.activeNetworkName ?? 'Demo-Netz',
@@ -364,7 +383,7 @@ function statusOf(scenario: MockScenario): ServiceStatus {
 
 function syncAppSession(status: ServiceStatus) {
   const keep = status === 'disconnected' || status === 'error' || status === 'starting' || status === 'stopping';
-  const session = mockApplyService(status, {
+  const session = applyService(status, {
     runId: engine.run?.runId,
     keepRun: keep,
   });
@@ -375,7 +394,7 @@ function syncAppSession(status: ServiceStatus) {
 }
 
 function followSession() {
-  const session = peekMockSession();
+  const session = peekSession();
   if (session.serviceStatus === engine.serviceStatus) return;
   applyStatus(session.serviceStatus, engine.flavor);
 }
@@ -536,7 +555,7 @@ export function createMockHandle(): MonitoringHandle {
       };
     },
     getSnapshot() {
-      const session = peekMockSession();
+      const session = peekSession();
       if (session.serviceStatus !== engine.serviceStatus && listeners.size === 0) {
         engine.serviceStatus = session.serviceStatus;
         if (session.serviceStatus === 'running') {

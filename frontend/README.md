@@ -1,6 +1,6 @@
 # Agentus Network — Frontend
 
-Web-UI-Rahmen (Vite + React) für die lokale Agentnetz-App. Fachmodule hängen später nur in die Registry und die Routen ein. Ohne Backend laufen Header-Aktionen gegen In-Memory-Mocks.
+Web-UI-Rahmen (Vite + React) für die lokale Agentnetz-App. Fachmodule hängen in die Registry und die Routen ein. Die UI spricht die Python-API unter `/api` an (Vite-Proxy → `127.0.0.1:8765`).
 
 ## Stack
 
@@ -30,8 +30,7 @@ Dev-Server: `http://localhost:5173`. API-Proxy: `/api` → `http://127.0.0.1:876
 
 | Variable | Default | Bedeutung |
 |----------|---------|-----------|
-| `VITE_API_BASE` | `http://127.0.0.1:8765/api` | Fetch-Basis in `src/api/client.ts` |
-| `VITE_USE_MOCKS` | `true` (alles außer `false`) | Session/Start/Stopp/Netze lokal simulieren |
+| `VITE_API_BASE` | `/api` | Fetch-Basis in `src/api/client.ts` (Vite-Proxy / gleicher Origin im Freeze) |
 
 ## i18n
 

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch, USE_MOCKS } from '@/api/client';
+import { apiFetch } from '@/api/client';
 import { useHelpChatStatusQuery } from '@/components/help-chat/api';
-import { mockListRuns } from '@/modules/dashboard/mocks';
 import {
   isHistoryStoreOk,
   weekAgoIso,
@@ -14,7 +13,6 @@ import { pingRuntime, useRuntimeModelsQuery, useStoresQuery } from '@/modules/se
 export { listNetworkSummaries };
 
 export async function listRuns(filter: RunListFilter = {}): Promise<{ items: RunSummary[]; total: number }> {
-  if (USE_MOCKS) return mockListRuns(filter);
   const params = new URLSearchParams();
   if (filter.limit != null) params.set('limit', String(filter.limit));
   if (filter.since) params.set('since', filter.since);

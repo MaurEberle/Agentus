@@ -1,12 +1,4 @@
-import { apiFetch, USE_MOCKS } from '@/api/client';
-import {
-  mockDeleteRuns,
-  mockDeleteRunsOlderThan,
-  mockGetRun,
-  mockListCalls,
-  mockListRunLogs,
-  mockListRuns,
-} from '@/modules/history/mocks';
+import { apiFetch } from '@/api/client';
 import type { LlmCall, LogEvent, LogFilter, RunDetail, RunListFilter, RunSummary } from '@/modules/history/model/types';
 
 function queryString(filter: RunListFilter): string {
@@ -25,12 +17,10 @@ function queryString(filter: RunListFilter): string {
 }
 
 export async function listRuns(filter: RunListFilter = {}): Promise<{ items: RunSummary[]; total: number }> {
-  if (USE_MOCKS) return mockListRuns(filter);
   return apiFetch(`/runs${queryString(filter)}`);
 }
 
 export async function getRun(runId: string): Promise<RunDetail | null> {
-  if (USE_MOCKS) return mockGetRun(runId);
   try {
     return await apiFetch<RunDetail>(`/runs/${encodeURIComponent(runId)}`);
   } catch {
@@ -39,7 +29,6 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
 }
 
 export async function listRunLogs(runId: string, logFilter?: LogFilter): Promise<LogEvent[]> {
-  if (USE_MOCKS) return mockListRunLogs(runId, logFilter);
   const params = new URLSearchParams();
   if (logFilter?.level) params.set('level', logFilter.level);
   if (logFilter?.q) params.set('q', logFilter.q);
@@ -50,18 +39,15 @@ export async function listRunLogs(runId: string, logFilter?: LogFilter): Promise
 }
 
 export async function listCalls(filter: RunListFilter = {}): Promise<LlmCall[]> {
-  if (USE_MOCKS) return mockListCalls(filter);
   const body = await apiFetch<{ items: LlmCall[] }>(`/runs/calls${queryString(filter)}`);
   return body.items;
 }
 
 export async function deleteRuns(ids: string[]): Promise<void> {
-  if (USE_MOCKS) return mockDeleteRuns(ids);
   await apiFetch('/runs', { method: 'DELETE', body: JSON.stringify({ ids }) });
 }
 
 export async function deleteRunsOlderThan(days: number): Promise<{ deleted: number }> {
-  if (USE_MOCKS) return mockDeleteRunsOlderThan(days);
   return apiFetch('/runs/purge', { method: 'POST', body: JSON.stringify({ olderThanDays: days }) });
 }
 

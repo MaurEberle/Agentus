@@ -1,36 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_BASE, USE_MOCKS, apiFetch, queryClient } from '@/api/client';
-import i18n from '@/i18n';
-import { helpMessageCache } from '@/components/help-chat/messageStore';
-import { mockGetSettings, mockPatchSettings } from '@/modules/settings/mocks';
-import { helpChatConfigured } from '@/modules/settings/model';
+import { API_BASE, apiFetch, queryClient } from '@/api/client';
 import type { HelpChatStatus, HelpMessage, HelpSendHandlers, HelpSource } from '@/components/help-chat/model';
-import { useAppStore } from '@/store';
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function getHelpChatStatus(): Promise<HelpChatStatus> {
-  if (!USE_MOCKS) return apiFetch<HelpChatStatus>('/help-chat/status');
-  const settings = await mockGetSettings();
-  const serviceStatus = useAppStore.getState().serviceStatus;
-  return {
-    configured: helpChatConfigured(settings.helpChat),
-    onboardingSeen: Boolean(settings.chatOnboardingSeen),
-    webSearchEnabled: settings.helpChat.webSearchEnabled,
-    degraded: serviceStatus === 'running' || serviceStatus === 'starting',
-  };
+  return apiFetch<HelpChatStatus>('/help-chat/status');
 }
 
 export async function setOnboardingSeen(): Promise<void> {
-  if (USE_MOCKS) await mockPatchSettings({ chatOnboardingSeen: true });
-  else {
-    await apiFetch('/settings', {
-      method: 'PATCH',
-      body: JSON.stringify({ chatOnboardingSeen: true }),
-    });
-  }
+  await apiFetch('/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ chatOnboardingSeen: true }),
+  });
   queryClient.setQueryData(['help-chat', 'status'], (current: HelpChatStatus | undefined) =>
     current ? { ...current, onboardingSeen: true } : current,
   );
@@ -39,79 +19,8 @@ export async function setOnboardingSeen(): Promise<void> {
 }
 
 export async function listHelpMessages(): Promise<HelpMessage[]> {
-  if (USE_MOCKS) {
-    await delay(20);
-    return helpMessageCache.map((item) => ({
-      ...item,
-      sources: item.sources ? [...item.sources] : undefined,
-    }));
-  }
   const body = await apiFetch<{ items: HelpMessage[] }>('/help-chat/messages');
   return body.items;
-}
-
-function mockSend(text: string, handlers: HelpSendHandlers): { abort: () => void } {
-  let aborted = false;
-  helpMessageCache.push({
-    id: crypto.randomUUID(),
-    role: 'user',
-    content: text,
-    createdAt: new Date().toISOString(),
-  });
-  queryClient.setQueryData(['help-chat', 'messages'], [...helpMessageCache]);
-
-  const reply = i18n.t('helpChat.mock.reply');
-  const chunks = reply.split(/(\s+)/).filter((part) => part.length > 0);
-  let index = 0;
-  let content = '';
-  const id = crypto.randomUUID();
-  const createdAt = new Date().toISOString();
-
-  const finish = (sources?: HelpSource[]) => {
-    const final: HelpMessage = { id, role: 'assistant', content, createdAt, sources };
-    helpMessageCache.push(final);
-    handlers.onDone(final);
-    void queryClient.invalidateQueries({ queryKey: ['help-chat', 'messages'] });
-  };
-
-  const timer = setInterval(() => {
-    if (aborted) return;
-    if (index < chunks.length) {
-      const chunk = chunks[index] ?? '';
-      index += 1;
-      content += chunk;
-      handlers.onDelta(chunk);
-      return;
-    }
-    clearInterval(timer);
-    void getHelpChatStatus().then((status) => {
-      if (aborted) return;
-      const sources: HelpSource[] = [
-        {
-          kind: 'rag',
-          title: i18n.t('helpChat.mock.ragTitle'),
-          section: i18n.t('helpChat.mock.ragSection'),
-        },
-      ];
-      if (status.webSearchEnabled) {
-        sources.push({
-          kind: 'web',
-          title: i18n.t('helpChat.mock.webTitle'),
-          url: 'https://docs.ollama.com',
-        });
-      }
-      handlers.onSources?.(sources);
-      finish(sources);
-    });
-  }, 40);
-
-  return {
-    abort: () => {
-      aborted = true;
-      clearInterval(timer);
-      if (content) finish();
-    },
-  };
 }
 
 async function readSse(response: Response, handlers: HelpSendHandlers) {
@@ -151,8 +60,6 @@ async function readSse(response: Response, handlers: HelpSendHandlers) {
 }
 
 export function sendHelpMessage(text: string, handlers: HelpSendHandlers): { abort: () => void } {
-  if (USE_MOCKS) return mockSend(text, handlers);
-
   const controller = new AbortController();
   void (async () => {
     try {
@@ -192,8 +99,6 @@ export function useHelpChatStatusQuery() {
     refetchInterval: 4000,
   });
 }
-
-
 
 export function useHelpMessagesQuery() {
   return useQuery({

@@ -101,7 +101,7 @@ UI: `http://localhost:5173`. API: `http://127.0.0.1:8765/api`. OpenAPI `/docs` n
 
 Ohne `DEV` / `NO_HOST` auf Windows startet dasselbe Backend ein WebView2-Fenster und serviert `frontend/dist` (vorher `npm run build` im Frontend). Die API bindet nur Loopback (`127.0.0.1`, `localhost`, `::1`). `0.0.0.0` startet nicht.
 
-Frontend-Mocks sind Default (`VITE_USE_MOCKS` alles außer `false`). Gegen die echte API: `VITE_USE_MOCKS=false`.
+Das Frontend spricht die Python-API (`/api`, Proxy in Vite). Backend mit `AGENTUS_NETWORK_DEV=1` und `AGENTUS_NETWORK_NO_HOST=1` parallel zum Vite-Dev-Server starten.
 
 ```powershell
 cd backend
