@@ -1,7 +1,7 @@
 """Inference client. Help and harness import these functions only."""
 
 from app.runtime.catalog import list_openai_compat_models
-from app.runtime.completions import complete, complete_stream, test_llm
+from app.runtime.completions import complete, complete_live, complete_stream, test_llm
 from app.runtime.embeddings import embed
 from app.runtime.models import (
     ChatMessage,
@@ -31,6 +31,7 @@ __all__ = [
     "StreamEvent",
     "TestLlmRequest",
     "complete",
+    "complete_live",
     "complete_stream",
     "embed",
     "ensure_loaded",

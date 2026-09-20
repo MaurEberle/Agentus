@@ -207,7 +207,8 @@
       "pingOk": "Runtime accesible",
       "pingFail": "Runtime no accesible",
       "modelNotFound": "Modelo no encontrado o no se pudo cargar: {{name}}",
-      "unreachable": "Ollama no respondió a tiempo ({{name}}).",
+      "timeout": "Sin progreso del modelo ({{name}}). Abortado por silencio, no por un límite de duración total.",
+      "unreachable": "Ollama no está accesible ({{name}}).",
       "models": "Modelos instalados",
       "modelsEmpty": "No hay modelos o el runtime no está disponible.",
       "modelName": "Modelo",
@@ -1237,6 +1238,10 @@
       "router": {
         "noEdge": "El enrutador no tiene una arista coincidente"
       }
+    },
+    "runtime": {
+      "timeout": "Sin progreso del modelo",
+      "unreachable": "Runtime no accesible"
     }
   }
 }

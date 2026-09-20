@@ -15,6 +15,7 @@ const START_ERROR_DESC: Record<string, string> = {
   'run.noActiveNetwork': 'notify.noNetwork.desc',
   'run.knowledge.failed': 'network.inspector.knowledge.reindexFail',
   'runtime.modelNotFound': 'settings.runtime.modelNotFound',
+  'runtime.timeout': 'settings.runtime.timeout',
   'runtime.unreachable': 'settings.runtime.unreachable',
   'runtime.upstream': 'settings.runtime.unreachable',
   'graph.knowledge.path': 'network.validation.knowledgePath',

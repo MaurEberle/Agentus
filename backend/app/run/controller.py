@@ -60,6 +60,7 @@ class RunController:
         self.conversation: list[ChatMessage] = []
         self._unloads: list[str] = []
         self._help_model: str | None = None
+        self.last_error_node_id: str | None = None
         set_run_slice_provider(self.slice)
 
     def reset(self) -> None:
@@ -76,6 +77,7 @@ class RunController:
         self.conversation = []
         self._unloads = []
         self._help_model = None
+        self.last_error_node_id = None
         self.stop_event = threading.Event()
         self.abort_generation = threading.Event()
         set_run_slice_provider(self.slice)
@@ -99,6 +101,7 @@ class RunController:
             self.abort_generation.clear()
             self.chat_input_queue = queue.Queue()
             self.conversation = []
+            self.last_error_node_id = None
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()
@@ -215,11 +218,32 @@ class RunController:
             publish("service", {"serviceStatus": "stopped"})
         return {"serviceStatus": "stopped"}
 
-    def finish(self, outcome: str) -> None:
+    def finish(
+        self,
+        outcome: str,
+        *,
+        error_message: str | None = None,
+        error_class: str | None = None,
+        error_node_id: str | None = None,
+        error_node_name: str | None = None,
+    ) -> None:
         run_id = self.run_id
         if run_id:
             chat = [item.model_dump(by_alias=True) for item in self.conversation] or None
-            update_run(run_id, outcome=outcome, ended_at=utc_now(), chat=chat)
+            fields: dict[str, Any] = {
+                "outcome": outcome,
+                "ended_at": utc_now(),
+                "chat": chat,
+            }
+            if error_message:
+                fields["error_message"] = error_message
+            if error_class:
+                fields["error_class"] = error_class
+            if error_node_id:
+                fields["error_node_id"] = error_node_id
+            if error_node_name:
+                fields["error_node_name"] = error_node_name
+            update_run(run_id, **fields)
         self.teardown(outcome=outcome)
         with self.lock:
             self.service_status = "stopped"

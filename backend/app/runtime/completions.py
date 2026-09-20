@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from app.common.http import client
 from app.common.types import Provider
 from app.runtime.errors import (
     RuntimeApiError,
+    is_timeout_error,
     is_transport_error,
     map_http_status,
     raise_for_status,
     raise_transport,
     response_json,
+    transport_error_key,
 )
 from app.runtime.models import (
     ChatMessage,
@@ -272,8 +274,8 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
         yield StreamEvent(kind="error", error_key=exc.error_key)
         return
     except Exception as exc:
-        if is_transport_error(exc):
-            yield StreamEvent(kind="error", error_key="runtime.unreachable")
+        if is_timeout_error(exc) or is_transport_error(exc):
+            yield StreamEvent(kind="error", error_key=transport_error_key(exc))
             return
         yield StreamEvent(kind="error", error_key="runtime.badRequest")
         return
@@ -286,6 +288,42 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
         ]
         or None,
         usage=usage,
+    )
+
+
+def complete_live(
+    req: CompletionRequest,
+    *,
+    should_abort: Callable[[], bool] | None = None,
+) -> CompletionResult:
+    """Stream a completion. ``timeout_sec`` is idle time without a chunk, not total duration."""
+    texts: list[str] = []
+    tool_calls: list[ToolCall] = []
+    usage: CompletionUsage | None = None
+    finish: str | None = None
+    for event in complete_stream(req):
+        if should_abort and should_abort():
+            raise RuntimeApiError("run.cancelled")
+        if event.kind == "delta" and event.text:
+            texts.append(event.text)
+        elif event.kind == "tool_call_delta" and event.tool_calls:
+            tool_calls = event.tool_calls
+        elif event.kind == "usage" and event.usage is not None:
+            usage = event.usage
+        elif event.kind == "error":
+            raise RuntimeApiError(event.error_key or "runtime.badRequest")
+        elif event.kind == "done":
+            if event.tool_calls:
+                tool_calls = event.tool_calls
+            if event.usage is not None:
+                usage = event.usage
+            finish = event.finish_reason
+    return CompletionResult(
+        content="".join(texts) or None,
+        tool_calls=tool_calls,
+        finish_reason=finish,
+        usage=usage,
+        model=req.model,
     )
 
 

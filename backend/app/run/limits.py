@@ -1,5 +1,7 @@
 MAX_AGENT_INVOCATIONS = 32
 MAX_TOOL_ROUNDS = 8
+# Idle gap between stream chunks (or first byte). Not a total run duration.
+STREAM_IDLE_TIMEOUT_SEC = 180.0
 RESOURCES_INTERVAL_SEC = 1.5
 SSE_QUEUE_MAX = 1000
 LOG_PAYLOAD_MAX = 8000

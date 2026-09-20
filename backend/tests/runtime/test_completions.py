@@ -6,7 +6,7 @@ import logging
 import httpx
 import pytest
 
-from app.runtime.completions import complete, complete_stream
+from app.runtime.completions import complete, complete_live, complete_stream
 from app.runtime.errors import RuntimeApiError
 from app.runtime.models import ChatMessage, CompletionRequest
 from tests.runtime.transport import install_transport
@@ -154,3 +154,78 @@ def test_secret_not_in_logs(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogC
     ).model_dump()
     assert secret not in str(dumped)
     assert "secret" not in dumped
+
+
+def test_complete_read_timeout_is_runtime_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    assert err.value.error_key == "runtime.timeout"
+
+
+def test_complete_connect_error_is_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("offline", request=request)
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    assert err.value.error_key == "runtime.unreachable"
+
+
+def test_stream_read_timeout_error_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    assert events[-1].kind == "error"
+    assert events[-1].error_key == "runtime.timeout"
+
+
+def test_complete_live_aggregates_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n'
+        b'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n'
+        b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        b"data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        assert body["stream"] is True
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+    )
+    assert result.content == "Hello"
+    assert result.finish_reason == "stop"
+
+
+def test_complete_live_abort(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=b'data: {"choices":[{"delta":{"content":"x"}}]}\n\n' b"data: [DONE]\n\n",
+        )
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete_live(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG),
+            should_abort=lambda: True,
+        )
+    assert err.value.error_key == "run.cancelled"

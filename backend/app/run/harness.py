@@ -12,18 +12,34 @@ from app.db.vault import get as vault_get
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.knowledge import retrieve
-from app.run.limits import DEFAULT_SCORE_MIN, DEFAULT_TOP_K, MAX_AGENT_INVOCATIONS, MAX_TOOL_ROUNDS
+from app.run.limits import (
+    DEFAULT_SCORE_MIN,
+    DEFAULT_TOP_K,
+    MAX_AGENT_INVOCATIONS,
+    MAX_TOOL_ROUNDS,
+    STREAM_IDLE_TIMEOUT_SEC,
+)
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
 from app.run.models import ChatMessage, NodeRuntime
 from app.run.sse import publish
+from app.runtime.errors import RuntimeApiError
 from app.runtime.models import ChatMessage as LlmMessage
 from app.runtime.models import CompletionRequest, CompletionResult
 from app.tools.catalog import openai_tools_for_kinds
 from app.tools import execute as tools_execute
 
 
+def _run_error_class(exc: BaseException) -> str:
+    if isinstance(exc, RuntimeApiError) and exc.error_key == "runtime.timeout":
+        return "timeout"
+    if isinstance(exc, RuntimeApiError) and str(exc.error_key).startswith("runtime."):
+        return "llm_error"
+    return "unknown"
+
+
 def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
     outcome = "failed"
+    fail_exc: BaseException | None = None
     try:
         user_text = _wait_user(ctrl, compiled)
         if ctrl.stop_event.is_set():
@@ -97,6 +113,7 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
         else:
             outcome = "failed"
     except Exception as exc:
+        fail_exc = exc
         emit_log("error", str(exc), stack=traceback.format_exc())
         outcome = "failed"
     finally:
@@ -106,7 +123,17 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
             emit_log("warn", "run.cancelled")
         else:
             emit_log("error", "run.failed")
-        ctrl.finish(outcome)
+        extra: dict[str, str] = {}
+        if outcome == "failed" and fail_exc is not None:
+            extra["error_message"] = str(fail_exc)[:500]
+            extra["error_class"] = _run_error_class(fail_exc)
+            node_id = getattr(ctrl, "last_error_node_id", None)
+            if node_id:
+                extra["error_node_id"] = node_id
+                name = node_label(compiled, node_id)
+                if name:
+                    extra["error_node_name"] = name
+        ctrl.finish(outcome, **extra)
 
 
 def _wait_user(ctrl: RunController, compiled: CompiledGraph) -> str | None:
@@ -228,7 +255,7 @@ def _agent_turn(
             },
         )
         try:
-            result: CompletionResult = runtime_completions.complete(
+            result: CompletionResult = runtime_completions.complete_live(
                 CompletionRequest(
                     provider=agent.llm.provider,  # type: ignore[arg-type]
                     model=agent.llm.model,
@@ -239,11 +266,17 @@ def _agent_turn(
                     temperature=agent.llm.temperature,
                     max_tokens=agent.llm.max_tokens,
                     tools=tools or None,
-                    timeout_sec=120,
-                )
+                    timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
+                ),
+                should_abort=ctrl.stop_event.is_set,
             )
             ok = True
         except Exception as exc:
+            if isinstance(exc, RuntimeApiError) and (
+                exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
+            ):
+                return None
+            ctrl.last_error_node_id = agent_id
             emit_log("error", str(exc), node_id=agent_id, stack=traceback.format_exc())
             _set_node(ctrl, agent_id, "error", error=str(exc))
             insert_call(

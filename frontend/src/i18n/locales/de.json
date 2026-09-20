@@ -207,7 +207,8 @@
       "pingOk": "Runtime erreichbar",
       "pingFail": "Runtime nicht erreichbar",
       "modelNotFound": "Modell nicht gefunden oder nicht ladbar: {{name}}",
-      "unreachable": "Ollama hat nicht rechtzeitig geantwortet ({{name}}).",
+      "timeout": "Kein Fortschritt vom Modell ({{name}}). Abbruch nach Stille, nicht nach Gesamtdauer.",
+      "unreachable": "Ollama ist nicht erreichbar ({{name}}).",
       "models": "Installierte Modelle",
       "modelsEmpty": "Keine Modelle oder Runtime nicht erreichbar.",
       "modelName": "Modell",
@@ -1237,6 +1238,10 @@
       "router": {
         "noEdge": "Router ohne passende Kante"
       }
+    },
+    "runtime": {
+      "timeout": "Kein Fortschritt vom Modell",
+      "unreachable": "Runtime nicht erreichbar"
     }
   }
 }

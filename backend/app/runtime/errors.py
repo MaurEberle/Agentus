@@ -30,8 +30,18 @@ def map_http_status(status: int) -> str:
     return "runtime.upstream"
 
 
+def is_timeout_error(exc: BaseException) -> bool:
+    return isinstance(exc, (httpx.ReadTimeout, httpx.WriteTimeout, httpx.PoolTimeout))
+
+
+def transport_error_key(exc: BaseException) -> str:
+    if is_timeout_error(exc):
+        return "runtime.timeout"
+    return "runtime.unreachable"
+
+
 def raise_transport(exc: BaseException) -> None:
-    raise RuntimeTransportError("runtime.unreachable") from exc
+    raise RuntimeTransportError(transport_error_key(exc)) from exc
 
 
 def raise_for_status(response: httpx.Response) -> None:

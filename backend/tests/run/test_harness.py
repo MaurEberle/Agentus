@@ -36,7 +36,7 @@ def test_execute_first_party_allowlist(monkeypatch, api_env) -> None:
             )
         return CompletionResult(content="done", model=req.model, finish_reason="stop")
 
-    monkeypatch.setattr("app.runtime.completions.complete", _complete)
+    monkeypatch.setattr("app.runtime.completions.complete_live", lambda req, should_abort=None: _complete(req))
     monkeypatch.setattr("app.tools.execute.execute_first_party", _exec)
     doc = mini_doc(startMessage="go")
     doc["nodes"].append(
