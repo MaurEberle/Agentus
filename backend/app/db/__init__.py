@@ -52,9 +52,10 @@ def init() -> Bootstrap:
     set_bootstrap(bootstrap)
     open_all()
     try:
-        from app.db.runs import abandon_orphaned_runs
+        from app.db.runs import abandon_orphaned_runs, repair_interrupted_ended_at
 
         abandon_orphaned_runs()
+        repair_interrupted_ended_at()
     except Exception:
         pass
     global _atexit_registered

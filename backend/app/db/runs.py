@@ -21,6 +21,7 @@ _UPDATE_FIELDS = frozenset(
         "graph_snapshot",
         "chat",
         "models",
+        "updated_at",
     }
 )
 
@@ -174,8 +175,8 @@ def insert_run(
         conn.execute(
             """
             INSERT INTO runs (
-              id, network_id, network_name, started_at, outcome, graph_snapshot, models
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+              id, network_id, network_name, started_at, outcome, graph_snapshot, models, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 id,
@@ -185,29 +186,65 @@ def insert_run(
                 outcome,
                 _dump_optional(graph_snapshot),
                 json_dumps(models or []),
+                started_at,
             ),
         )
 
 
+def _activity_ended_at(conn: Any, run_id: str, started_at: str) -> str:
+    log_row = conn.execute(
+        """
+        SELECT MAX(ts) AS ts FROM run_logs
+        WHERE run_id = ? AND message != 'run.interrupted'
+        """,
+        (run_id,),
+    ).fetchone()
+    run_row = conn.execute(
+        "SELECT updated_at FROM runs WHERE id = ?",
+        (run_id,),
+    ).fetchone()
+    candidates = [started_at]
+    if log_row is not None and log_row["ts"]:
+        candidates.append(str(log_row["ts"]))
+    if run_row is not None and run_row["updated_at"]:
+        candidates.append(str(run_row["updated_at"]))
+    return max(candidates)
+
+
+def touch_run(id: str, *, at: str | None = None) -> None:
+    ts = at or utc_now()
+    try:
+        with transaction("history") as conn:
+            conn.execute(
+                "UPDATE runs SET updated_at = ? WHERE id = ? AND outcome = 'running'",
+                (ts, id),
+            )
+    except StoreUnavailable:
+        return
+
+
 def abandon_orphaned_runs(*, ended_at: str | None = None) -> int:
     """Mark leftover ``running`` rows cancelled. Safe at process start."""
-    ended = ended_at or utc_now()
+    detected = utc_now()
     try:
         with transaction("history") as conn:
             rows = conn.execute(
-                "SELECT id FROM runs WHERE outcome = 'running'"
+                "SELECT id, started_at FROM runs WHERE outcome = 'running'"
             ).fetchall()
             if not rows:
                 return 0
             ids = [str(row["id"]) for row in rows]
-            conn.execute(
-                """
-                UPDATE runs
-                SET outcome = 'cancelled', ended_at = ?
-                WHERE outcome = 'running'
-                """,
-                (ended,),
-            )
+            for row in rows:
+                run_id = str(row["id"])
+                ended = ended_at or _activity_ended_at(conn, run_id, str(row["started_at"]))
+                conn.execute(
+                    """
+                    UPDATE runs
+                    SET outcome = 'cancelled', ended_at = ?
+                    WHERE id = ? AND outcome = 'running'
+                    """,
+                    (ended, run_id),
+                )
             placeholders = ",".join("?" * len(ids))
             conn.execute(
                 f"""
@@ -229,7 +266,7 @@ def abandon_orphaned_runs(*, ended_at: str | None = None) -> int:
                     (
                         str(uuid.uuid4()),
                         run_id,
-                        ended,
+                        detected,
                         "warn",
                         None,
                         None,
@@ -239,6 +276,33 @@ def abandon_orphaned_runs(*, ended_at: str | None = None) -> int:
                     ),
                 )
             return len(ids)
+    except StoreUnavailable:
+        return 0
+
+
+def repair_interrupted_ended_at() -> int:
+    """Fix durations that used process-restart time instead of last activity."""
+    try:
+        with transaction("history") as conn:
+            rows = conn.execute(
+                """
+                SELECT DISTINCT runs.id, runs.started_at, runs.ended_at
+                FROM runs
+                JOIN run_logs ON run_logs.run_id = runs.id
+                WHERE runs.outcome = 'cancelled'
+                  AND run_logs.message = 'run.interrupted'
+                """
+            ).fetchall()
+            changed = 0
+            for row in rows:
+                ended = _activity_ended_at(conn, str(row["id"]), str(row["started_at"]))
+                if ended != row["ended_at"]:
+                    conn.execute(
+                        "UPDATE runs SET ended_at = ? WHERE id = ?",
+                        (ended, row["id"]),
+                    )
+                    changed += 1
+            return changed
     except StoreUnavailable:
         return 0
 

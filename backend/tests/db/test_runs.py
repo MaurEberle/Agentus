@@ -21,6 +21,9 @@ from app.db.runs import (
     list_runs,
     list_steps,
     purge_older_than,
+    repair_interrupted_ended_at,
+    touch_run,
+    update_run,
     upsert_step,
 )
 
@@ -58,7 +61,7 @@ def test_abandon_orphaned_runs() -> None:
     live = get_run("run-live")
     assert live is not None
     assert live["outcome"] == "cancelled"
-    assert live["ended_at"]
+    assert live["ended_at"] == now
     ok = get_run("run-ok")
     assert ok is not None
     assert ok["outcome"] == "succeeded"
@@ -68,6 +71,69 @@ def test_abandon_orphaned_runs() -> None:
     assert steps["ag"]["status"] == "error"
     assert steps["end"]["status"] == "idle"
     assert abandon_orphaned_runs() == 0
+
+
+def test_abandon_uses_last_activity_not_now() -> None:
+    init()
+    started = "2026-09-20T18:43:15.000000+00:00"
+    last = "2026-09-20T18:48:20.000000+00:00"
+    insert_run(
+        id="run-ghost",
+        network_id="n1",
+        network_name="Demo",
+        started_at=started,
+        outcome="running",
+    )
+    insert_log(run_id="run-ghost", message="run.llm.start", ts=last, level="info")
+    assert abandon_orphaned_runs() == 1
+    row = get_run("run-ghost")
+    assert row is not None
+    assert row["outcome"] == "cancelled"
+    assert row["ended_at"] == last
+    logs = list_logs("run-ghost")
+    interrupted = [item for item in logs if item["message"] == "run.interrupted"]
+    assert interrupted
+    assert interrupted[0]["ts"] != last
+
+
+def test_repair_interrupted_ended_at() -> None:
+    init()
+    started = "2026-09-20T18:43:15.000000+00:00"
+    last = "2026-09-20T18:48:20.000000+00:00"
+    restart = "2026-09-20T20:30:43.000000+00:00"
+    insert_run(
+        id="run-old",
+        network_id="n1",
+        network_name="Demo",
+        started_at=started,
+        outcome="cancelled",
+    )
+    update_run("run-old", ended_at=restart)
+    insert_log(run_id="run-old", message="run.llm.start", ts=last, level="info")
+    insert_log(run_id="run-old", message="run.interrupted", ts=restart, level="warn")
+    assert repair_interrupted_ended_at() == 1
+    row = get_run("run-old")
+    assert row is not None
+    assert row["ended_at"] == last
+    assert repair_interrupted_ended_at() == 0
+
+
+def test_touch_run_updates_activity() -> None:
+    init()
+    started = "2026-09-20T19:00:00.000000+00:00"
+    later = "2026-09-20T19:10:00.000000+00:00"
+    insert_run(
+        id="run-live",
+        network_id="n1",
+        network_name="Demo",
+        started_at=started,
+        outcome="running",
+    )
+    touch_run("run-live", at=later)
+    assert abandon_orphaned_runs() == 1
+    row = get_run("run-live")
+    assert row is not None
+    assert row["ended_at"] == later
 
 
 def test_complete_run_only_while_running() -> None:

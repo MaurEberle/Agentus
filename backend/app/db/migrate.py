@@ -181,14 +181,23 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
     )
     row = conn.execute("SELECT MAX(version) AS v FROM schema_migrations").fetchone()
     current = int(row["v"]) if row is not None and row["v"] is not None else 0
-    if current >= 1:
-        return
-    conn.execute("BEGIN")
-    try:
-        for statement in V1[store]:
-            conn.execute(statement)
-        conn.execute("INSERT INTO schema_migrations (version) VALUES (1)")
-        conn.execute("COMMIT")
-    except Exception:
-        conn.execute("ROLLBACK")
-        raise
+    if current < 1:
+        conn.execute("BEGIN")
+        try:
+            for statement in V1[store]:
+                conn.execute(statement)
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (1)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        current = 1
+    if store == "history" and current < 2:
+        conn.execute("BEGIN")
+        try:
+            conn.execute("ALTER TABLE runs ADD COLUMN updated_at TEXT")
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (2)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise

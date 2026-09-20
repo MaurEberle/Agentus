@@ -49,6 +49,15 @@ def _loop() -> None:
     while not _stop.wait(RESOURCES_INTERVAL_SEC):
         snap = _sample()
         publish("resources", snap.model_dump(by_alias=True))
+        try:
+            from app.db.runs import touch_run
+            from app.run.controller import get_controller
+
+            run_id = get_controller().run_id
+            if run_id:
+                touch_run(run_id, at=snap.ts)
+        except Exception:
+            pass
 
 
 def _sample_gpus() -> list[ResourceGpu]:
