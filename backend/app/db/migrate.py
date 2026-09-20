@@ -192,6 +192,16 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
             conn.execute("ROLLBACK")
             raise
         current = 1
+    if store == "help" and current < 2:
+        conn.execute("BEGIN")
+        try:
+            conn.execute("ALTER TABLE help_chat_rag_chunks ADD COLUMN locale TEXT")
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (2)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        current = 2
     if store == "history" and current < 2:
         conn.execute("BEGIN")
         try:

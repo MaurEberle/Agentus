@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { API_BASE, apiFetch, queryClient } from '@/api/client';
 import type { HelpChatStatus, HelpMessage, HelpSendHandlers, HelpSource } from '@/components/help-chat/model';
+import i18n, { resolveAppLanguage } from '@/i18n';
 
 export async function getHelpChatStatus(): Promise<HelpChatStatus> {
   return apiFetch<HelpChatStatus>('/help-chat/status');
@@ -66,7 +67,7 @@ export function sendHelpMessage(text: string, handlers: HelpSendHandlers): { abo
       const response = await fetch(`${API_BASE}/help-chat/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, locale: resolveAppLanguage(i18n.language) }),
         signal: controller.signal,
       });
       if (!response.ok) {

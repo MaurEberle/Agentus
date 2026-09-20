@@ -4,7 +4,7 @@ Zahnrad in der Kopfzeile. Abschnitte links: Darstellung, Zugänge, Runtime, Hilf
 
 ## Darstellung
 
-Hell, Dunkel oder System — gilt für die ganze App inklusive Kopfzeile. Sprache: Deutsch oder Englisch.
+Hell, Dunkel oder System — gilt für die ganze App inklusive Kopfzeile. **Sprache** ist ein Dropdown mit Flagge: Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية. Der Name in Klammern ist die Übersetzung in der aktuell gewählten Sprache.
 
 Schalter **Hilfe-Schaltfläche**: blendet die Sprechblase unten rechts ein oder aus. Die **Konfiguration** des Chatbots bleibt unter **Hilfe-Chatbot**, auch wenn die Blase aus ist.
 

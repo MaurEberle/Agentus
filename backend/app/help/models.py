@@ -31,6 +31,7 @@ class HelpMessage(ApiModel):
 
 class HelpSendBody(ApiModel):
     text: str
+    locale: str | None = None
 
 
 class HelpMessageList(ApiModel):

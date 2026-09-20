@@ -4,7 +4,7 @@ Gear in the header. Sections: Appearance, Credentials, Runtime, Help chatbot, MC
 
 ## Appearance
 
-Light, dark, or system — applies everywhere, including the header. Language: German or English.
+Light, dark, or system — applies everywhere, including the header. **Language** is a dropdown with a flag: Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية. The name in parentheses is the translation in the current UI language.
 
 **Help button** shows or hides the bubble at the bottom right. **Configuration** of the chatbot stays under **Help chatbot**, even if the bubble is hidden.
 

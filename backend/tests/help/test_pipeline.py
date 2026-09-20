@@ -84,7 +84,7 @@ def test_web_after_weak_rag(api_env, monkeypatch) -> None:
     )
     order: list[str] = []
 
-    def _retrieve(query: str):
+    def _retrieve(query: str, locale: str | None = None):
         order.append("rag")
         return []
 
@@ -115,7 +115,10 @@ def test_web_after_weak_rag(api_env, monkeypatch) -> None:
 def test_abort_done_partial(api_env, monkeypatch) -> None:
     init()
     _ready_index()
-    monkeypatch.setattr("app.help.pipeline.retrieve_scored", lambda q: [(1.0, HelpSource(kind="rag", title="g"))])
+    monkeypatch.setattr(
+        "app.help.pipeline.retrieve_scored",
+        lambda q, locale=None: [(1.0, HelpSource(kind="rag", title="g"))],
+    )
 
     def _stream(req: CompletionRequest):
         yield StreamEvent(kind="delta", text="hi")
@@ -143,7 +146,10 @@ def test_degraded_uses_fallback(api_env, monkeypatch) -> None:
         captured.append(req)
         yield StreamEvent(kind="done")
 
-    monkeypatch.setattr("app.help.pipeline.retrieve_scored", lambda q: [(1.0, HelpSource(kind="rag", title="g"))])
+    monkeypatch.setattr(
+        "app.help.pipeline.retrieve_scored",
+        lambda q, locale=None: [(1.0, HelpSource(kind="rag", title="g"))],
+    )
     monkeypatch.setattr("app.runtime.completions.complete_stream", _stream)
     list(send_stream("q"))
     assert captured[0].model == "llama3.2:1b"
@@ -153,7 +159,10 @@ def test_degraded_uses_fallback(api_env, monkeypatch) -> None:
 def test_masked_secret_persisted(api_env, monkeypatch) -> None:
     init()
     _ready_index()
-    monkeypatch.setattr("app.help.pipeline.retrieve_scored", lambda q: [(1.0, HelpSource(kind="rag", title="g"))])
+    monkeypatch.setattr(
+        "app.help.pipeline.retrieve_scored",
+        lambda q, locale=None: [(1.0, HelpSource(kind="rag", title="g"))],
+    )
     monkeypatch.setattr(
         "app.runtime.completions.complete_stream",
         lambda req: iter([StreamEvent(kind="done")]),

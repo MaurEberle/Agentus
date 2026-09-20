@@ -67,7 +67,7 @@ def _web_sources(query: str) -> list[HelpSource]:
     return sources
 
 
-def send_stream(text: str) -> Iterator[bytes]:
+def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
     stripped = text.strip()
     if not stripped:
         raise AppError("help.empty", status_code=400)
@@ -86,7 +86,7 @@ def send_stream(text: str) -> Iterator[bytes]:
         if not index_is_ready():
             yield sse_event("error", {"messageKey": "help.index.missing"})
             return
-        scored = retrieve_scored(stripped)
+        scored = retrieve_scored(stripped, locale)
         rag_sources = [item[1] for item in scored]
         max_score = scored[0][0] if scored else 0.0
         weak = len(rag_sources) == 0 or max_score < SCORE_MIN

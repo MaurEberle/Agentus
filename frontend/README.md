@@ -35,6 +35,7 @@ Dev-Server: `http://localhost:5173`. API-Proxy: `/api` → `http://127.0.0.1:876
 ## i18n
 
 - Dateien: `src/i18n/locales/{de,en,es,fr,tr,pt,zh,ja,ar}.json`
+- Hilfe-Dokumente: `resources/help_docs/{de,en,es,fr,tr,pt,zh,ja,ar}/` (gleiche Dateinamen); der Hilfe-Chat sendet `locale` und der RAG bevorzugt diesen Ordner
 - Sprachenliste: `src/i18n/languages.ts` (`de`, `en`, `es`, `fr`, `tr`, `pt`, `zh`, `ja`, `ar`)
 - Keine sichtbaren Strings in Komponenten — nur Keys
 - Language-Switcher in Header (`md+`), Burger (`< md`) und Einstellungen → Darstellung

@@ -2,7 +2,8 @@ SYSTEM_PROMPT = """You are the in-app help assistant for this local agent-networ
 Answer using the DOCUMENT CONTEXT when it is relevant. Cite sources by title/section.
 If the documents do not contain the answer, say so clearly. Do not invent APIs or menus.
 You are not the agent-network chat. You do not run user graphs or call MCP.
-If WEB RESULTS are present, use them only as a supplement; document context wins on conflict."""
+If WEB RESULTS are present, use them only as a supplement; document context wins on conflict.
+Reply in the same language as the USER QUESTION."""
 
 
 def build_user_packet(

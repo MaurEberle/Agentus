@@ -8,6 +8,7 @@ from app.db.engine import get_bootstrap
 from app.db.help_rag import HelpRagChunk, list_all_chunks, replace_all_chunks, wipe_chunks
 from app.db.paths import RAG_DIR_NAME
 from app.help.chunk import chunk_markdown, file_sha256
+from app.help.locales import locale_from_corpus_path
 from app.help.status import get_settings_merged
 from app.runtime.errors import RuntimeApiError
 from app.runtime.models import EmbedRequest
@@ -69,6 +70,7 @@ def _build_chunks() -> list[HelpRagChunk]:
             continue
         digest = file_sha256(path)
         title = path.stem
+        locale = locale_from_corpus_path(path, root)
         for piece in chunk_markdown(raw, title, digest):
             built.append(
                 HelpRagChunk(
@@ -80,6 +82,7 @@ def _build_chunks() -> list[HelpRagChunk]:
                     embedding=[],
                     embedding_model_id=None,
                     dimension=None,
+                    locale=locale,
                 )
             )
     return built
@@ -140,6 +143,7 @@ def reindex() -> tuple[Literal["ready", "error"], str | None]:
                 embedding=vector,
                 embedding_model_id=model,
                 dimension=dimension,
+                locale=chunk.locale,
             )
         )
     replace_all_chunks(stored)
