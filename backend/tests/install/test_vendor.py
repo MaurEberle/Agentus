@@ -73,6 +73,9 @@ def test_nsi_is_per_user_without_portable_marker() -> None:
     assert "cmd.exe" in text
     assert "--noproxy 127.0.0.1" in text
     assert r"$LOCALAPPDATA\Programs\Ollama\ollama app.exe" in text
+    assert 'File "/oname=app.ico"' in text
+    assert r'DisplayIcon" "$INSTDIR\app.ico"' in text
+    assert r'"$INSTDIR\app.ico" 0' in text
     build = (_REPO / "scripts" / "build-windows.ps1").read_text(encoding="utf-8")
     assert "/INPUTCHARSET" in build
     body = _strcontains_fn(text)

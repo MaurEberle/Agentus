@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import sys
+from pathlib import Path
 from typing import Any
 
 log = logging.getLogger("agentus.host")
@@ -19,6 +21,32 @@ SWP_NOACTIVATE = 0x0010
 SWP_FRAMECHANGED = 0x0020
 
 FRAME_STYLE = WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU
+
+WM_SETICON = 0x0080
+ICON_SMALL = 0
+ICON_BIG = 1
+IMAGE_ICON = 1
+LR_LOADFROMFILE = 0x0010
+
+
+def resolve_app_icon() -> str | None:
+    """ICO next to the freeze, under _MEIPASS, or the repo resource in dev."""
+    candidates: list[Path] = []
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        exe_dir = Path(sys.executable).resolve().parent
+        if meipass:
+            candidates.append(Path(meipass) / "app.ico")
+        candidates.append(exe_dir / "app.ico")
+        candidates.append(exe_dir / "_internal" / "app.ico")
+    else:
+        candidates.append(
+            Path(__file__).resolve().parents[3] / "resources" / "icons" / "app.ico"
+        )
+    for path in candidates:
+        if path.is_file():
+            return str(path)
+    return None
 
 
 def configure_webview(mod: Any) -> None:
@@ -76,3 +104,49 @@ def enable_frameless_resize(window: Any) -> None:
         )
     except Exception:
         log.debug("enable_frameless_resize failed", exc_info=True)
+
+
+def set_window_icon(window: Any, icon_path: str | None) -> None:
+    """Set small+big icons on the WinForms HWND. No-op if native handle is missing."""
+    if not icon_path:
+        return
+    hwnd = _hwnd(window)
+    native = getattr(window, "native", None)
+    if native is not None:
+        try:
+            from System.Drawing import Icon as WinIcon
+
+            native.Icon = WinIcon(icon_path)
+        except Exception:
+            log.debug("form Icon assignment failed", exc_info=True)
+    if not hwnd:
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32.LoadImageW.argtypes = [
+            wintypes.HINSTANCE,
+            wintypes.LPCWSTR,
+            wintypes.UINT,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.UINT,
+        ]
+        user32.LoadImageW.restype = wintypes.HANDLE
+        user32.SendMessageW.argtypes = [
+            wintypes.HWND,
+            wintypes.UINT,
+            wintypes.WPARAM,
+            wintypes.LPARAM,
+        ]
+        user32.SendMessageW.restype = ctypes.c_ssize_t
+        small = user32.LoadImageW(None, icon_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+        big = user32.LoadImageW(None, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+        if small:
+            user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, small)
+        if big:
+            user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, big)
+    except Exception:
+        log.debug("set_window_icon failed", exc_info=True)

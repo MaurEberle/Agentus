@@ -284,7 +284,8 @@ Section "Anwendungsdateien" SecApp
   WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr HKCU "${REG_UNINSTALL}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKCU "${REG_UNINSTALL}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXE}"
+  File "/oname=app.ico" "..\resources\icons\app.ico"
+  WriteRegStr HKCU "${REG_UNINSTALL}" "DisplayIcon" "$INSTDIR\app.ico"
   WriteRegStr HKCU "${REG_UNINSTALL}" "UninstallString" '"$INSTDIR\uninst.exe"'
   WriteRegDWORD HKCU "${REG_UNINSTALL}" "NoModify" 1
   WriteRegDWORD HKCU "${REG_UNINSTALL}" "NoRepair" 1
@@ -292,11 +293,11 @@ SectionEnd
 
 Section "Startmenü-Verknüpfung" SecStart
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\app.ico" 0
 SectionEnd
 
 Section /o "Desktop-Verknüpfung" SecDesktop
-  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\app.ico" 0
 SectionEnd
 
 Section "WebView2 (falls fehlend)" SecWebView

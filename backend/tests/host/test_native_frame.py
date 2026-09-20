@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.host.native_frame import (
     DRAG_REGION_SELECTOR,
     FRAME_STYLE,
@@ -7,6 +9,8 @@ from app.host.native_frame import (
     WS_THICKFRAME,
     configure_webview,
     enable_frameless_resize,
+    resolve_app_icon,
+    set_window_icon,
 )
 
 
@@ -35,3 +39,32 @@ def test_frame_style_includes_resize_and_max() -> None:
 
 def test_enable_frameless_resize_without_native() -> None:
     enable_frameless_resize(object())
+
+
+def test_resolve_app_icon_dev() -> None:
+    path = resolve_app_icon()
+    assert path is not None
+    ico = Path(path)
+    assert ico.is_file()
+    assert ico.name == "app.ico"
+    assert ico.stat().st_size > 1000
+
+
+def test_set_window_icon_without_native() -> None:
+    set_window_icon(object(), resolve_app_icon())
+
+
+def test_ico_has_small_sizes() -> None:
+    import struct
+
+    data = Path(resolve_app_icon() or "").read_bytes()
+    _reserved, kind, count = struct.unpack_from("<HHH", data, 0)
+    assert kind == 1
+    assert count >= 4
+    sizes = []
+    for i in range(count):
+        w, h = struct.unpack_from("<BB", data, 6 + 16 * i)
+        sizes.append(w or 256)
+    assert 16 in sizes
+    assert 32 in sizes
+    assert 256 in sizes
