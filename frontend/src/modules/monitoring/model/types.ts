@@ -3,7 +3,7 @@ import type { ServiceStatus } from '@/store/session';
 export type NodeRuntimeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error';
 export type WaitReason = 'none' | 'llm' | 'tool' | 'human';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type LlmProvider = 'ollama' | 'xai' | 'openai_compat';
+export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
 
 export const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
 export const LOG_BUFFER_SIZE = 2000;

@@ -26,7 +26,7 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 | Anzeigename | Typ | Aufgabe |
 |-------------|-----|---------|
 | Chat-Eingabe | `chat_input` | Starttext und Nutzereingabe. **Höchstens eine.** Ausgang **Nachricht**. |
-| LLM | `llm` | Provider (Ollama, xAI, OpenAI-kompatibel), Modell, optional Zugang, Temperature, Token-Limit. Ausgang **LLM**. |
+| LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel), Modell, Zugang für Cloud, Temperature, Token-Limit. Ausgang **LLM**. |
 | Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen. Ausgang Nachricht, optional Übergabe. LLM, Tools und Wissen kommen **nur über Kanten**, nicht als geheime Felder. |
 | Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner — oder **MCP**. Ausgang **Werkzeug**. |
 | Wissen | `knowledge` | Ordner mit Dateien für das Netz. Ausgang **Wissen**, nur zum Agent-Anschluss Wissen. |

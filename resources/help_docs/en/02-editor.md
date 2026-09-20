@@ -26,7 +26,7 @@ While **this** network is running: **read-only** banner — stop it in the heade
 | Label | Type | Job |
 |-------|------|-----|
 | Chat input | `chat_input` | Start text and user input. **At most one.** Output **message**. |
-| LLM | `llm` | Provider (Ollama, xAI, OpenAI-compatible), model, optional credential, temperature, token limit. Output **llm**. |
+| LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-compatible), model, credential for cloud, temperature, token limit. Output **llm**. |
 | Agent | `agent` | System prompt. Inputs message, llm, tool, knowledge. Output message, optional handoff. LLM, tools, and knowledge arrive **only via edges**, not as secret fields. |
 | Tool | `tool` | First-party: HTTP, web search, date/time, calculator — or **MCP**. Output **tool**. |
 | Knowledge | `knowledge` | Folder of files for the network. Output **knowledge**, only to the agent knowledge port. |

@@ -3,6 +3,14 @@
     "name": "Agentus Network",
     "skipToContent": "Saltar al contenido"
   },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "Compatible con OpenAI"
+  },
   "nav": {
     "dashboard": "Panel",
     "network": "Red",
@@ -175,6 +183,9 @@
       "inUseBody": "«{{name}}» sigue asignada a un perfil de ayuda, una red o un servidor MCP y no se puede eliminar.",
       "kindName": {
         "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
         "openai_compat": "Compatible con OpenAI",
         "web_search": "Búsqueda web",
         "github": "GitHub",
@@ -215,8 +226,8 @@
       "model": "Modelo de chat",
       "credential": "Credencial",
       "credentialEmpty": "Ninguna credencial",
-      "credentialHint": "Elige primero una API key válida. Después se cargan los modelos de xAI.",
-      "noCredentials": "No hay credencial xAI: crea una de tipo xAI en Credenciales.",
+      "credentialHint": "Elige primero una API key válida. Después se cargan los modelos.",
+      "noCredentials": "No hay credencial para este proveedor: crea una adecuada en Credenciales.",
       "pickCredentialFirst": "Elige primero una API key válida",
       "modelsLoadError": "No se pudieron cargar los modelos. Comprueba la API key.",
       "embedProvider": "Proveedor de embeddings",
@@ -567,8 +578,8 @@
         "model": "Modelo",
         "credential": "Credencial",
         "credentialEmpty": "Sin credencial",
-        "credentialHint": "Elige primero una API key válida. Después se cargan los modelos de xAI.",
-        "noCredentials": "Aún no hay una credencial de xAI.",
+        "credentialHint": "Elige primero una API key válida. Después se cargan los modelos.",
+        "noCredentials": "Aún no hay una credencial para este proveedor.",
         "pickCredentialFirst": "Elige primero una API key válida",
         "modelsLoadError": "No se pudieron cargar los modelos. Comprueba la API key.",
         "baseUrl": "URL base",
@@ -964,6 +975,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "Compatible con OpenAI"
     },
     "mock": {
@@ -1071,6 +1085,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "Compatible con OpenAI"
     },
     "list": {

@@ -48,7 +48,7 @@ Model Context Protocol: externe Tool-Server. In den Einstellungen anlegen und ak
 
 ## Provider
 
-`ollama` (lokal), `xai` (Cloud), `openai_compat` (kompatible HTTP-API). Kein eigener „LM-Studio“-Schalter — LM Studio kannst du als OpenAI-kompatibel eintragen.
+`ollama` (lokal), `xai`, `openai`, `anthropic` (Claude), `gemini` (Cloud, API-Key zuerst, dann Modellliste), `openai_compat` (eigene kompatible HTTP-API, z. B. LM Studio).
 
 ## Ollama
 

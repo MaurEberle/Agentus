@@ -2,14 +2,19 @@
 
 from typing import Literal, get_args
 
-Provider = Literal["ollama", "xai", "openai_compat"]
+Provider = Literal["ollama", "xai", "openai", "anthropic", "gemini", "openai_compat"]
 PROVIDERS: tuple[Provider, ...] = get_args(Provider)
+CLOUD_CATALOG_PROVIDERS: tuple[Provider, ...] = ("xai", "openai", "anthropic", "gemini")
+NEEDS_CREDENTIAL: frozenset[Provider] = frozenset((*CLOUD_CATALOG_PROVIDERS, "openai_compat"))
 
-HelpProvider = Literal["ollama", "xai", "openai_compat", ""]
+HelpProvider = Literal["ollama", "xai", "openai", "anthropic", "gemini", "openai_compat", ""]
 EmbeddingProvider = Literal["ollama", "openai_compat", ""]
 
 CredentialKind = Literal[
     "xai",
+    "openai",
+    "anthropic",
+    "gemini",
     "openai_compat",
     "web_search",
     "github",

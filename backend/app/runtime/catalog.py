@@ -73,6 +73,8 @@ def _model_names(payload: object) -> list[str]:
             raw = item.get("id") or item.get("name") or item.get("model")
             if isinstance(raw, str) and raw.strip():
                 name = raw.strip()
+        if name and name.startswith("models/"):
+            name = name[len("models/") :]
         if not name or name in seen:
             continue
         seen.add(name)

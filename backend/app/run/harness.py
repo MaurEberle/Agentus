@@ -171,7 +171,7 @@ def _agent_turn(
                 infos = [i for i in infos if i.name in allow]
             tools.extend(mcp_openai_tools(server_id, infos))
     secret = None
-    if agent.llm.provider in {"xai", "openai_compat"} and agent.llm.credential_id:
+    if agent.llm.provider != "ollama" and agent.llm.credential_id:
         secret = vault_get(agent.llm.credential_id)
     messages = [LlmMessage(role="system", content=system), *conversation]
     from app.runtime import completions as runtime_completions

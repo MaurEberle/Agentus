@@ -39,10 +39,17 @@ def resolve_secret(req_secret: str | None, credential_id: str | None) -> str | N
     return None
 
 
+ANTHROPIC_VERSION = "2023-06-01"
+
+
 def request_headers(provider: Provider, secret: str | None) -> dict[str, str]:
     headers = {"Content-Type": "application/json"}
-    if provider != "ollama" and secret:
-        headers["Authorization"] = f"Bearer {secret}"
+    if provider == "ollama" or not secret:
+        return headers
+    headers["Authorization"] = f"Bearer {secret}"
+    if provider == "anthropic":
+        headers["x-api-key"] = secret
+        headers["anthropic-version"] = ANTHROPIC_VERSION
     return headers
 
 

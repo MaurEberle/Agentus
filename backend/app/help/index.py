@@ -99,10 +99,10 @@ def reindex() -> tuple[Literal["ready", "error"], str | None]:
     help_chat = settings.help_chat
     provider = help_chat.embedding_provider or "ollama"
     model = help_chat.embedding_model.strip() or DEFAULT_EMBED_MODEL
-    if provider == "xai":
+    if provider in {"xai", "anthropic"}:
         return "error", "help.embed.unsupported"
     credential_id = None
-    if provider == "openai_compat":
+    if provider != "ollama":
         if not help_chat.credential_id:
             return "error", "help.embed.unsupported"
         credential_id = help_chat.credential_id

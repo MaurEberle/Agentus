@@ -3,6 +3,14 @@
     "name": "Agentus Network",
     "skipToContent": "Skip to content"
   },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "OpenAI-compatible"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "network": "Network",
@@ -175,6 +183,9 @@
       "inUseBody": "“{{name}}” is still used by a help profile, network, or MCP server and cannot be deleted.",
       "kindName": {
         "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
         "openai_compat": "OpenAI-compatible",
         "web_search": "Web search",
         "github": "GitHub",
@@ -215,8 +226,8 @@
       "model": "Chat model",
       "credential": "Credential",
       "credentialEmpty": "No credential",
-      "credentialHint": "Choose a valid API key first. xAI models are loaded afterwards.",
-      "noCredentials": "No xAI credential — add an xAI entry under Credentials.",
+      "credentialHint": "Choose a valid API key first. Models are loaded afterwards.",
+      "noCredentials": "No credential for this provider — add a matching entry under Credentials.",
       "pickCredentialFirst": "Choose a valid API key first",
       "modelsLoadError": "Could not load models. Check the API key.",
       "embedProvider": "Embedding provider",
@@ -567,8 +578,8 @@
         "model": "Model",
         "credential": "Credential",
         "credentialEmpty": "No credential",
-        "credentialHint": "Choose a valid API key first. xAI models are loaded afterwards.",
-        "noCredentials": "No xAI credential yet.",
+        "credentialHint": "Choose a valid API key first. Models are loaded afterwards.",
+        "noCredentials": "No credential for this provider yet.",
         "pickCredentialFirst": "Choose a valid API key first",
         "modelsLoadError": "Could not load models. Check the API key.",
         "baseUrl": "Base URL",
@@ -964,6 +975,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-compatible"
     },
     "mock": {
@@ -1071,6 +1085,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-compatible"
     },
     "list": {

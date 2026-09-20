@@ -3,7 +3,15 @@ from __future__ import annotations
 import pytest
 
 from app.runtime.errors import RuntimeApiError
-from app.runtime.urls import DEFAULT_XAI_BASE, completions_url, embeddings_url, models_url
+from app.runtime.urls import (
+    DEFAULT_ANTHROPIC_BASE,
+    DEFAULT_GEMINI_BASE,
+    DEFAULT_OPENAI_BASE,
+    DEFAULT_XAI_BASE,
+    completions_url,
+    embeddings_url,
+    models_url,
+)
 
 
 def test_completions_url_ollama_root() -> None:
@@ -59,6 +67,37 @@ def test_models_url_xai_default() -> None:
     )
     assert url == "https://api.x.ai/v1/models"
     assert "/v1/v1" not in url
+
+
+def test_completions_url_openai_default() -> None:
+    url = completions_url(
+        "openai",
+        ollama_root="http://127.0.0.1:11434",
+        override_base=None,
+        settings_openai=None,
+    )
+    assert url == f"{DEFAULT_OPENAI_BASE}/chat/completions"
+
+
+def test_completions_url_anthropic_default() -> None:
+    url = completions_url(
+        "anthropic",
+        ollama_root="http://127.0.0.1:11434",
+        override_base=None,
+        settings_openai=None,
+    )
+    assert url == f"{DEFAULT_ANTHROPIC_BASE}/chat/completions"
+
+
+def test_models_url_gemini_no_extra_v1() -> None:
+    url = models_url(
+        "gemini",
+        ollama_root="http://127.0.0.1:11434",
+        override_base=None,
+        settings_openai=None,
+    )
+    assert url == f"{DEFAULT_GEMINI_BASE}/models"
+    assert "/openai/v1/" not in url
 
 
 def test_openai_missing_base() -> None:

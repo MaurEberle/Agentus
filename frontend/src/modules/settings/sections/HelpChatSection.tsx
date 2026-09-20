@@ -33,10 +33,14 @@ import {
   useSettingsQuery,
 } from '@/modules/settings/api';
 import {
+  LLM_PROVIDERS,
+  credentialMatchesProvider,
   helpChatConfigured,
+  isCloudCatalogProvider,
   isEmbeddingModelName,
   type EmbeddingProvider,
   type HelpProvider,
+  type LlmProvider,
   type RuntimeModel,
 } from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
@@ -137,10 +141,10 @@ export function HelpChatSection() {
   const help = useSettingsDraft((state) => state.helpChat);
   const setHelpChat = useSettingsDraft((state) => state.setHelpChat);
   const { data: models } = useRuntimeModelsQuery();
-  const xaiModelsQuery = useRuntimeModelsQuery({
-    provider: 'xai',
+  const catalogQuery = useRuntimeModelsQuery({
+    provider: (help?.provider || 'ollama') as LlmProvider,
     credentialId: help?.credentialId,
-    enabled: help?.provider === 'xai' && Boolean(help?.credentialId),
+    enabled: isCloudCatalogProvider(help?.provider ?? '') && Boolean(help?.credentialId),
   });
   const dirty = useSettingsDraft((state) => state.helpDirty(settings));
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
@@ -154,22 +158,23 @@ export function HelpChatSection() {
     (help?.embeddingProvider !== settings?.helpChat.embeddingProvider ||
       help?.embeddingModel !== settings?.helpChat.embeddingModel);
 
-  const cloudCredentials = (credentials?.items ?? []).filter(
-    (item) => item.kind === 'xai' || item.kind === 'openai_compat',
+  const cloudCredentials = (credentials?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, help?.provider ?? ''),
   );
+  const kindCredentials = (credentials?.items ?? []).filter((item) => item.kind === help?.provider);
   const searchCredentials = (credentials?.items ?? []).filter((item) => item.kind === 'web_search');
   const runtimeModels = models?.items ?? [];
   const hasRuntimeModels = runtimeModels.length > 0;
   const embedModels = runtimeModels.filter((model) => isEmbeddingModelName(model.name));
-  const xaiModels = xaiModelsQuery.data?.items ?? [];
+  const catalogModels = catalogQuery.data?.items ?? [];
   const emptyLabel = t('settings.helpChat.providerEmpty');
-  const xaiLocked = help?.provider === 'xai' && !help.credentialId;
-  const xaiModelsFailed =
-    help?.provider === 'xai' &&
-    Boolean(help.credentialId) &&
-    !xaiModelsQuery.isFetching &&
-    !xaiModelsQuery.isPending &&
-    xaiModels.length === 0;
+  const catalogLocked = isCloudCatalogProvider(help?.provider ?? '') && !help?.credentialId;
+  const catalogFailed =
+    isCloudCatalogProvider(help?.provider ?? '') &&
+    Boolean(help?.credentialId) &&
+    !catalogQuery.isFetching &&
+    !catalogQuery.isPending &&
+    catalogModels.length === 0;
 
   async function save() {
     if (!help) return;
@@ -224,13 +229,13 @@ export function HelpChatSection() {
                 if (next !== help.provider) {
                   patch.model = '';
                 }
-                if (next === 'ollama') {
+                if (next === 'ollama' || next === '') {
                   patch.credentialId = undefined;
-                } else if (next === 'xai') {
-                  const xaiOnly = cloudCredentials.filter((item) => item.kind === 'xai');
-                  const current = cloudCredentials.find((item) => item.id === help.credentialId);
-                  if (!current || current.kind !== 'xai') {
-                    patch.credentialId = xaiOnly.length === 1 ? xaiOnly[0].id : undefined;
+                } else if (isCloudCatalogProvider(next)) {
+                  const nextKind = (credentials?.items ?? []).filter((item) => item.kind === next);
+                  const current = (credentials?.items ?? []).find((item) => item.id === help.credentialId);
+                  if (!current || !credentialMatchesProvider(current.kind, next)) {
+                    patch.credentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
                   }
                 }
                 setHelpChat(patch);
@@ -241,13 +246,15 @@ export function HelpChatSection() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t('settings.helpChat.providerEmpty')}</SelectItem>
-                <SelectItem value="ollama">Ollama</SelectItem>
-                <SelectItem value="xai">xAI</SelectItem>
-                <SelectItem value="openai_compat">{t('settings.helpChat.openaiCompat')}</SelectItem>
+                {LLM_PROVIDERS.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {t(`providers.${id}`)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          {help.provider === 'xai' ? (
+          {isCloudCatalogProvider(help.provider) ? (
             <div className="grid gap-1.5">
               <Label>{t('settings.helpChat.credential')}</Label>
               <Select
@@ -264,16 +271,14 @@ export function HelpChatSection() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('settings.helpChat.credentialEmpty')}</SelectItem>
-                  {cloudCredentials
-                    .filter((item) => item.kind === 'xai' || item.kind === 'token')
-                    .map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
+                  {cloudCredentials.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {cloudCredentials.filter((item) => item.kind === 'xai').length === 0 ? (
+              {kindCredentials.length === 0 ? (
                 <p className="text-xs text-destructive">{t('settings.helpChat.noCredentials')}</p>
               ) : (
                 <p className="text-xs text-muted-foreground">{t('settings.helpChat.credentialHint')}</p>
@@ -283,18 +288,22 @@ export function HelpChatSection() {
           <ModelField
             id="help-model"
             label={t('settings.helpChat.model')}
-            value={xaiLocked ? '' : help.model}
-            models={help.provider === 'xai' ? xaiModels : runtimeModels}
+            value={catalogLocked ? '' : help.model}
+            models={
+              isCloudCatalogProvider(help.provider)
+                ? catalogModels.filter((model) => !isEmbeddingModelName(model.name))
+                : runtimeModels
+            }
             useSelect={
               (help.provider === 'ollama' && hasRuntimeModels) ||
-              (help.provider === 'xai' && Boolean(help.credentialId))
+              (isCloudCatalogProvider(help.provider) && Boolean(help.credentialId))
             }
             emptyLabel={emptyLabel}
-            disabled={xaiLocked}
-            placeholder={xaiLocked ? t('settings.helpChat.pickCredentialFirst') : undefined}
+            disabled={catalogLocked}
+            placeholder={catalogLocked ? t('settings.helpChat.pickCredentialFirst') : undefined}
             onChange={(value) => setHelpChat({ model: value })}
           />
-          {xaiModelsFailed ? (
+          {catalogFailed ? (
             <p className="text-xs text-destructive">{t('settings.helpChat.modelsLoadError')}</p>
           ) : null}
           {help.provider === 'openai_compat' ? (

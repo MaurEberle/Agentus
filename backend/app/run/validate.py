@@ -4,7 +4,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from app.common.types import PROVIDERS
+from app.common.types import NEEDS_CREDENTIAL, PROVIDERS
 from app.db.paths import RAG_DIR_NAME
 from app.run.graph_models import AgentNetworkDocument, GraphEdge, GraphNode
 from app.run.models import ValidationError
@@ -143,7 +143,7 @@ def validate_document(
                 errors.append(_err("graph.llm.credential", node.id))
             if not model:
                 errors.append(_err("graph.llm.credential", node.id))
-            if provider in {"xai", "openai_compat"} and not str(node.data.get("credentialId") or "").strip():
+            if provider in NEEDS_CREDENTIAL and not str(node.data.get("credentialId") or "").strip():
                 errors.append(_err("graph.llm.credential", node.id))
         if node.type == "tool":
             kind = str(node.data.get("kind") or "")

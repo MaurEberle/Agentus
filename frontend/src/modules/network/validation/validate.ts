@@ -134,7 +134,7 @@ function validateNode(
     if (!asString(node.data.model)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.modelRequired' });
     }
-    if ((provider === 'xai' || provider === 'openai_compat') && !asString(node.data.credentialId)) {
+    if (provider !== 'ollama' && !asString(node.data.credentialId)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.credentialRequired' });
     }
   }

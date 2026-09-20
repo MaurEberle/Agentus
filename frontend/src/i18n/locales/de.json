@@ -3,6 +3,14 @@
     "name": "Agentus Network",
     "skipToContent": "Zum Inhalt springen"
   },
+  "providers": {
+    "ollama": "Ollama",
+    "xai": "xAI",
+    "openai": "OpenAI",
+    "anthropic": "Claude",
+    "gemini": "Gemini",
+    "openai_compat": "OpenAI-kompatibel"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "network": "Netzwerk",
@@ -175,6 +183,9 @@
       "inUseBody": "„{{name}}“ ist noch einem Hilfe-Profil, Netz oder MCP-Server zugeordnet und kann nicht gelöscht werden.",
       "kindName": {
         "xai": "xAI",
+        "openai": "OpenAI",
+        "anthropic": "Claude",
+        "gemini": "Gemini",
         "openai_compat": "OpenAI-kompatibel",
         "web_search": "Websuche",
         "github": "GitHub",
@@ -215,8 +226,8 @@
       "model": "Chat-Modell",
       "credential": "Zugang",
       "credentialEmpty": "Keinen Zugang wählen",
-      "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die xAI-Modelle geladen.",
-      "noCredentials": "Kein xAI-Zugang — lege unter Zugänge einen Eintrag der Art xAI an.",
+      "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die Modelle geladen.",
+      "noCredentials": "Kein Zugang für diesen Provider — lege unter Zugänge einen passenden Eintrag an.",
       "pickCredentialFirst": "Zuerst einen gültigen API-Key wählen",
       "modelsLoadError": "Modelle konnten nicht geladen werden. Prüfe den API-Key.",
       "embedProvider": "Embedding-Provider",
@@ -567,8 +578,8 @@
         "model": "Modell",
         "credential": "Zugang",
         "credentialEmpty": "Kein Zugang",
-        "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die xAI-Modelle geladen.",
-        "noCredentials": "Kein xAI-Zugang vorhanden.",
+        "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die Modelle geladen.",
+        "noCredentials": "Kein Zugang für diesen Provider vorhanden.",
         "pickCredentialFirst": "Zuerst einen gültigen API-Key wählen",
         "modelsLoadError": "Modelle konnten nicht geladen werden. Prüfe den API-Key.",
         "baseUrl": "Basis-URL",
@@ -964,6 +975,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-kompatibel"
     },
     "mock": {
@@ -1071,6 +1085,9 @@
     "provider": {
       "ollama": "Ollama",
       "xai": "xAI",
+      "openai": "OpenAI",
+      "anthropic": "Claude",
+      "gemini": "Gemini",
       "openai_compat": "OpenAI-kompatibel"
     },
     "list": {

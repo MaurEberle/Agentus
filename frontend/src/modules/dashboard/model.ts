@@ -40,7 +40,10 @@ export type RunSummary = {
   endedAt?: string;
   outcome: RunOutcome;
   errorMessage?: string;
-  models: Array<{ provider: 'ollama' | 'xai' | 'openai_compat'; model: string }>;
+  models: Array<{
+    provider: 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
+    model: string;
+  }>;
 };
 
 export type RunListFilter = {

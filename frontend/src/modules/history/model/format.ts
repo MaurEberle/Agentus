@@ -55,7 +55,16 @@ export function parseModelKey(value: string): { model: string; provider: LlmProv
   if (at <= 0) return null;
   const model = value.slice(0, at);
   const provider = value.slice(at + 1);
-  if (provider !== 'ollama' && provider !== 'xai' && provider !== 'openai_compat') return null;
+  if (
+    provider !== 'ollama' &&
+    provider !== 'xai' &&
+    provider !== 'openai' &&
+    provider !== 'anthropic' &&
+    provider !== 'gemini' &&
+    provider !== 'openai_compat'
+  ) {
+    return null;
+  }
   if (!model) return null;
   return { model, provider };
 }

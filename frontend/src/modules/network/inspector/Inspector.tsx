@@ -23,7 +23,15 @@ import type { GraphNode, ValidationIssue } from '@/modules/network/model/documen
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
-import { isEmbeddingModelName, isForbiddenDataRoot } from '@/modules/settings/model';
+import {
+  LLM_PROVIDERS,
+  credentialMatchesProvider,
+  isCloudCatalogProvider,
+  isEmbeddingModelName,
+  isForbiddenDataRoot,
+  providerNeedsCredential,
+  type LlmProvider,
+} from '@/modules/settings/model';
 
 export function Inspector({
   issues,
@@ -276,30 +284,31 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const provider = String(node.data.provider ?? 'ollama');
   const model = String(node.data.model ?? '');
   const credentialId = String(node.data.credentialId ?? '') || undefined;
-  const matchingCredentials = (credentials.data?.items ?? []).filter(
-    (item) => item.kind === provider || item.kind === 'token',
+  const catalogProvider = isCloudCatalogProvider(provider);
+  const matchingCredentials = (credentials.data?.items ?? []).filter((item) =>
+    credentialMatchesProvider(item.kind, provider),
   );
-  const xaiCredentials = (credentials.data?.items ?? []).filter((item) => item.kind === 'xai');
+  const kindCredentials = (credentials.data?.items ?? []).filter((item) => item.kind === provider);
   const ollamaModels = useRuntimeModelsQuery({ enabled: provider === 'ollama' });
-  const xaiModels = useRuntimeModelsQuery({
-    provider: 'xai',
+  const catalogModels = useRuntimeModelsQuery({
+    provider: provider as LlmProvider,
     credentialId,
-    enabled: provider === 'xai' && Boolean(credentialId),
+    enabled: catalogProvider && Boolean(credentialId),
   });
 
   const modelOptions =
     provider === 'ollama'
       ? (ollamaModels.data?.items ?? []).map((item) => item.name).filter((name) => !isEmbeddingModelName(name))
-      : provider === 'xai'
-        ? (xaiModels.data?.items ?? []).map((item) => item.name)
+      : catalogProvider
+        ? (catalogModels.data?.items ?? []).map((item) => item.name).filter((name) => !isEmbeddingModelName(name))
         : [];
-  const modelLocked = provider === 'xai' && !credentialId;
-  const xaiModelsFailed =
-    provider === 'xai' &&
+  const modelLocked = catalogProvider && !credentialId;
+  const catalogFailed =
+    catalogProvider &&
     Boolean(credentialId) &&
-    !xaiModels.isFetching &&
-    !xaiModels.isPending &&
-    (xaiModels.data?.items.length ?? 0) === 0;
+    !catalogModels.isFetching &&
+    !catalogModels.isPending &&
+    (catalogModels.data?.items.length ?? 0) === 0;
 
   function setProvider(next: string) {
     const patch: Record<string, unknown> = { provider: next };
@@ -308,10 +317,11 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
-    } else if (next === 'xai') {
+    } else if (isCloudCatalogProvider(next)) {
       const current = matchingCredentials.find((item) => item.id === credentialId);
-      if (!current || (current.kind !== 'xai' && current.kind !== 'token')) {
-        patch.credentialId = xaiCredentials.length === 1 ? xaiCredentials[0].id : undefined;
+      const nextKind = (credentials.data?.items ?? []).filter((item) => item.kind === next);
+      if (!current || !credentialMatchesProvider(current.kind, next)) {
+        patch.credentialId = nextKind.length === 1 ? nextKind[0].id : undefined;
       }
     }
     editorUpdateNodeData(node.id, patch);
@@ -336,7 +346,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   }
 
   const credentialField =
-    provider !== 'ollama' ? (
+    providerNeedsCredential(provider) ? (
       <Field label={t('network.inspector.llm.credential')}>
         <Select
           value={credentialId ?? 'none'}
@@ -344,7 +354,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           onValueChange={(value) =>
             editorUpdateNodeData(node.id, {
               credentialId: value === 'none' ? undefined : value,
-              ...(provider === 'xai' ? { model: '' } : {}),
+              ...(catalogProvider ? { model: '' } : {}),
             })
           }
         >
@@ -360,14 +370,14 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
             ))}
           </SelectContent>
         </Select>
-        {provider === 'xai' && matchingCredentials.length === 0 ? (
+        {catalogProvider && kindCredentials.length === 0 ? (
           <p className="text-xs text-destructive">
             {t('network.inspector.llm.noCredentials')}{' '}
             <Link to="/settings#credentials" className="underline">
               {t('nav.settings')}
             </Link>
           </p>
-        ) : provider === 'xai' ? (
+        ) : catalogProvider ? (
           <p className="text-xs text-muted-foreground">{t('network.inspector.llm.credentialHint')}</p>
         ) : null}
       </Field>
@@ -381,13 +391,15 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ollama">Ollama</SelectItem>
-            <SelectItem value="xai">xAI</SelectItem>
-            <SelectItem value="openai_compat">{t('network.inspector.llm.openaiCompat')}</SelectItem>
+            {LLM_PROVIDERS.map((id) => (
+              <SelectItem key={id} value={id}>
+                {t(`providers.${id}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </Field>
-      {provider === 'xai' ? credentialField : null}
+      {catalogProvider ? credentialField : null}
       <Field label={t('network.inspector.llm.model')}>
         <ModelCombobox
           value={modelLocked ? '' : model}
@@ -398,11 +410,11 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           }
           onChange={(value) => editorUpdateNodeData(node.id, { model: value })}
         />
-        {xaiModelsFailed ? (
+        {catalogFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
         ) : null}
       </Field>
-      {provider !== 'ollama' && provider !== 'xai' ? credentialField : null}
+      {provider === 'openai_compat' ? credentialField : null}
       {provider === 'openai_compat' ? (
         <Field label={t('network.inspector.llm.baseUrl')}>
           <Input
