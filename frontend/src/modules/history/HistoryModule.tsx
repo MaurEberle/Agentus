@@ -36,6 +36,8 @@ import { useHistoryUi } from '@/modules/history/store';
 import { ByModelTable } from '@/modules/history/tables/ByModelTable';
 import { ByNetworkTable } from '@/modules/history/tables/ByNetworkTable';
 import { cn } from '@/lib/utils';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
+
 
 export function HistoryModule() {
   const { t, i18n } = useTranslation();
@@ -373,7 +375,7 @@ export function HistoryModule() {
       {historyOk ? (
         <>
           <KpiRow kpis={kpis} loading={runsQuery.isLoading} />
-          <div className="grid w-full gap-4 lg:grid-cols-2">
+          <div className="grid w-full gap-4 lg:grid-cols-2 lg:items-start">
             <RunsChart buckets={buckets} />
             <ErrorTop rows={errors} onPick={onPickError} />
           </div>
@@ -395,30 +397,36 @@ export function HistoryModule() {
             ))}
           </div>
           {filter.tab === 'model' ? (
-            <Card>
-              <CardContent className="p-0">
+            <Card className={moduleCardClass}>
+              <CardContent className={cn(moduleCardBodyClass, 'p-0')}>
                 <ByModelTable rows={modelRows} />
               </CardContent>
             </Card>
           ) : null}
           {filter.tab === 'network' ? (
-            <Card>
-              <CardContent className="p-0">
+            <Card className={moduleCardClass}>
+              <CardContent className={cn(moduleCardBodyClass, 'p-0')}>
                 <ByNetworkTable rows={networkRows} />
               </CardContent>
             </Card>
           ) : null}
           {filter.tab === 'history' ? (
             desktop ? (
-              <div className="grid min-h-[24rem] w-full gap-3 md:grid-cols-2">
-                <Card className="min-w-0 overflow-hidden">{listPane}</Card>
-                <Card className="min-w-0 overflow-hidden">{detailPane}</Card>
+              <div className="grid w-full gap-3 md:grid-cols-2 md:items-start">
+                <Card className={cn(moduleCardClass, 'min-w-0')}>
+                  <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
+                </Card>
+                <Card className={cn(moduleCardClass, 'min-w-0')}>
+                  <div className={moduleCardBodyClass}>{detailPane}</div>
+                </Card>
               </div>
             ) : (
               <>
-                {listPane}
+                <Card className={cn(moduleCardClass, 'min-w-0')}>
+                  <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
+                </Card>
                 <Sheet open={showDetail} onOpenChange={(open) => !open && closeDetail()}>
-                  <SheetContent side="bottom" closeLabel={t('history.close')} className="max-h-[90vh] overflow-auto">
+                  <SheetContent side="bottom" closeLabel={t('history.close')} className="max-h-[min(90vh,1000px)] overflow-auto">
                     <SheetHeader>
                       <SheetTitle>{t('history.detail.title')}</SheetTitle>
                     </SheetHeader>

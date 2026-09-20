@@ -33,7 +33,7 @@ export function DetailOverlay({
   if (desktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent closeLabel={closeLabel} className="max-h-[80vh] overflow-hidden">
+        <DialogContent closeLabel={closeLabel} className="max-h-[min(80vh,1000px)] overflow-hidden">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
@@ -45,7 +45,7 @@ export function DetailOverlay({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" closeLabel={closeLabel} className="max-h-[80vh]">
+      <SheetContent side="bottom" closeLabel={closeLabel} className="max-h-[min(80vh,1000px)]">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>

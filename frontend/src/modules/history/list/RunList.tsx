@@ -109,19 +109,19 @@ function DesktopTable({
   const { selectedSet, allVisibleSelected, onRowClick, toggleOne, toggleAll } = useSelection(items);
 
   return (
-    <Table>
+    <Table className="table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead className="w-8">
             <Checkbox checked={allVisibleSelected} onCheckedChange={() => toggleAll()} aria-label={t('history.list.selectAll')} />
           </TableHead>
-          <TableHead>{t('history.list.runId')}</TableHead>
+          <TableHead className="w-24">{t('history.list.runId')}</TableHead>
           <TableHead>{t('history.list.network')}</TableHead>
-          <TableHead>{t('history.list.started')}</TableHead>
-          <TableHead>{t('history.list.duration')}</TableHead>
-          <TableHead>{t('history.list.outcome')}</TableHead>
-          <TableHead>{t('history.list.error')}</TableHead>
-          <TableHead>{t('history.list.models')}</TableHead>
+          <TableHead className="w-36">{t('history.list.started')}</TableHead>
+          <TableHead className="w-16">{t('history.list.duration')}</TableHead>
+          <TableHead className="w-28">{t('history.list.outcome')}</TableHead>
+          <TableHead className="w-24">{t('history.list.error')}</TableHead>
+          <TableHead className="w-40">{t('history.list.models')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -151,7 +151,9 @@ function DesktopTable({
               <TableCell>
                 <IdCell id={item.runId} />
               </TableCell>
-              <TableCell className="font-medium">{item.networkName}</TableCell>
+              <TableCell className="truncate font-medium" title={item.networkName}>
+                {item.networkName}
+              </TableCell>
               <TableCell className="whitespace-nowrap text-xs">{formatDateTime(item.startedAt, i18n.language)}</TableCell>
               <TableCell className="tabular-nums">{duration === null ? '—' : formatDuration(duration)}</TableCell>
               <TableCell>
@@ -160,10 +162,15 @@ function DesktopTable({
               <TableCell className="max-w-[12rem] truncate text-xs text-muted-foreground">
                 {item.errorMessage ?? '—'}
               </TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1">
+              <TableCell className="w-40 max-w-[10rem]">
+                <div className="flex max-w-full flex-col gap-0.5">
                   {item.models.map((model) => (
-                    <Badge key={`${model.provider}:${model.model}`} variant="outline" className="font-mono text-[10px]">
+                    <Badge
+                      key={`${model.provider}:${model.model}`}
+                      variant="outline"
+                      title={model.model}
+                      className="block max-w-full truncate font-mono text-[10px]"
+                    >
                       {model.model}
                     </Badge>
                   ))}

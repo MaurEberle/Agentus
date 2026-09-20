@@ -17,6 +17,7 @@ import { LogPanel } from '@/modules/monitoring/log/LogPanel';
 import { ResourcesPanel } from '@/modules/monitoring/resources/ResourcesPanel';
 import { RunHeader } from '@/modules/monitoring/run-header/RunHeader';
 import { useMonitoringStore } from '@/modules/monitoring/store';
+import { moduleCardClass, modulePaneHeightClass } from '@/modules/moduleCard';
 
 export function MonitoringModule() {
   const { t } = useTranslation();
@@ -65,8 +66,8 @@ export function MonitoringModule() {
         adapterErrorKey={adapterErrorKey}
       />
       {stopped ? (
-        <Card className="max-h-[min(28rem,60vh)] overflow-y-auto">
-          <CardContent className="space-y-2 p-6">
+        <Card className={moduleCardClass}>
+          <CardContent className="space-y-2 overflow-y-auto p-6">
             <p className="font-medium">{t('monitoring.empty.stoppedTitle')}</p>
             <p className="text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</p>
             {activeNetworkId ? (
@@ -82,7 +83,7 @@ export function MonitoringModule() {
         <>
           <RunHeader run={run} serviceStatus={serviceStatus} />
           <ResourcesPanel resources={resources} dimmed={dimmed} />
-          <div className="grid h-[min(28rem,55vh)] w-full gap-4 md:grid-cols-2 md:items-stretch">
+          <div className={cn('grid w-full gap-4 md:grid-cols-2 md:items-stretch', modulePaneHeightClass)}>
             <div className="order-2 h-full min-h-0 md:order-1">
               <MiniGraph run={run} dimmed={dimmed} />
             </div>
@@ -90,7 +91,7 @@ export function MonitoringModule() {
               <ActivityPanel run={run} dimmed={dimmed} />
             </div>
           </div>
-          <Card className="flex max-h-[min(36rem,70vh)] min-h-[16rem] flex-col overflow-hidden">
+          <Card className={cn(moduleCardClass, 'min-h-[16rem]')}>
             <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.log')}>
               {chat ? (
                 <TabButton active={tab === 'chat'} onClick={() => setTab('chat')}>
@@ -111,8 +112,8 @@ export function MonitoringModule() {
           </Card>
         </>
       ) : (
-        <Card className="max-h-[min(28rem,60vh)] overflow-y-auto">
-          <CardContent className="p-6 text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</CardContent>
+        <Card className={moduleCardClass}>
+          <CardContent className="overflow-y-auto p-6 text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</CardContent>
         </Card>
       )}
     </div>

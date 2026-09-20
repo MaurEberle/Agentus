@@ -129,7 +129,7 @@ function GraphInner({
 export function MiniGraph({ run, dimmed }: { run: RunSnapshot; dimmed?: boolean }) {
   const { t } = useTranslation();
   return (
-    <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+    <Card className="flex h-full max-h-[1000px] min-h-0 flex-col overflow-hidden">
       <CardHeader className="shrink-0 pb-2">
         <CardTitle>{t('monitoring.graph.title')}</CardTitle>
       </CardHeader>
