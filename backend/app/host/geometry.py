@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-MIN_W, MIN_H = 800, 560
+MIN_W, MIN_H = 1280, 720
 MARGIN = 24
-_FALLBACK_W, _FALLBACK_H = 1280, 720
+_FALLBACK_W, _FALLBACK_H = 1440, 900
+_WIDTH_RATIO = 0.86
+_HEIGHT_RATIO = 0.92
 
 
 @dataclass
@@ -51,10 +53,12 @@ def _fit(area: Rect, r: Rect) -> Rect:
 
 def default_rect() -> Rect:
     area = work_area()
-    w = max(MIN_W, area.w - 2 * MARGIN)
-    h = max(MIN_H, area.h - 2 * MARGIN)
-    x = area.x + MARGIN
-    y = area.y + MARGIN
+    max_w = max(MIN_W, area.w - 2 * MARGIN)
+    max_h = max(MIN_H, area.h - 2 * MARGIN)
+    w = min(max_w, max(MIN_W, int(area.w * _WIDTH_RATIO)))
+    h = min(max_h, max(MIN_H, int(area.h * _HEIGHT_RATIO)))
+    x = area.x + max(0, (area.w - w) // 2)
+    y = area.y + max(0, (area.h - h) // 2)
     return _fit(area, Rect(x, y, w, h))
 
 
@@ -72,15 +76,4 @@ def clamp_to_visible(r: Rect) -> Rect:
 
 
 def from_bootstrap(window) -> Rect:
-    w = int(getattr(window, "w", 0) or 0)
-    h = int(getattr(window, "h", 0) or 0)
-    if w == 0 or h == 0:
-        return default_rect()
-    return clamp_to_visible(
-        Rect(
-            int(getattr(window, "x", 0) or 0),
-            int(getattr(window, "y", 0) or 0),
-            w,
-            h,
-        )
-    )
+    return default_rect()
