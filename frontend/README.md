@@ -81,7 +81,7 @@ Toaster sitzt in der Shell (oben rechts ab `md`, unten Mitte auf schmal). Die Gl
 `src/lib/chromeHost.ts` beschreibt `minimize`, `maximize`, `restore`, `close`, `isMaximized`, optional `pickFolder`.
 
 - Fehlt `window.chromeHost` (Vite im Browser): Window-Buttons werden nicht gerendert.
-- Header-Hintergrund ist Drag-Region (`app-drag`); Buttons, Selects, Glocke, Nav sind `app-no-drag`.
+- Header-Hintergrund ist Drag-Region (`app-drag`). pywebview/WebView2 zieht am CSS-Selektor `.app-drag`, nicht an `-webkit-app-region`. Buttons, Selects, Glocke, Nav sind `app-no-drag` und liegen nicht in der Drag-Hierarchie.
 - Module importieren `chromeHost` nicht.
 
 ## Modul in die Registry

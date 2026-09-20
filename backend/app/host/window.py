@@ -9,6 +9,7 @@ from typing import Any
 from app.db.bootstrap import WindowGeom, load_bootstrap, save_window
 from app.host.bridge import ChromeHostApi, inject_chrome_host
 from app.host.geometry import MIN_H, MIN_W, from_bootstrap
+from app.host.native_frame import configure_webview, enable_frameless_resize
 from app.host.server import start_uvicorn, stop_uvicorn, wait_health
 from app.host.single_instance import WINDOW_TITLE, acquire, release
 
@@ -65,6 +66,7 @@ def run_host(host: str, port: int) -> None:
     try:
         import webview
 
+        configure_webview(webview)
         server = start_uvicorn(host, port)
         wait_health("127.0.0.1", port)
         bootstrap = load_bootstrap()
@@ -88,6 +90,7 @@ def run_host(host: str, port: int) -> None:
         api._window = win
 
         def _shown() -> None:
+            enable_frameless_resize(win)
             if maximized:
                 win.maximize()
 
