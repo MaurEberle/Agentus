@@ -470,7 +470,14 @@ function NetworkEditor() {
           </aside>
         ) : null}
         <div className="min-h-0 min-w-0 flex-1">
-          <FlowCanvas readOnly={readOnly} onRequestInsert={() => setPaletteOpen(true)} />
+          <FlowCanvas
+            readOnly={readOnly}
+            onRequestInsert={() => setPaletteOpen(true)}
+            onOpenInspector={() => {
+              setInspectorCollapsed(false);
+              if (!isDesktop) setInspectorOpen(true);
+            }}
+          />
         </div>
         {isDesktop ? (
           <aside

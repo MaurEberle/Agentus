@@ -40,9 +40,11 @@ const nodeTypes = { network: NetworkNode };
 export function FlowCanvas({
   readOnly,
   onRequestInsert,
+  onOpenInspector,
 }: {
   readOnly: boolean;
   onRequestInsert: (position: { x: number; y: number }) => void;
+  onOpenInspector?: () => void;
 }) {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
@@ -196,6 +198,10 @@ export function FlowCanvas({
         onPaneContextMenu={(event) => {
           event.preventDefault();
           setMenu({kind: 'pane', x: event.clientX, y: event.clientY, flow: screenToFlowPosition({ x: event.clientX, y: event.clientY })});
+        }}
+        onNodeDoubleClick={(_event, node) => {
+          useNetworkEditor.getState().select([node.id]);
+          onOpenInspector?.();
         }}
         onNodeContextMenu={(event, node) => {
           event.preventDefault();
