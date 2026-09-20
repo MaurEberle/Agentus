@@ -176,7 +176,7 @@ export function CredentialsSection() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CREDENTIAL_KINDS.map((kind) => (
+                    {CREDENTIAL_KINDS.filter((kind) => kind !== 'openai_compat').map((kind) => (
                       <SelectItem key={kind} value={kind}>
                         {t(`settings.credentials.kindName.${kind}`)}
                       </SelectItem>

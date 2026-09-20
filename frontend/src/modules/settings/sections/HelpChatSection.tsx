@@ -310,31 +310,6 @@ export function HelpChatSection() {
               onChange={(value) => setHelpChat({ fallbackModel: value || undefined })}
             />
           ) : null}
-          {help.provider === 'openai_compat' ? (
-            <div className="grid gap-1.5">
-              <Label>{t('settings.helpChat.credential')}</Label>
-              <Select
-                value={help.credentialId ?? 'none'}
-                onValueChange={(value) =>
-                  setHelpChat({ credentialId: value === 'none' ? undefined : value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('settings.helpChat.credentialEmpty')}</SelectItem>
-                  {cloudCredentials
-                    .filter((item) => item.kind === 'openai_compat' || item.kind === 'token')
-                    .map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
           <div className="grid gap-1.5">
             <Label>{t('settings.helpChat.embedProvider')}</Label>
             <Select

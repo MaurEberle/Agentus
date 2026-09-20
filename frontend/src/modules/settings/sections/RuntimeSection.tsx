@@ -83,15 +83,6 @@ export function RuntimeSection() {
             onChange={(event) => setRuntime({ ollamaBaseUrl: event.target.value })}
           />
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="compat-url">{t('settings.runtime.openaiCompatUrl')}</Label>
-          <Input
-            id="compat-url"
-            placeholder="http://127.0.0.1:1234/v1"
-            value={runtime?.openaiCompatBaseUrl ?? ''}
-            onChange={(event) => setRuntime({ openaiCompatBaseUrl: event.target.value })}
-          />
-        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" onClick={() => void save()} disabled={!dirty || saving}>
             {t('settings.common.save')}

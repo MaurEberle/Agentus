@@ -314,16 +314,6 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
         ) : null}
       </Field>
-      {provider === 'openai_compat' ? credentialField : null}
-      {provider === 'openai_compat' ? (
-        <Field label={t('network.inspector.llm.baseUrl')}>
-          <Input
-            value={String(node.data.baseUrl ?? '')}
-            disabled={readOnly}
-            onChange={(event) => editorUpdateNodeData(node.id, { baseUrl: event.target.value })}
-          />
-        </Field>
-      ) : null}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
         <Button
           type="button"

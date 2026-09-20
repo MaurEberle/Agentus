@@ -30,21 +30,14 @@ export const CREDENTIAL_KINDS = [
 
 export type CredentialKind = (typeof CREDENTIAL_KINDS)[number];
 
-export const LLM_PROVIDERS = [
-  'ollama',
-  'xai',
-  'openai',
-  'anthropic',
-  'gemini',
-  'openai_compat',
-] as const;
+export const LLM_PROVIDERS = ['ollama', 'xai', 'openai', 'anthropic', 'gemini'] as const;
 
-export type LlmProvider = (typeof LLM_PROVIDERS)[number];
+export type LlmProvider = (typeof LLM_PROVIDERS)[number] | 'openai_compat';
 export const CLOUD_CATALOG_PROVIDERS = ['xai', 'openai', 'anthropic', 'gemini'] as const;
 export type CloudCatalogProvider = (typeof CLOUD_CATALOG_PROVIDERS)[number];
 export type HelpProvider = LlmProvider | '';
-export const EMBEDDING_PROVIDERS = ['ollama', 'openai', 'gemini', 'openai_compat'] as const;
-export type EmbeddingProvider = (typeof EMBEDDING_PROVIDERS)[number] | '';
+export const EMBEDDING_PROVIDERS = ['ollama', 'openai', 'gemini'] as const;
+export type EmbeddingProvider = (typeof EMBEDDING_PROVIDERS)[number] | 'openai_compat' | '';
 
 export function embeddingNeedsCredential(provider: string): boolean {
   return provider === 'openai' || provider === 'gemini' || provider === 'openai_compat';
