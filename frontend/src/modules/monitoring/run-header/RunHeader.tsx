@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { formatDateTime, formatDuration, serviceBadgeVariant, shortId } from '@/modules/monitoring/model/format';
 import { activeLlms, activeNonLlm } from '@/modules/monitoring/model/graph';
 import type { RunSnapshot } from '@/modules/monitoring/model/types';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import type { ServiceStatus } from '@/store/session';
 
 function useNow(ms: number) {
@@ -52,8 +53,8 @@ export function RunHeader({
   const primaryWait = waitReasons[0];
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 p-4">
+    <Card className={moduleCardClass}>
+      <CardContent className={`${moduleCardBodyClass} flex flex-col gap-3 p-4`}>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{run.networkName}</p>

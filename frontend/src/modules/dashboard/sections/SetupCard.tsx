@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 
 type SetupItem = {
   id: string;
@@ -26,7 +27,7 @@ export function SetupCard({
 
   if (loading) {
     return (
-      <Card>
+      <Card className={moduleCardClass}>
         <CardHeader>
           <Skeleton className="h-4 w-32" />
         </CardHeader>
@@ -66,11 +67,11 @@ export function SetupCard({
   if (items.length === 0) return null;
 
   return (
-    <Card>
+    <Card className={moduleCardClass}>
       <CardHeader>
         <CardTitle>{t('dashboard.setup.title')}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className={`${moduleCardBodyClass} space-y-3`}>
         {items.map((item) => (
           <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <p>{t(item.labelKey)}</p>

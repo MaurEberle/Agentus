@@ -99,7 +99,7 @@ function GraphInner({
   );
 
   return (
-    <div className={cn('relative h-[280px] md:h-full md:min-h-[320px]', dimmed && 'opacity-60')}>
+    <div className={cn('relative h-[min(20rem,50vh)] min-h-0 md:h-full', dimmed && 'opacity-60')}>
       <FitButton />
       <ReactFlow
         className="monitoring-flow"
@@ -129,7 +129,7 @@ function GraphInner({
 export function MiniGraph({ run, dimmed }: { run: RunSnapshot; dimmed?: boolean }) {
   const { t } = useTranslation();
   return (
-    <Card className="flex min-h-0 flex-col">
+    <Card className="flex max-h-[min(28rem,60vh)] min-h-0 flex-col overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle>{t('monitoring.graph.title')}</CardTitle>
       </CardHeader>

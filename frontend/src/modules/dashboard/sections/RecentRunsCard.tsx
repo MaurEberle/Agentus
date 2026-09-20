@@ -12,6 +12,7 @@ import {
   outcomeBadgeVariant,
   type RunSummary,
 } from '@/modules/dashboard/model';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 
 export function RecentRunsCard({
   loading,
@@ -26,7 +27,7 @@ export function RecentRunsCard({
 
   if (loading) {
     return (
-      <Card>
+      <Card className={moduleCardClass}>
         <CardHeader>
           <Skeleton className="h-4 w-32" />
         </CardHeader>
@@ -39,11 +40,11 @@ export function RecentRunsCard({
   }
 
   return (
-    <Card>
+    <Card className={moduleCardClass}>
       <CardHeader>
         <CardTitle>{t('dashboard.runs.title')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className={moduleCardBodyClass}>
         {!storeOk ? (
           <Alert>
             <AlertTitle>{t('dashboard.runs.storeError')}</AlertTitle>

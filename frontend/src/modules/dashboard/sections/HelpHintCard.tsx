@@ -37,7 +37,7 @@ export function HelpHintCard({
   }
 
   return (
-    <Alert className="pl-10">
+    <Alert className="max-h-[min(16rem,40vh)] overflow-y-auto pl-10">
       <MessageCircle className="size-4" />
       <AlertTitle>{t('dashboard.helpHint.title')}</AlertTitle>
       <AlertDescription>

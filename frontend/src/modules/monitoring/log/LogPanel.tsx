@@ -125,7 +125,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-36">
           <Label className="text-xs">{t('monitoring.log.level')}</Label>
@@ -200,7 +200,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
       <div
         ref={scroller}
         onScroll={onScroll}
-        className="max-h-[min(28rem,50vh)] min-h-[12rem] overflow-auto rounded-md border bg-muted/20 font-mono text-xs"
+        className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20 font-mono text-xs"
       >
         {visible.length === 0 ? (
           <p className="p-3 font-sans text-sm text-muted-foreground">{t('monitoring.log.empty')}</p>
@@ -344,7 +344,7 @@ function LogDetail({
           {payloadText ? (
             <div>
               <p className="text-xs text-muted-foreground">{t('monitoring.log.payload')}</p>
-              <pre className="overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{payloadText}</pre>
+              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{payloadText}</pre>
               <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2" onClick={() => void copy(payloadText)}>
                 {t('monitoring.log.copyPayload')}
               </Button>
@@ -353,7 +353,7 @@ function LogDetail({
           {event.stack ? (
             <div>
               <p className="text-xs text-muted-foreground">{t('monitoring.log.stack')}</p>
-              <pre className="overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{event.stack}</pre>
+              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{event.stack}</pre>
             </div>
           ) : null}
         </div>

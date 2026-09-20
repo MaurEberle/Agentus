@@ -65,7 +65,7 @@ export function MonitoringModule() {
         adapterErrorKey={adapterErrorKey}
       />
       {stopped ? (
-        <Card>
+        <Card className="max-h-[min(28rem,60vh)] overflow-y-auto">
           <CardContent className="space-y-2 p-6">
             <p className="font-medium">{t('monitoring.empty.stoppedTitle')}</p>
             <p className="text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</p>
@@ -82,7 +82,7 @@ export function MonitoringModule() {
         <>
           <RunHeader run={run} serviceStatus={serviceStatus} />
           <ResourcesPanel resources={resources} dimmed={dimmed} />
-          <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
+          <div className="grid max-h-[min(28rem,60vh)] gap-4 md:grid-cols-2 md:items-stretch">
             <div className="order-2 min-h-0 md:order-1">
               <MiniGraph run={run} dimmed={dimmed} />
             </div>
@@ -90,7 +90,7 @@ export function MonitoringModule() {
               <ActivityPanel run={run} dimmed={dimmed} />
             </div>
           </div>
-          <Card className="flex min-h-[320px] flex-col">
+          <Card className="flex max-h-[min(36rem,70vh)] min-h-[16rem] flex-col overflow-hidden">
             <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.log')}>
               {chat ? (
                 <TabButton active={tab === 'chat'} onClick={() => setTab('chat')}>
@@ -111,7 +111,7 @@ export function MonitoringModule() {
           </Card>
         </>
       ) : (
-        <Card>
+        <Card className="max-h-[min(28rem,60vh)] overflow-y-auto">
           <CardContent className="p-6 text-sm text-muted-foreground">{t('monitoring.empty.stoppedBody')}</CardContent>
         </Card>
       )}

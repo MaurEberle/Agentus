@@ -51,7 +51,7 @@ export function NetworkChat({
   }
 
   return (
-    <div className="flex min-h-[240px] flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 space-y-3 overflow-auto px-1 py-2">
         {messages.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -95,7 +95,7 @@ function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
     <article className={cn('flex flex-col gap-1', user ? 'items-end' : 'items-start')}>
       <div
         className={cn(
-          'max-w-[92%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
+          'max-h-40 max-w-[92%] overflow-y-auto whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
           user ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         )}
       >

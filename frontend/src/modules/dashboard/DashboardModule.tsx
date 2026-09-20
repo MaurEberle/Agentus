@@ -40,7 +40,7 @@ export function DashboardModule() {
   const activeItem = networks.data?.items.find((item) => item.id === activeNetworkId);
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4 overflow-x-hidden p-4 pb-24 md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('dashboard.title')}</h1>
       <StatusCard />
       <HelpHintCard onboardingSeen={help.data?.onboardingSeen} loading={help.isLoading} />

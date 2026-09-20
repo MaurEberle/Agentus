@@ -3,16 +3,17 @@ import { FolderInput, GitBranch, Server } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 
 export function QuickLinks() {
   const { t } = useTranslation();
 
   return (
-    <Card>
+    <Card className={moduleCardClass}>
       <CardHeader>
         <CardTitle>{t('dashboard.quick.title')}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
+      <CardContent className={`${moduleCardBodyClass} flex flex-wrap gap-2`}>
         <Button asChild size="sm">
           <Link to="/network">
             <GitBranch />
