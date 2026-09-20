@@ -22,7 +22,8 @@ export function NetworkChat({
   const messages = useMonitoringStore((state) => state.chatMessages);
   const generating = useMonitoringStore((state) => state.chatGenerating);
   const [text, setText] = useState('');
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
   const config = chatInputConfig(run.graph);
   const running = serviceStatus === 'running';
   const waitingInput =
@@ -30,15 +31,25 @@ export function NetworkChat({
     messages.length === 0 &&
     (Boolean(config?.requireInput) ||
       Object.values(run.nodesRuntime).some((node) => node.waitReason === 'human'));
+  const lastContent = messages[messages.length - 1]?.content;
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'end' });
-  }, [messages, generating]);
+    const el = listRef.current;
+    if (!el || !stickToBottom.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [generating, lastContent, messages.length]);
+
+  function onListScroll() {
+    const el = listRef.current;
+    if (!el) return;
+    stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 64;
+  }
 
   function submit(event?: FormEvent) {
     event?.preventDefault();
     const value = text.trim();
     if (!value || !running || generating) return;
+    stickToBottom.current = true;
     sendRunChat(value);
     setText('');
   }
@@ -52,7 +63,11 @@ export function NetworkChat({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 space-y-3 overflow-auto px-1 py-2">
+      <div
+        ref={listRef}
+        onScroll={onListScroll}
+        className="min-h-0 flex-1 space-y-3 overflow-auto px-1 py-2 [overflow-anchor:none]"
+      >
         {messages.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {waitingInput ? t('monitoring.chat.waitInput') : t('monitoring.chat.empty')}
@@ -60,7 +75,6 @@ export function NetworkChat({
         ) : (
           messages.map((message) => <Bubble key={message.id} message={message} locale={i18n.language} />)
         )}
-        <div ref={endRef} />
       </div>
       <form onSubmit={submit} className="flex items-end gap-2 border-t pt-3">
         <Textarea
@@ -95,7 +109,7 @@ function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
     <article className={cn('flex flex-col gap-1', user ? 'items-end' : 'items-start')}>
       <div
         className={cn(
-          'max-h-40 max-w-[92%] overflow-y-auto whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
+          'max-w-[92%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
           user ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         )}
       >
