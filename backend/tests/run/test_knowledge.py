@@ -103,3 +103,49 @@ def test_index_uses_node_embedding_settings(monkeypatch, api_env) -> None:
     assert captured[0].model == "text-embedding-3-small"
     assert captured[0].provider == "openai"
     assert captured[0].credential_id == "cred-1"
+
+
+def test_index_outside_data_dir(monkeypatch, api_env, tmp_path) -> None:
+    from app.runtime.models import EmbedRequest, EmbedResult
+
+    init()
+    captured: list[EmbedRequest] = []
+
+    def _embed(req: EmbedRequest) -> EmbedResult:
+        captured.append(req)
+        return EmbedResult(
+            vectors=[[0.1, 0.2] for _ in req.texts],
+            dimension=2,
+            model=req.model,
+        )
+
+    monkeypatch.setattr("app.runtime.embeddings.embed", _embed)
+    upsert_network(
+        NetworkRow(
+            id="net-out",
+            name="kb",
+            description=None,
+            tags=[],
+            document={"schemaVersion": 1, "name": "kb", "nodes": [], "edges": []},
+            updated_at=utc_now(),
+            last_used_at=None,
+            last_run_id=None,
+        )
+    )
+    folder = tmp_path / "stories"
+    folder.mkdir()
+    (folder / "note.md").write_text("# Hello\nworld", encoding="utf-8")
+    data_dir = load_bootstrap().data_dir
+    node = GraphNode(
+        id="k-out",
+        type="knowledge",
+        position={"x": 0, "y": 0},
+        data={
+            "sourcePath": str(folder),
+            "embeddingProvider": "ollama",
+            "embeddingModel": "nomic-embed-text",
+        },
+    )
+    assert index_node("net-out", node, data_dir=str(data_dir), force=True) == "ready"
+    assert captured
+    assert any("world" in text for text in captured[0].texts)

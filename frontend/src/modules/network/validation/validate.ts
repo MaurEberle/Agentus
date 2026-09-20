@@ -167,8 +167,6 @@ function validateNode(
       issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgePath' });
     } else if (isForbiddenDataRoot(path)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgeRoot' });
-    } else if (options.dataDir && !path.toLowerCase().startsWith(options.dataDir.toLowerCase())) {
-      issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgeSandbox' });
     } else if (options.helpCorpusHint && path.toLowerCase().includes(options.helpCorpusHint.toLowerCase())) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.knowledgeHelpCorpus' });
     }

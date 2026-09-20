@@ -257,7 +257,7 @@ class RunController:
 
     def _vram_start(self, compiled: CompiledGraph, settings: Any) -> bool:
         from app.runtime.errors import RuntimeApiError
-        from app.runtime.ollama import ensure_loaded
+        from app.runtime.ollama import ensure_loaded, list_ollama_models
 
         fallback_missing = False
         help_chat = settings.help_chat
@@ -270,24 +270,20 @@ class RunController:
                 self._unloads.append(fallback)
             except Exception:
                 fallback_missing = True
-        models: list[str] = []
-        for agent in compiled.agents.values():
-            if agent.llm.provider == "ollama" and agent.llm.model:
-                if agent.llm.model not in models:
-                    models.append(agent.llm.model)
-        for tag in models:
-            try:
-                ensure_loaded(tag)
-                self._unloads.append(tag)
-            except RuntimeApiError as exc:
-                if exc.error_key == "runtime.modelNotFound":
-                    raise AppError("runtime.modelNotFound", status_code=409) from exc
-                raise AppError("runtime.modelNotFound", status_code=409) from exc
         try:
-            ensure_loaded("nomic-embed-text")
-            self._unloads.append("nomic-embed-text")
-        except Exception:
-            pass
+            installed = {item.name for item in list_ollama_models()}
+        except RuntimeApiError as exc:
+            raise AppError(exc.error_key, status_code=409) from exc
+        seen: set[str] = set()
+        for agent in compiled.agents.values():
+            if agent.llm.provider != "ollama" or not agent.llm.model:
+                continue
+            tag = agent.llm.model
+            if tag in seen:
+                continue
+            seen.add(tag)
+            if tag not in installed and f"{tag}:latest" not in installed:
+                raise AppError("runtime.modelNotFound", status_code=409, message=tag)
         return fallback_missing
 
     def send_chat(self, text: str) -> None:

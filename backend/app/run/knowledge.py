@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from app.db.engine import utc_now
+from app.db.paths import RAG_DIR_NAME
 from app.db.network_rag import (
     CollectionMeta,
     RagChunk,
@@ -63,16 +64,22 @@ def status_for_network(network_id: str) -> list[dict[str, str]]:
 
 
 def _safe_files(root: Path, data_dir: str) -> list[Path]:
-    data_root = Path(os.path.realpath(data_dir))
-    if not root.exists():
+    del data_dir
+    try:
+        source_root = Path(os.path.realpath(root))
+    except OSError:
+        return []
+    if not source_root.is_dir():
+        return []
+    if RAG_DIR_NAME in source_root.as_posix().replace("\\", "/").split("/"):
         return []
     out: list[Path] = []
-    for path in root.rglob("*"):
+    for path in source_root.rglob("*"):
         if not path.is_file():
             continue
         try:
             resolved = path.resolve()
-            resolved.relative_to(data_root)
+            resolved.relative_to(source_root)
         except (OSError, ValueError):
             continue
         suffix = path.suffix.lower()

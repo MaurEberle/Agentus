@@ -206,6 +206,8 @@
       "ping": "Verbindung prüfen",
       "pingOk": "Runtime erreichbar",
       "pingFail": "Runtime nicht erreichbar",
+      "modelNotFound": "Modell nicht gefunden oder nicht ladbar: {{name}}",
+      "unreachable": "Ollama hat nicht rechtzeitig geantwortet ({{name}}).",
       "models": "Installierte Modelle",
       "modelsEmpty": "Keine Modelle oder Runtime nicht erreichbar.",
       "modelName": "Modell",

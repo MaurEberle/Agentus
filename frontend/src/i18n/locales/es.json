@@ -206,6 +206,8 @@
       "ping": "Comprobar conexión",
       "pingOk": "Runtime accesible",
       "pingFail": "Runtime no accesible",
+      "modelNotFound": "Modelo no encontrado o no se pudo cargar: {{name}}",
+      "unreachable": "Ollama no respondió a tiempo ({{name}}).",
       "models": "Modelos instalados",
       "modelsEmpty": "No hay modelos o el runtime no está disponible.",
       "modelName": "Modelo",
