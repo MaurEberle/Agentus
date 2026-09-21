@@ -59,6 +59,49 @@ def test_retrieve_before_complete_adds_context(monkeypatch, api_env) -> None:
     assert "secret snippet" in captured[0] or "No document context." in captured[0]
 
 
+def test_ready_index_does_not_reread(monkeypatch, api_env, tmp_path) -> None:
+    from app.runtime.models import EmbedResult
+
+    init()
+    calls = {"n": 0}
+
+    def _embed(req):
+        calls["n"] += 1
+        return EmbedResult(vectors=[[0.1, 0.2] for _ in req.texts], dimension=2, model=req.model)
+
+    monkeypatch.setattr("app.runtime.embeddings.embed", _embed)
+    upsert_network(
+        NetworkRow(
+            id="net-1",
+            name="kb",
+            description=None,
+            tags=[],
+            document={"schemaVersion": 1, "name": "kb", "nodes": [], "edges": []},
+            updated_at=utc_now(),
+            last_used_at=None,
+            last_run_id=None,
+        )
+    )
+    folder = tmp_path / "notes"
+    folder.mkdir()
+    (folder / "note.md").write_text("# Hello\nworld", encoding="utf-8")
+    node = GraphNode(
+        id="k1",
+        type="knowledge",
+        position={"x": 0, "y": 0},
+        data={"sourcePath": str(folder), "embeddingModel": "nomic-embed-text"},
+    )
+    assert index_node("net-1", node, data_dir=str(tmp_path), force=True) == "ready"
+    assert calls["n"] == 1
+
+    def _read_forbidden(path):
+        raise AssertionError(path)
+
+    monkeypatch.setattr("app.run.knowledge._read", _read_forbidden)
+    assert index_node("net-1", node, data_dir=str(tmp_path)) == "ready"
+    assert calls["n"] == 1
+
+
 def test_index_uses_node_embedding_settings(monkeypatch, api_env) -> None:
     from app.runtime.models import EmbedRequest, EmbedResult
 

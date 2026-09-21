@@ -62,15 +62,21 @@ def test_no_web_when_disabled(api_env, monkeypatch) -> None:
         "app.runtime.embeddings.embed",
         lambda req: EmbedResult(vectors=[[1.0, 0.0]], dimension=2, model="nomic-embed-text"),
     )
-    monkeypatch.setattr(
-        "app.runtime.completions.complete_stream",
-        lambda req: iter([StreamEvent(kind="delta", text="ok"), StreamEvent(kind="done")]),
-    )
-    parsed = _parse(list(send_stream("hello")))
+    captured: list[CompletionRequest] = []
+
+    def _stream(req: CompletionRequest):
+        captured.append(req)
+        yield StreamEvent(kind="delta", text="ok")
+        yield StreamEvent(kind="done")
+
+    monkeypatch.setattr("app.runtime.completions.complete_stream", _stream)
+    parsed = _parse(list(send_stream("hello", locale="de")))
     kinds = [name for name, _ in parsed]
-    assert "sources" in kinds
+    assert "sources" not in kinds
     assert called["web"] == 0
-    assert "web" not in parsed[0][1]
+    assert "APP LANGUAGE: German" in captured[0].messages[0].content
+    assert "[1]\nhello" in captured[0].messages[1].content
+    assert "guide" not in captured[0].messages[1].content
 
 
 def test_web_after_weak_rag(api_env, monkeypatch) -> None:
@@ -154,6 +160,56 @@ def test_degraded_uses_fallback(api_env, monkeypatch) -> None:
     list(send_stream("q"))
     assert captured[0].model == "llama3.2:1b"
     assert captured[0].ollama_options == {"num_gpu": 0}
+
+
+def test_user_row_is_stored_when_the_turn_ends(api_env, monkeypatch) -> None:
+    init()
+    _ready_index()
+    monkeypatch.setattr(
+        "app.help.pipeline.retrieve_scored",
+        lambda q, locale=None: [(1.0, HelpSource(kind="rag", title="g", section="s"), "Nur dieser Absatz.")],
+    )
+    monkeypatch.setattr(
+        "app.runtime.completions.complete_stream",
+        lambda req: iter([StreamEvent(kind="delta", text="ok"), StreamEvent(kind="done")]),
+    )
+    from app.db.help_chat import list_messages
+
+    stream = send_stream("frage", locale="de")
+    next(stream)
+    assert list_messages() == []
+    list(stream)
+    stored = list_messages()
+    user = next(row for row in stored if row.role == "user")
+    assistant = next(row for row in stored if row.role == "assistant")
+    assert user.content == "frage"
+    assert assistant.sources is None or all(item.get("kind") != "rag" for item in assistant.sources or [])
+
+
+def test_think_blocks_are_omitted_from_the_stream_and_the_row(api_env, monkeypatch) -> None:
+    init()
+    _ready_index()
+    monkeypatch.setattr(
+        "app.help.pipeline.retrieve_scored",
+        lambda q, locale=None: [(1.0, HelpSource(kind="rag", title="g", section="s"), "Absatz.")],
+    )
+
+    def _stream(req: CompletionRequest):
+        yield StreamEvent(kind="delta", text="<think>geheim")
+        yield StreamEvent(kind="delta", text="</think>\n\nDie Palette")
+        yield StreamEvent(kind="done")
+
+    monkeypatch.setattr("app.runtime.completions.complete_stream", _stream)
+    parsed = _parse(list(send_stream("frage", locale="de")))
+    deltas = "".join(data for name, data in parsed if name == "delta")
+    assert "geheim" not in deltas
+    assert "<think>" not in deltas
+    assert "Die Palette" in deltas
+    from app.db.help_chat import list_messages
+
+    assistant = next(row for row in list_messages() if row.role == "assistant")
+    assert assistant.content == "Die Palette"
+    assert "geheim" not in assistant.content
 
 
 def test_masked_secret_persisted(api_env, monkeypatch) -> None:

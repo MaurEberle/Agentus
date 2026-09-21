@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "Agentus Network",
-    "skipToContent": "本文へスキップ"
+    "skipToContent": "本文へスキップ",
+    "loading": "読み込み中"
   },
   "providers": {
     "ollama": "Ollama",
@@ -26,6 +27,7 @@
   },
   "shell": {
     "start": "開始",
+    "indexing": "知識を索引しています: {{name}}",
     "stop": "停止",
     "quickSelect": "クイック選択",
     "quickSelectPlaceholder": "ネットワークを選択",
@@ -227,6 +229,9 @@
       "timeout": "モデルからの進捗がありません（{{name}}）。総時間ではなく無応答で中止しました。",
       "unreachable": "Ollama に到達できません（{{name}}）。",
       "models": "インストール済みモデル",
+      "modelsChat": "通常のモデル",
+      "modelsEmbed": "埋め込みモデル",
+      "modelsGroupEmpty": "なし",
       "modelsEmpty": "モデルがないか、ランタイムに到達できません。",
       "modelName": "モデル",
       "modelSize": "サイズ",
@@ -436,7 +441,8 @@
       "noNetwork": "アクティブなネットワークなし",
       "openLibrary": "ライブラリを開く",
       "runningSince": "{{time}} から実行中",
-      "openMonitoring": "監視"
+      "openMonitoring": "監視",
+      "indexing": "知識を索引しています: {{name}}"
     },
     "helpHint": {
       "title": "アプリ内ヘルプ",
@@ -557,12 +563,14 @@
       "collapse": "要素選択を折りたたむ",
       "expand": "要素選択を展開",
       "search": "ノードを検索",
-      "chat_input": "チャット入力",
-      "chat_inputHint": "最大1つ。開始テキストと実行の必須入力。",
+      "chat_input": "チャット",
+      "chat_inputHint": "最大1つ。実行中の会話。オーケストレーターがあると確認の質問のために開いたままです。",
+      "orchestrator": "オーケストレーター",
+      "orchestratorHint": "実行チャットを進行する。エージェントごとにチャネル、終了へはメッセージ。",
       "llm": "LLM",
       "llmHint": "モデルとプロバイダー。エージェントの llm ポートへエッジ。",
       "agent": "エージェント",
-      "agentHint": "システムプロンプト。LLM、メッセージ、ツール、知識はエッジで接続。",
+      "agentHint": "システムプロンプト。単体ではメッセージ、オーケストレーター配下ではチャネル。",
       "tool": "ツール",
       "toolHint": "カタログの種類。任意でMCP。",
       "knowledge": "知識",
@@ -578,6 +586,7 @@
       "tool": "ツール",
       "knowledge": "知識",
       "handoff": "引き継ぎ",
+      "channel": "チャネル",
       "default": "既定",
       "in": "入力",
       "out": "出力"
@@ -617,7 +626,12 @@
         "maxTokens": "最大トークン"
       },
       "agent": {
-        "hint": "LLM、ツール、知識はフィールドではなくエッジから来ます。",
+        "hint": "LLM、ツール、知識はエッジから届く。オーケストレーターがなければメッセージがエージェントを起動する。",
+        "channelHint": "このエージェントはオーケストレーター配下。依頼はチャネルから届き、結果は同じチャネルへ戻る。",
+        "systemPrompt": "システムプロンプト"
+      },
+      "orchestrator": {
+        "hint": "LLM はエッジが1本。チャットはここへ入る。エージェントごとにチャネル。メッセージ出力は終了のまま。",
         "systemPrompt": "システムプロンプト"
       },
       "tool": {
@@ -662,6 +676,7 @@
         "add": "分岐を追加"
       },
       "chat": {
+        "hint": "実行中の会話です。オーケストレーターは実行を終えるまでここで確認の質問ができます。",
         "placeholder": "プレースホルダー",
         "startMessage": "開始テキスト",
         "requireInput": "入力必須"
@@ -678,8 +693,7 @@
       "preview": "{{nodes}} ノード · {{edges}} エッジ"
     },
     "empty": {
-      "body": "パレットからノードをキャンバスへドラッグするか、保存済みネットワークを開いてください。",
-      "insert": "パレット"
+      "body": "パレットから最初のノードをキャンバスへドラッグしてください。"
     },
     "context": {
       "insert": "挿入",
@@ -711,6 +725,14 @@
       "edgeType": "この接続は型が互換ではありません。",
       "agentLlm": "各エージェントにはちょうど1本のLLMエッジが必要です。",
       "agentMessage": "各エージェントには入力メッセージが必要です。",
+      "orchestratorDuplicate": "オーケストレーターは最大1つです。",
+      "orchestratorLlm": "オーケストレーターには LLM のエッジがちょうど1つ必要です。",
+      "orchestratorChat": "チャットはオーケストレーターに接続する必要があります。",
+      "orchestratorFanout": "オーケストレーターがあるとき、チャットはそこだけに接続します。",
+      "orchestratorEnd": "オーケストレーターには終了へのメッセージエッジが必要です。",
+      "orchestratorLooseAgent": "オーケストレーターがあるとき、各エージェントにはそこからのチャネルが必要。",
+      "agentMode": "エージェントは連鎖かオーケストレーター配下のどちらか。",
+      "agentChannel": "エージェントのチャネルは1つまで。",
       "modelRequired": "モデルは必須です。",
       "credentialRequired": "クラウドプロバイダーには資格情報が必要です。",
       "toolKind": "ツールの種類がありません。",
@@ -874,6 +896,8 @@
       "disconnectedTitle": "サービスから切断されました",
       "disconnectedBody": "再接続しています。直近の値は薄く表示されます。",
       "startingTitle": "サービスを開始しています",
+      "indexingTitle": "知識を索引しています",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "サービスを停止しています",
       "errorTitle": "サービスエラー",
       "errorBody": "{{message}}"
@@ -919,7 +943,8 @@
       "tokens": "トークン"
     },
     "nodeType": {
-      "chat_input": "入力",
+      "chat_input": "チャット",
+      "orchestrator": "オーケストレーター",
       "llm": "LLM",
       "agent": "エージェント",
       "tool": "ツール",
@@ -938,7 +963,8 @@
       "none": "待機なし",
       "llm": "LLM",
       "tool": "ツール",
-      "human": "入力"
+      "human": "入力",
+      "index": "索引"
     },
     "activity": {
       "title": "アクティビティ",
@@ -963,6 +989,7 @@
       "send": "送信",
       "stop": "生成を停止",
       "waitInput": "最初のメッセージを書いてください。グラフは入力待ちです。",
+      "waitReply": "確認：実行はあなたの返事を待っています。",
       "empty": "この実行にはまだメッセージがありません。",
       "disabled": "チャットは実行中のみ利用できます。"
     },
@@ -1238,6 +1265,13 @@
         "done": "エージェントが完了しました"
       },
       "knowledge": "知識検索（{{count}} 件）",
+      "knowledgeIndex": {
+        "start": "知識を読み込んでいます: {{name}}",
+        "embed": "知識を索引しています: {{name}}（{{chunks}} 件、{{model}}）",
+        "ready": "知識の準備ができました: {{name}}",
+        "cached": "知識は最新です: {{name}}",
+        "failed": "知識の索引に失敗しました: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM完了（{{durationMs}} ms）"
@@ -1254,7 +1288,10 @@
       "help": {
         "fallbackMissing": "ヘルプのフォールバックモデルがありません"
       },
-      "stepLimit": "ステップ上限に達しました"
+      "stepLimit": "ステップ上限に達しました",
+      "orchestrator": {
+        "repair": "制御メッセージを読めなかったので再試行します。"
+      }
     },
     "graph": {
       "router": {
@@ -1265,5 +1302,24 @@
       "timeout": "モデルからの進捗がありません",
       "unreachable": "ランタイムに到達できません"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "このモデルはテキスト埋め込みを生成できません。",
+      "runnerFailed": "埋め込みモデルを起動できませんでした。"
+    },
+    "index": {
+      "failed": "ヘルプ索引を保存できませんでした。"
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "このモデルは埋め込みに対応していません。",
+    "timeout": "埋め込みリクエストがタイムアウトしました。",
+    "unreachable": "埋め込みサービスに到達できません。",
+    "upstream": "埋め込みサービスがリクエストを拒否しました。",
+    "badRequest": "埋め込みリクエストは拒否されました。",
+    "modelNotFound": "埋め込みモデルが見つかりません。",
+    "missingCredential": "この埋め込みモデルには認証情報が必要です。",
+    "unauthorized": "埋め込みの認証情報は拒否されました。"
   }
 }

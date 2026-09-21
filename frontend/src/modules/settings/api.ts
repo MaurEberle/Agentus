@@ -105,8 +105,20 @@ export async function clearHelpChatMessages(): Promise<void> {
   await queryClient.invalidateQueries({ queryKey: ['help-chat', 'messages'] });
 }
 
-export async function reindexHelpChat(): Promise<{ state: 'ready' | 'error'; messageKey?: string }> {
+export type HelpReindexState = 'idle' | 'running' | 'ready' | 'error';
+
+export type HelpReindexResult = {
+  state: HelpReindexState;
+  messageKey?: string;
+  id?: string;
+};
+
+export async function reindexHelpChat(): Promise<HelpReindexResult> {
   return apiFetch('/help-chat/reindex', { method: 'POST' });
+}
+
+export async function reindexHelpChatStatus(): Promise<HelpReindexResult> {
+  return apiFetch('/help-chat/reindex');
 }
 
 export async function listMcpRecipes(): Promise<{ items: McpRecipe[] }> {

@@ -89,34 +89,32 @@ function NotificationRow({
   const { t } = useTranslation();
   const Icon = VARIANT_ICON[item.variant];
   return (
-    <li
-      className={cn(
-        'flex gap-2 rounded-md px-2 py-2 text-sm',
-        item.read ? 'opacity-70' : 'bg-accent/40',
-      )}
-    >
-      <Icon className="mt-0.5 size-4 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="font-medium leading-5">{t(item.titleKey, item.values)}</p>
-        {item.descriptionKey ? (
-          <p className="text-xs text-muted-foreground">{t(item.descriptionKey, item.values)}</p>
+    <li>
+      <button
+        type="button"
+        className={cn(
+          'flex w-full gap-2 rounded-md px-2 py-2 text-left text-sm',
+          item.read ? 'opacity-70' : 'cursor-pointer bg-accent/40',
+        )}
+        onClick={onRead}
+      >
+        <Icon className="mt-0.5 size-4 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium leading-5">{t(item.titleKey, item.values)}</p>
+          {item.descriptionKey ? (
+            <p className="text-xs text-muted-foreground">{t(item.descriptionKey, item.values)}</p>
+          ) : null}
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {formatRelative(item.createdAt, locale)}
+          </p>
+        </div>
+        {!item.read ? (
+          <>
+            <Check className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="sr-only">{t('notifications.markRead')}</span>
+          </>
         ) : null}
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          {formatRelative(item.createdAt, locale)}
-        </p>
-      </div>
-      {!item.read ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7"
-          aria-label={t('notifications.markRead')}
-          onClick={onRead}
-        >
-          <Check className="size-3.5" />
-        </Button>
-      ) : null}
+      </button>
     </li>
   );
 }

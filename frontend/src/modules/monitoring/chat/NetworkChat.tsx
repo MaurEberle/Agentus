@@ -26,11 +26,9 @@ export function NetworkChat({
   const stickToBottom = useRef(true);
   const config = chatInputConfig(run.graph);
   const running = serviceStatus === 'running';
-  const waitingInput =
-    running &&
-    messages.length === 0 &&
-    (Boolean(config?.requireInput) ||
-      Object.values(run.nodesRuntime).some((node) => node.waitReason === 'human'));
+  const waitingHuman =
+    running && Object.values(run.nodesRuntime).some((node) => node.waitReason === 'human');
+  const waitingInput = waitingHuman && messages.length === 0;
   const lastContent = messages[messages.length - 1]?.content;
 
   useEffect(() => {
@@ -76,6 +74,9 @@ export function NetworkChat({
           messages.map((message) => <Bubble key={message.id} message={message} locale={i18n.language} />)
         )}
       </div>
+      {waitingHuman && messages.length > 0 ? (
+        <p className="px-1 pb-2 text-xs text-muted-foreground">{t('monitoring.chat.waitReply')}</p>
+      ) : null}
       <form onSubmit={submit} className="flex items-end gap-2 border-t pt-3">
         <Textarea
           value={text}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, Square, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,7 @@ import { HelpChatMessages } from '@/components/help-chat/HelpChatMessages';
 import { sendHelpMessage, useHelpMessagesQuery } from '@/components/help-chat/api';
 import {
   clampHelpChatSize,
+  defaultHelpChatSize,
   deriveHelpStatus,
   type HelpChatStatus,
   type HelpMessage,
@@ -37,6 +38,8 @@ export function HelpChatPanel({
   const generating = useHelpChatWidget((state) => state.generating);
   const streamContent = useHelpChatWidget((state) => state.streamContent);
   const streamSources = useHelpChatWidget((state) => state.streamSources);
+  const pendingUser = useHelpChatWidget((state) => state.pendingUser);
+  const pendingBaseCount = useHelpChatWidget((state) => state.pendingBaseCount);
   const errorKey = useHelpChatWidget((state) => state.errorKey);
   const errorMessage = useHelpChatWidget((state) => state.errorMessage);
   const abort = useHelpChatWidget((state) => state.abort);
@@ -58,24 +61,18 @@ export function HelpChatPanel({
   const onEscape = useCallback(() => onClose(), [onClose]);
   useFocusTrap(!compact, panelRef, onEscape);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (compact) return;
-    const viewport = { w: window.innerWidth, h: window.innerHeight };
-    const next = clampHelpChatSize(
-      width || viewport.w * 0.2,
-      height || Math.max(320, viewport.h * 0.45),
-      viewport,
-    );
-    if (next.width !== width || next.height !== height) setHelpChatSize(next);
-  }, [compact, height, setHelpChatSize, width]);
+    setHelpChatSize(defaultHelpChatSize({ w: window.innerWidth, h: window.innerHeight }));
+  }, [compact, setHelpChatSize]);
 
   function startResize(edge: 'left' | 'top' | 'corner') {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
       event.preventDefault();
       const startX = event.clientX;
       const startY = event.clientY;
-      const startW = width || window.innerWidth * 0.2;
-      const startH = height || Math.max(320, window.innerHeight * 0.45);
+      const startW = width || window.innerWidth * 0.3;
+      const startH = height || window.innerHeight * 0.8;
       function move(moveEvent: PointerEvent) {
         const viewport = { w: window.innerWidth, h: window.innerHeight };
         const dw = edge === 'top' ? 0 : startX - moveEvent.clientX;
@@ -96,6 +93,15 @@ export function HelpChatPanel({
     if (!canSend) return;
     setDraft('');
     useHelpChatWidget.getState().clearError();
+    useHelpChatWidget.getState().setPendingUser(
+      {
+        id: `pending-${Date.now()}`,
+        role: 'user',
+        content: text,
+        createdAt: new Date().toISOString(),
+      },
+      messages.length,
+    );
     const handle = sendHelpMessage(text, {
       onDelta: (chunk) => useHelpChatWidget.getState().appendDelta(chunk),
       onSources: (sources) => useHelpChatWidget.getState().setSources(sources),
@@ -110,6 +116,15 @@ export function HelpChatPanel({
     });
     useHelpChatWidget.getState().startStream(handle.abort);
   }
+
+  useEffect(() => {
+    if (pendingUser && messages.length > pendingBaseCount) {
+      useHelpChatWidget.getState().clearPendingUser();
+    }
+  }, [messages.length, pendingBaseCount, pendingUser]);
+
+  const visibleMessages =
+    pendingUser && messages.length <= pendingBaseCount ? [...messages, pendingUser] : messages;
 
   const streaming: HelpMessage | null =
     generating && streamContent
@@ -137,7 +152,7 @@ export function HelpChatPanel({
               height,
               minWidth: 280,
               minHeight: 320,
-              maxWidth: '50vw',
+              maxWidth: '30vw',
               maxHeight: '80vh',
             }
       }
@@ -187,7 +202,11 @@ export function HelpChatPanel({
           </Button>
         </div>
       ) : (
-        <HelpChatMessages messages={messages} streaming={streaming} />
+        <HelpChatMessages
+          messages={visibleMessages}
+          streaming={streaming}
+          waiting={generating && !streamContent}
+        />
       )}
       {errorKey || errorMessage ? (
         <p className="px-3 text-xs text-destructive">

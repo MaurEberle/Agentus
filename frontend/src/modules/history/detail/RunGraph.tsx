@@ -16,6 +16,7 @@ import { useFitGraph } from '@/modules/monitoring/graph/useFitGraph';
 import type { GraphSnapshot, RunStep } from '@/modules/history/model/types';
 import { asGraphNode } from '@/modules/network/model/document';
 import { toRfHandlePair } from '@/modules/network/canvas/handles';
+import { asPortContext } from '@/modules/network/schema/ports';
 
 const nodeTypes = { status: StatusNode };
 
@@ -41,6 +42,7 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
     return map;
   }, [steps]);
 
+  const portContext = useMemo(() => asPortContext(graph.nodes, graph.edges), [graph.edges, graph.nodes]);
   const nodes: Node[] = useMemo(
     () =>
       graph.nodes.map((node) => {
@@ -49,7 +51,7 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
           typeof node.data.displayName === 'string' && node.data.displayName.trim()
             ? node.data.displayName
             : node.type;
-        const size = statusNodeSize(node.type, node.data, node.id);
+        const size = statusNodeSize(node.type, node.data, node.id, portContext);
         return {
           id: node.id,
           type: 'status',
@@ -64,10 +66,11 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
             status: step?.status ?? 'done',
             waitReason: step?.waitReason,
             nodeData: node.data,
+            portContext,
           },
         } satisfies StatusFlowNode;
       }),
-    [graph.nodes, statusById],
+    [graph.nodes, portContext, statusById],
   );
 
   const edges: Edge[] = useMemo(
@@ -79,6 +82,7 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
           sourceNode ? asGraphNode(sourceNode) : undefined,
           targetNode ? asGraphNode(targetNode) : undefined,
           edge,
+          portContext,
         );
         return {
           id: edge.id,
@@ -88,7 +92,7 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
           targetHandle: handles.targetHandle,
         };
       }),
-    [graph.edges, graph.nodes],
+    [graph.edges, graph.nodes, portContext],
   );
 
   const paneRef = useFitGraph(

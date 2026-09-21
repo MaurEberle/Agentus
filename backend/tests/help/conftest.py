@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.db import init, reset
 from app.db.vault import reset_memory, use_memory
+from app.help.reindex_job import reset_for_tests
 from app.help.status import set_degraded
 from app.http.app import create_app
 
@@ -13,11 +14,13 @@ from app.http.app import create_app
 def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AGENTUS_NETWORK_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("AGENTUS_NETWORK_VAULT", "memory")
+    reset_for_tests()
     reset()
     use_memory()
     reset_memory()
     set_degraded(False)
     yield tmp_path
+    reset_for_tests()
     set_degraded(False)
     reset()
     reset_memory()

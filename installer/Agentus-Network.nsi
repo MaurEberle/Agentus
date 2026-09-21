@@ -61,12 +61,14 @@ VIAddVersionKey /LANG=1033 "LegalCopyright" "${PRODUCT_PUBLISHER}"
 
 Var KeepData
 Var InstallModels
+Var OllamaReady
 
 Function .onInit
   SetShellVarContext current
   SetRegView 64
   StrCpy $KeepData "1"
   StrCpy $InstallModels "0"
+  StrCpy $OllamaReady "0"
   ${GetParameters} $0
   ${GetOptions} $0 "/INSTALL_MODELS=" $1
   ${If} $1 == "1"
@@ -198,44 +200,67 @@ ollama_yes:
   Push 1
 FunctionEnd
 
+Function PingOllamaPort
+  ; stack out: 1 if 127.0.0.1:11434 answers, else 0. Bounded curl, never waits on the daemon.
+  Push $R9
+  Push $R8
+  StrCpy $R9 0
+  IfFileExists "$SYSDIR\curl.exe" 0 ping_done
+  nsExec::ExecToStack '"$SYSDIR\curl.exe" -s -o NUL --ipv4 --connect-timeout 1 --max-time 2 --noproxy 127.0.0.1 http://127.0.0.1:11434/'
+  Pop $R9
+  Pop $R8
+  ${If} $R9 == 0
+    StrCpy $R9 1
+  ${Else}
+    StrCpy $R9 0
+  ${EndIf}
+ping_done:
+  Pop $R8
+  Exch $R9
+FunctionEnd
+
 Function WaitOllama
   Push $0
   Push $1
-  Push $2
   StrCpy $0 0
+  IfFileExists "$SYSDIR\curl.exe" wait_have_curl 0
+  Push "curl.exe missing, skip ollama wait"
+  Call LogLine
+  Pop $1
+  Pop $0
+  Return
+wait_have_curl:
   Push "waiting for ollama on 11434"
   Call LogLine
 wait_loop:
-  DetailPrint "waiting for ollama ($0/60)"
-  nsExec::ExecToStack '"$SYSDIR\curl.exe" -s -o NUL --max-time 2 --noproxy 127.0.0.1 http://127.0.0.1:11434/'
+  Call PingOllamaPort
   Pop $1
-  Pop $2
-  ${If} $1 == 0
+  ${If} $1 == 1
+    StrCpy $OllamaReady "1"
     Push "ollama port 11434 ready"
     Call LogLine
-    Pop $2
     Pop $1
     Pop $0
     Return
   ${EndIf}
   IntOp $0 $0 + 1
-  ${If} $0 >= 60
-    Push "ollama port 11434 timeout"
+  ${If} $0 >= 15
+    Push "ollama port 11434 timeout, continue setup"
     Call LogLine
-    Pop $2
     Pop $1
     Pop $0
     Return
   ${EndIf}
+  DetailPrint "waiting for ollama ($0/15)"
   Sleep 2000
   Goto wait_loop
 FunctionEnd
 
 Function StartOllamaIfNeeded
-  nsExec::ExecToStack '"$SYSDIR\curl.exe" -s -o NUL --max-time 2 --noproxy 127.0.0.1 http://127.0.0.1:11434/'
+  Call PingOllamaPort
   Pop $0
-  Pop $1
-  ${If} $0 == 0
+  ${If} $0 == 1
+    StrCpy $OllamaReady "1"
     Push "ollama already listening"
     Call LogLine
     Return
@@ -250,22 +275,22 @@ Function StartOllamaIfNeeded
 start_app_prog:
   Push "starting Programs\Ollama\ollama app.exe --hide --fast-startup"
   Call LogLine
-  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start "" "$LOCALAPPDATA\Programs\Ollama\ollama app.exe" --hide --fast-startup'
+  Exec '"$LOCALAPPDATA\Programs\Ollama\ollama app.exe" --hide --fast-startup'
   Return
 start_app:
   Push "starting ollama app.exe --hide --fast-startup"
   Call LogLine
-  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start "" "$LOCALAPPDATA\Ollama\ollama app.exe" --hide --fast-startup'
+  Exec '"$LOCALAPPDATA\Ollama\ollama app.exe" --hide --fast-startup'
   Return
 start_exe:
   Push "starting ollama serve"
   Call LogLine
-  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start /MIN "" "$LOCALAPPDATA\Ollama\ollama.exe" serve'
+  Exec '"$SYSDIR\cmd.exe" /c start /MIN "" "$LOCALAPPDATA\Ollama\ollama.exe" serve'
   Return
 start_prog:
   Push "starting Programs\Ollama serve"
   Call LogLine
-  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start /MIN "" "$LOCALAPPDATA\Programs\Ollama\ollama.exe" serve'
+  Exec '"$SYSDIR\cmd.exe" /c start /MIN "" "$LOCALAPPDATA\Programs\Ollama\ollama.exe" serve'
 FunctionEnd
 
 Section "Anwendungsdateien" SecApp
@@ -364,6 +389,11 @@ Section "Standardmodelle pullen" SecModels
       Goto models_done
     ${EndIf}
   do_model_pull:
+  ${If} $OllamaReady != "1"
+    Push "skip model pulls, ollama not ready"
+    Call LogLine
+    Goto models_done
+  ${EndIf}
   Push "ollama pull nomic-embed-text + llama3.2:1b"
   Call LogLine
   nsExec::ExecToLog 'ollama pull nomic-embed-text'

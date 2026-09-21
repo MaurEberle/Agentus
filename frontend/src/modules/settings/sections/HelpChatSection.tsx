@@ -27,12 +27,12 @@ import {
   clearHelpChatMessages,
   patchSettings,
   pingHelpChat,
-  reindexHelpChat,
   resetHelpChatOnboarding,
   useCredentialsQuery,
   useRuntimeModelsQuery,
   useSettingsQuery,
 } from '@/modules/settings/api';
+import { startHelpReindex, useHelpReindexRunning } from '@/modules/settings/helpReindex';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -121,7 +121,9 @@ export function HelpChatSection() {
   });
   const dirty = useSettingsDraft((state) => state.helpDirty(settings));
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
-  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [pinging, setPinging] = useState(false);
+  const reindexing = useHelpReindexRunning();
   const [confirmClear, setConfirmClear] = useState(false);
 
   const configured = help ? helpChatConfigured(help) : false;
@@ -168,7 +170,7 @@ export function HelpChatSection() {
 
   async function save() {
     if (!help) return;
-    setBusy(true);
+    setSaving(true);
     try {
       const next = await patchSettings({
         helpChat: helpChatWritePayload(help) as HelpChatSettings,
@@ -178,12 +180,12 @@ export function HelpChatSection() {
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
   }
 
   async function runPing() {
-    setBusy(true);
+    setPinging(true);
     try {
       const result = await pingHelpChat();
       setPingStatus(result.ok ? 'ok' : 'error');
@@ -195,7 +197,7 @@ export function HelpChatSection() {
       setPingStatus('error');
       notify({ titleKey: 'settings.helpChat.pingFail', variant: 'error' });
     } finally {
-      setBusy(false);
+      setPinging(false);
     }
   }
 
@@ -444,10 +446,10 @@ export function HelpChatSection() {
             </div>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={() => void save()} disabled={!dirty || busy}>
+            <Button type="button" onClick={() => void save()} disabled={!dirty || saving} loading={saving}>
               {t('settings.common.save')}
             </Button>
-            <Button type="button" variant="outline" onClick={() => void runPing()} disabled={busy}>
+            <Button type="button" variant="outline" onClick={() => void runPing()} disabled={pinging} loading={pinging}>
               {t('settings.helpChat.ping')}
             </Button>
             <Button type="button" variant="outline" onClick={() => setConfirmClear(true)}>
@@ -456,14 +458,9 @@ export function HelpChatSection() {
             <Button
               type="button"
               variant="outline"
-              onClick={() =>
-                void reindexHelpChat().then((result) =>
-                  notify({
-                    titleKey: result.state === 'ready' ? 'settings.notify.reindexed' : 'settings.notify.saveError',
-                    variant: result.state === 'ready' ? 'success' : 'error',
-                  }),
-                )
-              }
+              disabled={reindexing}
+              loading={reindexing}
+              onClick={() => startHelpReindex()}
             >
               {t('settings.helpChat.reindex')}
             </Button>

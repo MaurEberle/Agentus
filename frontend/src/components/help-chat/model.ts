@@ -41,13 +41,13 @@ export const HELP_CHAT_MIN_HEIGHT = 320;
 
 export function clampHelpChatSize(width: number, height: number, viewport: { w: number; h: number }) {
   return {
-    width: Math.min(Math.max(width, HELP_CHAT_MIN_WIDTH), Math.max(HELP_CHAT_MIN_WIDTH, viewport.w * 0.5)),
+    width: Math.min(Math.max(width, HELP_CHAT_MIN_WIDTH), Math.max(HELP_CHAT_MIN_WIDTH, viewport.w * 0.3)),
     height: Math.min(Math.max(height, HELP_CHAT_MIN_HEIGHT), Math.max(HELP_CHAT_MIN_HEIGHT, viewport.h * 0.8)),
   };
 }
 
 export function defaultHelpChatSize(viewport: { w: number; h: number }) {
-  return clampHelpChatSize(viewport.w * 0.2, Math.max(HELP_CHAT_MIN_HEIGHT, viewport.h * 0.45), viewport);
+  return clampHelpChatSize(viewport.w * 0.3, viewport.h * 0.8, viewport);
 }
 
 export function deriveHelpStatus(input: {

@@ -6,6 +6,8 @@ export interface SessionDto {
   serviceStatus: ServiceStatus;
   runId?: string;
   startedAt?: string;
+  phase?: string | null;
+  phaseLabel?: string | null;
 }
 
 export interface NetworkOption {

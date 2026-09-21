@@ -12,19 +12,23 @@ Eine Ausführung des aktiven Graphen. Es läuft höchstens **einer**. Start und 
 
 ## Knoten und Kanten
 
-Bausteine (Chat-Eingabe, Agent, LLM, Werkzeug, Wissen, Router, Ende) und typisierte Verbindungen. Beliebige Pfeile zwischen Kästen sind ungültig.
+Bausteine (Chat, Orchestrator, Agent, LLM, Werkzeug, Wissen, Router, Ende) und typisierte Verbindungen. Beliebige Pfeile zwischen Kästen sind ungültig.
 
 ## Agent
 
-Knoten mit Systemprompt. Modell, Nachricht, Werkzeuge und Wissen kommen über Anschlüsse, nicht als eingebettete Schlüssel.
+Knoten mit Systemprompt. Modell, Nachricht, Werkzeuge und Wissen kommen über Anschlüsse. Ohne Orchestrator startet ihn die Nachricht, und Nachricht oder Übergabe geben die Antwort weiter. Mit Orchestrator hängt er an einem eigenen Kanal: ein Auftrag hinein, ein Ergebnis zurück.
 
 ## LLM-Knoten
 
 Wählt Provider und Modell. Lokal über Ollama, sonst Cloud oder OpenAI-kompatible URL plus Zugang.
 
-## Chat-Eingabe
+## Chat
 
-Einziger Einstieg für Nutzertext im Lauf. Höchstens einer pro Netz. Der Monitoring-Chat schreibt hier hinein.
+Einziger Einstieg für Nutzertext im Lauf. Höchstens einer pro Netz. Der Monitoring-Chat schreibt hier hinein. Mit Orchestrator bleibt das Gespräch über mehrere Nachrichten offen.
+
+## Orchestrator
+
+Knoten mit eigenem LLM. Er ist die Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende. Die Agentenantworten sieht der Nutzer nicht als eigene Chatblasen.
 
 ## Werkzeug
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from app.install_detect import ollama_exe_path, ollama_present, webview2_present
+from app.install_detect import ollama_app_exe_path, ollama_exe_path, ollama_present, webview2_present
 
 
 def test_webview2_present_fake_registry() -> None:
@@ -51,3 +51,27 @@ def test_ollama_missing(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "empty"))
     assert ollama_present() is False
     assert ollama_exe_path() is None
+    assert ollama_app_exe_path() is None
+
+
+def test_ollama_app_exe_prefers_programs_layout(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    local = tmp_path / "la"
+    app = local / "Programs" / "Ollama" / "ollama app.exe"
+    app.parent.mkdir(parents=True)
+    app.write_bytes(b"MZ")
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    assert ollama_app_exe_path() == app
+    assert ollama_present() is True
+
+
+def test_ollama_app_exe_sibling_of_cli(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    local = tmp_path / "la"
+    folder = local / "Ollama"
+    folder.mkdir(parents=True)
+    (folder / "ollama.exe").write_bytes(b"MZ")
+    app = folder / "ollama app.exe"
+    app.write_bytes(b"MZ")
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    assert ollama_app_exe_path() == app

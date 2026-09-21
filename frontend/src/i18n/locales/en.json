@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "Agentus Network",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "loading": "Loading"
   },
   "providers": {
     "ollama": "Ollama",
@@ -26,6 +27,7 @@
   },
   "shell": {
     "start": "Start",
+    "indexing": "Indexing knowledge: {{name}}",
     "stop": "Stop",
     "quickSelect": "Quick select",
     "quickSelectPlaceholder": "Select network",
@@ -227,6 +229,9 @@
       "timeout": "No progress from the model ({{name}}). Aborted after silence, not a total time limit.",
       "unreachable": "Ollama is not reachable ({{name}}).",
       "models": "Installed models",
+      "modelsChat": "Standard models",
+      "modelsEmbed": "Embedding models",
+      "modelsGroupEmpty": "None",
       "modelsEmpty": "No models, or the runtime is unavailable.",
       "modelName": "Model",
       "modelSize": "Size",
@@ -436,7 +441,8 @@
       "noNetwork": "No active network",
       "openLibrary": "Open library",
       "runningSince": "Running since {{time}}",
-      "openMonitoring": "Monitoring"
+      "openMonitoring": "Monitoring",
+      "indexing": "Indexing knowledge: {{name}}"
     },
     "helpHint": {
       "title": "In-app help",
@@ -557,12 +563,14 @@
       "collapse": "Collapse palette",
       "expand": "Expand palette",
       "search": "Search nodes",
-      "chat_input": "Chat input",
-      "chat_inputHint": "At most one. Start text and required input for the run.",
+      "chat_input": "Chat",
+      "chat_inputHint": "At most one. The run conversation. With an orchestrator it stays open for follow-ups.",
+      "orchestrator": "Orchestrator",
+      "orchestratorHint": "Runs the chat. One channel per agent, and message out to the end.",
       "llm": "LLM",
       "llmHint": "Model and provider. Edge to the agent llm port.",
       "agent": "Agent",
-      "agentHint": "System prompt. LLM, message, tools and knowledge via edges.",
+      "agentHint": "System prompt. On its own via message, or on an orchestrator via a channel.",
       "tool": "Tool",
       "toolHint": "Catalog kind, optional MCP.",
       "knowledge": "Knowledge",
@@ -578,6 +586,7 @@
       "tool": "Tool",
       "knowledge": "Knowledge",
       "handoff": "Handoff",
+      "channel": "Channel",
       "default": "Default",
       "in": "Input",
       "out": "Output"
@@ -617,7 +626,12 @@
         "maxTokens": "Max tokens"
       },
       "agent": {
-        "hint": "LLM, tools and knowledge come from edges, not fields.",
+        "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
+        "channelHint": "This agent belongs to the orchestrator. Tasks arrive on the channel, and the result goes back there.",
+        "systemPrompt": "System prompt"
+      },
+      "orchestrator": {
+        "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end.",
         "systemPrompt": "System prompt"
       },
       "tool": {
@@ -662,6 +676,7 @@
         "add": "Add branch"
       },
       "chat": {
+        "hint": "The run conversation. An orchestrator can ask follow-ups here until it ends the run.",
         "placeholder": "Placeholder",
         "startMessage": "Start message",
         "requireInput": "Input required"
@@ -678,8 +693,7 @@
       "preview": "{{nodes}} nodes · {{edges}} edges"
     },
     "empty": {
-      "body": "Drag a node from the palette onto the canvas or open a saved network.",
-      "insert": "Palette"
+      "body": "Drag the first node from the palette onto the canvas."
     },
     "context": {
       "insert": "Insert",
@@ -711,6 +725,14 @@
       "edgeType": "This connection is not type-compatible.",
       "agentLlm": "Each agent needs exactly one LLM edge.",
       "agentMessage": "Each agent needs an incoming message.",
+      "orchestratorDuplicate": "At most one orchestrator.",
+      "orchestratorLlm": "The orchestrator needs exactly one LLM edge.",
+      "orchestratorChat": "The chat must connect to the orchestrator.",
+      "orchestratorFanout": "With an orchestrator, the chat connects only to the orchestrator.",
+      "orchestratorEnd": "The orchestrator needs a message edge to an end node.",
+      "orchestratorLooseAgent": "With an orchestrator, every agent needs a channel from it.",
+      "agentMode": "An agent is either in the chain or on the orchestrator.",
+      "agentChannel": "An agent has at most one channel.",
       "modelRequired": "Model is required.",
       "credentialRequired": "Cloud provider needs a credential.",
       "toolKind": "Tool kind is missing.",
@@ -874,6 +896,8 @@
       "disconnectedTitle": "Disconnected from the service",
       "disconnectedBody": "Reconnecting. Last known values are dimmed.",
       "startingTitle": "Service is starting",
+      "indexingTitle": "Indexing knowledge",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "Service is stopping",
       "errorTitle": "Service error",
       "errorBody": "{{message}}"
@@ -919,7 +943,8 @@
       "tokens": "Tokens"
     },
     "nodeType": {
-      "chat_input": "Input",
+      "chat_input": "Chat",
+      "orchestrator": "Orchestrator",
       "llm": "LLM",
       "agent": "Agent",
       "tool": "Tool",
@@ -938,7 +963,8 @@
       "none": "None",
       "llm": "LLM",
       "tool": "Tool",
-      "human": "Input"
+      "human": "Input",
+      "index": "Index"
     },
     "activity": {
       "title": "Activity",
@@ -963,6 +989,7 @@
       "send": "Send",
       "stop": "Stop generation",
       "waitInput": "Write the first message. The graph is waiting for input.",
+      "waitReply": "Follow-up: the run is waiting for your answer.",
       "empty": "No messages in this run yet.",
       "disabled": "Chat is available only while a run is active."
     },
@@ -1238,6 +1265,13 @@
         "done": "Agent finished"
       },
       "knowledge": "Knowledge search ({{count}} hits)",
+      "knowledgeIndex": {
+        "start": "Reading knowledge: {{name}}",
+        "embed": "Indexing knowledge: {{name}} ({{chunks}} chunks, {{model}})",
+        "ready": "Knowledge ready: {{name}}",
+        "cached": "Knowledge is up to date: {{name}}",
+        "failed": "Knowledge indexing failed: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)"
@@ -1254,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Help fallback model is missing"
       },
-      "stepLimit": "Step limit reached"
+      "stepLimit": "Step limit reached",
+      "orchestrator": {
+        "repair": "Control message was unreadable, trying again."
+      }
     },
     "graph": {
       "router": {
@@ -1265,5 +1302,24 @@
       "timeout": "No progress from the model",
       "unreachable": "Runtime unreachable"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "This model cannot produce text embeddings.",
+      "runnerFailed": "The embedding model could not be started."
+    },
+    "index": {
+      "failed": "The help index could not be saved."
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "This model does not support embeddings.",
+    "timeout": "The embedding request timed out.",
+    "unreachable": "The embedding service is unreachable.",
+    "upstream": "The embedding service rejected the request.",
+    "badRequest": "The embedding request was rejected.",
+    "modelNotFound": "The embedding model was not found.",
+    "missingCredential": "This embedding model needs a credential.",
+    "unauthorized": "The embedding credential was rejected."
   }
 }

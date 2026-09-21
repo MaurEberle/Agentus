@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { toast } from 'sonner';
+import { toast, type ExternalToast } from 'sonner';
 import { useAppStore, type NotificationVariant } from '@/store';
 
 export interface NotifyOptions {
@@ -13,9 +13,15 @@ export interface NotifyOptions {
 function showToast(
   variant: NotificationVariant,
   title: string,
-  description?: string,
+  description: string | undefined,
+  id: string,
 ) {
-  const options = { description };
+  const options: ExternalToast = {
+    id,
+    description,
+    testId: id,
+    onDismiss: () => useAppStore.getState().markRead(id),
+  };
   switch (variant) {
     case 'success':
       toast.success(title, options);
@@ -37,15 +43,17 @@ export function notify(options: NotifyOptions) {
   const description = options.descriptionKey
     ? i18n.t(options.descriptionKey, options.values)
     : undefined;
-
-  showToast(variant, title, description);
+  const id = crypto.randomUUID();
 
   if (options.persist !== false) {
     useAppStore.getState().addNotification({
+      id,
       titleKey: options.titleKey,
       descriptionKey: options.descriptionKey,
       values: options.values,
       variant,
     });
   }
+
+  showToast(variant, title, description, id);
 }

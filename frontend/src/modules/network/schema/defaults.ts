@@ -5,6 +5,8 @@ export function defaultData(type: NodeType): Record<string, unknown> {
   switch (type) {
     case 'chat_input':
       return { displayName: '', placeholder: '', startMessage: '', requireInput: false };
+    case 'orchestrator':
+      return { displayName: '', systemPrompt: '' };
     case 'llm':
       return { displayName: '', provider: 'ollama', model: '' };
     case 'agent':

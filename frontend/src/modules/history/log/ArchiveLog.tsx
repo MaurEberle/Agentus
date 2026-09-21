@@ -119,7 +119,7 @@ export function ArchiveLog({ logs, detail }: { logs: LogEvent[]; detail: RunDeta
           {t('history.log.errorsOnly')}
         </label>
       </div>
-      <div className="max-h-[min(24rem,50vh)] min-h-[10rem] overflow-auto rounded-md border bg-muted/20 font-mono text-xs">
+      <div className="max-h-[min(24rem,50vh)] min-h-[10rem] overflow-auto rounded-md border bg-muted/20 font-log text-xs">
         {visible.length === 0 ? (
           <p className="p-3 font-sans text-sm text-muted-foreground">{t('history.log.empty')}</p>
         ) : (
@@ -223,16 +223,16 @@ function LogDetail({
       title={t('history.log.detailTitle')}
     >
       {event ? (
-        <div className="space-y-3 text-sm">
+        <div className="space-y-3 font-log text-sm">
           <p className="text-xs text-muted-foreground">
             {formatTime(event.ts, locale)} · {event.level} · {event.runId}
           </p>
-          <p className="whitespace-pre-wrap font-mono text-xs">{messageText}</p>
+          <p className="whitespace-pre-wrap font-log text-xs">{messageText}</p>
           {payloadText ? (
-            <pre className="overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{payloadText}</pre>
+            <pre className="overflow-auto rounded-md bg-muted p-2 font-log text-xs">{payloadText}</pre>
           ) : null}
           {event.stack ? (
-            <pre className="overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{event.stack}</pre>
+            <pre className="overflow-auto rounded-md bg-muted p-2 font-log text-xs">{event.stack}</pre>
           ) : null}
         </div>
       ) : null}

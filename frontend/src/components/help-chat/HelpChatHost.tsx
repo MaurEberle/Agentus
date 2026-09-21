@@ -68,7 +68,7 @@ export function HelpChatHost() {
       ) : null}
       {!isDesktop ? (
         <Sheet open={open} onOpenChange={(next) => (next ? setHelpChatOpen(true) : close())}>
-          <SheetContent side="bottom" closeLabel={t('helpChat.action.close')} className="h-[85vh] p-0">
+          <SheetContent side="bottom" closeLabel={t('helpChat.action.close')} className="h-[80vh] p-0">
             <SheetHeader className="sr-only">
               <SheetTitle>{t('helpChat.title')}</SheetTitle>
             </SheetHeader>

@@ -46,5 +46,24 @@ def ollama_exe_path() -> Path | None:
     return None
 
 
+def ollama_app_exe_path() -> Path | None:
+    """Official Windows helper that injects GUI settings (e.g. OLLAMA_MODELS)."""
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        for rel in (
+            Path("Programs") / "Ollama" / "ollama app.exe",
+            Path("Ollama") / "ollama app.exe",
+        ):
+            candidate = Path(local) / rel
+            if candidate.is_file():
+                return candidate
+    exe = ollama_exe_path()
+    if exe is not None:
+        sibling = exe.with_name("ollama app.exe")
+        if sibling.is_file():
+            return sibling
+    return None
+
+
 def ollama_present() -> bool:
-    return ollama_exe_path() is not None
+    return ollama_exe_path() is not None or ollama_app_exe_path() is not None

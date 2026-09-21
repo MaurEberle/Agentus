@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "Agentus Network",
-    "skipToContent": "Aller au contenu"
+    "skipToContent": "Aller au contenu",
+    "loading": "Chargement"
   },
   "providers": {
     "ollama": "Ollama",
@@ -26,6 +27,7 @@
   },
   "shell": {
     "start": "Démarrer",
+    "indexing": "Indexation des connaissances : {{name}}",
     "stop": "Arrêter",
     "quickSelect": "Sélection rapide",
     "quickSelectPlaceholder": "Choisir un réseau",
@@ -227,6 +229,9 @@
       "timeout": "Aucun progrès du modèle ({{name}}). Abandon après silence, pas après une durée totale.",
       "unreachable": "Ollama n’est pas joignable ({{name}}).",
       "models": "Modèles installés",
+      "modelsChat": "Modèles normaux",
+      "modelsEmbed": "Modèles d’embeddings",
+      "modelsGroupEmpty": "Aucun",
       "modelsEmpty": "Aucun modèle, ou runtime injoignable.",
       "modelName": "Modèle",
       "modelSize": "Taille",
@@ -436,7 +441,8 @@
       "noNetwork": "Aucun réseau actif",
       "openLibrary": "Ouvrir la bibliothèque",
       "runningSince": "En cours depuis {{time}}",
-      "openMonitoring": "Supervision"
+      "openMonitoring": "Supervision",
+      "indexing": "Indexation des connaissances : {{name}}"
     },
     "helpHint": {
       "title": "Aide de l’application",
@@ -557,12 +563,14 @@
       "collapse": "Réduire la palette",
       "expand": "Développer la palette",
       "search": "Rechercher des nœuds",
-      "chat_input": "Entrée de chat",
-      "chat_inputHint": "Au plus une. Texte de départ et champ obligatoire pour l’exécution.",
+      "chat_input": "Chat",
+      "chat_inputHint": "Au plus un. Conversation de l’exécution. Avec un orchestrateur, elle reste ouverte pour les questions.",
+      "orchestrator": "Orchestrateur",
+      "orchestratorHint": "Mène le chat. Un canal par agent, et le message vers la fin.",
       "llm": "LLM",
       "llmHint": "Modèle et fournisseur. Arête vers le port llm de l’agent.",
       "agent": "Agent",
-      "agentHint": "Invite système. LLM, message, outils et connaissances via des arêtes.",
+      "agentHint": "Invite système. Seul via le message, ou via un canal de l’orchestrateur.",
       "tool": "Outil",
       "toolHint": "Type du catalogue, MCP facultatif.",
       "knowledge": "Connaissances",
@@ -578,6 +586,7 @@
       "tool": "Outil",
       "knowledge": "Connaissances",
       "handoff": "Transfert",
+      "channel": "Canal",
       "default": "Par défaut",
       "in": "Entrée",
       "out": "Sortie"
@@ -617,7 +626,12 @@
         "maxTokens": "Jetons max."
       },
       "agent": {
-        "hint": "LLM, outils et connaissances viennent des arêtes, pas des champs.",
+        "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",
+        "channelHint": "Cet agent appartient à l’orchestrateur. Les tâches arrivent par le canal et le résultat y revient.",
+        "systemPrompt": "Invite système"
+      },
+      "orchestrator": {
+        "hint": "Un LLM par une arête. Le chat arrive ici. Chaque agent a son canal. La sortie message reste la fin.",
         "systemPrompt": "Invite système"
       },
       "tool": {
@@ -662,6 +676,7 @@
         "add": "Ajouter une branche"
       },
       "chat": {
+        "hint": "Conversation de l’exécution. Un orchestrateur peut poser des questions ici jusqu’à ce qu’il termine l’exécution.",
         "placeholder": "Espace réservé",
         "startMessage": "Texte de départ",
         "requireInput": "Saisie obligatoire"
@@ -678,8 +693,7 @@
       "preview": "{{nodes}} nœuds · {{edges}} arêtes"
     },
     "empty": {
-      "body": "Faites glisser un nœud de la palette sur la surface ou ouvrez un réseau enregistré.",
-      "insert": "Palette"
+      "body": "Glissez le premier nœud de la palette sur la surface."
     },
     "context": {
       "insert": "Insérer",
@@ -711,6 +725,14 @@
       "edgeType": "Cette connexion n’est pas compatible en type.",
       "agentLlm": "Chaque agent a besoin d’exactement une arête LLM.",
       "agentMessage": "Chaque agent a besoin d’un message entrant.",
+      "orchestratorDuplicate": "Au plus un orchestrateur.",
+      "orchestratorLlm": "L’orchestrateur a besoin d’exactement une arête LLM.",
+      "orchestratorChat": "Le chat doit être relié à l’orchestrateur.",
+      "orchestratorFanout": "Avec un orchestrateur, le chat ne se relie qu’à lui.",
+      "orchestratorEnd": "L’orchestrateur a besoin d’une arête message vers une fin.",
+      "orchestratorLooseAgent": "Avec un orchestrateur, chaque agent a besoin d’un canal depuis lui.",
+      "agentMode": "Un agent est soit dans la chaîne, soit sur l’orchestrateur.",
+      "agentChannel": "Un agent a au plus un canal.",
       "modelRequired": "Le modèle est obligatoire.",
       "credentialRequired": "Un fournisseur cloud a besoin d’un identifiant.",
       "toolKind": "Le type d’outil manque.",
@@ -874,6 +896,8 @@
       "disconnectedTitle": "Déconnecté du service",
       "disconnectedBody": "Reconnexion en cours. Les dernières valeurs sont atténuées.",
       "startingTitle": "Le service démarre",
+      "indexingTitle": "Indexation des connaissances",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "Le service s’arrête",
       "errorTitle": "Erreur de service",
       "errorBody": "{{message}}"
@@ -919,7 +943,8 @@
       "tokens": "Jetons"
     },
     "nodeType": {
-      "chat_input": "Entrée",
+      "chat_input": "Chat",
+      "orchestrator": "Orchestrateur",
       "llm": "LLM",
       "agent": "Agent",
       "tool": "Outil",
@@ -938,7 +963,8 @@
       "none": "Aucune attente",
       "llm": "LLM",
       "tool": "Outil",
-      "human": "Saisie"
+      "human": "Saisie",
+      "index": "Index"
     },
     "activity": {
       "title": "Activité",
@@ -963,6 +989,7 @@
       "send": "Envoyer",
       "stop": "Arrêter la génération",
       "waitInput": "Écrivez le premier message. Le graphe attend une saisie.",
+      "waitReply": "Question : l’exécution attend votre réponse.",
       "empty": "Aucun message dans cette exécution.",
       "disabled": "Chat uniquement pendant une exécution."
     },
@@ -1238,6 +1265,13 @@
         "done": "Agent terminé"
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
+      "knowledgeIndex": {
+        "start": "Lecture des connaissances : {{name}}",
+        "embed": "Indexation des connaissances : {{name}} ({{chunks}} extraits, {{model}})",
+        "ready": "Connaissances prêtes : {{name}}",
+        "cached": "Les connaissances sont à jour : {{name}}",
+        "failed": "L’indexation des connaissances a échoué : {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM terminé ({{durationMs}} ms)"
@@ -1254,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Le modèle de repli de l’aide manque"
       },
-      "stepLimit": "Limite d’étapes atteinte"
+      "stepLimit": "Limite d’étapes atteinte",
+      "orchestrator": {
+        "repair": "Commande illisible, nouvel essai."
+      }
     },
     "graph": {
       "router": {
@@ -1265,5 +1302,24 @@
       "timeout": "Aucun progrès du modèle",
       "unreachable": "Runtime injoignable"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "Ce modèle ne peut pas produire d’embeddings de texte.",
+      "runnerFailed": "Le modèle d’embeddings n’a pas pu être démarré."
+    },
+    "index": {
+      "failed": "L’index d’aide n’a pas pu être enregistré."
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "Ce modèle ne prend pas en charge les embeddings.",
+    "timeout": "La requête d’embeddings a expiré.",
+    "unreachable": "Le service d’embeddings est injoignable.",
+    "upstream": "Le service d’embeddings a rejeté la requête.",
+    "badRequest": "La requête d’embeddings a été rejetée.",
+    "modelNotFound": "Le modèle d’embeddings est introuvable.",
+    "missingCredential": "Ce modèle d’embeddings exige un accès.",
+    "unauthorized": "L’accès pour les embeddings a été refusé."
   }
 }

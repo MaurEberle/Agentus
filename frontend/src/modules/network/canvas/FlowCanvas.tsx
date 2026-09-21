@@ -4,6 +4,7 @@ import {
   applyNodeChanges,
   Background,
   BackgroundVariant,
+  ConnectionLineType,
   Controls,
   MiniMap,
   MarkerType,
@@ -18,8 +19,7 @@ import {
 } from '@xyflow/react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { connectionAllowed } from '@/modules/network/schema/ports';
+import { bindChannelHandle, connectionAllowed, type PortContext } from '@/modules/network/schema/ports';
 import { createNode } from '@/modules/network/schema/defaults';
 import { issuesForNode, validateDocument } from '@/modules/network/validation/validate';
 import type { GraphEdge, NodeType } from '@/modules/network/model/document';
@@ -71,6 +71,10 @@ export function FlowCanvas({
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const portContext = useMemo<PortContext>(
+    () => ({ nodes: document.nodes, edges: document.edges }),
+    [document.edges, document.nodes],
+  );
 
   useEffect(() => {
     setNodes(
@@ -86,6 +90,7 @@ export function FlowCanvas({
           issues: issuesForNode(issues, node.id),
           readOnly,
           connected: connectedPortKeys(node.id, document.edges),
+          portContext,
         },
       })),
     );
@@ -93,20 +98,20 @@ export function FlowCanvas({
       document.edges.map((edge) => {
         const sourceNode = document.nodes.find((item) => item.id === edge.source);
         const targetNode = document.nodes.find((item) => item.id === edge.target);
-        const handles = toRfHandlePair(sourceNode, targetNode, edge);
+        const handles = toRfHandlePair(sourceNode, targetNode, edge, portContext);
         return {
           id: edge.id,
           source: edge.source,
           target: edge.target,
           sourceHandle: handles.sourceHandle,
           targetHandle: handles.targetHandle,
-          type: 'smoothstep',
+          type: 'default',
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
           className: issues.some((issue) => issue.edgeId === edge.id) ? '!stroke-destructive' : undefined,
         };
       }),
     );
-  }, [graphSig, issues, readOnly, document.edges, document.nodes, selectedNodeIds]);
+  }, [graphSig, issues, portContext, readOnly, document.edges, document.nodes, selectedNodeIds]);
 
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
@@ -118,26 +123,34 @@ export function FlowCanvas({
         target,
         sourceHandle: docHandleId(connection.sourceHandle),
         targetHandle: docHandleId(connection.targetHandle),
+        context: portContext,
       });
     },
-    [document.nodes],
+    [document.nodes, portContext],
   );
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
       if (readOnly || !connection.source || !connection.target) return;
       if (!isValidConnection(connection)) return;
+      const source = document.nodes.find((node) => node.id === connection.source);
+      const target = document.nodes.find((node) => node.id === connection.target);
+      let sourceHandle = docHandleId(connection.sourceHandle);
+      const targetHandle = docHandleId(connection.targetHandle);
+      if (source?.type === 'orchestrator' && target?.type === 'agent' && targetHandle === 'channel') {
+        sourceHandle = bindChannelHandle(sourceHandle, target.id);
+      }
       // Multiple tool/knowledge edges may share one agent handle.
       const edge: GraphEdge = {
         id: newId('e'),
         source: connection.source,
-        sourceHandle: docHandleId(connection.sourceHandle),
+        sourceHandle,
         target: connection.target,
-        targetHandle: docHandleId(connection.targetHandle),
+        targetHandle,
       };
       useNetworkEditor.getState().setEdges([...document.edges, edge]);
     },
-    [document.edges, isValidConnection, readOnly],
+    [document.edges, document.nodes, isValidConnection, readOnly],
   );
 
   const onNodesChange: OnNodesChange = useCallback((changes) => {
@@ -215,6 +228,7 @@ export function FlowCanvas({
         onDrop={onDrop}
         snapToGrid={snap}
         snapGrid={[16, 16]}
+        connectionLineType={ConnectionLineType.Bezier}
         fitView={false}
         deleteKeyCode={[]}
         multiSelectionKeyCode="Shift"
@@ -230,17 +244,9 @@ export function FlowCanvas({
       </ReactFlow>
       {empty ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
-          <div className="pointer-events-auto max-w-sm rounded-lg border bg-card/95 p-4 text-center shadow-sm">
-            <p className="text-sm text-muted-foreground">{t('network.empty.body')}</p>
-            <div className="mt-3 flex flex-wrap justify-center gap-2">
-              <Button type="button" size="sm" onClick={() => onRequestInsert({ x: 120, y: 120 })}>
-                {t('network.empty.insert')}
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => fitView()}>
-                {t('network.view.fit')}
-              </Button>
-            </div>
-          </div>
+          <p className="max-w-xs rounded-md bg-background/80 px-3 py-1.5 text-center text-sm text-muted-foreground">
+            {t('network.empty.body')}
+          </p>
         </div>
       ) : null}
       {menu ? (

@@ -8,6 +8,7 @@ import {
   type GraphNode,
 } from '@/modules/network/model/document';
 import { duplicateNodes } from '@/modules/network/model/serialize';
+import { normalizeChannelEdges } from '@/modules/network/schema/channels';
 
 const MAX_HISTORY = 50;
 
@@ -57,16 +58,18 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
   snap: true,
   showGrid: true,
   showMinimap: true,
-  hydrate: (doc, saved) =>
+  hydrate: (doc, saved) => {
+    const next = normalizeChannelEdges(doc);
     set({
-      document: cloneDocument(doc),
-      saved: saved ? cloneDocument(doc) : null,
+      document: cloneDocument(next),
+      saved: saved ? cloneDocument(next) : null,
       selectedNodeIds: [],
       selectedEdgeIds: [],
       past: [],
       future: [],
       loadErrorKey: undefined,
-    }),
+    });
+  },
   resetNew: () =>
     set({
       document: emptyDocument(),

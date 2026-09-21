@@ -68,6 +68,8 @@ class RunSlice:
     service_status: ServiceStatus = "stopped"
     run_id: str | None = None
     started_at: str | None = None
+    phase: str | None = None
+    phase_label: str | None = None
 
 
 _run_slice_provider: Callable[[], RunSlice] | None = None
@@ -246,6 +248,8 @@ def _session_from(settings: AppSettings) -> SessionOut:
         service_status=slice_.service_status,
         run_id=slice_.run_id,
         started_at=slice_.started_at,
+        phase=slice_.phase,
+        phase_label=slice_.phase_label,
     )
 
 
@@ -284,7 +288,7 @@ def post_location(body: DataLocationPost) -> DataLocation:
 
 def dump_session(session: SessionOut) -> dict[str, Any]:
     data = session.model_dump(by_alias=True)
-    for key in ("activeNetworkName", "runId", "startedAt"):
+    for key in ("activeNetworkName", "runId", "startedAt", "phase", "phaseLabel"):
         if data.get(key) is None:
             data.pop(key, None)
     return data

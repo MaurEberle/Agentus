@@ -14,6 +14,7 @@ from app.db.errors import StoreUnavailable
 from app.db.runs import complete_run, get_run, insert_log, insert_run, update_run, upsert_step
 from app.http.errors import AppError
 from app.run.compile import CompiledGraph, compile_document
+from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument
 from app.run.help_bridge import set_help_degraded
 from app.run.knowledge import index_node
@@ -65,6 +66,8 @@ class RunController:
         self.last_error_node_id: str | None = None
         self.tokens_in = 0
         self.tokens_out = 0
+        self._phase = None
+        self._phase_label = None
         set_run_slice_provider(self.slice)
 
     def reset(self) -> None:
@@ -84,6 +87,8 @@ class RunController:
         self.last_error_node_id = None
         self.tokens_in = 0
         self.tokens_out = 0
+        self._phase = None
+        self._phase_label = None
         self.stop_event = threading.Event()
         self.abort_generation = threading.Event()
         set_run_slice_provider(self.slice)
@@ -93,6 +98,8 @@ class RunController:
             service_status=self.service_status,
             run_id=self.run_id,
             started_at=self.started_at,
+            phase=self._phase,
+            phase_label=self._phase_label,
         )
 
     def is_busy(self) -> bool:
@@ -123,7 +130,7 @@ class RunController:
 
             data_dir = str(get_bootstrap().data_dir)
             mcp = get_mcp()
-            doc = AgentNetworkDocument.model_validate(row.document)
+            doc = normalize_channel_edges(AgentNetworkDocument.model_validate(row.document))
             has_mcp = any(
                 n.type == "tool" and str(n.data.get("kind")) == "mcp" for n in doc.nodes
             )
@@ -140,14 +147,7 @@ class RunController:
                 keys = ",".join(e.message_key for e in errors[:8])
                 raise AppError("run.invalidNetwork", status_code=409, message=keys)
             compiled = compile_document(doc, network_id=row.id, network_name=row.name)
-            for kid in {kid for ag in compiled.agents.values() for kid in ag.knowledge_node_ids}:
-                node = compiled.by_id.get(kid)
-                if node and index_node(row.id, node, data_dir=data_dir) == "error":
-                    raise AppError("run.knowledge.failed", status_code=409)
             fallback_missing = self._vram_start(compiled, settings)
-            server_ids = [sid for ag in compiled.agents.values() for sid, _ in ag.mcp if sid]
-            if server_ids and mcp is not None:
-                mcp.open_for(list(dict.fromkeys(server_ids)))
             run_id = str(uuid.uuid4())
             started = utc_now()
             models: list[dict[str, str]] = []
@@ -167,15 +167,30 @@ class RunController:
                 models=models,
             )
             touch_network(row.id, last_used_at=started, last_run_id=run_id)
-            snapshot = _build_snapshot(compiled, run_id, started, "running")
+            snapshot = _build_snapshot(compiled, run_id, started, "starting")
             with self.lock:
                 self.run_id = run_id
                 self.started_at = started
                 self.network_id = row.id
                 self.compiled = compiled
                 self.snapshot = snapshot
-                self.service_status = "running"
+                self.service_status = "starting"
             _seed_steps(compiled, run_id)
+            publish("run", snapshot.model_dump(by_alias=True))
+            self._index_knowledge(compiled, data_dir)
+            if self.stop_event.is_set():
+                self.finish("cancelled")
+                return {"serviceStatus": "stopped", "runId": run_id}
+            server_ids = [sid for ag in compiled.agents.values() for sid, _ in ag.mcp if sid]
+            if server_ids and mcp is not None:
+                mcp.open_for(list(dict.fromkeys(server_ids)))
+            self._phase = None
+            self._phase_label = None
+            with self.lock:
+                self.service_status = "running"
+                if self.snapshot is not None:
+                    self.snapshot = self.snapshot.model_copy(update={"service_status": "running"})
+                    snapshot = self.snapshot
             publish("service", {"serviceStatus": "running"})
             publish("run", snapshot.model_dump(by_alias=True))
             if fallback_missing:
@@ -201,11 +216,123 @@ class RunController:
             raise AppError("run.invalidNetwork", status_code=409)
 
     def _fail_start(self) -> None:
+        run_id = self.run_id
+        if run_id:
+            try:
+                row = get_run(run_id)
+                if row and row.get("outcome") == "running":
+                    complete_run(
+                        run_id,
+                        outcome="failed",
+                        ended_at=utc_now(),
+                        error_class="unknown",
+                    )
+            except Exception:
+                pass
+        self._phase = None
+        self._phase_label = None
         self.teardown(outcome=None)
         with self.lock:
             self.service_status = "stopped"
             self.run_id = None
         publish("service", {"serviceStatus": "stopped"})
+
+    def _knowledge_ids(self, compiled: CompiledGraph) -> list[str]:
+        ordered: list[str] = []
+        seen: set[str] = set()
+        for agent in compiled.agents.values():
+            for node_id in agent.knowledge_node_ids:
+                if node_id in seen:
+                    continue
+                seen.add(node_id)
+                ordered.append(node_id)
+        return ordered
+
+    def _index_knowledge(self, compiled: CompiledGraph, data_dir: str) -> None:
+        for node_id in self._knowledge_ids(compiled):
+            if self.stop_event.is_set():
+                return
+            node = compiled.by_id.get(node_id)
+            if node is None:
+                continue
+            name = node_label(compiled, node_id) or node_id
+            worked = False
+
+            def on_progress(
+                phase: str,
+                payload: dict,
+                *,
+                node_id: str = node_id,
+                name: str = name,
+            ) -> None:
+                nonlocal worked
+                extra = {"name": name, **payload}
+                if phase == "cached":
+                    emit_log("info", "run.knowledgeIndex.cached", node_id=node_id, payload=extra)
+                    return
+                if phase in {"read", "embed"}:
+                    worked = True
+                    self._phase = "index"
+                    self._phase_label = name
+                    self._mark_indexing(node_id)
+                    key = "run.knowledgeIndex.embed" if phase == "embed" else "run.knowledgeIndex.start"
+                    emit_log("info", key, node_id=node_id, payload=extra)
+
+            state = index_node(
+                compiled.network_id,
+                node,
+                data_dir=data_dir,
+                on_progress=on_progress,
+            )
+            if state == "error":
+                self._phase = "index"
+                self._phase_label = name
+                self._node_status(node_id, "error", error="run.knowledge.failed")
+                emit_log(
+                    "error",
+                    "run.knowledgeIndex.failed",
+                    node_id=node_id,
+                    payload={"name": name},
+                )
+                raise AppError("run.knowledge.failed", status_code=409)
+            if worked:
+                emit_log(
+                    "info",
+                    "run.knowledgeIndex.ready",
+                    node_id=node_id,
+                    payload={"name": name},
+                )
+                self._clear_indexing(node_id)
+        self._phase = None
+        self._phase_label = None
+
+    def _node_status(
+        self,
+        node_id: str,
+        status: str,
+        *,
+        wait: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        from app.run.harness import _set_node
+
+        _set_node(self, node_id, status, wait=wait, error=error)
+
+    def _mark_indexing(self, node_id: str) -> None:
+        self._node_status(node_id, "running", wait="index")
+        if self.snapshot is None:
+            return
+        activity = self.snapshot.activity.model_copy(update={"current_node_ids": [node_id]})
+        self.snapshot = self.snapshot.model_copy(update={"activity": activity})
+        publish("run", self.snapshot.model_dump(by_alias=True))
+
+    def _clear_indexing(self, node_id: str) -> None:
+        self._node_status(node_id, "idle")
+        if self.snapshot is None:
+            return
+        activity = self.snapshot.activity.model_copy(update={"current_node_ids": []})
+        self.snapshot = self.snapshot.model_copy(update={"activity": activity})
+        publish("run", self.snapshot.model_dump(by_alias=True))
 
     def stop(self) -> dict[str, str]:
         with self.lock:

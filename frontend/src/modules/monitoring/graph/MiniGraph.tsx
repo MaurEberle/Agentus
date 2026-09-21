@@ -22,6 +22,7 @@ import { useFitGraph } from '@/modules/monitoring/graph/useFitGraph';
 import { useMonitoringStore } from '@/modules/monitoring/store';
 import { asGraphNode } from '@/modules/network/model/document';
 import { toRfHandlePair } from '@/modules/network/canvas/handles';
+import { asPortContext } from '@/modules/network/schema/ports';
 
 const nodeTypes = { status: StatusNode };
 
@@ -47,11 +48,15 @@ function GraphInner({
   const setLogNodeId = useMonitoringStore((state) => state.setLogNodeId);
   const setTab = useMonitoringStore((state) => state.setTab);
   const clearLogFilter = useMonitoringStore((state) => state.clearLogFilter);
+  const portContext = useMemo(
+    () => asPortContext(run.graph.nodes, run.graph.edges),
+    [run.graph.edges, run.graph.nodes],
+  );
   const nodes: Node[] = useMemo(
     () =>
       run.graph.nodes.map((node) => {
         const runtime = run.nodesRuntime[node.id];
-        const size = statusNodeSize(node.type, node.data, node.id);
+        const size = statusNodeSize(node.type, node.data, node.id, portContext);
         return {
           id: node.id,
           type: 'status',
@@ -67,10 +72,11 @@ function GraphInner({
             status: runtime?.status ?? 'idle',
             waitReason: runtime?.waitReason,
             nodeData: node.data,
+            portContext,
           },
         } satisfies StatusFlowNode;
       }),
-    [run.graph.nodes, run.nodesRuntime, selectedNodeId],
+    [portContext, run.graph.nodes, run.nodesRuntime, selectedNodeId],
   );
 
   const edges: Edge[] = useMemo(
@@ -82,6 +88,7 @@ function GraphInner({
           sourceNode ? asGraphNode(sourceNode) : undefined,
           targetNode ? asGraphNode(targetNode) : undefined,
           edge,
+          portContext,
         );
         return {
           id: edge.id,
@@ -91,7 +98,7 @@ function GraphInner({
           targetHandle: handles.targetHandle,
         };
       }),
-    [run.graph.edges, run.graph.nodes],
+    [portContext, run.graph.edges, run.graph.nodes],
   );
 
   const graphKey = `${run.runId}:${run.graph.nodes.map((node) => node.id).join(',')}`;

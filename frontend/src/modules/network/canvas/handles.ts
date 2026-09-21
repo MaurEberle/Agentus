@@ -1,5 +1,5 @@
 import type { GraphEdge, GraphNode, PortDef } from '@/modules/network/model/document';
-import { portsFor } from '@/modules/network/schema/ports';
+import { portsFor, type PortContext } from '@/modules/network/schema/ports';
 
 /** Vertical space reserved per handle so stacked ports do not overlap. */
 export const HANDLE_ROW_PX = 32;
@@ -19,10 +19,11 @@ export function docHandleId(handle: string | null | undefined): string {
 function portByHandle(
   node: GraphNode | undefined,
   direction: 'in' | 'out',
-  handle?: string | null,
+  handle: string | null | undefined,
+  context?: PortContext,
 ): PortDef | undefined {
   if (!node || !handle) return undefined;
-  return portsFor(node).find(
+  return portsFor(node, context).find(
     (port) => port.direction === direction && (port.id === handle || rfHandleId(port) === handle),
   );
 }
@@ -32,9 +33,10 @@ export function toRfHandlePair(
   source: GraphNode | undefined,
   target: GraphNode | undefined,
   edge: { sourceHandle?: string | null; targetHandle?: string | null },
+  context?: PortContext,
 ): { sourceHandle?: string; targetHandle?: string } {
-  const sourcePort = portByHandle(source, 'out', edge.sourceHandle);
-  const targetPort = portByHandle(target, 'in', edge.targetHandle);
+  const sourcePort = portByHandle(source, 'out', edge.sourceHandle, context);
+  const targetPort = portByHandle(target, 'in', edge.targetHandle, context);
   return {
     sourceHandle: sourcePort ? rfHandleId(sourcePort) : (edge.sourceHandle ?? undefined),
     targetHandle: targetPort ? rfHandleId(targetPort) : (edge.targetHandle ?? undefined),

@@ -127,6 +127,8 @@ class SessionOut(ApiModel):
     service_status: ServiceStatus = Field(alias="serviceStatus")
     run_id: str | None = Field(default=None, alias="runId")
     started_at: str | None = Field(default=None, alias="startedAt")
+    phase: str | None = None
+    phase_label: str | None = Field(default=None, alias="phaseLabel")
 
 
 class ActiveNetworkPut(ApiModel):

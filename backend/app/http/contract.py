@@ -82,6 +82,7 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("POST", "/api/help-chat/messages", HELP_CHAT),
     ContractRoute("POST", "/api/help-chat/abort", HELP_CHAT),
     ContractRoute("POST", "/api/help-chat/clear", HELP_CHAT),
+    ContractRoute("GET", "/api/help-chat/reindex", HELP_CHAT),
     ContractRoute("POST", "/api/help-chat/reindex", HELP_CHAT),
     ContractRoute("GET", "/api/runs", RUNS),
     ContractRoute("GET", "/api/runs/calls", RUNS),

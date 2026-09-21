@@ -5,6 +5,7 @@ import {
   GitFork,
   MessageSquare,
   Sparkles,
+  Waypoints,
   Wrench,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -13,11 +14,12 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { asGraphNode, type PortDef } from '@/modules/network/model/document';
 import { handleTopPercent, nodeMinHeightPx, rfHandleId } from '@/modules/network/canvas/handles';
-import { portI18nKey, portsFor, routerBranchName } from '@/modules/network/schema/ports';
+import { portI18nKey, portsFor, routerBranchName, type PortContext } from '@/modules/network/schema/ports';
 import type { NodeRuntimeStatus, WaitReason } from '@/modules/monitoring/model/types';
 
 const ICONS: Record<string, typeof Bot> = {
   chat_input: MessageSquare,
+  orchestrator: Waypoints,
   llm: Sparkles,
   agent: Bot,
   tool: Wrench,
@@ -33,18 +35,24 @@ export type StatusNodeData = {
   status: NodeRuntimeStatus;
   waitReason?: WaitReason;
   nodeData?: Record<string, unknown>;
+  portContext?: PortContext;
 };
 
 export type StatusFlowNode = Node<StatusNodeData, 'status'>;
 
-export function statusNodeSize(nodeType: string, nodeData?: Record<string, unknown>, id = '_') {
+export function statusNodeSize(
+  nodeType: string,
+  nodeData?: Record<string, unknown>,
+  id = '_',
+  portContext?: PortContext,
+) {
   const graph = asGraphNode({
     id,
     type: nodeType,
     position: { x: 0, y: 0 },
     data: nodeData ?? {},
   });
-  const ports = graph ? portsFor(graph) : [];
+  const ports = graph ? portsFor(graph, portContext) : [];
   return {
     width: 176,
     height: nodeMinHeightPx(
@@ -73,7 +81,7 @@ export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
     position: { x: 0, y: 0 },
     data: data.nodeData ?? {},
   });
-  const ports = graph ? portsFor(graph) : [];
+  const ports = graph ? portsFor(graph, data.portContext) : [];
   const ins = ports.filter((port) => port.direction === 'in');
   const outs = ports.filter((port) => port.direction === 'out');
   const minHeight = nodeMinHeightPx(ins.length, outs.length);
@@ -118,6 +126,7 @@ export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
         )}
       >
         {t(`monitoring.nodeStatus.${data.status}`)}
+        {data.waitReason && data.waitReason !== 'none' ? ` · ${t(`monitoring.wait.${data.waitReason}`)}` : ''}
       </p>
       {outs.map((port, index) => (
         <ViewHandle
@@ -147,7 +156,7 @@ function ViewHandle({
   side: 'left' | 'right';
 }) {
   const { t } = useTranslation();
-  const name = (graph ? routerBranchName(graph, port.id) : undefined) ?? t(portI18nKey(port));
+  const name = port.label ?? (graph ? routerBranchName(graph, port.id) : undefined) ?? t(portI18nKey(port));
   return (
     <Handle
       id={rfHandleId(port)}

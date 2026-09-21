@@ -53,9 +53,12 @@ export function CredentialsSection() {
   const items = data?.items ?? [];
   const [form, setForm] = useState<FormState | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CredentialListItem | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function save() {
     if (!form || !form.name.trim()) return;
+    setSaving(true);
     try {
       if (form.id) {
         await updateCredential(form.id, {
@@ -72,10 +75,13 @@ export function CredentialsSection() {
       setForm(null);
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+    } finally {
+      setSaving(false);
     }
   }
 
   async function remove(item: CredentialListItem) {
+    setDeleting(true);
     try {
       await deleteCredential(item.id);
       notify({ titleKey: 'settings.notify.credentialDeleted', variant: 'success' });
@@ -91,6 +97,8 @@ export function CredentialsSection() {
         return;
       }
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -201,7 +209,12 @@ export function CredentialsSection() {
             <Button type="button" variant="outline" onClick={() => setForm(null)}>
               {t('settings.common.cancel')}
             </Button>
-            <Button type="button" onClick={() => void save()} disabled={!form?.name.trim() || (!form.id && !form.secret)}>
+            <Button
+              type="button"
+              onClick={() => void save()}
+              disabled={!form?.name.trim() || (!form.id && !form.secret)}
+              loading={saving}
+            >
               {t('settings.common.save')}
             </Button>
           </DialogFooter>
@@ -230,6 +243,7 @@ export function CredentialsSection() {
               type="button"
               variant="destructive"
               disabled={Boolean(pendingDelete?.inUse)}
+              loading={deleting}
               onClick={() => pendingDelete && void remove(pendingDelete)}
             >
               {t('settings.common.delete')}

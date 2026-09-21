@@ -23,6 +23,8 @@ export function Header() {
   const { t } = useTranslation();
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
   const serviceStatus = useAppStore((state) => state.serviceStatus);
+  const phase = useAppStore((state) => state.phase);
+  const phaseLabel = useAppStore((state) => state.phaseLabel);
   const { data } = useNetworkOptions();
   const networks = data?.items ?? [];
 
@@ -62,6 +64,7 @@ export function Header() {
               type="button"
               size="sm"
               disabled={startDisabled}
+              loading={serviceStatus === 'starting'}
               onClick={() => void startActiveRun()}
             >
               <Play className="size-4" />
@@ -69,7 +72,11 @@ export function Header() {
               <span className="sr-only md:hidden">{t('shell.start')}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('shell.start')}</TooltipContent>
+          <TooltipContent>
+            {serviceStatus === 'starting' && phase === 'index' && phaseLabel
+              ? t('shell.indexing', { name: phaseLabel })
+              : t('shell.start')}
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -78,6 +85,7 @@ export function Header() {
               variant="outline"
               size="sm"
               disabled={stopDisabled}
+              loading={serviceStatus === 'stopping'}
               onClick={() => void stopActiveRun()}
             >
               <Square className="size-4" />

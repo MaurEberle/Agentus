@@ -26,6 +26,14 @@ const START_ERROR_DESC: Record<string, string> = {
   'graph.llm.credential': 'network.validation.modelRequired',
   'graph.end.missing': 'network.validation.endRequired',
   'graph.chatInput.duplicate': 'network.validation.tooManyChatInputs',
+  'graph.orchestrator.duplicate': 'network.validation.orchestratorDuplicate',
+  'graph.orchestrator.noChat': 'network.validation.orchestratorChat',
+  'graph.orchestrator.fanout': 'network.validation.orchestratorFanout',
+  'graph.orchestrator.noEnd': 'network.validation.orchestratorEnd',
+  'graph.orchestrator.noLlm': 'network.validation.orchestratorLlm',
+  'graph.orchestrator.looseAgent': 'network.validation.orchestratorLooseAgent',
+  'graph.agent.mode': 'network.validation.agentMode',
+  'graph.agent.channel': 'network.validation.agentChannel',
   'graph.edge.invalid': 'network.validation.edgeType',
 };
 
@@ -191,9 +199,11 @@ export async function stopActiveRun() {
 }
 
 export function useSessionQuery() {
+  const serviceStatus = useAppStore((state) => state.serviceStatus);
   return useQuery({
     queryKey: ['session'],
     queryFn: getSession,
+    refetchInterval: serviceStatus === 'starting' ? 1000 : false,
   });
 }
 

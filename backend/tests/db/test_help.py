@@ -45,9 +45,12 @@ def test_help_rag_replace_and_wipe() -> None:
                 embedding=[1.0, 0.0],
                 embedding_model_id="nomic-embed-text",
                 dimension=2,
+                embedding_provider="openai",
             )
         ]
     )
-    assert len(list_all_chunks()) == 1
+    stored = list_all_chunks()
+    assert len(stored) == 1
+    assert stored[0].embedding_provider == "openai"
     wipe_chunks()
     assert list_all_chunks() == []
