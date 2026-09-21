@@ -4,6 +4,7 @@ import {
   applyNodeChanges,
   Background,
   BackgroundVariant,
+  ConnectionLineType,
   Controls,
   MiniMap,
   MarkerType,
@@ -104,7 +105,7 @@ export function FlowCanvas({
           target: edge.target,
           sourceHandle: handles.sourceHandle,
           targetHandle: handles.targetHandle,
-          type: 'smoothstep',
+          type: 'default',
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
           className: issues.some((issue) => issue.edgeId === edge.id) ? '!stroke-destructive' : undefined,
         };
@@ -227,6 +228,7 @@ export function FlowCanvas({
         onDrop={onDrop}
         snapToGrid={snap}
         snapGrid={[16, 16]}
+        connectionLineType={ConnectionLineType.Bezier}
         fitView={false}
         deleteKeyCode={[]}
         multiSelectionKeyCode="Shift"
