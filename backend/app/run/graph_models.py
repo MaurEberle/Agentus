@@ -7,7 +7,7 @@ from pydantic import Field
 from app.http.app import ApiModel
 
 NodeType = Literal[
-    "chat_input", "llm", "agent", "tool", "knowledge", "router", "end"
+    "chat_input", "orchestrator", "llm", "agent", "tool", "knowledge", "router", "end"
 ]
 
 

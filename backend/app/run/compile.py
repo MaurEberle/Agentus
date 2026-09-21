@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass, field
 
+from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument, GraphNode
 
 
@@ -15,6 +16,15 @@ class CompiledLlm:
     temperature: float | None
     max_tokens: int | None
     node_id: str
+
+
+@dataclass
+class CompiledOrchestrator:
+    node_id: str
+    system_prompt: str
+    llm: CompiledLlm
+    agents: list[str]
+    finals: list[str]
 
 
 @dataclass
@@ -34,6 +44,7 @@ class CompiledGraph:
     network_name: str
     doc: AgentNetworkDocument
     agents: dict[str, CompiledAgent]
+    orchestrator: CompiledOrchestrator | None
     chat_input: GraphNode | None
     end_ids: list[str]
     routers: dict[str, list[tuple[str, str]]]
@@ -41,9 +52,57 @@ class CompiledGraph:
     by_id: dict[str, GraphNode] = field(default_factory=dict)
 
 
+def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str) -> CompiledLlm:
+    llm_edges = [e for e in doc.edges if e.target == node_id and e.target_handle == "llm"]
+    llm_node = by_id[llm_edges[0].source] if llm_edges else None
+    data = llm_node.data if llm_node else {}
+    return CompiledLlm(
+        provider=str(data.get("provider") or "ollama"),
+        model=str(data.get("model") or ""),
+        base_url=data.get("baseUrl"),
+        credential_id=data.get("credentialId"),
+        temperature=data.get("temperature"),
+        max_tokens=data.get("maxTokens"),
+        node_id=llm_node.id if llm_node else "",
+    )
+
+
+def _compile_orchestrator(
+    doc: AgentNetworkDocument, by_id: dict[str, GraphNode]
+) -> CompiledOrchestrator | None:
+    nodes = [node for node in doc.nodes if node.type == "orchestrator"]
+    if not nodes:
+        return None
+    node = nodes[0]
+    agents: list[str] = []
+    finals: list[str] = []
+    for edge in doc.edges:
+        if edge.source != node.id:
+            continue
+        target = by_id.get(edge.target)
+        if target is None:
+            continue
+        if (
+            edge.source_handle == f"channel:{target.id}"
+            and target.type == "agent"
+            and target.id not in agents
+        ):
+            agents.append(target.id)
+        elif edge.source_handle == "message":
+            finals.append(target.id)
+    return CompiledOrchestrator(
+        node_id=node.id,
+        system_prompt=str(node.data.get("systemPrompt") or ""),
+        llm=_compile_llm(doc, by_id, node.id),
+        agents=agents,
+        finals=finals,
+    )
+
+
 def compile_document(
     doc: AgentNetworkDocument, *, network_id: str, network_name: str
 ) -> CompiledGraph:
+    doc = normalize_channel_edges(doc)
     by_id = {n.id: n for n in doc.nodes}
     chats = [n for n in doc.nodes if n.type == "chat_input"]
     chat_input = chats[0] if chats else None
@@ -59,21 +118,11 @@ def compile_document(
         ]
 
     agents: dict[str, CompiledAgent] = {}
+    orchestrator = _compile_orchestrator(doc, by_id)
     for node in doc.nodes:
         if node.type != "agent":
             continue
-        llm_edges = [e for e in doc.edges if e.target == node.id and e.target_handle == "llm"]
-        llm_node = by_id[llm_edges[0].source] if llm_edges else None
-        data = llm_node.data if llm_node else {}
-        llm = CompiledLlm(
-            provider=str(data.get("provider") or "ollama"),
-            model=str(data.get("model") or ""),
-            base_url=data.get("baseUrl"),
-            credential_id=data.get("credentialId"),
-            temperature=data.get("temperature"),
-            max_tokens=data.get("maxTokens"),
-            node_id=llm_node.id if llm_node else "",
-        )
+        llm = _compile_llm(doc, by_id, node.id)
         tool_kinds: list[str] = []
         mcp: list[tuple[str, list[str] | None]] = []
         for edge in doc.edges:
@@ -119,6 +168,7 @@ def compile_document(
         network_name=network_name,
         doc=AgentNetworkDocument.model_validate(deepcopy(doc.model_dump(by_alias=True))),
         agents=agents,
+        orchestrator=orchestrator,
         chat_input=chat_input,
         end_ids=end_ids,
         routers=routers,

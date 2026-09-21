@@ -142,6 +142,7 @@ export function Inspector({
       <DisplayNameField node={node} readOnly={readOnly} />
       {node.type === 'llm' ? <LlmFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'agent' ? <AgentFields node={node} readOnly={readOnly} /> : null}
+      {node.type === 'orchestrator' ? <OrchestratorFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'tool' ? <ToolFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'knowledge' ? <KnowledgeFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'router' ? <RouterFields node={node} readOnly={readOnly} /> : null}
@@ -385,11 +386,33 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   );
 }
 
-function AgentFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   return (
     <>
-      <p className="text-xs text-muted-foreground">{t('network.inspector.agent.hint')}</p>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.hint')}</p>
+      <Field label={t('network.inspector.orchestrator.systemPrompt')}>
+        <Textarea
+          rows={6}
+          value={String(node.data.systemPrompt ?? '')}
+          disabled={readOnly}
+          onChange={(event) => editorUpdateNodeData(node.id, { systemPrompt: event.target.value })}
+        />
+      </Field>
+    </>
+  );
+}
+
+function AgentFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const onChannel = useNetworkEditor((state) =>
+    state.document.edges.some((edge) => edge.target === node.id && edge.targetHandle === 'channel'),
+  );
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">
+        {t(onChannel ? 'network.inspector.agent.channelHint' : 'network.inspector.agent.hint')}
+      </p>
       <Field label={t('network.inspector.agent.systemPrompt')}>
         <Textarea
           rows={6}
@@ -839,6 +862,7 @@ function ChatInputFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
   const { t } = useTranslation();
   return (
     <>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.chat.hint')}</p>
       <Field label={t('network.inspector.chat.placeholder')}>
         <Input
           value={String(node.data.placeholder ?? '')}

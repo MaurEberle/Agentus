@@ -7,6 +7,7 @@ from typing import Any
 
 from app.common.types import NEEDS_CREDENTIAL, PROVIDERS
 from app.db.paths import RAG_DIR_NAME
+from app.run.channels import agent_id_from_channel, normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument, GraphEdge, GraphNode
 from app.run.models import ValidationError
 from app.tools.file_access_tool import is_forbidden_root
@@ -21,10 +22,22 @@ _OUT_HANDLES = {
     "end": set(),
 }
 _IN_HANDLES = {
-    "agent": {"message", "llm", "tool", "knowledge"},
+    "agent": {"message", "llm", "tool", "knowledge", "channel"},
+    "orchestrator": {"message", "llm"},
     "router": {"message"},
     "end": {"message"},
 }
+
+
+def _orchestrator_edge_ok(edge: GraphEdge, dst: GraphNode) -> bool:
+    if edge.source_handle == "message":
+        return dst.type in {"end", "router"} and edge.target_handle == "message"
+    agent_id = agent_id_from_channel(edge.source_handle)
+    return (
+        agent_id == dst.id
+        and dst.type == "agent"
+        and edge.target_handle == "channel"
+    )
 
 
 def _err(key: str, node_id: str | None = None) -> ValidationError:
@@ -84,6 +97,7 @@ def validate_document(
     mcp_root: Callable[[str], str | None] | None = None,
     mcp_available: bool = True,
 ) -> list[ValidationError]:
+    doc = normalize_channel_edges(doc)
     errors: list[ValidationError] = []
     if not doc.nodes:
         errors.append(_err("graph.end.missing"))
@@ -101,6 +115,29 @@ def validate_document(
     chats = [n for n in doc.nodes if n.type == "chat_input"]
     if len(chats) > 1:
         errors.append(_err("graph.chatInput.duplicate", chats[1].id))
+    orchestrators = [n for n in doc.nodes if n.type == "orchestrator"]
+    if len(orchestrators) > 1:
+        errors.append(_err("graph.orchestrator.duplicate", orchestrators[1].id))
+    if orchestrators:
+        orch = orchestrators[0]
+        chat_edges = [e for e in doc.edges if chats and e.source == chats[0].id]
+        if not chats or not any(
+            e.target == orch.id and e.target_handle == "message" for e in chat_edges
+        ):
+            errors.append(_err("graph.orchestrator.noChat", orch.id))
+        if any(e.target != orch.id for e in chat_edges):
+            errors.append(_err("graph.orchestrator.fanout", chats[0].id if chats else orch.id))
+        if not any(
+            e.source == orch.id
+            and e.source_handle == "message"
+            and by_id.get(e.target) is not None
+            and by_id[e.target].type == "end"
+            for e in doc.edges
+        ):
+            errors.append(_err("graph.orchestrator.noEnd", orch.id))
+        llm_in = [e for e in doc.edges if e.target == orch.id and e.target_handle == "llm"]
+        if len(llm_in) != 1:
+            errors.append(_err("graph.orchestrator.noLlm", orch.id))
     if not any(n.type == "end" for n in doc.nodes):
         errors.append(_err("graph.end.missing"))
     if _has_cycle(doc):
@@ -113,6 +150,9 @@ def validate_document(
             continue
         if src.type == "router":
             pass
+        elif src.type == "orchestrator":
+            if not _orchestrator_edge_ok(edge, dst):
+                errors.append(_err("graph.edge.invalid", src.id))
         elif src.type in _OUT_HANDLES and edge.source_handle not in _OUT_HANDLES[src.type]:
             errors.append(_err("graph.edge.invalid", src.id))
         if dst.type in _IN_HANDLES and edge.target_handle not in _IN_HANDLES[dst.type]:
@@ -121,7 +161,9 @@ def validate_document(
             errors.append(_err("graph.edge.invalid", src.id))
         if src.type == "tool" and not (dst.type == "agent" and edge.target_handle == "tool"):
             errors.append(_err("graph.edge.invalid", src.id))
-        if src.type == "llm" and not (dst.type == "agent" and edge.target_handle == "llm"):
+        if src.type == "llm" and not (
+            dst.type in {"agent", "orchestrator"} and edge.target_handle == "llm"
+        ):
             errors.append(_err("graph.edge.invalid", src.id))
 
     has_chat = bool(chats)
@@ -134,12 +176,28 @@ def validate_document(
             ]
             if len(llm_in) != 1:
                 errors.append(_err("graph.agent.noLlm", node.id))
+            channel_in = [
+                e
+                for e in doc.edges
+                if e.target == node.id and e.target_handle == "channel"
+            ]
             msg_in = [
                 e
                 for e in doc.edges
                 if e.target == node.id and e.target_handle == "message"
             ]
-            if has_chat and not msg_in:
+            pipeline_out = [
+                e
+                for e in doc.edges
+                if e.source == node.id and e.source_handle in {"message", "handoff"}
+            ]
+            if len(channel_in) > 1:
+                errors.append(_err("graph.agent.channel", node.id))
+            if channel_in and (msg_in or pipeline_out):
+                errors.append(_err("graph.agent.mode", node.id))
+            if orchestrators and not channel_in:
+                errors.append(_err("graph.orchestrator.looseAgent", node.id))
+            elif has_chat and not channel_in and not msg_in:
                 errors.append(_err("graph.agent.noLlm", node.id))
         if node.type == "llm":
             provider = str(node.data.get("provider") or "ollama")

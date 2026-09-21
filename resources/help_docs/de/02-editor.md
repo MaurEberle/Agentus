@@ -25,9 +25,10 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 
 | Anzeigename | Typ | Aufgabe |
 |-------------|-----|---------|
-| Chat-Eingabe | `chat_input` | Starttext und Nutzereingabe. **Höchstens eine.** Ausgang **Nachricht**. |
+| Chat | `chat_input` | Gespräch des Laufs. **Höchstens einer.** Ausgang **Nachricht**. Mit Orchestrator bleibt der Chat für Rückfragen offen. |
+| Orchestrator | `orchestrator` | Stimme im Lauf-Chat. Eingänge **Nachricht** und **LLM**. Pro Agent ein Ausgang **Kanal**. **Nachricht** nur zum **Ende** (oder Router). **Höchstens einer.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel), Modell, Zugang für Cloud, Temperature, Token-Limit. Ausgang **LLM**. |
-| Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen. Ausgang Nachricht, optional Übergabe. LLM, Tools und Wissen kommen **nur über Kanten**, nicht als geheime Felder. |
+| Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen, optional **Kanal**. Ausgänge Nachricht und Übergabe. Der Kanal kommt nur vom Orchestrator. Ohne Kanal läuft der Agent einmal über die Nachricht. |
 | Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner — oder **MCP**. Ausgang **Werkzeug**. |
 | Wissen | `knowledge` | Ordner mit Dateien für das Netz. Ausgang **Wissen**, nur zum Agent-Anschluss Wissen. |
 | Router | `router` | Verzweigt die Nachricht nach Bedingungen (erste Zeile / benannte Zweige) plus Standard-Ausgang. |
@@ -37,8 +38,9 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 
 Nur passende Anschlüsse:
 
-- Nachricht zu Nachricht (Chat → Agent, Agent → Ende, Agent → Router, Router-Zweige → …)
-- LLM-Ausgang nur an Agent **LLM** — jeder Agent braucht **genau eine** solche Kante
+- Nachricht zu Nachricht (Chat → Agent oder Chat → Orchestrator, Agent → Ende, Agent → Router, Router-Zweige → …). Der Orchestrator schickt Nachricht nur an Ende oder Router.
+- Kanal zu Kanal (Orchestrator → Agent). Ein Anschluss pro Agent. Die Antwort kommt im Lauf zurück, ohne zweite Kante.
+- LLM-Ausgang an Agent **LLM** oder Orchestrator **LLM** — jeder Agent und der Orchestrator brauchen **genau eine** solche Kante
 - Werkzeug-Ausgang an Agent **Werkzeug** (mehrere erlaubt)
 - Wissen-Ausgang nur an Agent **Wissen**
 - Zyklen sind verboten (gerichteter Graph ohne Schleife)
@@ -55,7 +57,8 @@ Knoten gewählt:
 - **Agent:** nur Systemprompt und Anzeigename.
 - **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. MCP: aktivierter Server aus den Einstellungen; Standard alle Tools dieses Servers.
 - **Wissen:** Quellenordner (Ordnerwahl), topK, Score-Schwelle, **Index neu**. Der Ordner muss **unter dem Datenordner** liegen, darf nicht die Laufwerkswurzel sein und nicht der Hilfe-Korpus.
-- **Chat-Eingabe:** Platzhalter, Starttext, Schalter „Eingabe nötig“.
+- **Chat:** Platzhalter, Starttext, Schalter „Eingabe nötig“.
+- **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Die Agenten sind die Kanäle, keine zweite Liste.
 - **Router:** benannte Zweige (Name + Bedingung) und Standard.
 
 Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Export — nur die Wahl eines Zugangs.
@@ -65,8 +68,8 @@ Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Expo
 **Validieren** im Ribbon prüft unter anderem:
 
 - Name nicht leer
-- höchstens eine Chat-Eingabe, mindestens ein Ende
-- jeder Agent: genau eine LLM-Kante und eine eingehende Nachricht
+- höchstens ein Chat, höchstens ein Orchestrator, mindestens ein Ende
+- jeder Agent: genau eine LLM-Kante. Ohne Orchestrator eine eingehende Nachricht. Mit Orchestrator genau ein Kanal und keine Nachrichten-Kette am selben Agenten
 - LLM: Modell gesetzt; Cloud: Zugang
 - Werkzeug: Art; MCP: aktiver Server, Wurzelpfad wenn das Rezept ihn braucht
 - Wissen: Pfad, Sandbox, nicht Hilfe-Korpus

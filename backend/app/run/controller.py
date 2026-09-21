@@ -14,6 +14,7 @@ from app.db.errors import StoreUnavailable
 from app.db.runs import complete_run, get_run, insert_log, insert_run, update_run, upsert_step
 from app.http.errors import AppError
 from app.run.compile import CompiledGraph, compile_document
+from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument
 from app.run.help_bridge import set_help_degraded
 from app.run.knowledge import index_node
@@ -123,7 +124,7 @@ class RunController:
 
             data_dir = str(get_bootstrap().data_dir)
             mcp = get_mcp()
-            doc = AgentNetworkDocument.model_validate(row.document)
+            doc = normalize_channel_edges(AgentNetworkDocument.model_validate(row.document))
             has_mcp = any(
                 n.type == "tool" and str(n.data.get("kind")) == "mcp" for n in doc.nodes
             )

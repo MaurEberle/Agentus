@@ -25,9 +25,10 @@ Düğümler paletten sürüklenir. Kartlar kompakt kalır; formlar denetçidedir
 
 | Ad | Tür | Görev |
 |-------------|-----|---------|
-| Sohbet girişi | `chat_input` | Başlangıç metni ve kullanıcı girişi. **En fazla bir.** Çıkış **İleti**. |
+| Sohbet | `chat_input` | Çalışma sohbeti. **En fazla bir.** Çıkış **İleti**. |
+| Orkestratör | `orchestrator` | Sohbetin sesi. Girişler **İleti** ve **LLM**. Ajan başına bir **Kanal** çıkışı. **İleti** yalnız **Bitiş**e. **En fazla bir.** |
 | LLM | `llm` | Sağlayıcı (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI uyumlu), model, bulut kimlik bilgisi, sıcaklık, belirteç sınırı. Çıkış **LLM**. |
-| Ajan | `agent` | Sistem istemi. Girişler İleti, LLM, Araç, Bilgi. Çıkış İleti, isteğe bağlı Devretme. LLM, araçlar ve bilgi **yalnızca kenarlardan** gelir, gizli alan olarak değil. |
+| Ajan | `agent` | Sistem istemi. Girişler İleti, LLM, Araç, Bilgi ve isteğe bağlı **Kanal**. Çıkışlar İleti ve Devretme. Kanal yalnız orkestratörden gelir. Kanalsız ajan ileti üzerinden bir kez çalışır. |
 | Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi — veya **MCP**. Çıkış **Araç**. |
 | Bilgi | `knowledge` | Ağ için dosya klasörü. Çıkış **Bilgi**, yalnızca ajanın Bilgi bağlantı noktasına. |
 | Yönlendirici | `router` | İletiyi koşullara göre ayırır (ilk satır / adlı dallar) artı varsayılan çıkış. |

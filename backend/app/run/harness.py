@@ -16,9 +16,11 @@ from app.run.limits import (
     DEFAULT_SCORE_MIN,
     DEFAULT_TOP_K,
     MAX_AGENT_INVOCATIONS,
+    MAX_ORCHESTRATOR_STEPS,
     MAX_TOOL_ROUNDS,
     STREAM_IDLE_TIMEOUT_SEC,
 )
+from app.run.orchestrate import match_agent, orchestrator_instructions, parse_orchestrator_action
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
 from app.run.models import ActivityTokens, ChatMessage, NodeRuntime, NodeTokens
 from app.run.sse import publish
@@ -56,63 +58,10 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
                 node_id=compiled.chat_input.id,
                 payload={"chars": len(user_text)},
             )
-        conversation: list[LlmMessage] = []
-        if user_text:
-            conversation.append(LlmMessage(role="user", content=user_text))
-        pending: deque[tuple[str, str]] = deque()
-        if compiled.chat_input:
-            for edge in compiled.doc.edges:
-                if edge.source == compiled.chat_input.id:
-                    pending.append((edge.target, user_text or ""))
+        if compiled.orchestrator is not None:
+            outcome = _run_orchestrator(ctrl, compiled, user_text or "")
         else:
-            for agent_id in compiled.topo_agents:
-                pending.append((agent_id, user_text or ""))
-        end_hit: set[str] = set()
-        invocations = 0
-        while pending and not ctrl.stop_event.is_set():
-            node_id, payload = pending.popleft()
-            node = compiled.by_id.get(node_id)
-            if node is None:
-                continue
-            if node.type == "end":
-                end_hit.add(node_id)
-                _set_node(ctrl, node_id, "done")
-                emit_log("debug", "run.end", node_id=node_id)
-                continue
-            if node.type == "router":
-                target = _route(compiled, node_id, payload)
-                if target is None:
-                    emit_log("error", "graph.router.noEdge", node_id=node_id)
-                    outcome = "failed"
-                    return
-                emit_log(
-                    "info",
-                    "run.router",
-                    node_id=node_id,
-                    payload={"target": target},
-                )
-                pending.append((target, payload))
-                continue
-            if node.type != "agent":
-                continue
-            invocations += 1
-            if invocations > MAX_AGENT_INVOCATIONS:
-                emit_log("error", "run.stepLimit", node_id=node_id)
-                outcome = "failed"
-                return
-            text = _agent_turn(ctrl, compiled, node_id, payload, conversation)
-            if text is None:
-                if ctrl.stop_event.is_set():
-                    break
-                continue
-            for target in compiled.agents[node_id].outbound_message:
-                pending.append((target, text))
-        if ctrl.stop_event.is_set():
-            outcome = "cancelled"
-        elif end_hit:
-            outcome = "succeeded"
-        else:
-            outcome = "failed"
+            outcome = _run_linear(ctrl, compiled, user_text or "")
     except Exception as exc:
         fail_exc = exc
         emit_log("error", str(exc), stack=traceback.format_exc())
@@ -178,12 +127,71 @@ def _route(compiled: CompiledGraph, router_id: str, text: str) -> str | None:
     return edges[0][1] if edges else None
 
 
+def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:
+    conversation: list[LlmMessage] = []
+    if user_text:
+        conversation.append(LlmMessage(role="user", content=user_text))
+    pending: deque[tuple[str, str]] = deque()
+    if compiled.chat_input:
+        for edge in compiled.doc.edges:
+            if edge.source == compiled.chat_input.id:
+                pending.append((edge.target, user_text or ""))
+    else:
+        for agent_id in compiled.topo_agents:
+            pending.append((agent_id, user_text or ""))
+    end_hit: set[str] = set()
+    invocations = 0
+    while pending and not ctrl.stop_event.is_set():
+        node_id, payload = pending.popleft()
+        node = compiled.by_id.get(node_id)
+        if node is None:
+            continue
+        if node.type == "end":
+            end_hit.add(node_id)
+            _set_node(ctrl, node_id, "done")
+            emit_log("debug", "run.end", node_id=node_id)
+            continue
+        if node.type == "router":
+            target = _route(compiled, node_id, payload)
+            if target is None:
+                emit_log("error", "graph.router.noEdge", node_id=node_id)
+                return "failed"
+            emit_log(
+                "info",
+                "run.router",
+                node_id=node_id,
+                payload={"target": target},
+            )
+            pending.append((target, payload))
+            continue
+        if node.type != "agent":
+            continue
+        invocations += 1
+        if invocations > MAX_AGENT_INVOCATIONS:
+            emit_log("error", "run.stepLimit", node_id=node_id)
+            return "failed"
+        text = _agent_turn(ctrl, compiled, node_id, payload, conversation)
+        if text is None:
+            if ctrl.stop_event.is_set():
+                break
+            continue
+        for target in compiled.agents[node_id].outbound_message:
+            pending.append((target, text))
+    if ctrl.stop_event.is_set():
+        return "cancelled"
+    if end_hit:
+        return "succeeded"
+    return "failed"
+
+
 def _agent_turn(
     ctrl: RunController,
     compiled: CompiledGraph,
     agent_id: str,
     user_text: str,
     conversation: list[LlmMessage],
+    *,
+    publish_chat: bool = True,
 ) -> str | None:
     agent = compiled.agents[agent_id]
     _set_node(ctrl, agent_id, "running", wait="llm")
@@ -403,7 +411,7 @@ def _agent_turn(
         break
     _set_node(ctrl, agent_id, "done")
     emit_log("info", "run.agent.done", node_id=agent_id)
-    if compiled.chat_input and content:
+    if publish_chat and compiled.chat_input and content:
         msg = ChatMessage(
             id=str(uuid.uuid4()),
             run_id=ctrl.run_id or "",
@@ -502,6 +510,223 @@ def _set_node(
         error_message=error,
     )
     publish("run", ctrl.snapshot.model_dump(by_alias=True))
+
+
+def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:
+    orch = compiled.orchestrator
+    if orch is None:
+        return "failed"
+    history: list[LlmMessage] = []
+    if user_text:
+        history.append(LlmMessage(role="user", content=user_text))
+    roster: list[tuple[str, str, str]] = []
+    for agent_id in orch.agents:
+        node = compiled.by_id.get(agent_id)
+        name = agent_id
+        instructions = ""
+        if node is not None:
+            name = str(node.data.get("displayName") or node.data.get("role") or agent_id).strip() or agent_id
+            instructions = str(node.data.get("systemPrompt") or "")
+        roster.append((agent_id, name, instructions))
+    system = orchestrator_instructions(orch.system_prompt, roster)
+    names = [(agent_id, name) for agent_id, name, _ in roster]
+    steps = 0
+    while not ctrl.stop_event.is_set():
+        steps += 1
+        if steps > MAX_ORCHESTRATOR_STEPS:
+            emit_log("error", "run.stepLimit", node_id=orch.node_id)
+            return "failed"
+        action = _orchestrator_action(ctrl, compiled, system, history)
+        if action is None:
+            return "cancelled" if ctrl.stop_event.is_set() else "failed"
+        kind = action.get("action") or "reply"
+        text = action.get("text") or ""
+        if kind == "ask":
+            _speak(ctrl, compiled, text or "…", history, wait=True)
+            reply = _queue_get(ctrl)
+            if not reply or ctrl.stop_event.is_set():
+                return "cancelled"
+            history.append(LlmMessage(role="user", content=reply))
+            continue
+        if kind == "call":
+            token = action.get("agent") or ""
+            agent_id = match_agent(token, names)
+            task = (action.get("task") or text or user_text).strip()
+            if agent_id is None or agent_id not in compiled.agents:
+                history.append(LlmMessage(role="user", content=f"Unknown agent: {token}"))
+                continue
+            history.append(LlmMessage(role="assistant", content=f"Call {agent_id}: {task}"))
+            result = _agent_turn(
+                ctrl,
+                compiled,
+                agent_id,
+                task,
+                [LlmMessage(role="user", content=task or " ")],
+                publish_chat=False,
+            )
+            if result is None:
+                if ctrl.stop_event.is_set():
+                    return "cancelled"
+                history.append(LlmMessage(role="user", content=f"Agent {agent_id} produced no result."))
+                continue
+            history.append(LlmMessage(role="user", content=f"Agent {agent_id} result:\n{result}"))
+            continue
+        if kind == "finish":
+            if text.strip():
+                _publish_assistant(ctrl, text.strip())
+            for target in orch.finals:
+                node = compiled.by_id.get(target)
+                if node is None:
+                    continue
+                if node.type == "end":
+                    _set_node(ctrl, target, "done")
+                    emit_log("debug", "run.end", node_id=target)
+                elif node.type == "router":
+                    nxt = _route(compiled, target, text)
+                    end = compiled.by_id.get(nxt or "")
+                    if end is not None and end.type == "end":
+                        _set_node(ctrl, end.id, "done")
+                        emit_log("debug", "run.end", node_id=end.id)
+            _set_node(ctrl, orch.node_id, "done")
+            if compiled.chat_input:
+                _set_node(ctrl, compiled.chat_input.id, "done")
+            return "succeeded"
+        if text.strip():
+            _publish_assistant(ctrl, text.strip())
+            history.append(LlmMessage(role="assistant", content=text.strip()))
+        _wait_chat(ctrl, compiled)
+        reply = _queue_get(ctrl)
+        if not reply or ctrl.stop_event.is_set():
+            return "cancelled"
+        history.append(LlmMessage(role="user", content=reply))
+    return "cancelled"
+
+
+def _speak(
+    ctrl: RunController,
+    compiled: CompiledGraph,
+    text: str,
+    history: list[LlmMessage],
+    *,
+    wait: bool,
+) -> None:
+    _publish_assistant(ctrl, text)
+    history.append(LlmMessage(role="assistant", content=text))
+    if wait:
+        _wait_chat(ctrl, compiled)
+
+
+def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
+    orch = compiled.orchestrator
+    if orch is not None:
+        _set_node(ctrl, orch.node_id, "waiting", wait="human")
+    if compiled.chat_input:
+        _set_node(ctrl, compiled.chat_input.id, "waiting", wait="human")
+    emit_log("info", "run.wait.human", node_id=orch.node_id if orch else None)
+
+
+def _orchestrator_action(
+    ctrl: RunController,
+    compiled: CompiledGraph,
+    system: str,
+    history: list[LlmMessage],
+) -> dict[str, str] | None:
+    orch = compiled.orchestrator
+    if orch is None:
+        return None
+    _set_node(ctrl, orch.node_id, "running", wait="llm")
+    ctrl.flush_chat(generating=True)
+    llm = orch.llm
+    secret = None
+    if llm.provider != "ollama" and llm.credential_id:
+        secret = vault_get(llm.credential_id)
+    started = time.perf_counter()
+    llm_node_id = llm.node_id or orch.node_id
+    emit_log(
+        "info",
+        "run.llm.start",
+        node_id=llm_node_id,
+        payload={"provider": llm.provider, "model": llm.model, "waitReason": "llm"},
+    )
+    from app.runtime import completions as runtime_completions
+
+    try:
+        result = runtime_completions.complete_live(
+            CompletionRequest(
+                provider=llm.provider,  # type: ignore[arg-type]
+                model=llm.model,
+                messages=[LlmMessage(role="system", content=system), *history],
+                base_url=llm.base_url,
+                credential_id=llm.credential_id,
+                secret=secret,
+                temperature=llm.temperature,
+                max_tokens=llm.max_tokens,
+                timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
+            ),
+            should_abort=ctrl.stop_event.is_set,
+            on_progress=lambda out, rate: _publish_tokens(
+                ctrl,
+                orch.node_id,
+                llm_node_id,
+                tokens_in=None,
+                tokens_out=out,
+                per_second=rate,
+                committed=False,
+            ),
+        )
+    except Exception as exc:
+        if isinstance(exc, RuntimeApiError) and (
+            exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
+        ):
+            return None
+        ctrl.last_error_node_id = orch.node_id
+        emit_log("error", str(exc), node_id=orch.node_id, stack=traceback.format_exc())
+        _set_node(ctrl, orch.node_id, "error", error=str(exc))
+        raise
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    usage = result.usage
+    out_final = usage.completion_tokens if usage else (
+        estimate_token_count(result.content) if result.content else None
+    )
+    in_final = usage.prompt_tokens if usage else None
+    rate_final = None
+    if out_final is not None and duration_ms > 0:
+        rate_final = out_final / max(duration_ms / 1000.0, 0.05)
+    _publish_tokens(
+        ctrl,
+        orch.node_id,
+        llm_node_id,
+        tokens_in=in_final,
+        tokens_out=out_final,
+        per_second=rate_final,
+        committed=True,
+    )
+    insert_call(
+        run_id=ctrl.run_id or "",
+        provider=llm.provider,
+        model=llm.model,
+        ok=True,
+        node_id=orch.node_id,
+        node_name=node_label(compiled, orch.node_id),
+        duration_ms=duration_ms,
+        tokens_in=in_final,
+        tokens_out=out_final,
+    )
+    return parse_orchestrator_action(result.content or "")
+
+
+def _publish_assistant(ctrl: RunController, text: str) -> None:
+    cleaned = text.strip()
+    if not cleaned:
+        return
+    msg = ChatMessage(
+        id=str(uuid.uuid4()),
+        run_id=ctrl.run_id or "",
+        role="assistant",
+        content=cleaned,
+        created_at=utc_now(),
+    )
+    ctrl.remember_chat(msg, generating=False)
 
 
 def _publish_user(ctrl: RunController, text: str) -> None:

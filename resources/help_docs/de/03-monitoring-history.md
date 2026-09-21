@@ -29,7 +29,7 @@ Kopfbereich: Lauf-ID, Startzeit, Dauer, grober Schritt, aktive LLMs (lokal vs. C
 
 ## Netz-Chat (Monitoring)
 
-Tab **Chat**: Nachrichten an die **Chat-Eingabe** des laufenden Graphen. Nur aktiv, solange der Lauf läuft. „Eingabe nötig“ am Chat-Knoten: der Graph wartet auf die erste Zeile.
+Tab **Chat**: Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile. Mit Orchestrator bleiben Rückfragen im selben Lauf offen, bis er fertig ist.
 
 Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 

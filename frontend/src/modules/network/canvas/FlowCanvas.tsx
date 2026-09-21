@@ -18,7 +18,7 @@ import {
 } from '@xyflow/react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import { connectionAllowed } from '@/modules/network/schema/ports';
+import { bindChannelHandle, connectionAllowed, type PortContext } from '@/modules/network/schema/ports';
 import { createNode } from '@/modules/network/schema/defaults';
 import { issuesForNode, validateDocument } from '@/modules/network/validation/validate';
 import type { GraphEdge, NodeType } from '@/modules/network/model/document';
@@ -70,6 +70,10 @@ export function FlowCanvas({
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const portContext = useMemo<PortContext>(
+    () => ({ nodes: document.nodes, edges: document.edges }),
+    [document.edges, document.nodes],
+  );
 
   useEffect(() => {
     setNodes(
@@ -85,6 +89,7 @@ export function FlowCanvas({
           issues: issuesForNode(issues, node.id),
           readOnly,
           connected: connectedPortKeys(node.id, document.edges),
+          portContext,
         },
       })),
     );
@@ -92,7 +97,7 @@ export function FlowCanvas({
       document.edges.map((edge) => {
         const sourceNode = document.nodes.find((item) => item.id === edge.source);
         const targetNode = document.nodes.find((item) => item.id === edge.target);
-        const handles = toRfHandlePair(sourceNode, targetNode, edge);
+        const handles = toRfHandlePair(sourceNode, targetNode, edge, portContext);
         return {
           id: edge.id,
           source: edge.source,
@@ -105,7 +110,7 @@ export function FlowCanvas({
         };
       }),
     );
-  }, [graphSig, issues, readOnly, document.edges, document.nodes, selectedNodeIds]);
+  }, [graphSig, issues, portContext, readOnly, document.edges, document.nodes, selectedNodeIds]);
 
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
@@ -117,26 +122,34 @@ export function FlowCanvas({
         target,
         sourceHandle: docHandleId(connection.sourceHandle),
         targetHandle: docHandleId(connection.targetHandle),
+        context: portContext,
       });
     },
-    [document.nodes],
+    [document.nodes, portContext],
   );
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
       if (readOnly || !connection.source || !connection.target) return;
       if (!isValidConnection(connection)) return;
+      const source = document.nodes.find((node) => node.id === connection.source);
+      const target = document.nodes.find((node) => node.id === connection.target);
+      let sourceHandle = docHandleId(connection.sourceHandle);
+      const targetHandle = docHandleId(connection.targetHandle);
+      if (source?.type === 'orchestrator' && target?.type === 'agent' && targetHandle === 'channel') {
+        sourceHandle = bindChannelHandle(sourceHandle, target.id);
+      }
       // Multiple tool/knowledge edges may share one agent handle.
       const edge: GraphEdge = {
         id: newId('e'),
         source: connection.source,
-        sourceHandle: docHandleId(connection.sourceHandle),
+        sourceHandle,
         target: connection.target,
-        targetHandle: docHandleId(connection.targetHandle),
+        targetHandle,
       };
       useNetworkEditor.getState().setEdges([...document.edges, edge]);
     },
-    [document.edges, isValidConnection, readOnly],
+    [document.edges, document.nodes, isValidConnection, readOnly],
   );
 
   const onNodesChange: OnNodesChange = useCallback((changes) => {

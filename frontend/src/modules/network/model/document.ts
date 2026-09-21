@@ -5,6 +5,7 @@ export const SNAP_SIZE = 16;
 
 export const NODE_TYPES = [
   'chat_input',
+  'orchestrator',
   'llm',
   'agent',
   'tool',
@@ -15,7 +16,7 @@ export const NODE_TYPES = [
 
 export type NodeType = (typeof NODE_TYPES)[number];
 
-export type PortKind = 'message' | 'llm' | 'tool' | 'knowledge' | 'handoff';
+export type PortKind = 'message' | 'llm' | 'tool' | 'knowledge' | 'handoff' | 'channel';
 
 export type PortDef = {
   id: string;
@@ -23,6 +24,8 @@ export type PortDef = {
   direction: 'in' | 'out';
   /** Must have ≥1 compatible edge before the graph is valid. */
   required?: boolean;
+  /** Overrides the kind label, used for one orchestrator channel per agent. */
+  label?: string;
 };
 
 export type RouterBranch = {
@@ -49,6 +52,11 @@ export type LlmNodeData = {
 };
 
 export type AgentNodeData = {
+  displayName?: string;
+  systemPrompt?: string;
+};
+
+export type OrchestratorNodeData = {
   displayName?: string;
   systemPrompt?: string;
 };
@@ -89,6 +97,7 @@ export type EndNodeData = {
 
 export type NodeDataMap = {
   chat_input: ChatInputData;
+  orchestrator: OrchestratorNodeData;
   llm: LlmNodeData;
   agent: AgentNodeData;
   tool: ToolNodeData;

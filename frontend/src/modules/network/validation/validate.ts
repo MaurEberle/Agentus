@@ -1,6 +1,6 @@
 import { embeddingNeedsCredential, isForbiddenDataRoot } from '@/modules/settings/model';
 import type { McpServerListItem } from '@/modules/settings/model';
-import { connectionAllowed, portKind } from '@/modules/network/schema/ports';
+import { connectionAllowed, portKind, type PortContext } from '@/modules/network/schema/ports';
 import type {
   AgentNetworkDocument,
   GraphNode,
@@ -55,6 +55,7 @@ export function validateDocument(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const byId = new Map(doc.nodes.map((node) => [node.id, node]));
+  const portContext: PortContext = { nodes: doc.nodes, edges: doc.edges };
 
   if (!doc.name.trim()) {
     issues.push({ messageKey: 'network.validation.nameRequired' });
@@ -64,6 +65,32 @@ export function validateDocument(
   if (chatInputs.length > 1) {
     for (const node of chatInputs) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.tooManyChatInputs' });
+    }
+  }
+  const orchestrators = doc.nodes.filter((node) => node.type === 'orchestrator');
+  if (orchestrators.length > 1) {
+    for (const node of orchestrators) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.orchestratorDuplicate' });
+    }
+  }
+  if (orchestrators.length === 1) {
+    const orch = orchestrators[0];
+    if (incoming(doc, orch.id, 'llm', 'llm').length !== 1) {
+      issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorLlm' });
+    }
+    const chat = chatInputs[0];
+    const fromChat = chat ? doc.edges.filter((edge) => edge.source === chat.id) : [];
+    if (!chat || !fromChat.some((edge) => edge.target === orch.id && edge.targetHandle === 'message')) {
+      issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorChat' });
+    }
+    if (fromChat.some((edge) => edge.target !== orch.id)) {
+      issues.push({ nodeId: chat?.id, messageKey: 'network.validation.orchestratorFanout' });
+    }
+    const toEnd = doc.edges.some(
+      (edge) => edge.source === orch.id && edge.sourceHandle === 'message' && byId.get(edge.target)?.type === 'end',
+    );
+    if (!toEnd) {
+      issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorEnd' });
     }
   }
   if (!doc.nodes.some((node) => node.type === 'end')) {
@@ -83,6 +110,8 @@ export function validateDocument(
         target,
         sourceHandle: edge.sourceHandle,
         targetHandle: edge.targetHandle,
+        context: portContext,
+        ignore: edge,
       })
     ) {
       issues.push({ edgeId: edge.id, nodeId: source.id, messageKey: 'network.validation.edgeType' });
@@ -125,7 +154,22 @@ function validateNode(
     if (incoming(doc, node.id, 'llm', 'llm').length !== 1) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.agentLlm' });
     }
-    if (incoming(doc, node.id, 'message', 'message').length + incoming(doc, node.id, 'message', 'handoff').length < 1) {
+    const channels = doc.edges.filter((edge) => edge.target === node.id && edge.targetHandle === 'channel');
+    const pipelineIn =
+      incoming(doc, node.id, 'message', 'message').length + incoming(doc, node.id, 'message', 'handoff').length;
+    const pipelineOut = doc.edges.some(
+      (edge) => edge.source === node.id && (edge.sourceHandle === 'message' || edge.sourceHandle === 'handoff'),
+    );
+    if (channels.length > 1) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.agentChannel' });
+    }
+    if (channels.length > 0 && (pipelineIn > 0 || pipelineOut)) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.agentMode' });
+    }
+    const orchestrated = doc.nodes.some((item) => item.type === 'orchestrator');
+    if (orchestrated && channels.length === 0) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.orchestratorLooseAgent' });
+    } else if (channels.length === 0 && pipelineIn < 1) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.agentMessage' });
     }
   }

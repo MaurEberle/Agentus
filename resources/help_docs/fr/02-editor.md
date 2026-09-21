@@ -25,9 +25,10 @@ Pendant que **précisément ce** réseau tourne : bannière **Lecture seule** �
 
 | Nom | Type | Rôle |
 |-------------|-----|---------|
-| Entrée de chat | `chat_input` | Texte de départ et saisie utilisateur. **Au plus une.** Sortie **Message**. |
+| Chat | `chat_input` | Conversation de l’exécution. **Au plus un.** Sortie **Message**. |
+| Orchestrateur | `orchestrator` | Voix du chat. Entrées **Message** et **LLM**. Une sortie **Canal** par agent. **Message** seulement vers **Fin**. **Au plus un.** |
 | LLM | `llm` | Fournisseur (Ollama, xAI, OpenAI, Claude, Gemini, compatible OpenAI), modèle, identifiant cloud, température, limite de jetons. Sortie **LLM**. |
-| Agent | `agent` | Invite système. Entrées Message, LLM, Outil, Connaissances. Sortie Message, transfert optionnel. LLM, outils et connaissances viennent **uniquement par des arêtes**, pas comme champs secrets. |
+| Agent | `agent` | Invite système. Entrées Message, LLM, Outil, Connaissances, **Canal** optionnel. Sorties Message et transfert. Le canal vient seulement de l’orchestrateur. Sans canal, l’agent s’exécute une fois via le message. |
 | Outil | `tool` | First-party : HTTP, recherche web, date/heure, calculatrice — ou **MCP**. Sortie **Outil**. |
 | Connaissances | `knowledge` | Dossier de fichiers pour le réseau. Sortie **Connaissances**, uniquement vers le port Connaissances de l’agent. |
 | Routeur | `router` | Branche le message selon des conditions (première ligne / branches nommées) plus sortie par défaut. |

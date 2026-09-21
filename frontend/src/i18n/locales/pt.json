@@ -561,12 +561,14 @@
       "collapse": "Recolher paleta",
       "expand": "Expandir paleta",
       "search": "Procurar nós",
-      "chat_input": "Entrada de chat",
-      "chat_inputHint": "No máximo uma. Texto inicial e campo obrigatório para a execução.",
+      "chat_input": "Chat",
+      "chat_inputHint": "No máximo um. Conversa da execução. Com orquestrador fica aberta para perguntas.",
+      "orchestrator": "Orquestrador",
+      "orchestratorHint": "Conduz o chat. Um canal por agente e a mensagem até o fim.",
       "llm": "LLM",
       "llmHint": "Modelo e fornecedor. Aresta para o porto llm do agente.",
       "agent": "Agente",
-      "agentHint": "Prompt de sistema. LLM, mensagem, ferramentas e conhecimento por arestas.",
+      "agentHint": "Prompt de sistema. Sozinho pela mensagem, ou por um canal do orquestrador.",
       "tool": "Ferramenta",
       "toolHint": "Tipo do catálogo, MCP opcional.",
       "knowledge": "Conhecimento",
@@ -582,6 +584,7 @@
       "tool": "Ferramenta",
       "knowledge": "Conhecimento",
       "handoff": "Transferência",
+      "channel": "Canal",
       "default": "Predefinição",
       "in": "Entrada",
       "out": "Saída"
@@ -621,7 +624,12 @@
         "maxTokens": "Máx. tokens"
       },
       "agent": {
-        "hint": "LLM, ferramentas e conhecimento vêm das arestas, não dos campos.",
+        "hint": "LLM, ferramentas e conhecimento vêm pelas arestas. Sem orquestrador, a mensagem inicia o agente.",
+        "channelHint": "Este agente pertence ao orquestrador. As tarefas chegam pelo canal e o resultado volta por ele.",
+        "systemPrompt": "Prompt de sistema"
+      },
+      "orchestrator": {
+        "hint": "Um LLM por uma aresta. O chat chega aqui. Cada agente tem o seu canal. A saída de mensagem continua a ser o fim.",
         "systemPrompt": "Prompt de sistema"
       },
       "tool": {
@@ -666,6 +674,7 @@
         "add": "Adicionar ramo"
       },
       "chat": {
+        "hint": "Conversa da execução. Um orquestrador pode perguntar aqui até terminar a execução.",
         "placeholder": "Marcador de posição",
         "startMessage": "Texto inicial",
         "requireInput": "Entrada obrigatória"
@@ -714,6 +723,14 @@
       "edgeType": "Esta ligação não é compatível em tipo.",
       "agentLlm": "Cada agente precisa de exatamente uma aresta LLM.",
       "agentMessage": "Cada agente precisa de uma mensagem de entrada.",
+      "orchestratorDuplicate": "No máximo um orquestrador.",
+      "orchestratorLlm": "O orquestrador precisa de exatamente uma aresta LLM.",
+      "orchestratorChat": "O chat tem de ligar ao orquestrador.",
+      "orchestratorFanout": "Com orquestrador, o chat liga-se apenas a ele.",
+      "orchestratorEnd": "O orquestrador precisa de uma aresta de mensagem para um fim.",
+      "orchestratorLooseAgent": "Com orquestrador, cada agente precisa de um canal a partir dele.",
+      "agentMode": "Um agente está na cadeia ou no orquestrador.",
+      "agentChannel": "Um agente tem no máximo um canal.",
       "modelRequired": "O modelo é obrigatório.",
       "credentialRequired": "Um fornecedor na nuvem precisa de uma credencial.",
       "toolKind": "Falta o tipo de ferramenta.",
@@ -922,7 +939,8 @@
       "tokens": "Tokens"
     },
     "nodeType": {
-      "chat_input": "Entrada",
+      "chat_input": "Chat",
+      "orchestrator": "Orquestrador",
       "llm": "LLM",
       "agent": "Agente",
       "tool": "Ferramenta",
@@ -966,6 +984,7 @@
       "send": "Enviar",
       "stop": "Parar geração",
       "waitInput": "Escreva a primeira mensagem. O grafo aguarda entrada.",
+      "waitReply": "Pergunta: a execução espera a sua resposta.",
       "empty": "Ainda sem mensagens nesta execução.",
       "disabled": "Chat só durante uma execução."
     },

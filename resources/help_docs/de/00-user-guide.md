@@ -34,16 +34,18 @@ Das Dashboard zeigt fehlende Schritte als Einrichtungs-Karten.
 
 Im Editor (**Netzwerk**) mindestens:
 
-1. **Chat-Eingabe** (`chat_input`) — höchstens eine
+1. **Chat** (`chat_input`) — höchstens einer
 2. **Agent** — Systemprompt
 3. **LLM** — Provider und Modell
 4. **Ende** (`end`) — mindestens eines
 
 Verbindungen (typisierte Anschlüsse, keine beliebigen Pfeile):
 
-- Chat-Eingabe **Nachricht** → Agent **Nachricht**
+- Chat **Nachricht** → Agent **Nachricht**
 - LLM **LLM** → Agent **LLM**
 - Agent **Nachricht** → Ende
+
+Optional **Orchestrator**: Chat nur an den Orchestrator, LLM an den Orchestrator, pro Agent ein **Kanal** vom Orchestrator an den Kanal des Agenten, **Nachricht** vom Orchestrator an **Ende**. Er spricht im Lauf-Chat, stellt Rückfragen und ruft die Agenten nacheinander auf. Die Antwort eines Agenten bleibt bei ihm. Der Chat bleibt offen, bis er den Lauf beendet. Ohne Orchestrator bleibt jeder Agent eine eigene Kette über Nachricht und Übergabe.
 
 Optional: **Werkzeug** an den Agent-Anschluss **Werkzeug**, **Wissen** an **Wissen**. Speichern. In der **Verwaltung** „Als aktiv setzen“, wenn die Schnellwahl es noch nicht ist.
 
@@ -63,7 +65,7 @@ Schließen des Fensters beendet den Lauf und die App. Ollama lebt weiter.
 
 Unten rechts: Sprechblase = **Hilfe zur App** (diese Anleitung, Graph-Begriffe, optionale Websuche). Onboarding erklärt das beim ersten Öffnen.
 
-Im **Monitoring** der Tab **Chat** = **Lauf-Chat** des Graphen (Knoten Chat-Eingabe). Er spricht mit dem Agentennetz.
+Im **Monitoring** der Tab **Chat** = **Lauf-Chat** des Graphen (Knoten Chat). Ohne Orchestrator ist das die Eingabe an die Agenten. Mit Orchestrator ist es das Gespräch: er kann nachfragen, bevor er Agenten aufruft.
 
 Die beiden teilen **keinen** Verlauf, keine Tools und keine Zugänge. Die Hilfe nutzt **keine** MCP-Server.
 

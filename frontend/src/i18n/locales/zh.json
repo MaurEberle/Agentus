@@ -561,12 +561,14 @@
       "collapse": "折叠元素选择",
       "expand": "展开元素选择",
       "search": "搜索节点",
-      "chat_input": "聊天输入",
-      "chat_inputHint": "最多一个。起始文本，运行时必填。",
+      "chat_input": "聊天",
+      "chat_inputHint": "最多一个。运行中的对话。有编排器时会为追问保持打开。",
+      "orchestrator": "编排器",
+      "orchestratorHint": "主持运行聊天。每个智能体一条通道，消息输出到结束。",
       "llm": "LLM",
       "llmHint": "模型和提供方。连接到智能体 llm 端口。",
       "agent": "智能体",
-      "agentHint": "系统提示。通过边连接 LLM、消息、工具和知识。",
+      "agentHint": "系统提示。单独使用时走消息，或通过编排器的通道。",
       "tool": "工具",
       "toolHint": "目录类型，可选 MCP。",
       "knowledge": "知识",
@@ -582,6 +584,7 @@
       "tool": "工具",
       "knowledge": "知识",
       "handoff": "交接",
+      "channel": "通道",
       "default": "默认",
       "in": "输入",
       "out": "输出"
@@ -621,7 +624,12 @@
         "maxTokens": "最大 token 数"
       },
       "agent": {
-        "hint": "LLM、工具和知识来自边，而不是字段。",
+        "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",
+        "channelHint": "此智能体属于编排器。任务经通道到来，结果经同一通道返回。",
+        "systemPrompt": "系统提示"
+      },
+      "orchestrator": {
+        "hint": "一条 LLM 连线。聊天进入这里。每个智能体有自己的通道。消息输出仍指向结束。",
         "systemPrompt": "系统提示"
       },
       "tool": {
@@ -666,6 +674,7 @@
         "add": "添加分支"
       },
       "chat": {
+        "hint": "运行中的对话。编排器可以在这里追问，直到它结束运行。",
         "placeholder": "占位符",
         "startMessage": "起始文本",
         "requireInput": "需要输入"
@@ -714,6 +723,14 @@
       "edgeType": "此连接类型不兼容。",
       "agentLlm": "每个智能体需要恰好一条 LLM 边。",
       "agentMessage": "每个智能体需要一条传入消息。",
+      "orchestratorDuplicate": "最多一个编排器。",
+      "orchestratorLlm": "编排器需要恰好一条 LLM 边。",
+      "orchestratorChat": "聊天必须连接到编排器。",
+      "orchestratorFanout": "有编排器时，聊天只连接编排器。",
+      "orchestratorEnd": "编排器需要一条指向结束的消息边。",
+      "orchestratorLooseAgent": "有编排器时，每个智能体都需要来自它的一条通道。",
+      "agentMode": "智能体要么在链中，要么接在编排器上。",
+      "agentChannel": "每个智能体最多一条通道。",
       "modelRequired": "模型为必填。",
       "credentialRequired": "云提供方需要凭据。",
       "toolKind": "缺少工具类型。",
@@ -922,7 +939,8 @@
       "tokens": "Token"
     },
     "nodeType": {
-      "chat_input": "输入",
+      "chat_input": "聊天",
+      "orchestrator": "编排器",
       "llm": "LLM",
       "agent": "智能体",
       "tool": "工具",
@@ -966,6 +984,7 @@
       "send": "发送",
       "stop": "停止生成",
       "waitInput": "请写下第一条消息。图正在等待输入。",
+      "waitReply": "追问：运行正在等待你的回答。",
       "empty": "此运行尚无消息。",
       "disabled": "仅在运行期间可聊天。"
     },

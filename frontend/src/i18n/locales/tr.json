@@ -561,12 +561,14 @@
       "collapse": "Paleti daralt",
       "expand": "Paleti genişlet",
       "search": "Düğüm ara",
-      "chat_input": "Sohbet girişi",
-      "chat_inputHint": "En fazla bir tane. Başlangıç metni ve çalıştırma için zorunlu alan.",
+      "chat_input": "Sohbet",
+      "chat_inputHint": "En fazla bir. Çalışma sohbeti. Orkestratör varken takip soruları için açık kalır.",
+      "orchestrator": "Orkestratör",
+      "orchestratorHint": "Sohbeti yürütür. Ajan başına bir kanal, bitişe ileti.",
       "llm": "LLM",
       "llmHint": "Model ve sağlayıcı. Ajan llm bağlantı noktasına kenar.",
       "agent": "Ajan",
-      "agentHint": "Sistem istemi. LLM, ileti, araçlar ve bilgi kenarlarla.",
+      "agentHint": "Sistem istemi. Tek başına iletiyle veya orkestratörün bir kanalıyla.",
       "tool": "Araç",
       "toolHint": "Katalog türü, isteğe bağlı MCP.",
       "knowledge": "Bilgi",
@@ -582,6 +584,7 @@
       "tool": "Araç",
       "knowledge": "Bilgi",
       "handoff": "Devretme",
+      "channel": "Kanal",
       "default": "Varsayılan",
       "in": "Giriş",
       "out": "Çıkış"
@@ -621,7 +624,12 @@
         "maxTokens": "En fazla belirteç"
       },
       "agent": {
-        "hint": "LLM, araçlar ve bilgi alanlardan değil kenarlardan gelir.",
+        "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",
+        "channelHint": "Bu ajan orkestratöre bağlı. Görevler kanaldan gelir, sonuç aynı kanaldan döner.",
+        "systemPrompt": "Sistem istemi"
+      },
+      "orchestrator": {
+        "hint": "Bir LLM kenarı. Sohbet buraya gelir. Her ajanın kendi kanalı vardır. İleti çıkışı bitiştir.",
         "systemPrompt": "Sistem istemi"
       },
       "tool": {
@@ -666,6 +674,7 @@
         "add": "Dal ekle"
       },
       "chat": {
+        "hint": "Çalışmanın sohbeti. Bir orkestratör, çalışmayı bitirene kadar burada soru sorabilir.",
         "placeholder": "Yer tutucu",
         "startMessage": "Başlangıç metni",
         "requireInput": "Giriş gerekli"
@@ -714,6 +723,14 @@
       "edgeType": "Bu bağlantı tür olarak uyumlu değil.",
       "agentLlm": "Her ajan tam olarak bir LLM kenarına ihtiyaç duyar.",
       "agentMessage": "Her ajan gelen bir iletiye ihtiyaç duyar.",
+      "orchestratorDuplicate": "En fazla bir orkestratör.",
+      "orchestratorLlm": "Orkestratör tam olarak bir LLM kenarına ihtiyaç duyar.",
+      "orchestratorChat": "Sohbet orkestratöre bağlanmalıdır.",
+      "orchestratorFanout": "Orkestratör varken sohbet yalnızca ona bağlanır.",
+      "orchestratorEnd": "Orkestratörün bitişe bir ileti kenarı olmalıdır.",
+      "orchestratorLooseAgent": "Orkestratör varken her ajanın ondan bir kanalı olmalıdır.",
+      "agentMode": "Bir ajan ya zincirdedir ya da orkestratördedir.",
+      "agentChannel": "Bir ajanın en fazla bir kanalı olur.",
       "modelRequired": "Model zorunludur.",
       "credentialRequired": "Bulut sağlayıcısı bir kimlik bilgisi ister.",
       "toolKind": "Araç türü eksik.",
@@ -922,7 +939,8 @@
       "tokens": "Belirteç"
     },
     "nodeType": {
-      "chat_input": "Giriş",
+      "chat_input": "Sohbet",
+      "orchestrator": "Orkestratör",
       "llm": "LLM",
       "agent": "Ajan",
       "tool": "Araç",
@@ -966,6 +984,7 @@
       "send": "Gönder",
       "stop": "Üretimi durdur",
       "waitInput": "İlk iletiyi yazın. Grafik giriş bekliyor.",
+      "waitReply": "Soru: çalışma yanıtınızı bekliyor.",
       "empty": "Bu çalıştırmada henüz ileti yok.",
       "disabled": "Sohbet yalnızca çalıştırma sırasında."
     },

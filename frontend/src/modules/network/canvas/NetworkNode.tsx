@@ -6,6 +6,7 @@ import {
   GitFork,
   MessageSquare,
   Sparkles,
+  Waypoints,
   Wrench,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -19,10 +20,11 @@ import {
   portStateKey,
   rfHandleId,
 } from '@/modules/network/canvas/handles';
-import { portAcceptsConnection, portI18nKey, portsFor, routerBranchName } from '@/modules/network/schema/ports';
+import { portAcceptsConnection, portI18nKey, portsFor, routerBranchName, type PortContext } from '@/modules/network/schema/ports';
 
 const ICONS = {
   chat_input: MessageSquare,
+  orchestrator: Waypoints,
   llm: Sparkles,
   agent: Bot,
   tool: Wrench,
@@ -36,6 +38,7 @@ export type NetworkNodeData = {
   issues: ValidationIssue[];
   readOnly?: boolean;
   connected: string[];
+  portContext?: PortContext;
 };
 
 type ConnectMatch = 'idle' | 'origin' | 'match' | 'mismatch';
@@ -44,8 +47,9 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
   const { t } = useTranslation();
   const nodeData = data as unknown as NetworkNodeData;
   const node = nodeData.graph;
+  const portContext = nodeData.portContext;
   const Icon = ICONS[node.type];
-  const ports = portsFor(node);
+  const ports = portsFor(node, portContext);
   const ins = ports.filter((port) => port.direction === 'in');
   const outs = ports.filter((port) => port.direction === 'out');
   const invalid = nodeData.issues.length > 0;
@@ -66,16 +70,21 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
   function matchFor(port: PortDef): ConnectMatch {
     if (!connecting || !fromGraph || !fromHandle) return 'idle';
     if (fromGraph.id === node.id && fromHandle.id === rfHandleId(port)) return 'origin';
-    const accepts = portAcceptsConnection(node, port, {
-      node: fromGraph,
-      handleId: fromHandle.id,
-      handleType: fromHandle.type,
-    });
+    const accepts = portAcceptsConnection(
+      node,
+      port,
+      {
+        node: fromGraph,
+        handleId: fromHandle.id,
+        handleType: fromHandle.type,
+      },
+      portContext,
+    );
     return accepts ? 'match' : 'mismatch';
   }
 
   function labelOf(port: PortDef): string {
-    return routerBranchName(node, port.id) ?? t(portI18nKey(port));
+    return port.label ?? routerBranchName(node, port.id) ?? t(portI18nKey(port));
   }
 
   function showsIdle(port: PortDef, count: number): boolean {
@@ -193,7 +202,7 @@ function PortNameColumn({
         const show = ports.length > 1 || unconfigured;
         if (!show) return null;
         const match = matchFor(port);
-        const name = routerBranchName(node, port.id) ?? t(portI18nKey(port));
+        const name = port.label ?? routerBranchName(node, port.id) ?? t(portI18nKey(port));
         const hideForHover = match === 'match' || (match !== 'mismatch' && hoveredKey === portStateKey(port));
         return (
           <span
@@ -242,7 +251,7 @@ function PortHandle({
   const { t } = useTranslation();
   const key = portStateKey(port);
   const unconfigured = Boolean(port.required) && !connected;
-  const name = routerBranchName(node, port.id) ?? t(portI18nKey(port));
+  const name = port.label ?? routerBranchName(node, port.id) ?? t(portI18nKey(port));
   const directionLabel = t(`network.ports.${port.direction}`);
   const fullLabel = `${name} · ${directionLabel}`;
   const top = handleTopPercent(index, count);

@@ -5,6 +5,7 @@ import {
   GitFork,
   MessageSquare,
   Sparkles,
+  Waypoints,
   Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -18,6 +19,7 @@ import { editorAddNode } from '@/modules/network/store';
 
 const ICONS = {
   chat_input: MessageSquare,
+  orchestrator: Waypoints,
   llm: Sparkles,
   agent: Bot,
   tool: Wrench,

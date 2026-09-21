@@ -561,12 +561,14 @@
       "collapse": "Elementauswahl einklappen",
       "expand": "Elementauswahl ausklappen",
       "search": "Knoten suchen",
-      "chat_input": "Chat-Eingabe",
-      "chat_inputHint": "Höchstens eine. Starttext und Pflichtfeld für den Lauf.",
+      "chat_input": "Chat",
+      "chat_inputHint": "Höchstens einer. Gespräch im Lauf. Mit Orchestrator bleiben Rückfragen offen.",
+      "orchestrator": "Orchestrator",
+      "orchestratorHint": "Führt den Lauf-Chat. Pro Agent ein Kanal, das Ende über Nachricht.",
       "llm": "LLM",
       "llmHint": "Modell und Provider. Kante zum Agenten-Port llm.",
       "agent": "Agent",
-      "agentHint": "Systemprompt. LLM, Nachricht, Tools und Wissen per Kanten.",
+      "agentHint": "Systemprompt. Allein über Nachricht, oder über einen Kanal am Orchestrator.",
       "tool": "Werkzeug",
       "toolHint": "Katalog-Art, optional MCP.",
       "knowledge": "Wissen",
@@ -582,6 +584,7 @@
       "tool": "Werkzeug",
       "knowledge": "Wissen",
       "handoff": "Übergabe",
+      "channel": "Kanal",
       "default": "Standard",
       "in": "Eingang",
       "out": "Ausgang"
@@ -621,7 +624,12 @@
         "maxTokens": "Max. Tokens"
       },
       "agent": {
-        "hint": "LLM, Tools und Wissen kommen über Kanten, nicht als Felder.",
+        "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",
+        "channelHint": "Dieser Agent hängt am Orchestrator. Aufträge kommen über den Kanal, die Antwort geht dorthin zurück.",
+        "systemPrompt": "Systemprompt"
+      },
+      "orchestrator": {
+        "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang.",
         "systemPrompt": "Systemprompt"
       },
       "tool": {
@@ -666,6 +674,7 @@
         "add": "Zweig hinzufügen"
       },
       "chat": {
+        "hint": "Gespräch des Laufs. Ein Orchestrator kann hier nachfragen, bis er den Lauf beendet.",
         "placeholder": "Platzhalter",
         "startMessage": "Starttext",
         "requireInput": "Eingabe nötig"
@@ -714,6 +723,14 @@
       "edgeType": "Diese Verbindung ist typunverträglich.",
       "agentLlm": "Jeder Agent braucht genau eine LLM-Kante.",
       "agentMessage": "Jeder Agent braucht eine eingehende Nachricht.",
+      "orchestratorDuplicate": "Höchstens ein Orchestrator.",
+      "orchestratorLlm": "Der Orchestrator braucht genau eine LLM-Kante.",
+      "orchestratorChat": "Der Chat muss an den Orchestrator angeschlossen sein.",
+      "orchestratorFanout": "Mit Orchestrator geht der Chat nur an den Orchestrator.",
+      "orchestratorEnd": "Der Orchestrator braucht eine Nachricht-Kante zum Ende.",
+      "orchestratorLooseAgent": "Mit Orchestrator braucht jeder Agent einen Kanal von ihm.",
+      "agentMode": "Ein Agent hängt entweder in der Kette oder am Orchestrator.",
+      "agentChannel": "Ein Agent hat höchstens einen Kanal.",
       "modelRequired": "Modell ist Pflicht.",
       "credentialRequired": "Cloud-Provider braucht einen Zugang.",
       "toolKind": "Werkzeug-Art fehlt.",
@@ -922,7 +939,8 @@
       "tokens": "Token"
     },
     "nodeType": {
-      "chat_input": "Eingabe",
+      "chat_input": "Chat",
+      "orchestrator": "Orchestrator",
       "llm": "LLM",
       "agent": "Agent",
       "tool": "Werkzeug",
@@ -966,6 +984,7 @@
       "send": "Senden",
       "stop": "Generierung stoppen",
       "waitInput": "Erste Nachricht schreiben. Der Graph wartet auf Eingabe.",
+      "waitReply": "Rückfrage: der Lauf wartet auf deine Antwort.",
       "empty": "Noch keine Nachrichten in diesem Lauf.",
       "disabled": "Chat nur während eines Laufs."
     },
