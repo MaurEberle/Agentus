@@ -200,7 +200,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
       <div
         ref={scroller}
         onScroll={onScroll}
-        className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20 font-mono text-xs"
+        className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20 font-log text-xs"
       >
         {visible.length === 0 ? (
           <p className="p-3 font-sans text-sm text-muted-foreground">{t('monitoring.log.empty')}</p>
@@ -321,14 +321,14 @@ function LogDetail({
       title={t('monitoring.log.detailTitle')}
     >
       {event ? (
-        <div className="space-y-3 text-sm">
+        <div className="space-y-3 font-log text-sm">
           <p className="text-xs text-muted-foreground">
             {formatTime(event.ts, locale)} · {event.level} · {event.runId}
             {event.nodeId ? ` · ${event.nodeId}` : ''}
           </p>
           <div>
             <p className="text-xs text-muted-foreground">{t('monitoring.log.message')}</p>
-            <p className="whitespace-pre-wrap break-words font-mono text-xs">
+            <p className="whitespace-pre-wrap break-words font-log text-xs">
               {formatRunLogMessage(event.message, t, event.payload)}
             </p>
             <Button
@@ -344,7 +344,7 @@ function LogDetail({
           {payloadText ? (
             <div>
               <p className="text-xs text-muted-foreground">{t('monitoring.log.payload')}</p>
-              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{payloadText}</pre>
+              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-log text-xs">{payloadText}</pre>
               <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2" onClick={() => void copy(payloadText)}>
                 {t('monitoring.log.copyPayload')}
               </Button>
@@ -353,7 +353,7 @@ function LogDetail({
           {event.stack ? (
             <div>
               <p className="text-xs text-muted-foreground">{t('monitoring.log.stack')}</p>
-              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{event.stack}</pre>
+              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-log text-xs">{event.stack}</pre>
             </div>
           ) : null}
         </div>

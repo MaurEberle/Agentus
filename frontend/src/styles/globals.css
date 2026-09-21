@@ -26,6 +26,8 @@
     --input: 40 12% 86%;
     --ring: 168 70% 28%;
     --radius: 0.65rem;
+    --font-sans: 'Figtree', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+    --font-log: 'Saira', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
   }
 
   .dark {
@@ -63,36 +65,22 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family:
-      'Segoe UI',
-      Inter,
-      ui-sans-serif,
-      system-ui,
-      sans-serif;
+    @apply bg-background font-sans text-foreground antialiased;
   }
 
-  html[lang='zh'] body {
-    font-family:
-      'Microsoft YaHei UI',
-      'Microsoft YaHei',
-      'Segoe UI',
-      sans-serif;
+  html[lang='zh'] {
+    --font-sans: 'Figtree', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    --font-log: 'Saira', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Segoe UI', sans-serif;
   }
 
-  html[lang='ja'] body {
-    font-family:
-      'Yu Gothic UI',
-      Meiryo,
-      'Segoe UI',
-      sans-serif;
+  html[lang='ja'] {
+    --font-sans: 'Figtree', 'Yu Gothic UI', Meiryo, 'Segoe UI', sans-serif;
+    --font-log: 'Saira', 'Yu Gothic UI', Meiryo, 'Segoe UI', sans-serif;
   }
 
-  html[lang='ar'] body {
-    font-family:
-      'Segoe UI',
-      Tahoma,
-      sans-serif;
+  html[lang='ar'] {
+    --font-sans: 'Figtree', 'Segoe UI', Tahoma, sans-serif;
+    --font-log: 'Saira', 'Segoe UI', Tahoma, sans-serif;
   }
 }
 
