@@ -202,7 +202,11 @@ export function HelpChatPanel({
           </Button>
         </div>
       ) : (
-        <HelpChatMessages messages={visibleMessages} streaming={streaming} />
+        <HelpChatMessages
+          messages={visibleMessages}
+          streaming={streaming}
+          waiting={generating && !streamContent}
+        />
       )}
       {errorKey || errorMessage ? (
         <p className="px-3 text-xs text-destructive">

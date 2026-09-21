@@ -70,10 +70,32 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'help-typing-dot': {
+          '0%, 70%, 100%': {
+            transform: 'translateY(0) scale(0.72)',
+            backgroundColor: 'hsl(var(--muted-foreground) / 0.4)',
+          },
+          '35%': {
+            transform: 'translateY(-5px) scale(1)',
+            backgroundColor: 'hsl(var(--warning))',
+          },
+        },
+        'help-typing-ring': {
+          '0%': { transform: 'scale(0.9)', opacity: '0.65' },
+          '70%, 100%': { transform: 'scale(1.45)', opacity: '0' },
+        },
+        'help-typing-sweep': {
+          '0%': { transform: 'translateX(-12px)', opacity: '0' },
+          '35%': { opacity: '0.9' },
+          '100%': { transform: 'translateX(46px)', opacity: '0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'help-typing-dot': 'help-typing-dot 1.15s ease-in-out infinite',
+        'help-typing-ring': 'help-typing-ring 1.6s ease-out infinite',
+        'help-typing-sweep': 'help-typing-sweep 1.15s ease-in-out infinite',
       },
     },
   },

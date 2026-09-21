@@ -34,6 +34,35 @@ function Sources({ sources }: { sources: HelpSource[] }) {
   );
 }
 
+function TypingIndicator() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex gap-2" role="status" aria-live="polite" aria-label={t('helpChat.status.generating')}>
+      <span className="relative mt-0.5 size-7 shrink-0">
+        <span
+          aria-hidden
+          className="absolute -inset-1 rounded-full border border-warning/80 motion-safe:animate-help-typing-ring"
+        />
+        <BrandMark className="relative size-7" alt="" />
+      </span>
+      <div className="relative flex h-9 items-center gap-1.5 overflow-hidden rounded-lg bg-muted px-3.5">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-1 left-0 w-5 rounded-full bg-warning/45 blur-md motion-safe:animate-help-typing-sweep"
+        />
+        {[0, 150, 300].map((delay) => (
+          <span
+            key={delay}
+            aria-hidden
+            className="relative size-1.5 rounded-full bg-muted-foreground/40 motion-safe:animate-help-typing-dot"
+            style={{ animationDelay: `${delay}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Bubble({
   message,
   locale,
@@ -74,9 +103,11 @@ function Bubble({
 export function HelpChatMessages({
   messages,
   streaming,
+  waiting = false,
 }: {
   messages: HelpMessage[];
   streaming?: HelpMessage | null;
+  waiting?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const endRef = useRef<HTMLDivElement>(null);
@@ -84,9 +115,9 @@ export function HelpChatMessages({
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
-  }, [items.length, streaming?.content]);
+  }, [items.length, streaming?.content, waiting]);
 
-  if (items.length === 0) {
+  if (items.length === 0 && !waiting) {
     return (
       <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-muted-foreground">
         {t('helpChat.empty')}
@@ -100,6 +131,7 @@ export function HelpChatMessages({
         {items.map((message) => (
           <Bubble key={message.id} message={message} locale={i18n.language} />
         ))}
+        {waiting ? <TypingIndicator /> : null}
         <div ref={endRef} />
       </div>
     </ScrollArea>
