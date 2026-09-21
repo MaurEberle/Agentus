@@ -12,27 +12,31 @@ Etkin grafiğin bir yürütmesi. En fazla **biri** çalışır. Başlat ve durdu
 
 ## Düğümler ve kenarlar
 
-Parçalar (sohbet girişi, ajan, LLM, araç, bilgi, yönlendirici, son) ve tipli bağlantılar. Kutular arasında rastgele oklar geçersizdir.
+Parçalar (sohbet, orkestratör, ajan, LLM, araç, bilgi, yönlendirici, son) ve tipli bağlantılar. Kutular arasında rastgele oklar geçersizdir.
 
 ## Ajan
 
-Sistem istemi olan düğüm. Model, ileti, araçlar ve bilgi bağlantı noktalarından gelir, gömülü anahtar olarak değil.
+Sistem istemi olan düğüm. Model, ileti, araçlar ve bilgi bağlantı noktalarından gelir. Orkestratör yoksa ileti onu başlatır, ileti veya devretme yanıtı iletir. Orkestratör varken kendi kanalına bağlıdır: bir görev girer, bir sonuç döner.
 
 ## LLM düğümü
 
-Sağlayıcı ve modeli seçer. Yerel Ollama, yoksa bulut veya OpenAI uyumlu URL artı kimlik bilgisi.
+Sağlayıcı ve modeli seçer. Yerel Ollama; değilse bulut artı kimlik bilgisi.
 
-## Sohbet girişi
+## Sohbet
 
-Çalıştırmada kullanıcı metninin tek girişi. Ağ başına en fazla bir. İzleme sohbeti buraya yazar.
+Çalıştırmada kullanıcı metninin tek girişi. Ağ başına en fazla bir. İzleme sohbeti buraya yazar. Orkestratör varken konuşma birkaç ileti boyunca açık kalır.
+
+## Orkestratör
+
+Kendi LLM’i olan düğüm. Çalıştırma sohbetinin tek sesidir, soru sorar ve bağlı ajanları teker teker, her birini bir kanaldan çağırır. En fazla bir. Sohbet yalnız ona bağlanır. İleti çıkışı Son’a veya bir yönlendiriciye gider. Ajan metinlerini ve iç komutları baloncuk olarak görmezsin. Uygulama son sonucu sonraki göreve ekler. Bir ajan ya kanaldadır ya ileti zincirindedir.
 
 ## Araç
 
-First-party (HTTP, web araması, tarih/saat, hesap makinesi) veya MCP. Yapılandırma denetçide, yürütme yalnızca çalıştırmada.
+First-party (HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi) veya MCP. Dosya erişimi bir kök klasörde kalır, sürücü kökünde değil. Yapılandırma denetçide, yürütme yalnızca çalıştırmada.
 
 ## Bilgi (ağ)
 
-Knowledge düğümü: uygulamanın veri klasörünün **altında** bir klasör. Kendi dizini, topK ve puan. **Yardım derlemi değil.** Sürücü kökü değil.
+Bilgi düğümü: ağ için metin klasörü. Sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Kendi gömme modeli, dizini, topK ve puanı. **Yardım derlemi değil.** Başlangıçta dizin oluşumunu görürsün; güncel bir dizin atlanır.
 
 ## Yardım-RAG
 
@@ -48,11 +52,11 @@ Model Context Protocol: dış araç sunucuları. Ayarlar’da oluşturup etkinle
 
 ## Sağlayıcı
 
-`ollama` (yerel), `xai`, `openai`, `anthropic` (Claude), `gemini` (bulut, önce API anahtarı, sonra model listesi), `openai_compat` (kendi uyumlu HTTP API’si, örn. LM Studio).
+Listede: `ollama` (yerel), `xai`, `openai`, `anthropic` (Claude), `gemini` (bulut: önce kimlik bilgisi, sonra model listesi). Gömmeler: Ollama, OpenAI, Gemini. `openai_compat` eski grafikler ve kimlik bilgileri için geçerli kalır, model listesinde artık yoktur.
 
 ## Ollama
 
-Yerel modeller için ayrı hizmet. Uygulama istemcidir. Kurulum Ollama ve iki küçük varsayılan model oluşturabilir. Uygulamayı kapatmak Ollama’yı çalışır bırakır.
+Yerel modeller için ayrı hizmet. Uygulama istemcidir. Kuruluysa, adres yerel ise ve kapı yanıt vermiyorsa uygulama onu başlatır ve durdurmaz. Kurulum Ollama’yı oluşturabilir, kısa bekleyebilir ve yanıt verirse iki küçük varsayılan modeli yükleyebilir.
 
 ## Kontrol paneli, izleme, geçmiş
 

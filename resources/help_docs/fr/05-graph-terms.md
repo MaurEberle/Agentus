@@ -12,27 +12,31 @@ Un passage du graphe actif. Il en tourne au plus **une**. Démarrer et arrêter 
 
 ## Nœuds et arêtes
 
-Briques (entrée de chat, agent, LLM, outil, connaissances, routeur, fin) et connexions typées. Des flèches arbitraires entre cases sont invalides.
+Briques (chat, orchestrateur, agent, LLM, outil, connaissances, routeur, fin) et connexions typées. Des flèches arbitraires entre cases sont invalides.
 
 ## Agent
 
-Nœud avec invite système. Modèle, message, outils et connaissances viennent par des ports, pas comme clés embarquées.
+Nœud avec invite système. Modèle, message, outils et connaissances arrivent par des ports. Sans orchestrateur, le message le démarre, et message ou transfert transmet la réponse. Avec orchestrateur, il tient à son propre canal : une tâche entre, un résultat revient.
 
 ## Nœud LLM
 
-Choisit fournisseur et modèle. Local via Ollama, sinon cloud ou URL compatible OpenAI plus identifiant.
+Choisit fournisseur et modèle. Local via Ollama, sinon cloud plus identifiant.
 
-## Entrée de chat
+## Chat
 
-Seul point d’entrée du texte utilisateur dans l’exécution. Au plus une par réseau. Le chat de supervision écrit ici.
+Seul point d’entrée du texte utilisateur dans l’exécution. Au plus un par réseau. Le chat de supervision écrit ici. Avec orchestrateur, la conversation reste ouverte sur plusieurs messages.
+
+## Orchestrateur
+
+Nœud avec son propre LLM. Il est la seule voix du chat de l’exécution, pose des questions et appelle les agents reliés un par un, chacun par un canal. Au plus un. Le chat ne se branche que sur lui. Sa sortie message va vers Fin ou un routeur. Tu ne vois ni les textes des agents ni les ordres internes comme bulles. L’app joint le dernier résultat à la tâche suivante. Un agent est sur le canal ou dans la chaîne de messages.
 
 ## Outil
 
-First-party (HTTP, recherche web, date/heure, calculatrice) ou MCP. Configuration dans l’inspecteur, exécution seulement pendant le run.
+First-party (HTTP, recherche web, date/heure, calculatrice, accès aux fichiers) ou MCP. L’accès aux fichiers reste dans un dossier racine, pas à la racine d’un lecteur. Configuration dans l’inspecteur, exécution seulement pendant le run.
 
 ## Connaissances (réseau)
 
-Nœud knowledge : dossier **sous** le dossier de données de l’app. Index propre, topK et score. **Pas** le corpus d’aide. Pas la racine du lecteur.
+Nœud de connaissances : un dossier de textes pour le réseau. Il peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Modèle d’embeddings, index, topK et score propres. **Pas** le corpus d’aide. Au démarrage tu vois l’indexation ; un index déjà à jour est sauté.
 
 ## Aide-RAG
 
@@ -48,11 +52,11 @@ Model Context Protocol : serveurs d’outils externes. À créer et activer dans
 
 ## Fournisseur
 
-`ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (cloud, clé API d’abord, puis liste de modèles), `openai_compat` (API HTTP compatible maison, p. ex. LM Studio).
+Dans la liste : `ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (cloud : identifiant d’abord, puis la liste de modèles). Embeddings : Ollama, OpenAI, Gemini. `openai_compat` reste valable pour d’anciens graphes et identifiants, mais n’est plus dans la liste de modèles.
 
 ## Ollama
 
-Service séparé pour modèles locaux. L’app est le client. Le setup peut créer Ollama et deux petits modèles par défaut. Fermer l’app laisse Ollama tourner.
+Service séparé pour modèles locaux. L’app est le client. S’il est installé, que l’adresse est locale et que le port ne répond pas, l’app le démarre et ne l’arrête pas. Le setup peut créer Ollama, attendre un court instant et charger deux petits modèles par défaut s’il répond.
 
 ## Tableau de bord, supervision, historique
 

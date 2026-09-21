@@ -13,7 +13,7 @@ Dieses Paket ist der Rahmen (`python_backend.md`). Fachmodule hängen Code in `a
 - vier SQLite-Dateien (`settings`, `help`, `workspace`, `history`), Secrets nur im Tresor
 - pytest
 
-Provider: `ollama` | `xai` | `openai_compat` — kein `lmstudio`.
+Provider in der Oberfläche: `ollama`, `xai`, `openai`, `anthropic`, `gemini`. `openai_compat` bleibt für gespeicherte Graphen und Zugänge gültig, steht aber nicht in den Modell-Auswahlen. Embeddings: `ollama`, `openai`, `gemini`. Kein `lmstudio`.
 
 ## Layout
 
@@ -95,9 +95,10 @@ Per-User, kein Admin. Ziel: `%LOCALAPPDATA%\Programs\Agentus-Network`. Daten: `%
 
 - Fehlt WebView2: Evergreen-Bootstrapper silent (mitgepackt).
 - Fehlt Ollama: Download der offiziellen `OllamaSetup.exe` (URL/SHA256 in `installer/vendor.lock.json`) und Inno silent. Bereits vorhanden → skip.
-- Modelle (GUI, Default an): `nomic-embed-text` und `llama3.2:1b`. Fehlschlag lässt das Setup **erfolgreich** enden.
+- Danach Start im Hintergrund (`ollama app.exe --hide --fast-startup`, sonst `ollama.exe serve`). Kein Warten auf das Ollama-Fenster. `curl.exe` prüft `127.0.0.1:11434` höchstens 15×2 s. Fehlt `curl.exe`, entfällt die Warte. Das Setup geht danach weiter.
+- Modelle (GUI, Default an): `nomic-embed-text` und `llama3.2:1b`, nur wenn Ollama geantwortet hat. Fehlschlag oder Stille lässt das Setup **erfolgreich** enden. Desktop-Verknüpfung ist in der Komponentenliste aus.
 - LM Studio wird nicht installiert.
-- Hilfe-Markdown wird **nicht** vom Setup kopiert; `app/install_seed.py` legt den Korpus beim ersten App-Start an, wenn der Ordner leer ist.
+- Hilfe-Markdown wird **nicht** vom Setup kopiert. `app/install_seed.py` kopiert fehlende Dateien aus `resources/help_docs/` beim App-Start und überschreibt vorhandene Dateien nicht.
 
 Silent (keine UI, keine Modell-Pulls):
 

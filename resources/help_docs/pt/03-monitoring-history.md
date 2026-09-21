@@ -15,13 +15,15 @@ Uma entrada de histórico ainda a correr é só um salto para a Monitorização 
 
 ## Monitorização sem execução
 
-Estado vazio: **Sem execução** — inicia no cabeçalho. Mostra a rede ativa ou o aviso de que a seleção rápida está vazia. Desligado / erro / a iniciar / a parar têm textos próprios. Os últimos valores podem ficar esbatidos até haver ligação.
+Sem execução ativa a página mostra a **última execução guardada** para leitura (grafo, atividade, registo, chat). Um aviso diz que nada está em direto. A página fica mesmo vazia só se ainda não houver execução guardada: **Sem execução**, mais a rede ativa ou o aviso de que a seleção rápida está vazia. Desligado / erro / a iniciar / a parar têm textos próprios. Enquanto se indexa conhecimento, o aviso de início passa ao nome desse nó. Os últimos valores podem ficar esbatidos até haver ligação.
 
 ## Durante uma execução
 
 Cabeçalho: ID da execução, hora de início, duração, passo aproximado, LLM ativos (local vs nuvem).
 
-**Rede (só leitura):** o mesmo grafo, cores de nó segundo o estado (inativo, à espera, a correr, pronto, erro). Um clique num nó filtra registo/atividade e abre o detalhe (função, estado, espera LLM/ferramenta/entrada, última mensagem, tokens). Sem editar, sem segundo editor.
+**Rede (só leitura):** o mesmo grafo, cores de nó segundo o estado (inativo, à espera, a correr, pronto, erro). Um clique num nó filtra registo/atividade e abre o detalhe (função, estado, espera LLM/ferramenta/entrada/índice, última mensagem, tokens). Sem editar, sem segundo editor.
+
+Se houver conhecimento num agente, o início já mostra a execução durante a indexação: o nó de conhecimento corre com motivo de espera **índice**, o registo nomeia a leitura e os embeddings, e o cabeçalho e o painel mostram o mesmo nome. Um índice já atual é saltado e só anotado como atual.
 
 **Atividade:** nós atuais, progresso «passo x de y», tokens entrada/saída, janela de contexto opcional.
 
@@ -29,7 +31,7 @@ Cabeçalho: ID da execução, hora de início, duração, passo aproximado, LLM 
 
 ## Chat da rede (monitorização)
 
-Separador **Chat**: mensagens para a **entrada de chat** do grafo em execução. Só ativo enquanto a execução corre. «Entrada necessária» no nó de chat: o grafo espera a primeira linha.
+Separador **Chat**: conversa do grafo em execução. Só ativo enquanto a execução corre. Sem orquestrador o chat espera a primeira linha e passa-a à cadeia. Com orquestrador falas só com ele. As perguntas ficam abertas na mesma execução. Os textos dos agentes e as ordens internas não aparecem aqui.
 
 Isto **não** é a bolha de ajuda. Histórico e ferramentas são os da rede.
 

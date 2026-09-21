@@ -15,7 +15,7 @@ Der Editor unter **Netzwerk** bearbeitet **ein** Graph-Dokument. Die **Verwaltun
 
 Oben das **Ribbon**: Neu, Speichern, Speichern unter, Laden, Duplizieren, Export, Validieren, Rückgängig/Wiederherstellen, Ansicht (Einpassen, Raster, Rasterfang, Minikarte), Zur Verwaltung.
 
-Mitte: **Palette** (links), **Canvas**, **Inspector** (rechts). Auf schmalen Screens sind Palette und Inspector Schubladen.
+Mitte: **Palette** (links), **Canvas**, **Inspector** (rechts). Auf dem Desktop lassen sich Palette und Inspector einklappen. Auf schmalen Screens sind sie Schubladen. Ein leeres Netz zeigt nur den Hinweis, den ersten Knoten aus der Palette auf die Fläche zu ziehen. Die Kanten sind geschwungene Kurven, wie in Monitoring und Historie.
 
 Knoten per Ziehen aus der Palette. Karten bleiben kompakt; Formulare stehen im Inspector. Mehrfachauswahl mit Umschalt oder Gummiband. Entf löscht Auswahl. Rückgängig: Strg+Z.
 
@@ -29,7 +29,7 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 | Orchestrator | `orchestrator` | Stimme im Lauf-Chat. Eingänge **Nachricht** und **LLM**. Pro Agent ein Ausgang **Kanal**. **Nachricht** nur zum **Ende** (oder Router). **Höchstens einer.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel), Modell, Zugang für Cloud, Temperature, Token-Limit. Ausgang **LLM**. |
 | Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen, optional **Kanal**. Ausgänge Nachricht und Übergabe. Der Kanal kommt nur vom Orchestrator. Ohne Kanal läuft der Agent einmal über die Nachricht. |
-| Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner — oder **MCP**. Ausgang **Werkzeug**. |
+| Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff — oder **MCP**. Ausgang **Werkzeug**. |
 | Wissen | `knowledge` | Ordner mit Dateien für das Netz. Ausgang **Wissen**, nur zum Agent-Anschluss Wissen. |
 | Router | `router` | Verzweigt die Nachricht nach Bedingungen (erste Zeile / benannte Zweige) plus Standard-Ausgang. |
 | Ende | `end` | Abschluss. **Mindestens eines.** |
@@ -54,9 +54,9 @@ Kein Knoten gewählt: Name, Beschreibung, Tags, Statistik, Validierungsliste des
 Knoten gewählt:
 
 - **LLM:** Provider, Modell (Liste von der Runtime), Zugang für Cloud, Ping, erweitert Temperature / max. Tokens. Cloud ohne Zugang ist ungültig.
-- **Agent:** nur Systemprompt und Anzeigename.
-- **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. MCP: aktivierter Server aus den Einstellungen; Standard alle Tools dieses Servers.
-- **Wissen:** Quellenordner (Ordnerwahl), topK, Score-Schwelle, **Index neu**. Der Ordner muss **unter dem Datenordner** liegen, darf nicht die Laufwerkswurzel sein und nicht der Hilfe-Korpus.
+- **Agent:** Systemprompt und Anzeigename. Hängt der Agent an einem Kanal, erklärt der Inspector, dass Aufträge vom Orchestrator kommen.
+- **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. Dateizugriff: Wurzelordner, nicht die Laufwerkswurzel; der Agent arbeitet nur darunter, Schreiben und Löschen sind Schalter. MCP: aktivierter Server aus den Einstellungen; Standard alle Tools dieses Servers.
+- **Wissen:** Quellenordner (Ordnerwahl), Embedding-Provider (Ollama, OpenAI oder Gemini) und Embedding-Modell, topK, Score-Schwelle, **Index neu**. Der Ordner darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Cloud-Embeddings brauchen einen Zugang. Der Index gehört zu diesem Netz, nicht zur Hilfe.
 - **Chat:** Platzhalter, Starttext, Schalter „Eingabe nötig“.
 - **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Die Agenten sind die Kanäle, keine zweite Liste.
 - **Router:** benannte Zweige (Name + Bedingung) und Standard.
@@ -72,7 +72,7 @@ Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Expo
 - jeder Agent: genau eine LLM-Kante. Ohne Orchestrator eine eingehende Nachricht. Mit Orchestrator genau ein Kanal und keine Nachrichten-Kette am selben Agenten
 - LLM: Modell gesetzt; Cloud: Zugang
 - Werkzeug: Art; MCP: aktiver Server, Wurzelpfad wenn das Rezept ihn braucht
-- Wissen: Pfad, Sandbox, nicht Hilfe-Korpus
+- Wissen: Pfad gesetzt, keine Wurzel, nicht der Hilfe-Korpus, Embedding-Zugang wenn der Provider ihn braucht
 - keine hängenden Kanten, keine Zyklen, passende Anschlusstypen
 
 Gültig/Ungültig siehst du als Badge. Ungültige Netze lassen sich speichern, aber schlecht starten.

@@ -2,7 +2,7 @@
 
 Agentus Network **yerel bir masaüstü uygulamasıdır**. Bu PC’de ajan, dil modeli ve araçlardan ağlar kurar, **bir** çalıştırma başlatır ve canlı izlersin. Arayüz uygulamanın kendisine aittir (kendi penceresi); Chrome veya bir `file://` sayfası değildir.
 
-Ollama **ayrı bir hizmettir**. Agentus Network’ü kapatmak veya kaldırmak Ollama’yı durdurmaz ve modelleri silmez.
+Ollama **ayrı bir hizmettir**. Agentus Network’ü kapatmak veya kaldırmak Ollama’yı durdurmaz ve modelleri silmez. Ollama bu PC’de kuruluysa, Ayarlar’daki adres yerel ise ve hizmet kapalıysa uygulama pencere açılınca onu başlatır.
 
 ## Pencere ve gezinme
 
@@ -22,7 +22,7 @@ Logoyu veya boş başlığı sürükleyerek pencereyi taşırsın. Başlat, Durd
 
 ## İlk tur
 
-1. Ollama çalışıyor olmalı (kurucu onu oluşturup küçük modeller `nomic-embed-text` ve `llama3.2:1b`’yi çekebilir).
+1. Ollama’ya erişilebilmeli. Kurulu ama kapalıysa uygulama yerel hizmeti kendisi başlatır. Kurulum Ollama’yı oluşturabilir, kısa süre arka planda başlatabilir ve küçük modeller `nomic-embed-text` ile `llama3.2:1b`’yi yalnız Ollama yanıt verirse çeker. Model anahtarı olmayan sessiz kurulum hiçbir şey indirmez. Başarısız bir indirme kurulumu yine de başarıyla bitirir.
 2. **Ayarlar → Çalışma zamanı** altında bağlantıyı denetle; model listesi boş olmamalı.
 3. **Ayarlar → Yardım sohbeti** altında sağlayıcı ve sohbet modelini ayarla (varsayılan: Ollama + `llama3.2:1b`). Gömme **başka** bir modeldir (`nomic-embed-text`).
 4. **Kitaplıkta** veya düzenleyicide bir ağ oluştur, kaydet, hızlı seçimde **etkin yap**.
@@ -34,16 +34,18 @@ Kontrol paneli eksik adımları kurulum kartları olarak gösterir.
 
 Düzenleyicide (**Ağ**) en az:
 
-1. **Sohbet girişi** (`chat_input`) — en fazla bir
+1. **Sohbet** (`chat_input`) — en fazla bir
 2. **Ajan** — sistem istemi
 3. **LLM** — sağlayıcı ve model
 4. **Son** (`end`) — en az bir
 
 Bağlantılar (tipli bağlantı noktaları, rastgele oklar değil):
 
-- Sohbet girişi **İleti** → Ajan **İleti**
+- Sohbet **İleti** → Ajan **İleti**
 - LLM **LLM** → Ajan **LLM**
 - Ajan **İleti** → Son
+
+İsteğe bağlı **Orkestratör**: sohbet yalnız orkestratöre, bir LLM orkestratöre, orkestratörden her ajanın kanalına bir **Kanal** ve orkestratörden **Son**’a **İleti**. Çalıştırma sohbetinin tek sesidir, soru sorar ve ajanları teker teker çağırır. Ajan metinleri ve iç komutlar baloncuk olarak görünmez. Uygulama son ajan sonucunu sonraki göreve ekler; sohbete yapıştırman gerekmez. Sohbet, çalıştırmayı bitirene kadar açık kalır. Orkestratör yoksa her ajan ileti ve devretme üzerinden kendi zinciridir. Bir ajan ya kanaldadır ya zincirdedir, ikisinde birden değil.
 
 İsteğe bağlı: **Araç** ajanın **Araç** bağlantı noktasına, **Bilgi** **Bilgi**’ye. Kaydet. **Kitaplıkta** hızlı seçim henüz değilse «Etkin yap».
 
@@ -63,16 +65,16 @@ Pencereyi kapatmak çalıştırmayı ve uygulamayı bitirir. Ollama yaşamaya de
 
 Sağ alt: baloncuk = **uygulama yardımı** (bu kılavuz, grafik terimleri, isteğe bağlı web araması). Karşılama ilk açılışta açıklar.
 
-**İzleme**’de **Sohbet** sekmesi = grafiğin **çalıştırma sohbeti** (sohbet girişi düğümü). Ajan ağıyla konuşur.
+**İzleme**’de **Sohbet** sekmesi = grafiğin **çalıştırma sohbeti** (Sohbet düğümü). Orkestratör yoksa ajanlara giriştir. Orkestratör varken konuşmadır: ajan çağırmadan önce sana sorabilir.
 
 İkisi **geçmiş**, araç veya kimlik bilgisi paylaşmaz. Yardım **hiçbir** MCP sunucusu kullanmaz.
 
 ## Ollama ve bulut
 
 - **Yerel:** Ollama, Ayarlar’da çalışma zamanı. Modelleri orada listeler ve dener. Uygulama çalışma anında sessizce model **indirmez**.
-- **Bulut:** kimlik bilgileri **Ayarlar → Kimlik bilgileri** (xAI, OpenAI uyumlu, web araması, …). Listeler yalnızca bir **maske** gösterir, sırrı asla. LLM düğümleri ve yardım grafikte anahtarla değil, adla kimlik bilgisine işaret eder.
+- **Bulut:** kimlik bilgileri **Ayarlar → Kimlik bilgileri** (xAI, OpenAI, Claude, Gemini, web araması, …). LLM düğümünde Ollama, xAI, OpenAI, Claude veya Gemini seçersin. Uygun kimlik bilgisi olmayan bulut geçersizdir. Listeler yalnızca bir **maske** gösterir, sırrı asla. LLM düğümleri ve yardım grafikte anahtarla değil, adla kimlik bilgisine işaret eder.
 
-OpenAI uyumlu (örneğin yerel bir sunucu) **Çalışma zamanı** altında temel URL ve çoğu zaman bir kimlik bilgisi ister.
+OpenAI uyumlu bir temel URL artık Çalışma zamanında sunulmaz. Bu türdeki mevcut kimlik bilgileri Kimlik bilgilerinde durur.
 
 ## Tek örnek
 

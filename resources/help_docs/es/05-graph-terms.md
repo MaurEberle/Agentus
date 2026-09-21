@@ -12,27 +12,31 @@ Una pasada del grafo activo. Corre como máximo **una**. Iniciar y detener en el
 
 ## Nodos y aristas
 
-Piezas (entrada de chat, agente, LLM, herramienta, conocimiento, enrutador, fin) y conexiones tipadas. Flechas arbitrarias entre cajas no valen.
+Piezas (chat, orquestador, agente, LLM, herramienta, conocimiento, enrutador, fin) y conexiones tipadas. Flechas arbitrarias entre cajas no valen.
 
 ## Agente
 
-Nodo con prompt de sistema. Modelo, mensaje, herramientas y conocimiento llegan por puertos, no como claves embebidas.
+Nodo con prompt de sistema. Modelo, mensaje, herramientas y conocimiento llegan por puertos. Sin orquestador lo arranca el mensaje, y mensaje o transferencia siguen con la respuesta. Con orquestador cuelga de su propio canal: un encargo entra, un resultado vuelve.
 
 ## Nodo LLM
 
-Elige proveedor y modelo. Local vía Ollama, si no nube o URL compatible con OpenAI más credencial.
+Elige proveedor y modelo. Local vía Ollama; si no, nube más credencial.
 
-## Entrada de chat
+## Chat
 
-Única entrada de texto de usuario en la ejecución. Como máximo una por red. El chat de supervisión escribe aquí.
+Única entrada de texto de usuario en la ejecución. Como máximo una por red. El chat de supervisión escribe aquí. Con orquestador la conversación sigue abierta en varios mensajes.
+
+## Orquestador
+
+Nodo con su propio LLM. Es la única voz del chat de la ejecución, hace preguntas y llama a los agentes conectados de uno en uno por un canal cada uno. Como máximo uno. El chat solo se conecta a él. Su salida de mensaje va a Fin o a un enrutador. No ves los textos de los agentes ni las órdenes internas como burbujas. La app adjunta el último resultado al siguiente encargo. Un agente está en el canal o en la cadena de mensajes.
 
 ## Herramienta
 
-First-party (HTTP, búsqueda web, fecha/hora, calculadora) o MCP. Configuración en el inspector, ejecución solo en el run.
+First-party (HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos) o MCP. El acceso a archivos se queda en una carpeta raíz, no en la raíz de la unidad. Configuración en el inspector, ejecución solo durante el run.
 
 ## Conocimiento (red)
 
-Nodo knowledge: carpeta **bajo** la carpeta de datos de la app. Índice propio, topK y puntuación. **No** es el corpus de ayuda. No es la raíz de la unidad.
+Nodo de conocimiento: una carpeta de textos para la red. Puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Modelo de embeddings propio, índice, topK y puntuación. **No** es el corpus de ayuda. Al iniciar ves la indexación; un índice ya actual se omite.
 
 ## Ayuda-RAG
 
@@ -48,11 +52,11 @@ Model Context Protocol: servidores de herramientas externos. Créalos y actíval
 
 ## Proveedor
 
-`ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (nube, primero la clave API, luego la lista de modelos), `openai_compat` (API HTTP compatible propia, p. ej. LM Studio).
+En la lista: `ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (nube: primero la credencial, luego la lista de modelos). Embeddings: Ollama, OpenAI, Gemini. `openai_compat` sigue valiendo en grafos y credenciales antiguos, pero ya no está en la lista de modelos.
 
 ## Ollama
 
-Servicio aparte para modelos locales. La app es el cliente. El setup puede crear Ollama y dos modelos pequeños por defecto. Cerrar la app deja Ollama en marcha.
+Servicio aparte para modelos locales. La app es el cliente. Si está instalado, la dirección es local y el puerto no responde, la app lo arranca y no lo detiene. El setup puede crear Ollama, esperar un momento y cargar dos modelos pequeños por defecto si responde.
 
 ## Panel, supervisión, historial
 

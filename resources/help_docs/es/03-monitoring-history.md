@@ -15,13 +15,15 @@ Una entrada de historial aún en curso es solo un salto a Supervisión («Ver en
 
 ## Supervisión sin ejecución
 
-Estado vacío: **Sin ejecución** — inicia desde el encabezado. Muestra la red activa o el aviso de que la selección rápida está vacía. Desconectado / error / iniciando / deteniendo tienen textos propios. Los últimos valores pueden quedar atenuados hasta que haya conexión.
+Sin ejecución activa la página muestra la **última ejecución guardada** para leerla (grafo, actividad, registro, chat). Un aviso dice que nada está en vivo. La página queda del todo vacía solo si aún no hay ninguna ejecución guardada: **Sin ejecución**, más la red activa o el aviso de que la selección rápida está vacía. Desconectado / error / iniciando / deteniendo tienen textos propios. Mientras se indexa conocimiento, el aviso de inicio pasa al nombre de ese nodo. Los últimos valores pueden quedar atenuados hasta que haya conexión.
 
 ## Durante una ejecución
 
 Cabecera: ID de ejecución, hora de inicio, duración, paso aproximado, LLM activos (local frente a nube).
 
-**Red (solo lectura):** el mismo grafo, colores de nodo según estado (inactivo, en espera, en curso, listo, error). Un clic en un nodo filtra registro/actividad y abre el detalle (rol, estado, espera LLM/herramienta/entrada, último mensaje, tokens). Sin editar, sin segundo editor.
+**Red (solo lectura):** el mismo grafo, colores de nodo según estado (inactivo, en espera, en curso, listo, error). Un clic en un nodo filtra registro/actividad y abre el detalle (rol, estado, espera LLM/herramienta/entrada/índice, último mensaje, tokens). Sin editar, sin segundo editor.
+
+Si hay conocimiento en un agente, el inicio ya muestra la ejecución mientras se indexa: el nodo de conocimiento corre con motivo de espera **índice**, el registro nombra la lectura y los embeddings, y el encabezado y el panel muestran el mismo nombre. Un índice ya actual se omite y solo se anota como actual.
 
 **Actividad:** nodos actuales, progreso «paso x de y», tokens entrada/salida, ventana de contexto opcional.
 
@@ -29,7 +31,7 @@ Cabecera: ID de ejecución, hora de inicio, duración, paso aproximado, LLM acti
 
 ## Chat de red (supervisión)
 
-Pestaña **Chat**: mensajes a la **entrada de chat** del grafo en ejecución. Solo activo mientras corre la ejecución. «Entrada necesaria» en el nodo de chat: el grafo espera la primera línea.
+Pestaña **Chat**: conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. Las preguntas siguen abiertas en la misma ejecución. Los textos de los agentes y las órdenes internas no se ven aquí.
 
 Esto **no** es la burbuja de ayuda. Historial y herramientas son los de la red.
 

@@ -18,7 +18,7 @@ La misma tarjeta que en **Supervisión**: CPU, memoria y GPU/VRAM **de este PC**
 
 ## Estado
 
-Indica si el servicio está **parado**, **iniciando**, **en ejecución** o **deteniendo**, más la red activa. Con red en marcha: enlace **Supervisión** y opcionalmente «en ejecución desde …». Sin selección rápida: aviso y enlace a la **Biblioteca**.
+Indica si el servicio está **parado**, **iniciando**, **en ejecución** o **deteniendo**, más la red activa. Mientras se indexa conocimiento, el estado dice **Se indexa el conocimiento** y el nombre del nodo. La misma línea está en el botón Iniciar. Con red en marcha: enlace **Supervisión** y opcionalmente «en ejecución desde …». Sin selección rápida: aviso y enlace a la **Biblioteca**.
 
 Iniciar y detener siguen en el **encabezado**, no en esta tarjeta.
 

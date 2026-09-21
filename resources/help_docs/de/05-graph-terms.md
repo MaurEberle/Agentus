@@ -28,15 +28,15 @@ Einziger Einstieg für Nutzertext im Lauf. Höchstens einer pro Netz. Der Monito
 
 ## Orchestrator
 
-Knoten mit eigenem LLM. Er ist die Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende. Die Agentenantworten sieht der Nutzer nicht als eigene Chatblasen.
+Knoten mit eigenem LLM. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende oder an einen Router. Agententexte und interne Aufträge siehst du nicht als Chatblasen. Die App hängt das letzte Ergebnis an den nächsten Auftrag. Ein Agent ist entweder am Kanal oder in der Nachrichtenkette.
 
 ## Werkzeug
 
-First-Party (HTTP, Websuche, Datum/Zeit, Rechner) oder MCP. Konfiguration im Inspector, Ausführung nur im Lauf.
+First-Party (HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff) oder MCP. Dateizugriff bleibt in einem Wurzelordner, nicht auf der Laufwerkswurzel. Konfiguration im Inspector, Ausführung nur im Lauf.
 
 ## Wissen (Netz)
 
-Knowledge-Knoten: Ordner **unter** dem Datenordner der App. Eigener Index, topK und Score. **Nicht** der Hilfe-Korpus. Nicht die Laufwerkswurzel.
+Knowledge-Knoten: ein Ordner mit Texten für das Netz. Er darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Eigenes Embedding-Modell, eigener Index, topK und Score. Beim Start siehst du die Indizierung. Ein schon aktueller Index wird übersprungen.
 
 ## Hilfe-RAG
 
@@ -52,11 +52,11 @@ Model Context Protocol: externe Tool-Server. In den Einstellungen anlegen und ak
 
 ## Provider
 
-`ollama` (lokal), `xai`, `openai`, `anthropic` (Claude), `gemini` (Cloud, API-Key zuerst, dann Modellliste), `openai_compat` (eigene kompatible HTTP-API, z. B. LM Studio).
+In der Auswahl: `ollama` (lokal), `xai`, `openai`, `anthropic` (Claude), `gemini` (Cloud, Zugang zuerst, dann Modellliste). Embeddings: Ollama, OpenAI, Gemini. `openai_compat` bleibt für ältere Graphen und Zugänge gültig, steht aber nicht mehr in der Modell-Auswahl.
 
 ## Ollama
 
-Separater Dienst für lokale Modelle. Die App ist der Client. Setup kann Ollama und zwei kleine Default-Modelle anlegen. Close der App lässt Ollama laufen.
+Separater Dienst für lokale Modelle. Die App ist der Client. Ist er installiert, die Adresse lokal und der Port zu, startet die App ihn und beendet ihn nicht. Das Setup kann Ollama anlegen, kurz auf ihn warten und zwei kleine Default-Modelle laden, wenn er antwortet.
 
 ## Dashboard, Monitoring, Historie
 

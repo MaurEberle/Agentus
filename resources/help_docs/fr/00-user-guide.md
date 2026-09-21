@@ -2,7 +2,7 @@
 
 Agentus Network est une **application de bureau locale**. Sur ce PC tu construis des réseaux d’agents, de modèles de langue et d’outils, tu lances **une** exécution et tu la suis en direct. L’interface appartient à l’app (sa propre fenêtre), pas à Chrome ni à une page `file://`.
 
-Ollama est un **service à part**. Fermer ou désinstaller Agentus Network n’arrête pas Ollama et ne supprime pas les modèles.
+Ollama est un **service à part**. Fermer ou désinstaller Agentus Network n’arrête pas Ollama et ne supprime pas les modèles. S’il est installé sur ce PC, que l’adresse dans Paramètres est locale et que le service est arrêté, l’app le démarre à l’ouverture de la fenêtre.
 
 ## Fenêtre et navigation
 
@@ -22,7 +22,7 @@ Glisse le logo ou l’en-tête vide pour déplacer la fenêtre. Démarrer, Arrê
 
 ## Premier parcours
 
-1. Ollama doit tourner (l’installateur peut le créer et récupérer les petits modèles `nomic-embed-text` et `llama3.2:1b`).
+1. Ollama doit être joignable. L’app démarre elle-même un service local s’il est installé mais arrêté. Le setup peut créer Ollama, le lancer brièvement en arrière-plan et récupérer les petits modèles `nomic-embed-text` et `llama3.2:1b`, seulement s’il répond. Un setup silencieux sans l’option modèles ne télécharge rien. Un téléchargement raté termine quand même le setup avec succès.
 2. Sous **Paramètres → Runtime**, vérifie la connexion ; la liste des modèles ne doit pas être vide.
 3. Sous **Paramètres → Chat d’aide**, choisis le fournisseur et le modèle de chat (défaut : Ollama + `llama3.2:1b`). Les embeddings sont **un autre** modèle (`nomic-embed-text`).
 4. Dans la **Bibliothèque** ou l’éditeur, crée un réseau, enregistre-le et **active-le** dans la sélection rapide.
@@ -34,16 +34,18 @@ Le tableau de bord affiche les étapes manquantes comme cartes de configuration.
 
 Dans l’éditeur (**Réseau**) au moins :
 
-1. **Entrée de chat** (`chat_input`) — au plus une
+1. **Chat** (`chat_input`) — au plus un
 2. **Agent** — invite système
 3. **LLM** — fournisseur et modèle
 4. **Fin** (`end`) — au moins une
 
 Connexions (ports typés, pas de flèches arbitraires) :
 
-- Entrée de chat **Message** → Agent **Message**
+- Chat **Message** → Agent **Message**
 - LLM **LLM** → Agent **LLM**
 - Agent **Message** → Fin
+
+**Orchestrateur** optionnel : le chat seulement vers l’orchestrateur, un LLM vers l’orchestrateur, un **Canal** de l’orchestrateur vers le canal de chaque agent, et **Message** de l’orchestrateur vers **Fin**. Il est la seule voix du chat de l’exécution, pose des questions et appelle les agents un par un. Les textes des agents et les ordres internes n’apparaissent pas comme bulles. L’app joint le dernier résultat à la tâche suivante ; inutile de le coller dans le chat. Le chat reste ouvert jusqu’à ce qu’il termine l’exécution. Sans orchestrateur, chaque agent reste sa propre chaîne via message et transfert. Un agent est soit sur le canal, soit sur la chaîne, jamais les deux.
 
 Optionnel : **Outil** vers le port **Outil** de l’agent, **Connaissances** vers **Connaissances**. Enregistrer. Dans la **Bibliothèque**, « Définir comme actif » si la sélection rapide ne l’est pas encore.
 
@@ -63,16 +65,16 @@ Fermer la fenêtre termine l’exécution et l’app. Ollama continue.
 
 En bas à droite : bulle = **aide de l’app** (ce guide, termes du graphe, recherche web optionnelle). L’onboarding l’explique à la première ouverture.
 
-Dans **Supervision**, l’onglet **Chat** = **chat de l’exécution** du graphe (nœud entrée de chat). Il parle au réseau d’agents.
+Dans **Supervision**, l’onglet **Chat** = **chat de l’exécution** du graphe (nœud Chat). Sans orchestrateur, c’est l’entrée vers les agents. Avec orchestrateur, c’est la conversation : il peut te questionner avant d’appeler un agent.
 
 Ils ne partagent **ni** historique, **ni** outils, **ni** identifiants. L’aide n’utilise **aucun** serveur MCP.
 
 ## Ollama et le cloud
 
 - **Local :** Ollama, dans Paramètres comme Runtime. Tu listes et testes les modèles là. L’app **ne** télécharge **pas** de modèles en silence à l’exécution.
-- **Cloud :** identifiants sous **Paramètres → Identifiants** (xAI, compatible OpenAI, recherche web, …). Les listes n’affichent qu’un **masque**, jamais le secret. Les nœuds LLM et l’aide pointent vers l’identifiant par nom, pas avec la clé dans le graphe.
+- **Cloud :** identifiants sous **Paramètres → Identifiants** (xAI, OpenAI, Claude, Gemini, recherche web, …). Sur le nœud LLM tu choisis Ollama, xAI, OpenAI, Claude ou Gemini. Un cloud sans identifiant adapté est invalide. Les listes n’affichent qu’un **masque**, jamais le secret. Les nœuds LLM et l’aide pointent vers l’identifiant par nom, pas avec la clé dans le graphe.
 
-Compatible OpenAI (par exemple un serveur local) a besoin de l’URL de base sous **Runtime** et souvent d’un identifiant.
+Une URL de base compatible OpenAI n’est plus proposée dans Runtime. Les identifiants de ce type déjà présents restent sous Identifiants.
 
 ## Une instance
 

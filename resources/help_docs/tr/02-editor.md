@@ -15,7 +15,7 @@
 
 Üstte **şerit**: Yeni, Kaydet, Farklı kaydet, Aç, Çoğalt, Dışa aktar, Doğrula, Geri al/Yinele, Görünüm (sığdır, ızgara, hizala, minikart), Kitaplığa.
 
-Orta: **Palet** (sol), **tuval**, **Denetçi** (sağ). Dar ekranlarda palet ve denetçi çekmecedir.
+Orta: **Palet** (sol), **tuval**, **Denetçi** (sağ). Masaüstünde katlanabilirler. Dar ekranlarda çekmecedir. Boş bir ağ yalnızca ilk düğümü paletten tuvale sürükleme ipucunu gösterir. Kenarlar, izleme ve geçmişteki gibi eğridir.
 
 Düğümler paletten sürüklenir. Kartlar kompakt kalır; formlar denetçidedir. Çoklu seçim Shift veya lastikle. Delete seçimi siler. Geri al: Ctrl+Z.
 
@@ -25,11 +25,11 @@ Düğümler paletten sürüklenir. Kartlar kompakt kalır; formlar denetçidedir
 
 | Ad | Tür | Görev |
 |-------------|-----|---------|
-| Sohbet | `chat_input` | Çalışma sohbeti. **En fazla bir.** Çıkış **İleti**. |
-| Orkestratör | `orchestrator` | Sohbetin sesi. Girişler **İleti** ve **LLM**. Ajan başına bir **Kanal** çıkışı. **İleti** yalnız **Bitiş**e. **En fazla bir.** |
-| LLM | `llm` | Sağlayıcı (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI uyumlu), model, bulut kimlik bilgisi, sıcaklık, belirteç sınırı. Çıkış **LLM**. |
+| Sohbet | `chat_input` | Çalışma sohbeti. **En fazla bir.** Çıkış **İleti**. Orkestratör varken sohbet sorular için açık kalır. |
+| Orkestratör | `orchestrator` | Çalıştırma sohbetinin sesi. Girişler **İleti** ve **LLM**. Ajan başına bir **Kanal** çıkışı. **İleti** yalnız **Son** veya yönlendiriciye. **En fazla bir.** |
+| LLM | `llm` | Sağlayıcı (Ollama, xAI, OpenAI, Claude, Gemini), model, bulut kimlik bilgisi, sıcaklık, belirteç sınırı. Çıkış **LLM**. |
 | Ajan | `agent` | Sistem istemi. Girişler İleti, LLM, Araç, Bilgi ve isteğe bağlı **Kanal**. Çıkışlar İleti ve Devretme. Kanal yalnız orkestratörden gelir. Kanalsız ajan ileti üzerinden bir kez çalışır. |
-| Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi — veya **MCP**. Çıkış **Araç**. |
+| Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi — veya **MCP**. Çıkış **Araç**. |
 | Bilgi | `knowledge` | Ağ için dosya klasörü. Çıkış **Bilgi**, yalnızca ajanın Bilgi bağlantı noktasına. |
 | Yönlendirici | `router` | İletiyi koşullara göre ayırır (ilk satır / adlı dallar) artı varsayılan çıkış. |
 | Son | `end` | Bitiş. **En az bir.** |
@@ -38,8 +38,9 @@ Düğümler paletten sürüklenir. Kartlar kompakt kalır; formlar denetçidedir
 
 Yalnızca uyumlu bağlantı noktaları:
 
-- İleti’den İleti’ye (Sohbet → Ajan, Ajan → Son, Ajan → Yönlendirici, yönlendirici dalları → …)
-- LLM çıkışı yalnızca ajan **LLM**’sine — her ajan **tam olarak bir** böyle kenar ister
+- İleti’den İleti’ye (Sohbet → Ajan veya Sohbet → Orkestratör, Ajan → Son, Ajan → Yönlendirici, yönlendirici dalları → …). Orkestratör İleti’yi yalnız Son’a veya bir yönlendiriciye gönderir.
+- Kanaldan kanala (Orkestratör → Ajan). Ajan başına bir bağlantı noktası. Yanıt çalıştırma içinde döner, ikinci kenar gerekmez.
+- LLM çıkışı ajanın veya orkestratörün **LLM**’sine — her ajan ve orkestratör **tam olarak bir** böyle kenar ister
 - Araç çıkışı ajan **Araç**’ına (birden fazla izinli)
 - Bilgi çıkışı yalnızca ajan **Bilgi**’sine
 - Döngüler yasaktır (döngüsüz yönlü grafik)
@@ -53,10 +54,11 @@ Düğüm seçili değil: **açık** ağın adı, açıklaması, etiketleri, ista
 Düğüm seçili:
 
 - **LLM:** sağlayıcı, model (çalışma zamanı listesi), bulut kimlik bilgisi, ping, gelişmiş sıcaklık / en fazla belirteç. Kimlik bilgisi olmadan bulut geçersizdir.
-- **Ajan:** yalnızca sistem istemi ve görünen ad.
-- **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. MCP: Ayarlar’dan etkin sunucu; varsayılan o sunucunun tüm araçları.
-- **Bilgi:** kaynak klasör (klasör seçimi), topK, puan eşiği, **Dizini yenile**. Klasör **veri klasörünün altında** olmalı; sürücü kökü veya yardım derlemi olamaz.
-- **Sohbet girişi:** yer tutucu, başlangıç metni, «Giriş gerekli» anahtarı.
+- **Ajan:** sistem istemi ve görünen ad. Ajan bir kanaldaysa denetçi görevlerin orkestratörden geldiğini açıklar.
+- **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. Dosya erişimi: kök klasör, sürücü kökü değil; ajan yalnız onun altında çalışır, yazma ve silme anahtardır. MCP: Ayarlar’dan etkin sunucu; varsayılan o sunucunun tüm araçları.
+- **Bilgi:** kaynak klasör (klasör seçimi), gömme sağlayıcısı (Ollama, OpenAI veya Gemini) ve gömme modeli, topK, puan eşiği, **Dizini yenile**. Klasör sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Bulut gömmeleri kimlik bilgisi ister. Dizin bu ağa aittir, yardıma değil.
+- **Sohbet:** yer tutucu, başlangıç metni, «Giriş gerekli» anahtarı.
+- **Orkestratör:** sistem istemi. Model bir soru, bir ajanın kanalından tek görev, bir yanıt veya bitiş seçer. Ajanlar kanallardır, ikinci bir liste değil.
 - **Yönlendirici:** adlı dallar (ad + koşul) ve varsayılan.
 
 Sırlar denetçi metnine ve grafik dışa aktarımına **ait değildir** — yalnızca bir kimlik bilgisi seçimi.
@@ -66,11 +68,11 @@ Sırlar denetçi metnine ve grafik dışa aktarımına **ait değildir** — yal
 Şeritteki **Doğrula** şunları da denetler:
 
 - Ad boş değil
-- en fazla bir sohbet girişi, en az bir son
-- her ajan: tam olarak bir LLM kenarı ve gelen bir ileti
+- en fazla bir sohbet, en fazla bir orkestratör, en az bir son
+- her ajan: tam olarak bir LLM kenarı. Orkestratör yoksa gelen bir ileti. Orkestratör varken tam olarak bir kanal ve aynı ajanda ileti zinciri yok
 - LLM: model set; bulut: kimlik bilgisi
-- Araç: tür; MCP: etkin sunucu, tarif kök yolu istiyorsa kök yolu
-- Bilgi: yol, sanal alan, yardım derlemi değil
+- Araç: tür; MCP: etkin sunucu, tarif kök yolu istiyorsa kök yolu; dosya erişimi: sürücü kökü olmayan bir klasör
+- Bilgi: yol dolu, kök değil, yardım derlemi değil, sağlayıcı istiyorsa gömme kimlik bilgisi
 - sarkan kenar yok, döngü yok, uyumlu bağlantı türleri
 
 Geçerli/Geçersiz rozet olarak görünür. Geçersiz ağlar kaydedilebilir ama kötü başlar.

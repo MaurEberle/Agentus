@@ -12,15 +12,15 @@ Schalter **Hilfe-Schaltfläche**: blendet die Sprechblase unten rechts ein oder 
 
 Benannte Geheimnisse für Cloud-Modelle, Websuche und manche MCP-Rezepte. Anlegen: Name, Art, Secret **einmal**. Danach nur noch die **Maske**. Bearbeiten kann das Secret ersetzen (leer = unverändert).
 
-Arten unter anderem: xAI, OpenAI-kompatibel, Websuche, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, Token.
+Arten unter anderem: xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel, Websuche, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, Token.
 
 **Löschen** ist gesperrt, solange Hilfe-Profil, ein Netz (LLM/Tool) oder ein MCP-Server den Zugang nutzt. Zuerst die Zuordnung entfernen.
 
 ## Runtime
 
-**Ollama-Basis-URL** (üblich die lokale Adresse von Ollama) und optional **OpenAI-kompatible Basis-URL**. **Verbindung prüfen** und die **Modellliste** laufen über die App, nicht am Browser vorbei.
+**Ollama-Basis-URL** (üblich die lokale Adresse von Ollama). **Verbindung prüfen** und die **Modellliste** laufen über die App. Die Liste teilt sich in **Normale Modelle** und **Embedding-Modelle**. Ein Modell gilt als Embedding, wenn der Name `embed` enthält. Eine leere Gruppe zeigt **Keine**.
 
-Ohne erreichbares Ollama bleiben lokale LLM-Knoten und die Standard-Hilfe stehen. Modelle installierst du mit Ollama selbst oder beim Setup; die App **pullt** zur Laufzeit nicht still.
+Ist die Adresse lokal und Ollama installiert, aber aus, startet die App den Dienst beim Öffnen und beendet ihn nicht. Ohne erreichbares Ollama bleiben lokale LLM-Knoten und die Standard-Hilfe stehen. Modelle installierst du mit Ollama selbst oder beim Setup; die App **pullt** zur Laufzeit nicht still. Eine OpenAI-kompatible Basis-URL wird hier nicht mehr angeboten.
 
 ## Hilfe-Chatbot
 
@@ -33,9 +33,9 @@ Einzige Stelle für das Hilfe-Widget. Unvollständig ohne Chat-Provider und Chat
 - Websuche an/aus plus Such-Zugang; ohne Zugang bleibt der Chat konfiguriert, die Suche ist aus
 - Verbindung prüfen, Verlauf löschen, **Index neu aufbauen**, Onboarding erneut zeigen
 
-Nach Wechsel des Embedding-Modells oder nach neuen Dateien im Hilfe-Korpus: **Index neu aufbauen**. Der Korpus ist der Ordner für Hilfe-Dokumente im Datenordner, nicht das Netz-Wissen.
+Nach Wechsel des Embedding-Modells oder nach neuen Dateien im Hilfe-Korpus: **Index neu aufbauen**. Der Lauf geht weiter, auch wenn du die Einstellungen verlässt. Ein zweiter Klick startet keinen zweiten Index. Der Korpus ist der Ordner für Hilfe-Dokumente im Datenordner, nicht das Netz-Wissen. Neue mitgelieferte Anleitungen überschreiben Dateien, die schon dort liegen, nicht von selbst.
 
-Die Hilfe nutzt **keine** MCP-Server und **kein** Knowledge der Graphen.
+Die Hilfe antwortet in der Oberflächensprache. Kann das Modell die Sprache nicht, antwortet es auf Englisch. Sie nennt keine Dokumenttitel aus den Anleitungen. Nur eine Websuche zeigt Quellen, und zwar Titel und Adresse. Interne Denkblöcke des Modells erscheinen nicht. Die Hilfe nutzt **keine** MCP-Server und **kein** Knowledge der Graphen.
 
 ## MCP-Server
 

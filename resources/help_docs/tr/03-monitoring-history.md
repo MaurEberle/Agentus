@@ -15,13 +15,15 @@ Hâlâ çalışan bir geçmiş kaydı yalnızca İzleme’ye atlamadır («Canl�
 
 ## Çalıştırma olmadan izleme
 
-Boş durum: **Çalıştırma yok** — başlıktan başlat. Etkin ağı veya hızlı seçimin boş olduğunu gösterir. Bağlantı kesildi / hata / başlıyor / duruyor ayrı metinlere sahiptir. Son değerler bağlantı kurulana kadar soluk kalabilir.
+Etkin çalıştırma yoksa sayfa **son kaydedilen çalıştırmayı** okumak için gösterir (grafik, etkinlik, günlük, sohbet). Bir uyarı hiçbir şeyin canlı olmadığını söyler. Sayfa yalnız hiç çalıştırma kaydı yoksa tamamen boştur: **Çalıştırma yok**, artı etkin ağ veya hızlı seçimin boş olduğu uyarısı. Bağlantı kesildi / hata / başlıyor / duruyor ayrı metinlere sahiptir. Bilgi dizini oluşurken başlangıç uyarısı o düğümün adına döner. Son değerler bağlantı kurulana kadar soluk kalabilir.
 
 ## Çalıştırma sırasında
 
 Üst alan: çalıştırma kimliği, başlangıç saati, süre, kaba adım, etkin LLM’ler (yerel / bulut).
 
-**Ağ (yalnızca okuma):** aynı grafik, duruma göre düğüm renkleri (boşta, bekliyor, çalışıyor, bitti, hata). Bir düğüme tıklamak günlük/etkinliği süzgeçler ve ayrıntıyı açar (rol, durum, LLM/araç/giriş bekleniyor, son ileti, belirteç). Düzenleme yok, ikinci düzenleyici yok.
+**Ağ (yalnızca okuma):** aynı grafik, duruma göre düğüm renkleri (boşta, bekliyor, çalışıyor, bitti, hata). Bir düğüme tıklamak günlük/etkinliği süzgeçler ve ayrıntıyı açar (rol, durum, LLM/araç/giriş/dizin bekleniyor, son ileti, belirteç). Düzenleme yok, ikinci düzenleyici yok.
+
+Bir ajana bilgi bağlıysa başlangıç, dizin oluşurken çalıştırmayı gösterir: bilgi düğümü bekleme nedeni **dizin** ile çalışır, günlük okumayı ve gömmeleri adlandırır, başlık ve kontrol paneli aynı adı gösterir. Zaten güncel bir dizin atlanır ve yalnızca güncel diye not edilir.
 
 **Etkinlik:** geçerli düğümler, «adım x / y» ilerleme, giriş/çıkış belirteçleri, isteğe bağlı bağlam penceresi.
 
@@ -29,7 +31,7 @@ Boş durum: **Çalıştırma yok** — başlıktan başlat. Etkin ağı veya hı
 
 ## Ağ sohbeti (izleme)
 
-**Sohbet** sekmesi: çalışan grafiğin **sohbet girişine** iletiler. Yalnızca çalıştırma sürerken etkin. Sohbet düğümünde «Giriş gerekli»: grafik ilk satırı bekler.
+**Sohbet** sekmesi: çalışan grafiğin konuşması. Yalnızca çalıştırma sürerken etkin. Orkestratör yoksa sohbet ilk satırı bekler ve zincire verir. Orkestratör varken yalnız onunla konuşursun. Sorular aynı çalıştırmada açık kalır. Ajan metinleri ve iç komutlar burada görünmez.
 
 Bu **yardım baloncuğu değildir**. Geçmiş ve araçlar ağındır.
 

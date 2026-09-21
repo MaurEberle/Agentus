@@ -18,7 +18,7 @@ La même carte que sous **Supervision** : CPU, mémoire et GPU/VRAM **de ce PC**
 
 ## Statut
 
-Indique si le service est **arrêté**, **démarre**, **en cours** ou **s’arrête**, plus le réseau actif. Réseau en cours : lien **Supervision** et éventuellement « en cours depuis … ». Sans sélection rapide : mention et lien vers la **Bibliothèque**.
+Indique si le service est **arrêté**, **démarre**, **en cours** ou **s’arrête**, plus le réseau actif. Pendant l’indexation des connaissances, le statut dit **Indexation des connaissances** et le nom du nœud. La même ligne est sur le bouton Démarrer. Réseau en cours : lien **Supervision** et éventuellement « en cours depuis … ». Sans sélection rapide : mention et lien vers la **Bibliothèque**.
 
 Démarrer et arrêter restent dans l’**en-tête**, pas sur cette carte.
 

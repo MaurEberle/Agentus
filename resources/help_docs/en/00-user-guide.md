@@ -2,7 +2,7 @@
 
 Agentus Network is a **local desktop app**. You build networks of agents, language models, and tools on this PC, start **one** run, and watch it live. The UI belongs to the app (its own window), not Chrome and not a `file://` page.
 
-Ollama is a **separate service**. Closing or uninstalling Agentus Network does not stop Ollama and does not delete models.
+Ollama is a **separate service**. Closing or uninstalling Agentus Network does not stop Ollama and does not delete models. If Ollama is installed on this PC, the address in Settings is local, and the service is down, the app starts it when the window opens.
 
 ## Window and navigation
 
@@ -22,7 +22,7 @@ Drag the logo or empty header to move the window. Start, Stop, quick select, and
 
 ## First hour
 
-1. Ollama must be running (the installer can set it up and pull the small models `nomic-embed-text` and `llama3.2:1b`).
+1. Ollama must be reachable. The app starts a local service itself when it is installed but down. Setup can install Ollama, start it briefly in the background, and pull the small models `nomic-embed-text` and `llama3.2:1b` — only if Ollama answers. A silent setup without the model switch pulls nothing. A failed download still finishes setup successfully.
 2. Under **Settings → Runtime**, ping the connection; the model list should not be empty.
 3. Under **Settings → Help chatbot**, set provider and chat model (default: Ollama + `llama3.2:1b`). Embeddings stay a **different** model (`nomic-embed-text`).
 4. In the **library** or editor, create a network, save it, and set it **active** in quick select.
@@ -34,18 +34,20 @@ The dashboard shows missing steps as setup cards.
 
 In the editor (**Network**) you need at least:
 
-1. **Chat input** (`chat_input`) — at most one
+1. **Chat** (`chat_input`) — at most one
 2. **Agent** — system prompt
 3. **LLM** — provider and model
 4. **End** (`end`) — at least one
 
 Connections (typed ports, not arbitrary arrows):
 
-- Chat input **message** → agent **message**
+- Chat **message** → agent **message**
 - LLM **llm** → agent **llm**
 - Agent **message** → end
 
-Optional: **tool** to the agent **tool** port, **knowledge** to **knowledge**. Save. In the **library**, **Set active** if quick select does not have it yet.
+Optional **orchestrator**: chat only to the orchestrator, an LLM to the orchestrator, one **channel** from the orchestrator to each agent’s channel, and **message** from the orchestrator to **end**. It is the only voice in the run chat, asks follow-ups, and calls agents one at a time. Agent text and internal commands do not appear as chat bubbles. The app attaches the latest agent result to the next task, so you do not paste it into the chat. The chat stays open until the orchestrator finishes the run. Without an orchestrator each agent stays its own chain through message and handoff. An agent is either on a channel or on the chain, never both.
+
+Optional: **tool** on the agent **tool** port, **knowledge** on **knowledge**. Save. In the **library**, **Set active** if quick select does not have it yet.
 
 ## Start and stop
 
@@ -63,16 +65,16 @@ Closing the window ends the run and the app. Ollama keeps running.
 
 Bottom right: the bubble is **in-app help** (this guide, graph terms, optional web search). Onboarding explains that the first time you open it.
 
-In **Monitoring**, the **Chat** tab is **run chat** for the graph (chat-input node). It talks to the agent network.
+In **Monitoring**, the **Chat** tab is **run chat** for the graph (Chat node). Without an orchestrator it is the input to the agents. With an orchestrator it is the conversation: it can ask you before it calls agents.
 
 The two share **no** history, tools, or credentials. Help does **not** use MCP servers.
 
 ## Ollama and cloud
 
 - **Local:** Ollama, configured as Runtime in Settings. List and ping models there. The app does **not** silently pull models at runtime.
-- **Cloud:** credentials under **Settings → Credentials** (xAI, OpenAI-compatible, web search, …). Lists show a **mask** only, never the secret. LLM nodes and help refer to the credential by name, not with the key in the graph.
+- **Cloud:** credentials under **Settings → Credentials** (xAI, OpenAI, Claude, Gemini, web search, …). On an LLM node you choose Ollama, xAI, OpenAI, Claude, or Gemini. Cloud without a matching credential is invalid. Lists show a **mask** only, never the secret. LLM nodes and help refer to the credential by name, not with the key in the graph.
 
-OpenAI-compatible (for example a local server) needs the base URL under **Runtime** and often a credential.
+An OpenAI-compatible base URL is no longer offered under Runtime. Existing credentials of that kind stay visible under Credentials.
 
 ## One instance
 

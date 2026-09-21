@@ -18,7 +18,7 @@ O mesmo cartão que em **Monitorização**: CPU, memória e GPU/VRAM **deste PC*
 
 ## Estado
 
-Mostra se o serviço está **parado**, **a iniciar**, **em execução** ou **a parar**, mais a rede ativa. Com rede a correr: ligação **Monitorização** e opcionalmente «em execução desde …». Sem seleção rápida: aviso e ligação à **Biblioteca**.
+Mostra se o serviço está **parado**, **a iniciar**, **em execução** ou **a parar**, mais a rede ativa. Enquanto o conhecimento é indexado, o estado diz **A indexar conhecimento** e o nome do nó. A mesma linha está no botão Iniciar. Com rede a correr: ligação **Monitorização** e opcionalmente «em execução desde …». Sem seleção rápida: aviso e ligação à **Biblioteca**.
 
 Iniciar e parar ficam no **cabeçalho**, não neste cartão.
 

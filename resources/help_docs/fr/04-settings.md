@@ -12,15 +12,15 @@ Interrupteur **Bouton d’aide** : affiche ou masque la bulle en bas à droite. 
 
 Secrets nommés pour modèles cloud, recherche web et certaines recettes MCP. Créer : nom, type, secret **une fois**. Ensuite seulement le **masque**. Modifier peut remplacer le secret (vide = inchangé).
 
-Types notamment : xAI, compatible OpenAI, recherche web, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, jeton.
+Types notamment : xAI, OpenAI, Claude, Gemini, compatible OpenAI, recherche web, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, jeton.
 
 **Supprimer** est bloqué tant que le profil d’aide, un réseau (LLM/outil) ou un serveur MCP utilise l’identifiant. D’abord retirer l’affectation.
 
 ## Runtime
 
-**URL de base Ollama** (souvent l’adresse locale d’Ollama) et optionnellement **URL de base compatible OpenAI**. **Vérifier la connexion** et la **liste des modèles** passent par l’app, pas par le navigateur.
+**URL de base Ollama** (souvent l’adresse locale d’Ollama). **Vérifier la connexion** et la **liste des modèles** passent par l’app. La liste se partage en **Modèles normaux** et **Modèles d’embeddings**. Un modèle compte comme embedding si le nom contient `embed`. Un groupe vide affiche **Aucun**.
 
-Sans Ollama joignable, les nœuds LLM locaux et l’aide par défaut restent bloqués. Tu installes les modèles avec Ollama ou au setup ; l’app **ne** pull **pas** en silence à l’exécution.
+Si l’adresse est locale et qu’Ollama est installé mais arrêté, l’app démarre le service à l’ouverture et ne l’arrête pas. Sans Ollama joignable, les nœuds LLM locaux et l’aide par défaut restent bloqués. Tu installes les modèles avec Ollama ou au setup ; l’app **ne** pull **pas** en silence à l’exécution. Une URL de base compatible OpenAI n’est plus proposée ici.
 
 ## Chat d’aide
 
@@ -33,9 +33,9 @@ Seul endroit pour le widget d’aide. Incomplet sans fournisseur et modèle de c
 - recherche web on/off plus identifiant de recherche ; sans identifiant le chat reste configuré, la recherche est off
 - vérifier la connexion, effacer l’historique, **reconstruire l’index**, réafficher l’onboarding
 
-Après changement du modèle d’embeddings ou de nouveaux fichiers dans le corpus d’aide : **reconstruire l’index**. Le corpus est le dossier des documents d’aide dans le dossier de données, pas le savoir du réseau.
+Après changement du modèle d’embeddings ou de nouveaux fichiers dans le corpus d’aide : **reconstruire l’index**. Le travail continue si tu quittes Paramètres. Un second clic n’en lance pas un autre. Le corpus est le dossier des documents d’aide dans le dossier de données, pas le savoir du réseau. Les nouveaux guides livrés n’écrasent pas les fichiers déjà présents.
 
-L’aide n’utilise **aucun** serveur MCP ni le knowledge des graphes.
+L’aide répond dans la langue de l’interface. Si le modèle ne peut pas l’utiliser, il répond en anglais. Elle ne cite pas les titres des guides. Seule une recherche web montre des sources, titre et adresse. Les blocs de réflexion internes du modèle restent cachés. L’aide n’utilise **aucun** serveur MCP ni le knowledge des graphes.
 
 ## Serveurs MCP
 

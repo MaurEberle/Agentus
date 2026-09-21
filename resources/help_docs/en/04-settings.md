@@ -12,15 +12,15 @@ Light, dark, or system — applies everywhere, including the header. **Language*
 
 Named secrets for cloud models, web search, and some MCP recipes. Create: name, kind, secret **once**. After that, only the **mask**. Edit can replace the secret (empty = unchanged).
 
-Kinds include: xAI, OpenAI-compatible, web search, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, token.
+Kinds include: xAI, OpenAI, Claude, Gemini, OpenAI-compatible, web search, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, token.
 
 **Delete** is blocked while the help profile, a network (LLM/tool), or an MCP server still uses the credential. Remove the link first.
 
 ## Runtime
 
-**Ollama base URL** (usually Ollama’s local address) and optional **OpenAI-compatible base URL**. **Ping** and the **model list** go through the app, not around the browser.
+**Ollama base URL** (usually Ollama’s local address). **Ping** and the **model list** go through the app. The list splits into **Normal models** and **Embedding models**. A model counts as an embedding when its name contains `embed`. An empty group shows **None**.
 
-Without reachable Ollama, local LLM nodes and default help stall. You install models with Ollama itself or during setup; the app does **not** silently pull at runtime.
+If the address is local and Ollama is installed but down, the app starts the service when the window opens and does not stop it. Without reachable Ollama, local LLM nodes and default help stall. You install models with Ollama itself or during setup; the app does **not** silently pull at runtime. An OpenAI-compatible base URL is no longer offered here.
 
 ## Help chatbot
 
@@ -33,9 +33,9 @@ The only place that configures the help widget. Incomplete without chat provider
 - web search on/off plus a search credential; without a credential the chat stays configured and search stays off
 - ping, clear history, **rebuild index**, show onboarding again
 
-After changing the embedding model or adding files to the help corpus: **rebuild index**. The corpus is the help-documents folder in the data directory, not network knowledge.
+After changing the embedding model or adding files to the help corpus: **rebuild index**. The job keeps running if you leave Settings. A second click does not start a second index. The corpus is the help-documents folder in the data directory, not network knowledge. New bundled guides do not overwrite files that are already there.
 
-Help uses **no** MCP servers and **no** graph knowledge nodes.
+Help answers in the UI language. If the model cannot use that language, it answers in English. It does not name document titles from the guides. Only a web search shows sources, as title and address. Internal thinking blocks from the model are hidden. Help uses **no** MCP servers and **no** graph knowledge nodes.
 
 ## MCP servers
 

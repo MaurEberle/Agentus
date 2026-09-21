@@ -9,7 +9,7 @@ Web-UI-Rahmen (Vite + React) für die lokale Agentnetz-App. Fachmodule hängen i
 - Tailwind CSS + shadcn/ui (New York)
 - Lucide, `next-themes` (light / dark / system)
 - i18next (`de` Default, `en`, `es`, `fr`, `tr`, `pt`, `zh`, `ja`, `ar`)
-- `@xyflow/react` (Dependency + Styles; Editor kommt im Modul-Prompt)
+- `@xyflow/react` (Editor, Monitoring-Graph, Historien-Graph; Kanten sind Bézier)
 - Zustand (`useAppStore`) für Session, Notifications, UI-Prefs
 - TanStack Query für Serverdaten
 - Sonner-Toasts über `notify()`
@@ -44,7 +44,7 @@ Dev-Server: `http://localhost:5173`. API-Proxy: `/api` → `http://127.0.0.1:876
 
 ## React Flow
 
-`@xyflow/react` ist installiert. Styles werden in `src/main.tsx` importiert. Den Canvas nicht in der Shell bauen — das macht `frontend_module_agents.md`.
+`@xyflow/react` ist installiert. Styles werden in `src/main.tsx` importiert. Der Editor liegt in `src/modules/network/canvas/`. Monitoring und Historie zeichnen denselben Graph nur lesend. Alle drei nutzen die Standard-Bézier-Kante, nicht `smoothstep`.
 
 ## Zustand + TanStack Query
 
@@ -74,7 +74,7 @@ notify({
 });
 ```
 
-Toaster sitzt in der Shell (oben rechts ab `md`, unten Mitte auf schmal). Die Glocke zeigt Unread-Badge, Liste, gelesen und leeren.
+Toaster sitzt unten links. Ein Klick auf den Toast oder das Schließen über das X markiert die Benachrichtigung gelesen; reines Ausblenden lässt sie ungelesen. Die Glocke zeigt Unread-Badge, Liste, gelesen und leeren.
 
 ## WebView2-Titelleiste / `chromeHost`
 
