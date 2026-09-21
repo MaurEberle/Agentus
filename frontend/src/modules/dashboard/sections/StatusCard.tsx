@@ -13,6 +13,8 @@ import { useAppStore } from '@/store';
 export function StatusCard() {
   const { t, i18n } = useTranslation();
   const serviceStatus = useAppStore((state) => state.serviceStatus);
+  const phase = useAppStore((state) => state.phase);
+  const phaseLabel = useAppStore((state) => state.phaseLabel);
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
   const activeNetworkName = useAppStore((state) => state.activeNetworkName);
   const { data: session, isLoading } = useSessionQuery();
@@ -36,6 +38,9 @@ export function StatusCard() {
           ) : (
             <p className="text-muted-foreground">{t('dashboard.status.noNetwork')}</p>
           )}
+          {serviceStatus === 'starting' && phase === 'index' && phaseLabel ? (
+            <p className="text-muted-foreground">{t('dashboard.status.indexing', { name: phaseLabel })}</p>
+          ) : null}
           {live && startedAt ? (
             <p className="text-muted-foreground">
               {t('dashboard.status.runningSince', {

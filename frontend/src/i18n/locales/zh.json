@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "启动",
+    "indexing": "正在索引知识：{{name}}",
     "stop": "停止",
     "quickSelect": "快速选择",
     "quickSelectPlaceholder": "选择网络",
@@ -440,7 +441,8 @@
       "noNetwork": "无活动网络",
       "openLibrary": "打开资料库",
       "runningSince": "已运行 {{time}}",
-      "openMonitoring": "监控"
+      "openMonitoring": "监控",
+      "indexing": "正在索引知识：{{name}}"
     },
     "helpHint": {
       "title": "应用内帮助",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "已与服务断开",
       "disconnectedBody": "正在重新连接。上次的值显示为灰色。",
       "startingTitle": "服务正在启动",
+      "indexingTitle": "正在索引知识",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "服务正在停止",
       "errorTitle": "服务错误",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "无等待",
       "llm": "LLM",
       "tool": "工具",
-      "human": "输入"
+      "human": "输入",
+      "index": "索引"
     },
     "activity": {
       "title": "活动",
@@ -1260,6 +1265,13 @@
         "done": "智能体已完成"
       },
       "knowledge": "知识搜索（{{count}} 条结果）",
+      "knowledgeIndex": {
+        "start": "正在读取知识：{{name}}",
+        "embed": "正在索引知识：{{name}}（{{chunks}} 段，{{model}}）",
+        "ready": "知识已就绪：{{name}}",
+        "cached": "知识已是最新：{{name}}",
+        "failed": "知识索引失败：{{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM 已完成（{{durationMs}} ms）"

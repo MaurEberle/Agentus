@@ -8,7 +8,7 @@ from app.common.types import ServiceStatus
 from app.http.app import ApiModel
 
 NodeRuntimeStatus = Literal["idle", "waiting", "running", "done", "error"]
-WaitReason = Literal["none", "llm", "tool", "human"]
+WaitReason = Literal["none", "llm", "tool", "human", "index"]
 LogLevel = Literal["debug", "info", "warn", "error"]
 
 

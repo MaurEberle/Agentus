@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "Start",
+    "indexing": "Wissen wird indiziert: {{name}}",
     "stop": "Stopp",
     "quickSelect": "Schnellwahl",
     "quickSelectPlaceholder": "Netzwerk wählen",
@@ -440,7 +441,8 @@
       "noNetwork": "Kein aktives Netz",
       "openLibrary": "Zur Verwaltung",
       "runningSince": "Läuft seit {{time}}",
-      "openMonitoring": "Monitoring"
+      "openMonitoring": "Monitoring",
+      "indexing": "Wissen wird indiziert: {{name}}"
     },
     "helpHint": {
       "title": "Hilfe zur Anwendung",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "Getrennt vom Dienst",
       "disconnectedBody": "Die Verbindung wird erneut aufgebaut. Letzte Werte sind ausgegraut.",
       "startingTitle": "Dienst startet",
+      "indexingTitle": "Wissen wird indiziert",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "Dienst stoppt",
       "errorTitle": "Dienstfehler",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "Kein Warten",
       "llm": "LLM",
       "tool": "Werkzeug",
-      "human": "Eingabe"
+      "human": "Eingabe",
+      "index": "Index"
     },
     "activity": {
       "title": "Aktivität",
@@ -1260,6 +1265,13 @@
         "done": "Agent fertig"
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
+      "knowledgeIndex": {
+        "start": "Wissen wird gelesen: {{name}}",
+        "embed": "Wissen wird indiziert: {{name}} ({{chunks}} Abschnitte, {{model}})",
+        "ready": "Wissen bereit: {{name}}",
+        "cached": "Wissen ist aktuell: {{name}}",
+        "failed": "Wissen konnte nicht indiziert werden: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM fertig ({{durationMs}} ms)"

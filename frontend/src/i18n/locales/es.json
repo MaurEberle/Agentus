@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "Iniciar",
+    "indexing": "Indexando conocimiento: {{name}}",
     "stop": "Detener",
     "quickSelect": "Selección rápida",
     "quickSelectPlaceholder": "Elegir red",
@@ -440,7 +441,8 @@
       "noNetwork": "Ninguna red activa",
       "openLibrary": "Ir a la biblioteca",
       "runningSince": "En ejecución desde {{time}}",
-      "openMonitoring": "Supervisión"
+      "openMonitoring": "Supervisión",
+      "indexing": "Indexando conocimiento: {{name}}"
     },
     "helpHint": {
       "title": "Ayuda de la aplicación",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "Desconectado del servicio",
       "disconnectedBody": "Reconectando. Los últimos valores se muestran atenuados.",
       "startingTitle": "El servicio está arrancando",
+      "indexingTitle": "Indexando conocimiento",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "El servicio se está deteniendo",
       "errorTitle": "Error del servicio",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "Sin espera",
       "llm": "LLM",
       "tool": "Herramienta",
-      "human": "Entrada"
+      "human": "Entrada",
+      "index": "Índice"
     },
     "activity": {
       "title": "Actividad",
@@ -1260,6 +1265,13 @@
         "done": "Agente finalizado"
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
+      "knowledgeIndex": {
+        "start": "Leyendo conocimiento: {{name}}",
+        "embed": "Indexando conocimiento: {{name}} ({{chunks}} fragmentos, {{model}})",
+        "ready": "Conocimiento listo: {{name}}",
+        "cached": "El conocimiento está al día: {{name}}",
+        "failed": "No se pudo indexar el conocimiento: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM finalizado ({{durationMs}} ms)"

@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "Démarrer",
+    "indexing": "Indexation des connaissances : {{name}}",
     "stop": "Arrêter",
     "quickSelect": "Sélection rapide",
     "quickSelectPlaceholder": "Choisir un réseau",
@@ -440,7 +441,8 @@
       "noNetwork": "Aucun réseau actif",
       "openLibrary": "Ouvrir la bibliothèque",
       "runningSince": "En cours depuis {{time}}",
-      "openMonitoring": "Supervision"
+      "openMonitoring": "Supervision",
+      "indexing": "Indexation des connaissances : {{name}}"
     },
     "helpHint": {
       "title": "Aide de l’application",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "Déconnecté du service",
       "disconnectedBody": "Reconnexion en cours. Les dernières valeurs sont atténuées.",
       "startingTitle": "Le service démarre",
+      "indexingTitle": "Indexation des connaissances",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "Le service s’arrête",
       "errorTitle": "Erreur de service",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "Aucune attente",
       "llm": "LLM",
       "tool": "Outil",
-      "human": "Saisie"
+      "human": "Saisie",
+      "index": "Index"
     },
     "activity": {
       "title": "Activité",
@@ -1260,6 +1265,13 @@
         "done": "Agent terminé"
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
+      "knowledgeIndex": {
+        "start": "Lecture des connaissances : {{name}}",
+        "embed": "Indexation des connaissances : {{name}} ({{chunks}} extraits, {{model}})",
+        "ready": "Connaissances prêtes : {{name}}",
+        "cached": "Les connaissances sont à jour : {{name}}",
+        "failed": "L’indexation des connaissances a échoué : {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM terminé ({{durationMs}} ms)"

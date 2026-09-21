@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "開始",
+    "indexing": "知識を索引しています: {{name}}",
     "stop": "停止",
     "quickSelect": "クイック選択",
     "quickSelectPlaceholder": "ネットワークを選択",
@@ -440,7 +441,8 @@
       "noNetwork": "アクティブなネットワークなし",
       "openLibrary": "ライブラリを開く",
       "runningSince": "{{time}} から実行中",
-      "openMonitoring": "監視"
+      "openMonitoring": "監視",
+      "indexing": "知識を索引しています: {{name}}"
     },
     "helpHint": {
       "title": "アプリ内ヘルプ",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "サービスから切断されました",
       "disconnectedBody": "再接続しています。直近の値は薄く表示されます。",
       "startingTitle": "サービスを開始しています",
+      "indexingTitle": "知識を索引しています",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "サービスを停止しています",
       "errorTitle": "サービスエラー",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "待機なし",
       "llm": "LLM",
       "tool": "ツール",
-      "human": "入力"
+      "human": "入力",
+      "index": "索引"
     },
     "activity": {
       "title": "アクティビティ",
@@ -1260,6 +1265,13 @@
         "done": "エージェントが完了しました"
       },
       "knowledge": "知識検索（{{count}} 件）",
+      "knowledgeIndex": {
+        "start": "知識を読み込んでいます: {{name}}",
+        "embed": "知識を索引しています: {{name}}（{{chunks}} 件、{{model}}）",
+        "ready": "知識の準備ができました: {{name}}",
+        "cached": "知識は最新です: {{name}}",
+        "failed": "知識の索引に失敗しました: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM完了（{{durationMs}} ms）"

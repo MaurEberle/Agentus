@@ -199,9 +199,11 @@ export async function stopActiveRun() {
 }
 
 export function useSessionQuery() {
+  const serviceStatus = useAppStore((state) => state.serviceStatus);
   return useQuery({
     queryKey: ['session'],
     queryFn: getSession,
+    refetchInterval: serviceStatus === 'starting' ? 1000 : false,
   });
 }
 

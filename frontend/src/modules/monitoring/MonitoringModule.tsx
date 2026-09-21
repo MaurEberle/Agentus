@@ -39,7 +39,8 @@ export function MonitoringModule() {
 
   const chat = hasChatInput(run?.graph);
   const empty = !run;
-  const dimmed = serviceStatus === 'disconnected' || serviceStatus === 'starting' || serviceStatus === 'stopping';
+  const dimmed = serviceStatus === 'disconnected' || serviceStatus === 'stopping';
+  const indexingName = indexingNodeName(run);
 
   useEffect(() => {
     if (!chat && tab === 'chat') setTab('log');
@@ -64,6 +65,7 @@ export function MonitoringModule() {
         status={serviceStatus}
         errorMessage={lastErrorMessage}
         adapterErrorKey={adapterErrorKey}
+        indexingName={indexingName}
       />
       {run?.archived ? (
         <Alert>
@@ -151,14 +153,26 @@ function TabButton({
   );
 }
 
+function indexingNodeName(run: { graph: { nodes: Array<{ id: string; type: string; data: { displayName?: string } }> }; nodesRuntime: Record<string, { waitReason?: string }> } | null) {
+  if (!run) return null;
+  const id = Object.entries(run.nodesRuntime).find(([, node]) => node.waitReason === 'index')?.[0];
+  if (!id) return null;
+  const node = run.graph.nodes.find((item) => item.id === id);
+  if (!node) return id;
+  const name = node.data.displayName?.trim();
+  return name || node.type;
+}
+
 function StatusBanner({
   status,
   errorMessage,
   adapterErrorKey,
+  indexingName,
 }: {
   status: ServiceStatus;
   errorMessage: string | null;
   adapterErrorKey: string | null;
+  indexingName: string | null;
 }) {
   const { t } = useTranslation();
   if (status === 'stopped' || status === 'running') {
@@ -182,7 +196,8 @@ function StatusBanner({
   if (status === 'starting') {
     return (
       <Alert>
-        <AlertTitle>{t('monitoring.empty.startingTitle')}</AlertTitle>
+        <AlertTitle>{t(indexingName ? 'monitoring.empty.indexingTitle' : 'monitoring.empty.startingTitle')}</AlertTitle>
+        {indexingName ? <AlertDescription>{t('monitoring.empty.indexingBody', { name: indexingName })}</AlertDescription> : null}
       </Alert>
     );
   }

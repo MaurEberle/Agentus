@@ -23,6 +23,8 @@ export function Header() {
   const { t } = useTranslation();
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
   const serviceStatus = useAppStore((state) => state.serviceStatus);
+  const phase = useAppStore((state) => state.phase);
+  const phaseLabel = useAppStore((state) => state.phaseLabel);
   const { data } = useNetworkOptions();
   const networks = data?.items ?? [];
 
@@ -70,7 +72,11 @@ export function Header() {
               <span className="sr-only md:hidden">{t('shell.start')}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('shell.start')}</TooltipContent>
+          <TooltipContent>
+            {serviceStatus === 'starting' && phase === 'index' && phaseLabel
+              ? t('shell.indexing', { name: phaseLabel })
+              : t('shell.start')}
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>

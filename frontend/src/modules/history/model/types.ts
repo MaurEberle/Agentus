@@ -32,7 +32,7 @@ export type RunStep = {
   role?: string;
   type?: string;
   status: 'idle' | 'waiting' | 'running' | 'done' | 'error';
-  waitReason?: 'none' | 'llm' | 'tool' | 'human';
+  waitReason?: 'none' | 'llm' | 'tool' | 'human' | 'index';
   errorMessage?: string;
 };
 

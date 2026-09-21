@@ -126,6 +126,7 @@ export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
         )}
       >
         {t(`monitoring.nodeStatus.${data.status}`)}
+        {data.waitReason && data.waitReason !== 'none' ? ` · ${t(`monitoring.wait.${data.waitReason}`)}` : ''}
       </p>
       {outs.map((port, index) => (
         <ViewHandle

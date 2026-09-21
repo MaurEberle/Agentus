@@ -55,6 +55,84 @@ def test_start_succeeds_and_teardown_unloads(client: TestClient) -> None:
     assert get_help_degraded() is False
 
 
+def test_knowledge_index_is_visible_while_starting(client: TestClient, tmp_path, monkeypatch) -> None:
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    (folder / "a.md").write_text("# Titel\nText", encoding="utf-8")
+    doc = mini_doc(startMessage="go")
+    doc["nodes"].append(
+        {
+            "id": "kn",
+            "type": "knowledge",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "displayName": "Akten",
+                "sourcePath": str(folder),
+                "embeddingModel": "nomic-embed-text",
+            },
+        }
+    )
+    doc["edges"].append(
+        {
+            "id": "ek",
+            "source": "kn",
+            "sourceHandle": "knowledge",
+            "target": "ag",
+            "targetHandle": "knowledge",
+        }
+    )
+    upsert_network(
+        NetworkRow(
+            id="net-1",
+            name="mini",
+            description=None,
+            tags=[],
+            document=doc,
+            updated_at=utc_now(),
+            last_used_at=None,
+            last_run_id=None,
+        )
+    )
+    patch_settings(AppSettingsPatch(active_network_id="net-1"))
+    seen: dict[str, object] = {}
+
+    def _index(network_id, node, *, data_dir, force=False, on_progress=None):
+        del network_id, data_dir, force
+        if on_progress:
+            on_progress("read", {})
+            on_progress("embed", {"chunks": 2, "model": "nomic-embed-text"})
+        ctrl = get_controller()
+        assert ctrl.snapshot is not None
+        runtime = ctrl.snapshot.nodes_runtime[node.id]
+        seen["status"] = ctrl.service_status
+        seen["wait"] = runtime.wait_reason
+        seen["current"] = list(ctrl.snapshot.activity.current_node_ids)
+        seen["phase"] = ctrl.slice().phase
+        seen["label"] = ctrl.slice().phase_label
+        return "ready"
+
+    monkeypatch.setattr("app.run.controller.index_node", _index)
+    response = client.post("/api/run/start")
+    assert response.status_code == 200, response.json()
+    assert seen == {
+        "status": "starting",
+        "wait": "index",
+        "current": ["kn"],
+        "phase": "index",
+        "label": "Akten",
+    }
+    run_id = response.json()["runId"]
+    thread = get_controller().thread
+    if thread:
+        thread.join(timeout=5)
+    logs = client.get(f"/api/runs/{run_id}/logs").json()["items"]
+    messages = [row["message"] for row in logs]
+    assert "run.knowledgeIndex.start" in messages
+    assert "run.knowledgeIndex.embed" in messages
+    assert "run.knowledgeIndex.ready" in messages
+    assert get_controller().slice().phase is None
+
+
 def test_run_persists_logs_steps_and_chat(client: TestClient) -> None:
     _save_mini(startMessage="go")
     response = client.post("/api/run/start")

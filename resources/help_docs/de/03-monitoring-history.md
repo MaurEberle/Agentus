@@ -21,7 +21,9 @@ Leerzustand: **Kein Lauf** — Starte über die Kopfzeile. Zeigt das aktive Netz
 
 Kopfbereich: Lauf-ID, Startzeit, Dauer, grober Schritt, aktive LLMs (lokal vs. Cloud).
 
-**Netz (nur Lesen):** derselbe Graph, Knotenfarben nach Status (Leerlauf, wartend, läuft, fertig, Fehler). Klick auf einen Knoten filtert Log/Aktivität und öffnet das Knotendetail (Rolle, Status, wartet auf LLM/Werkzeug/Eingabe, letzte Meldung, Token). Kein Bearbeiten, kein zweiter Editor.
+**Netz (nur Lesen):** derselbe Graph, Knotenfarben nach Status (Leerlauf, wartend, läuft, fertig, Fehler). Klick auf einen Knoten filtert Log/Aktivität und öffnet das Knotendetail (Rolle, Status, wartet auf LLM/Werkzeug/Eingabe/Index, letzte Meldung, Token). Kein Bearbeiten, kein zweiter Editor.
+
+Hängt Wissen an einem Agenten, zeigt der Start den Lauf schon während der Indizierung: der Wissensknoten läuft mit Wartegrund **Index**, das Log nennt Lesen und Embeddings, die Kopfzeile und das Dashboard denselben Namen. Ein bereits aktueller Index wird übersprungen und nur kurz als aktuell gemeldet.
 
 **Aktivität:** aktuelle Knoten, Fortschritt „Schritt x von y“, Token ein/aus, optional Kontextfenster.
 

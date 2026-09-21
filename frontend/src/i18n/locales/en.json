@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "Start",
+    "indexing": "Indexing knowledge: {{name}}",
     "stop": "Stop",
     "quickSelect": "Quick select",
     "quickSelectPlaceholder": "Select network",
@@ -440,7 +441,8 @@
       "noNetwork": "No active network",
       "openLibrary": "Open library",
       "runningSince": "Running since {{time}}",
-      "openMonitoring": "Monitoring"
+      "openMonitoring": "Monitoring",
+      "indexing": "Indexing knowledge: {{name}}"
     },
     "helpHint": {
       "title": "In-app help",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "Disconnected from the service",
       "disconnectedBody": "Reconnecting. Last known values are dimmed.",
       "startingTitle": "Service is starting",
+      "indexingTitle": "Indexing knowledge",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "Service is stopping",
       "errorTitle": "Service error",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "None",
       "llm": "LLM",
       "tool": "Tool",
-      "human": "Input"
+      "human": "Input",
+      "index": "Index"
     },
     "activity": {
       "title": "Activity",
@@ -1260,6 +1265,13 @@
         "done": "Agent finished"
       },
       "knowledge": "Knowledge search ({{count}} hits)",
+      "knowledgeIndex": {
+        "start": "Reading knowledge: {{name}}",
+        "embed": "Indexing knowledge: {{name}} ({{chunks}} chunks, {{model}})",
+        "ready": "Knowledge ready: {{name}}",
+        "cached": "Knowledge is up to date: {{name}}",
+        "failed": "Knowledge indexing failed: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)"

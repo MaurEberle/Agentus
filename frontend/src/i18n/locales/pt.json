@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "Iniciar",
+    "indexing": "A indexar conhecimento: {{name}}",
     "stop": "Parar",
     "quickSelect": "Seleção rápida",
     "quickSelectPlaceholder": "Escolher rede",
@@ -440,7 +441,8 @@
       "noNetwork": "Sem rede ativa",
       "openLibrary": "Abrir biblioteca",
       "runningSince": "Em execução desde {{time}}",
-      "openMonitoring": "Monitorização"
+      "openMonitoring": "Monitorização",
+      "indexing": "A indexar conhecimento: {{name}}"
     },
     "helpHint": {
       "title": "Ajuda da aplicação",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "Desligado do serviço",
       "disconnectedBody": "A religar. Os últimos valores estão esbatidos.",
       "startingTitle": "O serviço está a iniciar",
+      "indexingTitle": "A indexar conhecimento",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "O serviço está a parar",
       "errorTitle": "Erro de serviço",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "Sem espera",
       "llm": "LLM",
       "tool": "Ferramenta",
-      "human": "Entrada"
+      "human": "Entrada",
+      "index": "Índice"
     },
     "activity": {
       "title": "Atividade",
@@ -1260,6 +1265,13 @@
         "done": "Agente concluído"
       },
       "knowledge": "Pesquisa de conhecimento ({{count}} resultados)",
+      "knowledgeIndex": {
+        "start": "A ler conhecimento: {{name}}",
+        "embed": "A indexar conhecimento: {{name}} ({{chunks}} trechos, {{model}})",
+        "ready": "Conhecimento pronto: {{name}}",
+        "cached": "O conhecimento está atualizado: {{name}}",
+        "failed": "Não foi possível indexar o conhecimento: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM concluído ({{durationMs}} ms)"

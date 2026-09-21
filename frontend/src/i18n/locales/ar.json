@@ -27,6 +27,7 @@
   },
   "shell": {
     "start": "بدء",
+    "indexing": "تجري فهرسة المعرفة: {{name}}",
     "stop": "إيقاف",
     "quickSelect": "اختيار سريع",
     "quickSelectPlaceholder": "اختر شبكة",
@@ -440,7 +441,8 @@
       "noNetwork": "لا توجد شبكة نشطة",
       "openLibrary": "فتح المكتبة",
       "runningSince": "قيد التشغيل منذ {{time}}",
-      "openMonitoring": "المراقبة"
+      "openMonitoring": "المراقبة",
+      "indexing": "تجري فهرسة المعرفة: {{name}}"
     },
     "helpHint": {
       "title": "مساعدة التطبيق",
@@ -894,6 +896,8 @@
       "disconnectedTitle": "انقطع الاتصال بالخدمة",
       "disconnectedBody": "جارٍ إعادة الاتصال. القيم الأخيرة باهتة.",
       "startingTitle": "الخدمة تبدأ",
+      "indexingTitle": "تجري فهرسة المعرفة",
+      "indexingBody": "{{name}}",
       "stoppingTitle": "الخدمة تتوقف",
       "errorTitle": "خطأ في الخدمة",
       "errorBody": "{{message}}"
@@ -959,7 +963,8 @@
       "none": "لا انتظار",
       "llm": "LLM",
       "tool": "أداة",
-      "human": "إدخال"
+      "human": "إدخال",
+      "index": "فهرس"
     },
     "activity": {
       "title": "النشاط",
@@ -1260,6 +1265,13 @@
         "done": "انتهى الوكيل"
       },
       "knowledge": "بحث المعرفة ({{count}} نتائج)",
+      "knowledgeIndex": {
+        "start": "تُقرأ المعرفة: {{name}}",
+        "embed": "تجري فهرسة المعرفة: {{name}} ({{chunks}} مقاطع، {{model}})",
+        "ready": "المعرفة جاهزة: {{name}}",
+        "cached": "المعرفة محدّثة: {{name}}",
+        "failed": "تعذّرت فهرسة المعرفة: {{name}}"
+      },
       "llm": {
         "start": "LLM {{model}}",
         "done": "انتهى LLM ({{durationMs}} مللي ثانية)"

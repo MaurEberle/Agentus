@@ -5,7 +5,8 @@ import os
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from collections.abc import Callable
+from typing import Any, Literal
 
 from app.db.engine import utc_now
 from app.db.paths import RAG_DIR_NAME
@@ -111,28 +112,19 @@ def index_node(
     *,
     data_dir: str,
     force: bool = False,
+    on_progress: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> Literal["ready", "error"]:
     from app.runtime.embeddings import embed
+
+    def tell(phase: str, **payload: Any) -> None:
+        if on_progress is not None:
+            on_progress(phase, payload)
 
     source = str(node.data.get("sourcePath") or "")
     if not source:
         return "error"
-    root = Path(os.path.realpath(source))
-    files = _safe_files(root, data_dir)
-    digest = hashlib.sha256()
-    texts: list[tuple[str, str | None, str, str]] = []
-    for path in files:
-        raw = _read(path)
-        if not raw.strip():
-            continue
-        file_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-        digest.update(file_hash.encode())
-        title = path.stem
-        for piece in chunk_markdown(raw, title, file_hash):
-            texts.append((piece.title, piece.section, piece.text, piece.file_hash))
     provider, model, credential_id = _embed_args(node)
     existing = get_collection(network_id, node.id)
-    combo = digest.hexdigest()
     if (
         not force
         and existing
@@ -140,7 +132,20 @@ def index_node(
         and existing.embedding_model_id == model
         and existing.source_path == source
     ):
+        tell("cached")
         return "ready"
+    tell("read")
+    root = Path(os.path.realpath(source))
+    files = _safe_files(root, data_dir)
+    texts: list[tuple[str, str | None, str, str]] = []
+    for path in files:
+        raw = _read(path)
+        if not raw.strip():
+            continue
+        file_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        title = path.stem
+        for piece in chunk_markdown(raw, title, file_hash):
+            texts.append((piece.title, piece.section, piece.text, piece.file_hash))
     if not texts:
         upsert_collection(
             CollectionMeta(
@@ -154,7 +159,9 @@ def index_node(
             )
         )
         replace_chunks(network_id, node.id, [])
+        tell("ready", chunks=0)
         return "ready"
+    tell("embed", chunks=len(texts), model=model)
     try:
         result = embed(
             EmbedRequest(
@@ -204,6 +211,7 @@ def index_node(
         )
     )
     replace_chunks(network_id, node.id, chunks)
+    tell("ready", chunks=len(chunks))
     return "ready"
 
 
