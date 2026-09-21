@@ -20,19 +20,19 @@ export function HistoryRibbon({
   const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button type="button" size="sm" variant="outline" onClick={onRefresh} disabled={busy}>
+      <Button type="button" size="sm" variant="outline" onClick={onRefresh} disabled={busy} loading={busy}>
         <RefreshCw className="size-3.5" />
         {t('history.ribbon.refresh')}
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={onDelete} disabled={busy || selectedCount === 0}>
+      <Button type="button" size="sm" variant="outline" onClick={onDelete} disabled={busy || selectedCount === 0} loading={busy}>
         <Trash2 className="size-3.5" />
         {t('history.ribbon.delete')}
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={onExport} disabled={busy || selectedCount === 0}>
+      <Button type="button" size="sm" variant="outline" onClick={onExport} disabled={busy || selectedCount === 0} loading={busy}>
         <Download className="size-3.5" />
         {t('history.ribbon.export')}
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={onPurge} disabled={busy}>
+      <Button type="button" size="sm" variant="outline" onClick={onPurge} disabled={busy} loading={busy}>
         <Clock className="size-3.5" />
         {t('history.ribbon.purge')}
       </Button>

@@ -366,7 +366,7 @@ export function HistoryModule() {
         <Alert variant="destructive">
           <AlertTitle>{t('history.error.api')}</AlertTitle>
           <AlertDescription>
-            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => void refresh()}>
+            <Button type="button" size="sm" variant="outline" className="mt-2" loading={runsQuery.isFetching} onClick={() => void refresh()}>
               {t('history.ribbon.refresh')}
             </Button>
           </AlertDescription>
@@ -445,6 +445,7 @@ export function HistoryModule() {
           body={t('history.delete.body', { count: selectedIds.length })}
           confirm={t('history.delete.confirm')}
           cancel={t('history.delete.cancel')}
+          busy={busy}
           onCancel={() => setDeleteOpen(false)}
           onConfirm={() => void confirmDelete()}
         />
@@ -455,6 +456,7 @@ export function HistoryModule() {
           body={t('history.retention.body', { count: purgePreview.data?.total ?? 0 })}
           confirm={t('history.retention.confirm')}
           cancel={t('history.delete.cancel')}
+          busy={busy}
           onCancel={() => setPurgeOpen(false)}
           onConfirm={() => void confirmPurge()}
         />
@@ -486,6 +488,7 @@ function ConfirmBar({
   body,
   confirm,
   cancel,
+  busy,
   onConfirm,
   onCancel,
 }: {
@@ -493,6 +496,7 @@ function ConfirmBar({
   body: string;
   confirm: string;
   cancel: string;
+  busy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -505,7 +509,7 @@ function ConfirmBar({
           <Button type="button" variant="outline" onClick={onCancel}>
             {cancel}
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
+          <Button type="button" variant="destructive" loading={busy} onClick={onConfirm}>
             {confirm}
           </Button>
         </div>

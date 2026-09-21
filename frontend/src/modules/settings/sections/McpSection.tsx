@@ -83,12 +83,18 @@ export function McpSection() {
     [serversData],
   );
 
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [savingCustom, setSavingCustom] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [pingingId, setPingingId] = useState<string | null>(null);
+
   async function savePreset() {
     if (!preset) return;
     if (preset.recipe.needsRoot && isForbiddenDataRoot(preset.rootPath)) {
       notify({ titleKey: 'settings.data.invalidRoot', variant: 'error' });
       return;
     }
+    setSavingPreset(true);
     try {
       await upsertMcpServer({
         recipeId: preset.recipe.id,
@@ -102,11 +108,14 @@ export function McpSection() {
       setPreset(null);
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+    } finally {
+      setSavingPreset(false);
     }
   }
 
   async function saveCustom() {
     if (!custom?.name.trim()) return;
+    setSavingCustom(true);
     try {
       await upsertMcpServer({
         name: custom.name.trim(),
@@ -120,6 +129,8 @@ export function McpSection() {
       setCustom(null);
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+    } finally {
+      setSavingCustom(false);
     }
   }
 
@@ -209,14 +220,18 @@ export function McpSection() {
                       type="button"
                       size="sm"
                       variant="ghost"
-                      onClick={() =>
-                        void pingMcpServer(server.id).then((result) =>
-                          notify({
-                            titleKey: result.messageKey ?? 'settings.mcp.pingOk',
-                            variant: result.status === 'ok' ? 'success' : 'warning',
-                          }),
-                        )
-                      }
+                      loading={pingingId === server.id}
+                      onClick={() => {
+                        setPingingId(server.id);
+                        void pingMcpServer(server.id)
+                          .then((result) =>
+                            notify({
+                              titleKey: result.messageKey ?? 'settings.mcp.pingOk',
+                              variant: result.status === 'ok' ? 'success' : 'warning',
+                            }),
+                          )
+                          .finally(() => setPingingId(null));
+                      }}
                     >
                       {t('settings.mcp.probe')}
                     </Button>
@@ -285,7 +300,7 @@ export function McpSection() {
             <Button type="button" variant="outline" onClick={() => setPreset(null)}>
               {t('settings.common.cancel')}
             </Button>
-            <Button type="button" onClick={() => void savePreset()}>
+            <Button type="button" onClick={() => void savePreset()} loading={savingPreset}>
               {t('settings.common.save')}
             </Button>
           </DialogFooter>
@@ -361,7 +376,7 @@ export function McpSection() {
             <Button type="button" variant="outline" onClick={() => setCustom(null)}>
               {t('settings.common.cancel')}
             </Button>
-            <Button type="button" onClick={() => void saveCustom()}>
+            <Button type="button" onClick={() => void saveCustom()} loading={savingCustom}>
               {t('settings.common.save')}
             </Button>
           </DialogFooter>
@@ -381,13 +396,17 @@ export function McpSection() {
             <Button
               type="button"
               variant="destructive"
-              onClick={() =>
-                deleteId &&
-                void deleteMcpServer(deleteId).then(() => {
-                  setDeleteId(null);
-                  notify({ titleKey: 'settings.notify.mcpDeleted', variant: 'success' });
-                })
-              }
+              loading={deleting}
+              onClick={() => {
+                if (!deleteId) return;
+                setDeleting(true);
+                void deleteMcpServer(deleteId)
+                  .then(() => {
+                    setDeleteId(null);
+                    notify({ titleKey: 'settings.notify.mcpDeleted', variant: 'success' });
+                  })
+                  .finally(() => setDeleting(false));
+              }}
             >
               {t('settings.common.delete')}
             </Button>

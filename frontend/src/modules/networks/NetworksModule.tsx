@@ -222,7 +222,7 @@ export function NetworksModule() {
           <AlertTitle>{t('networks.error.title')}</AlertTitle>
           <AlertDescription className="flex items-center gap-2">
             {t('networks.error.body')}
-            <Button type="button" size="sm" variant="outline" onClick={() => void query.refetch()}>
+            <Button type="button" size="sm" variant="outline" loading={query.isFetching} onClick={() => void query.refetch()}>
               {t('networks.ribbon.refresh')}
             </Button>
           </AlertDescription>

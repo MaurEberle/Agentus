@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "Agentus Network",
-    "skipToContent": "İçeriğe atla"
+    "skipToContent": "İçeriğe atla",
+    "loading": "Yükleniyor"
   },
   "providers": {
     "ollama": "Ollama",

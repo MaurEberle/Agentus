@@ -62,6 +62,7 @@ export function Header() {
               type="button"
               size="sm"
               disabled={startDisabled}
+              loading={serviceStatus === 'starting'}
               onClick={() => void startActiveRun()}
             >
               <Play className="size-4" />
@@ -78,6 +79,7 @@ export function Header() {
               variant="outline"
               size="sm"
               disabled={stopDisabled}
+              loading={serviceStatus === 'stopping'}
               onClick={() => void stopActiveRun()}
             >
               <Square className="size-4" />

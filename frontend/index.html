@@ -11,6 +11,58 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot-splash" role="status" aria-live="polite">
+      <img src="/app-icon.png" width="64" height="64" alt="" />
+      <div class="boot-spinner" aria-hidden="true"></div>
+      <p>Wird geladen</p>
+    </div>
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        margin: 0;
+        background: hsl(40 20% 98%);
+        color: hsl(240 6% 42%);
+        font: 14px/1.4 system-ui, 'Segoe UI', sans-serif;
+      }
+      #boot-splash img {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+      }
+      #boot-splash p {
+        margin: 0;
+      }
+      .boot-spinner {
+        width: 1.75rem;
+        height: 1.75rem;
+        border: 3px solid hsl(168 70% 28% / 0.25);
+        border-top-color: hsl(168 70% 28%);
+        border-radius: 50%;
+        animation: boot-spin 0.7s linear infinite;
+      }
+      @media (prefers-color-scheme: dark) {
+        #boot-splash {
+          background: hsl(230 16% 7%);
+          color: hsl(230 8% 64%);
+        }
+        .boot-spinner {
+          border-color: hsl(168 55% 48% / 0.25);
+          border-top-color: hsl(168 55% 48%);
+        }
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

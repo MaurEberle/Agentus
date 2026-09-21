@@ -26,6 +26,8 @@ export function Ribbon({
   isActive,
   isRunning,
   readOnly,
+  saving,
+  duplicating,
   onNew,
   onSave,
   onSaveAs,
@@ -40,6 +42,8 @@ export function Ribbon({
   isActive: boolean;
   isRunning: boolean;
   readOnly: boolean;
+  saving?: boolean;
+  duplicating?: boolean;
   onNew: () => void;
   onSave: () => void;
   onSaveAs: () => void;
@@ -77,7 +81,7 @@ export function Ribbon({
         <Button type="button" size="sm" variant="outline" onClick={onNew}>
           {t('network.ribbon.new')}
         </Button>
-        <Button type="button" size="sm" onClick={onSave} disabled={readOnly}>
+        <Button type="button" size="sm" onClick={onSave} disabled={readOnly} loading={saving}>
           <Save />
           {t('network.ribbon.save')}
         </Button>
@@ -88,7 +92,7 @@ export function Ribbon({
           <FolderOpen />
           {t('network.ribbon.load')}
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onDuplicate} disabled={!document.id}>
+        <Button type="button" size="sm" variant="outline" onClick={onDuplicate} disabled={!document.id} loading={duplicating}>
           <Copy />
           {t('network.ribbon.duplicate')}
         </Button>

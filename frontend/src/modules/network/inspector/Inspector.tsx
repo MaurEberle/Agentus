@@ -343,6 +343,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           size="sm"
           variant="outline"
           disabled={pinging || !model || modelLocked}
+          loading={pinging}
           onClick={() => void ping()}
         >
           {t('network.inspector.llm.ping')}
@@ -542,7 +543,7 @@ function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boole
             className="min-w-0 font-mono text-xs"
             onChange={(event) => editorUpdateNodeData(node.id, { rootPath: event.target.value })}
           />
-          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} onClick={() => void pick()}>
+          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} loading={picking} onClick={() => void pick()}>
             {t('network.inspector.tool.pickRoot')}
           </Button>
         </div>
@@ -747,7 +748,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
             className="min-w-0 font-mono text-xs"
             onChange={(event) => editorUpdateNodeData(node.id, { sourcePath: event.target.value })}
           />
-          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} onClick={() => void pick()}>
+          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} loading={picking} onClick={() => void pick()}>
             {t('network.inspector.knowledge.pick')}
           </Button>
         </div>
@@ -774,7 +775,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
         />
       </Field>
       <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.reindexHint')}</p>
-      <Button type="button" size="sm" variant="outline" disabled={!document.id || reindexing} onClick={() => void reindex()}>
+      <Button type="button" size="sm" variant="outline" disabled={!document.id || reindexing} loading={reindexing} onClick={() => void reindex()}>
         {t('network.inspector.knowledge.reindex')}
       </Button>
     </>

@@ -84,10 +84,10 @@ export function RuntimeSection() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={() => void save()} disabled={!dirty || saving}>
+          <Button type="button" onClick={() => void save()} disabled={!dirty || saving} loading={saving}>
             {t('settings.common.save')}
           </Button>
-          <Button type="button" variant="outline" onClick={() => void runPing()} disabled={pinging}>
+          <Button type="button" variant="outline" onClick={() => void runPing()} disabled={pinging} loading={pinging}>
             {t('settings.runtime.ping')}
           </Button>
           <Badge variant={pingStatus === 'ok' ? 'default' : pingStatus === 'error' ? 'destructive' : 'secondary'}>

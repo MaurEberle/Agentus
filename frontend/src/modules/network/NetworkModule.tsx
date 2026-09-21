@@ -97,6 +97,8 @@ function NetworkEditor() {
   const [nameValue, setNameValue] = useState('');
   const [nameMode, setNameMode] = useState<'save' | 'saveAs'>('save');
   const [dirtyAction, setDirtyAction] = useState<DirtyAction | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const pendingLoadId = useRef<string | null>(null);
   const pendingActionRef = useRef<DirtyAction | null>(null);
   const allowLeaveRef = useRef(false);
@@ -250,6 +252,7 @@ function NetworkEditor() {
       setNameOpen(true);
       return false;
     }
+    setSaving(true);
     try {
       const payload = { ...current, name: name || current.name };
       const saved = current.id
@@ -268,10 +271,13 @@ function NetworkEditor() {
     } catch {
       notify({ titleKey: 'network.notify.saveError', variant: 'error' });
       return false;
+    } finally {
+      setSaving(false);
     }
   }, [id, navigate]);
 
   async function saveAsConfirmed(name: string): Promise<boolean> {
+    setSaving(true);
     try {
       const { id: _id, ...rest } = useNetworkEditor.getState().document;
       void _id;
@@ -289,6 +295,8 @@ function NetworkEditor() {
     } catch {
       notify({ titleKey: 'network.notify.saveError', variant: 'error' });
       return false;
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -347,12 +355,15 @@ function NetworkEditor() {
 
   async function duplicate() {
     if (!document.id) return;
+    setDuplicating(true);
     try {
       const copy = await duplicateNetwork(document.id);
       notify({ titleKey: 'network.notify.duplicated', variant: 'success' });
       navigate(`/network/${copy.id}`);
     } catch {
       notify({ titleKey: 'network.notify.saveError', variant: 'error' });
+    } finally {
+      setDuplicating(false);
     }
   }
 
@@ -417,6 +428,8 @@ function NetworkEditor() {
         isActive={isActive}
         isRunning={isRunning}
         readOnly={readOnly}
+        saving={saving}
+        duplicating={duplicating}
         onNew={requestNew}
         onSave={() => void save()}
         onSaveAs={() => {
@@ -553,7 +566,7 @@ function NetworkEditor() {
             <Button type="button" variant="outline" onClick={() => setNameOpen(false)}>
               {t('network.dialog.cancel')}
             </Button>
-            <Button type="button" disabled={!nameValue.trim()} onClick={() => void confirmName()}>
+            <Button type="button" disabled={!nameValue.trim()} loading={saving} onClick={() => void confirmName()}>
               {t('network.ribbon.save')}
             </Button>
           </DialogFooter>
@@ -574,7 +587,7 @@ function NetworkEditor() {
             <Button type="button" variant="outline" onClick={cancelDirtyPrompt}>
               {t('network.dirty.cancel')}
             </Button>
-            <Button type="button" variant="outline" onClick={() => void saveAndContinue()}>
+            <Button type="button" variant="outline" loading={saving} onClick={() => void saveAndContinue()}>
               {t('network.dirty.save')}
             </Button>
             <Button type="button" onClick={discardAndContinue}>

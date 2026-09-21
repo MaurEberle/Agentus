@@ -52,6 +52,7 @@ export function DataSection() {
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [copy, setCopy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   async function chooseFolder() {
     if (busy || readOnly) return;
@@ -66,6 +67,7 @@ export function DataSection() {
 
   async function confirmDir() {
     if (!pendingPath) return;
+    setConfirming(true);
     try {
       await setDataDir({ path: pendingPath, copy });
       notify({ titleKey: 'settings.notify.dataDirOk', variant: 'success' });
@@ -73,6 +75,8 @@ export function DataSection() {
       setCopy(false);
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -165,7 +169,7 @@ export function DataSection() {
             </label>
           ))}
         </RadioGroup>
-        <Button type="button" onClick={() => void saveRetention()} disabled={!dirty || saving}>
+        <Button type="button" onClick={() => void saveRetention()} disabled={!dirty || saving} loading={saving}>
           {t('settings.common.save')}
         </Button>
       </fieldset>
@@ -185,7 +189,7 @@ export function DataSection() {
             <Button type="button" variant="outline" onClick={() => setPendingPath(null)}>
               {t('settings.common.cancel')}
             </Button>
-            <Button type="button" onClick={() => void confirmDir()}>
+            <Button type="button" onClick={() => void confirmDir()} loading={confirming}>
               {t('settings.common.save')}
             </Button>
           </DialogFooter>

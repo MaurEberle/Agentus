@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -16,13 +17,19 @@ export function HelpChatOnboarding({ open, onClose }: { open: boolean; onClose: 
   const { t } = useTranslation();
   const navigate = useNavigate();
   const suppressHelpOnboarding = useAppStore((state) => state.suppressHelpOnboarding);
+  const [finishing, setFinishing] = useState(false);
 
   async function finish(goToSettings: boolean) {
-    await setOnboardingSeen();
-    suppressHelpOnboarding();
-    onClose();
-    if (goToSettings) {
-      navigate({ pathname: '/settings', hash: 'help-chat' });
+    setFinishing(true);
+    try {
+      await setOnboardingSeen();
+      suppressHelpOnboarding();
+      onClose();
+      if (goToSettings) {
+        navigate({ pathname: '/settings', hash: 'help-chat' });
+      }
+    } finally {
+      setFinishing(false);
     }
   }
 
@@ -34,10 +41,10 @@ export function HelpChatOnboarding({ open, onClose }: { open: boolean; onClose: 
           <DialogDescription>{t('helpChat.onboarding.body')}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => void finish(false)}>
+          <Button type="button" variant="outline" loading={finishing} onClick={() => void finish(false)}>
             {t('helpChat.onboarding.later')}
           </Button>
-          <Button type="button" onClick={() => void finish(true)}>
+          <Button type="button" loading={finishing} onClick={() => void finish(true)}>
             {t('helpChat.onboarding.configure')}
           </Button>
         </DialogFooter>
