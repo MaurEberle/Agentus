@@ -14,6 +14,7 @@ from app.help.models import (
     HelpChatStatus,
 )
 from app.help.pipeline import send_stream
+from app.help.visible import strip_think
 from app.help.status import get_status, ping_help_llm
 from app.http.errors import AppError
 from app.http.sse import sse_response
@@ -33,7 +34,7 @@ def _message_from_row(row) -> HelpMessage:
     return HelpMessage(
         id=row.id,
         role=row.role,  # type: ignore[arg-type]
-        content=row.content,
+        content=strip_think(row.content) if row.role == "assistant" else row.content,
         created_at=row.created_at,
         sources=sources,
     )

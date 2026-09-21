@@ -11,6 +11,7 @@ from app.help.index import SCORE_MIN, index_is_ready
 from app.help.models import HelpMessage, HelpSource
 from app.help.prompt import build_user_packet, system_prompt
 from app.help.retrieve import retrieve_scored
+from app.help.visible import ThinkStripper
 from app.help.status import effective_help_model, get_degraded, get_settings_merged, get_status
 from app.http.errors import AppError
 from app.http.sse import sse_event
@@ -123,6 +124,16 @@ def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
         from app.runtime.completions import complete_stream
 
         collected = ""
+        visible = ThinkStripper()
+
+        def _show(chunk: str) -> Iterator[bytes]:
+            nonlocal collected
+            shown = visible.feed(chunk)
+            if not shown:
+                return
+            collected += shown
+            yield sse_event("delta", {"chunk": shown})
+
         try:
             stream = complete_stream(
                 CompletionRequest(
@@ -143,8 +154,7 @@ def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
                 if not isinstance(item, StreamEvent):
                     continue
                 if item.kind == "delta" and item.text:
-                    collected += item.text
-                    yield sse_event("delta", {"chunk": item.text})
+                    yield from _show(item.text)
                 elif item.kind == "error":
                     yield sse_event(
                         "error",
@@ -154,6 +164,10 @@ def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
         except RuntimeApiError as exc:
             yield sse_event("error", {"messageKey": exc.error_key})
             return
+        tail = visible.finish()
+        if tail:
+            collected += tail
+            yield sse_event("delta", {"chunk": tail})
         _save_user()
         assistant = HelpMessage(
             id=str(uuid.uuid4()),

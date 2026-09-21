@@ -186,6 +186,32 @@ def test_user_row_is_stored_when_the_turn_ends(api_env, monkeypatch) -> None:
     assert assistant.sources is None or all(item.get("kind") != "rag" for item in assistant.sources or [])
 
 
+def test_think_blocks_are_omitted_from_the_stream_and_the_row(api_env, monkeypatch) -> None:
+    init()
+    _ready_index()
+    monkeypatch.setattr(
+        "app.help.pipeline.retrieve_scored",
+        lambda q, locale=None: [(1.0, HelpSource(kind="rag", title="g", section="s"), "Absatz.")],
+    )
+
+    def _stream(req: CompletionRequest):
+        yield StreamEvent(kind="delta", text="<think>geheim")
+        yield StreamEvent(kind="delta", text="</think>\n\nDie Palette")
+        yield StreamEvent(kind="done")
+
+    monkeypatch.setattr("app.runtime.completions.complete_stream", _stream)
+    parsed = _parse(list(send_stream("frage", locale="de")))
+    deltas = "".join(data for name, data in parsed if name == "delta")
+    assert "geheim" not in deltas
+    assert "<think>" not in deltas
+    assert "Die Palette" in deltas
+    from app.db.help_chat import list_messages
+
+    assistant = next(row for row in list_messages() if row.role == "assistant")
+    assert assistant.content == "Die Palette"
+    assert "geheim" not in assistant.content
+
+
 def test_masked_secret_persisted(api_env, monkeypatch) -> None:
     init()
     _ready_index()

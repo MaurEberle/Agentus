@@ -22,6 +22,34 @@ def test_send_unconfigured_400(client: TestClient) -> None:
     assert response.json()["messageKey"] == "help.unconfigured"
 
 
+def test_history_hides_stored_think_blocks(client: TestClient) -> None:
+    from app.db.engine import utc_now
+    from app.db.help_chat import HelpMessageRow, insert_message
+
+    insert_message(
+        HelpMessageRow(
+            id="old-assistant",
+            role="assistant",
+            content="<think>intern</think>Sichtbar",
+            created_at=utc_now(),
+            sources=None,
+        )
+    )
+    insert_message(
+        HelpMessageRow(
+            id="old-user",
+            role="user",
+            content="<think>bleibt</think>",
+            created_at=utc_now(),
+            sources=None,
+        )
+    )
+    items = client.get("/api/help-chat/messages").json()["items"]
+    by_id = {item["id"]: item["content"] for item in items}
+    assert by_id["old-assistant"] == "Sichtbar"
+    assert by_id["old-user"] == "<think>bleibt</think>"
+
+
 def test_clear(client: TestClient, monkeypatch) -> None:
     from app.db.help_rag import HelpRagChunk, replace_all_chunks
 

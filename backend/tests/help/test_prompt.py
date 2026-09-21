@@ -7,6 +7,7 @@ def test_unknown_locale_answers_in_english() -> None:
     text = system_prompt("zz")
     assert "APP LANGUAGE: English" in text
     assert "Do not cite help documents" in text
+    assert "Never write a <think> block" in text
 
 
 def test_known_locale_names_the_app_language() -> None:
