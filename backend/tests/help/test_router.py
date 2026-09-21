@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.db.help_rag import list_all_chunks
 from app.db.networks import list_networks
 from app.help.index import corpus_dir
+from app.runtime.errors import RuntimeApiError
 from app.runtime.models import EmbedResult, StreamEvent
 from app.settings.models import AppSettingsPatch
 from app.settings.service import patch_settings
@@ -70,7 +71,26 @@ def test_reindex_tmp_md(client: TestClient, monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json()["state"] == "ready"
     assert len(list_all_chunks()) > 0
+    assert list_all_chunks()[0].embedding_provider == "ollama"
     assert len(list_networks()) == before_networks
+
+
+def test_reindex_reports_unsupported_model(client: TestClient, monkeypatch) -> None:
+    folder = corpus_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "intro.md").write_text("# Hello\nworld", encoding="utf-8")
+
+    def _embed(req: object) -> EmbedResult:
+        del req
+        raise RuntimeApiError("runtime.embedUnsupported", status=501)
+
+    monkeypatch.setattr("app.runtime.embeddings.embed", _embed)
+    response = client.post("/api/help-chat/reindex")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["state"] == "error"
+    assert body["messageKey"] == "help.embed.runnerFailed"
+    assert list_all_chunks() == []
 
 
 def test_status_and_ping(client: TestClient, monkeypatch) -> None:

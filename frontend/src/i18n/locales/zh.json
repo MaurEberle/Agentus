@@ -1265,5 +1265,24 @@
       "timeout": "模型无进展",
       "unreachable": "运行时不可达"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "此模型无法生成文本嵌入。",
+      "runnerFailed": "无法启动嵌入模型。"
+    },
+    "index": {
+      "failed": "帮助索引未能保存。"
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "此模型不支持嵌入。",
+    "timeout": "嵌入请求超时。",
+    "unreachable": "无法连接嵌入服务。",
+    "upstream": "嵌入服务拒绝了请求。",
+    "badRequest": "嵌入请求被拒绝。",
+    "modelNotFound": "未找到嵌入模型。",
+    "missingCredential": "此嵌入模型需要凭据。",
+    "unauthorized": "嵌入凭据被拒绝。"
   }
 }

@@ -1265,5 +1265,24 @@
       "timeout": "Modelden ilerleme yok",
       "unreachable": "Çalışma zamanına erişilemiyor"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "Bu model metin gömmesi üretemiyor.",
+      "runnerFailed": "Gömme modeli başlatılamadı."
+    },
+    "index": {
+      "failed": "Yardım dizini kaydedilemedi."
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "Bu model gömmeleri desteklemiyor.",
+    "timeout": "Gömme isteği zaman aşımına uğradı.",
+    "unreachable": "Gömme hizmetine erişilemiyor.",
+    "upstream": "Gömme hizmeti isteği reddetti.",
+    "badRequest": "Gömme isteği reddedildi.",
+    "modelNotFound": "Gömme modeli bulunamadı.",
+    "missingCredential": "Bu gömme modeli bir kimlik bilgisi gerektiriyor.",
+    "unauthorized": "Gömme kimlik bilgisi reddedildi."
   }
 }

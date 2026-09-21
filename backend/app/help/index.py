@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from pathlib import Path
 from typing import Literal
@@ -12,6 +13,8 @@ from app.help.locales import locale_from_corpus_path
 from app.help.status import get_settings_merged
 from app.runtime.errors import RuntimeApiError
 from app.runtime.models import EmbedRequest
+
+log = logging.getLogger("agentus.help")
 
 DEFAULT_EMBED_MODEL = "nomic-embed-text"
 SCORE_MIN = 0.22
@@ -83,6 +86,7 @@ def _build_chunks() -> list[HelpRagChunk]:
                     embedding_model_id=None,
                     dimension=None,
                     locale=locale,
+                    embedding_provider=None,
                 )
             )
     return built
@@ -122,29 +126,35 @@ def reindex() -> tuple[Literal["ready", "error"], str | None]:
                 model=model,
                 provider=provider,  # type: ignore[arg-type]
                 credential_id=credential_id,
+                timeout_sec=180,
             )
         )
-    except RuntimeApiError:
-        return "error", "help.index.failed"
-    except Exception:
-        return "error", "help.index.failed"
-    if len(result.vectors) != len(chunks):
-        return "error", "help.index.failed"
-    dimension = result.dimension
-    stored: list[HelpRagChunk] = []
-    for chunk, vector in zip(chunks, result.vectors, strict=True):
-        stored.append(
-            HelpRagChunk(
-                id=chunk.id,
-                source=chunk.source,
-                section=chunk.section,
-                text=chunk.text,
-                file_hash=chunk.file_hash,
-                embedding=vector,
-                embedding_model_id=model,
-                dimension=dimension,
-                locale=chunk.locale,
+        if len(result.vectors) != len(chunks):
+            return "error", "help.index.failed"
+        dimension = result.dimension
+        stored: list[HelpRagChunk] = []
+        for chunk, vector in zip(chunks, result.vectors, strict=True):
+            stored.append(
+                HelpRagChunk(
+                    id=chunk.id,
+                    source=chunk.source,
+                    section=chunk.section,
+                    text=chunk.text,
+                    file_hash=chunk.file_hash,
+                    embedding=vector,
+                    embedding_model_id=model,
+                    dimension=dimension,
+                    locale=chunk.locale,
+                    embedding_provider=provider,
+                )
             )
-        )
-    replace_all_chunks(stored)
+        replace_all_chunks(stored)
+    except RuntimeApiError as exc:
+        log.warning("help reindex failed: %s", exc.error_key)
+        if exc.error_key == "runtime.embedUnsupported":
+            return "error", "help.embed.runnerFailed"
+        return "error", exc.error_key
+    except Exception as exc:
+        log.warning("help reindex failed: %s", type(exc).__name__)
+        return "error", "help.index.failed"
     return "ready", None

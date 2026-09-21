@@ -1265,5 +1265,24 @@
       "timeout": "No progress from the model",
       "unreachable": "Runtime unreachable"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "This model cannot produce text embeddings.",
+      "runnerFailed": "The embedding model could not be started."
+    },
+    "index": {
+      "failed": "The help index could not be saved."
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "This model does not support embeddings.",
+    "timeout": "The embedding request timed out.",
+    "unreachable": "The embedding service is unreachable.",
+    "upstream": "The embedding service rejected the request.",
+    "badRequest": "The embedding request was rejected.",
+    "modelNotFound": "The embedding model was not found.",
+    "missingCredential": "This embedding model needs a credential.",
+    "unauthorized": "The embedding credential was rejected."
   }
 }

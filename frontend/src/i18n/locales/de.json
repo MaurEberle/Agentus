@@ -1265,5 +1265,24 @@
       "timeout": "Kein Fortschritt vom Modell",
       "unreachable": "Runtime nicht erreichbar"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "Dieses Modell kann keine Text-Embeddings erzeugen.",
+      "runnerFailed": "Das Embedding-Modell konnte nicht gestartet werden."
+    },
+    "index": {
+      "failed": "Der Hilfe-Index konnte nicht gespeichert werden."
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "Dieses Modell unterstützt keine Embeddings.",
+    "timeout": "Zeitüberschreitung beim Embedding.",
+    "unreachable": "Der Embedding-Dienst ist nicht erreichbar.",
+    "upstream": "Der Embedding-Dienst hat die Anfrage abgelehnt.",
+    "badRequest": "Die Embedding-Anfrage wurde abgelehnt.",
+    "modelNotFound": "Das Embedding-Modell wurde nicht gefunden.",
+    "missingCredential": "Für dieses Embedding-Modell fehlt ein Zugang.",
+    "unauthorized": "Der Zugang für Embeddings wurde abgelehnt."
   }
 }

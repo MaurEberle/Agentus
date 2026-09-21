@@ -1265,5 +1265,24 @@
       "timeout": "Sem progresso do modelo",
       "unreachable": "Runtime inacessível"
     }
+  },
+  "help": {
+    "embed": {
+      "unsupported": "Este modelo não consegue gerar embeddings de texto.",
+      "runnerFailed": "Não foi possível iniciar o modelo de embeddings."
+    },
+    "index": {
+      "failed": "Não foi possível guardar o índice de ajuda."
+    }
+  },
+  "runtime": {
+    "embedUnsupported": "Este modelo não suporta embeddings.",
+    "timeout": "O pedido de embeddings expirou.",
+    "unreachable": "O serviço de embeddings está inacessível.",
+    "upstream": "O serviço de embeddings recusou o pedido.",
+    "badRequest": "O pedido de embeddings foi recusado.",
+    "modelNotFound": "O modelo de embeddings não foi encontrado.",
+    "missingCredential": "Este modelo de embeddings precisa de uma credencial.",
+    "unauthorized": "A credencial de embeddings foi recusada."
   }
 }

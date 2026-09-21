@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ModelCombobox } from '@/components/ModelCombobox';
+import i18n from '@/i18n';
 import { notify } from '@/lib/notifications';
 import {
   clearHelpChatMessages,
@@ -463,12 +464,20 @@ export function HelpChatSection() {
               onClick={() => {
                 setReindexing(true);
                 void reindexHelpChat()
-                  .then((result) =>
+                  .then((result) => {
+                    const failed = result.state !== 'ready';
+                    const reported = result.messageKey;
                     notify({
-                      titleKey: result.state === 'ready' ? 'settings.notify.reindexed' : 'settings.notify.saveError',
-                      variant: result.state === 'ready' ? 'success' : 'error',
-                    }),
-                  )
+                      titleKey:
+                        !failed
+                          ? 'settings.notify.reindexed'
+                          : reported && i18n.exists(reported)
+                            ? reported
+                            : 'help.index.failed',
+                      variant: failed ? 'error' : 'success',
+                    });
+                  })
+                  .catch(() => notify({ titleKey: 'help.index.failed', variant: 'error' }))
                   .finally(() => setReindexing(false));
               }}
             >
