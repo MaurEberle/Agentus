@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import { notify } from '@/lib/notifications';
 import { patchSettings, pingRuntime, useRuntimeModelsQuery, useSettingsQuery } from '@/modules/settings/api';
+import { isEmbeddingModelName, type RuntimeModel } from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useSettingsDraft } from '@/modules/settings/store';
 
@@ -22,6 +23,35 @@ function formatBytes(bytes?: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+function ModelGroup({ title, items }: { title: string; items: RuntimeModel[] }) {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-medium">{title}</h3>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('settings.runtime.modelsGroupEmpty')}</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('settings.runtime.modelName')}</TableHead>
+              <TableHead>{t('settings.runtime.modelSize')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((model) => (
+              <TableRow key={model.name}>
+                <TableCell className="font-mono text-xs">{model.name}</TableCell>
+                <TableCell>{formatBytes(model.sizeBytes)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
 }
 
 export function RuntimeSection() {
@@ -95,27 +125,21 @@ export function RuntimeSection() {
           </Badge>
         </div>
       </div>
-      <div>
-        <h2 className="mb-2 text-sm font-medium">{t('settings.runtime.models')}</h2>
+      <div className="space-y-4">
+        <h2 className="text-sm font-medium">{t('settings.runtime.models')}</h2>
         {(models?.items.length ?? 0) === 0 ? (
           <p className="text-sm text-muted-foreground">{t('settings.runtime.modelsEmpty')}</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('settings.runtime.modelName')}</TableHead>
-                <TableHead>{t('settings.runtime.modelSize')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {models?.items.map((model) => (
-                <TableRow key={model.name}>
-                  <TableCell className="font-mono text-xs">{model.name}</TableCell>
-                  <TableCell>{formatBytes(model.sizeBytes)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <ModelGroup
+              title={t('settings.runtime.modelsChat')}
+              items={(models?.items ?? []).filter((model) => !isEmbeddingModelName(model.name))}
+            />
+            <ModelGroup
+              title={t('settings.runtime.modelsEmbed')}
+              items={(models?.items ?? []).filter((model) => isEmbeddingModelName(model.name))}
+            />
+          </>
         )}
       </div>
     </div>
