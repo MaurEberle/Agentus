@@ -2,7 +2,7 @@
 
 Agentus Network ist eine **lokale Desktop-App**. Du baust auf diesem PC Netze aus Agenten, Sprachmodellen und Werkzeugen, startest **einen** Lauf und siehst ihn live. Die Oberfläche gehört zur App selbst (eigenes Fenster), nicht zu Chrome und nicht zu einer `file://`-Seite.
 
-Ollama ist ein **eigener Dienst** neben der App. Schließen oder Deinstallieren von Agentus Network beendet Ollama nicht und löscht keine Modelle.
+Ollama ist ein **eigener Dienst** neben der App. Schließen oder Deinstallieren von Agentus Network beendet Ollama nicht und löscht keine Modelle. Ist Ollama auf diesem PC installiert, die Adresse in den Einstellungen lokal und der Dienst aus, startet die App ihn beim Öffnen.
 
 ## Fenster und Navigation
 
@@ -22,7 +22,7 @@ Ziehen am Logo oder an leerem Header-Bereich verschiebt das Fenster. Start, Stop
 
 ## Erster Durchgang
 
-1. Ollama muss laufen (Installer kann ihn anlegen und die kleinen Modelle `nomic-embed-text` und `llama3.2:1b` holen).
+1. Ollama muss erreichbar sein. Die App startet einen lokalen Dienst selbst, wenn er installiert, aber aus ist. Das Setup kann Ollama anlegen, ihn kurz im Hintergrund starten und die kleinen Modelle `nomic-embed-text` und `llama3.2:1b` holen — nur, wenn Ollama antwortet. Ein stilles Setup ohne Modell-Schalter lädt keine Modelle. Ein fehlgeschlagener Download beendet das Setup trotzdem erfolgreich.
 2. Unter **Einstellungen → Runtime** Verbindung prüfen; die Modellliste darf nicht leer sein.
 3. Unter **Einstellungen → Hilfe-Chatbot** Provider und Chat-Modell setzen (Default: Ollama + `llama3.2:1b`). Embeddings bleiben ein **anderes** Modell (`nomic-embed-text`).
 4. In der **Verwaltung** oder im Editor ein Netz anlegen, speichern, in der Schnellwahl **als aktiv** setzen.
@@ -45,7 +45,7 @@ Verbindungen (typisierte Anschlüsse, keine beliebigen Pfeile):
 - LLM **LLM** → Agent **LLM**
 - Agent **Nachricht** → Ende
 
-Optional **Orchestrator**: Chat nur an den Orchestrator, LLM an den Orchestrator, pro Agent ein **Kanal** vom Orchestrator an den Kanal des Agenten, **Nachricht** vom Orchestrator an **Ende**. Er spricht im Lauf-Chat, stellt Rückfragen und ruft die Agenten nacheinander auf. Die Antwort eines Agenten bleibt bei ihm. Der Chat bleibt offen, bis er den Lauf beendet. Ohne Orchestrator bleibt jeder Agent eine eigene Kette über Nachricht und Übergabe.
+Optional **Orchestrator**: Chat nur an den Orchestrator, LLM an den Orchestrator, pro Agent ein **Kanal** vom Orchestrator an den Kanal des Agenten, **Nachricht** vom Orchestrator an **Ende**. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die Agenten nacheinander auf. Agententexte und interne Aufträge erscheinen nicht als Chatblasen. Den letzten Agententext hängt die App an den nächsten Auftrag, du musst ihn nicht in den Chat kopieren. Der Chat bleibt offen, bis er den Lauf beendet. Ohne Orchestrator bleibt jeder Agent eine eigene Kette über Nachricht und Übergabe. Ein Agent hängt entweder am Kanal oder an der Kette, nie an beidem.
 
 Optional: **Werkzeug** an den Agent-Anschluss **Werkzeug**, **Wissen** an **Wissen**. Speichern. In der **Verwaltung** „Als aktiv setzen“, wenn die Schnellwahl es noch nicht ist.
 
@@ -72,9 +72,9 @@ Die beiden teilen **keinen** Verlauf, keine Tools und keine Zugänge. Die Hilfe 
 ## Ollama und Cloud
 
 - **Lokal:** Ollama, in den Einstellungen als Runtime. Modelle listest und prüfst du dort. Die App lädt zur Laufzeit **keine** Modelle still nach.
-- **Cloud:** Zugänge unter **Einstellungen → Zugänge** (xAI, OpenAI-kompatibel, Websuche, …). Listen zeigen nur eine **Maske**, nie das Geheimnis. LLM-Knoten und die Hilfe verweisen auf den Zugang per Name, nicht mit dem Schlüssel im Graphen.
+- **Cloud:** Zugänge unter **Einstellungen → Zugänge** (xAI, OpenAI, Claude, Gemini, Websuche, …). Im LLM-Knoten wählst du Ollama, xAI, OpenAI, Claude oder Gemini. Cloud ohne passenden Zugang ist ungültig. Listen zeigen nur eine **Maske**, nie das Geheimnis. LLM-Knoten und die Hilfe verweisen auf den Zugang per Name, nicht mit dem Schlüssel im Graphen.
 
-OpenAI-kompatibel (zum Beispiel ein lokaler Server) braucht die Basis-URL unter **Runtime** und oft einen Zugang.
+Eine eigene OpenAI-kompatible Basis-URL steht in Runtime nicht mehr zur Auswahl. Bestehende Zugänge dieser Art bleiben unter Zugänge sichtbar.
 
 ## Eine Instanz
 

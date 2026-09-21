@@ -15,13 +15,15 @@ A still-running history row is only a jump to monitoring (“View live”).
 
 ## Monitoring with no run
 
-Empty state: **No run** — start from the header. Shows the active network or that quick select is empty. Disconnected / error / starting / stopping have their own copy. Last values may stay greyed out until the connection is back.
+With no active run the page shows the **last saved run** for reading (graph, activity, log, chat). A note says nothing is live. The page is fully empty only when no run has been saved: **No run**, plus the active network or a hint that quick select is empty. Disconnected / error / starting / stopping have their own copy. While knowledge is indexing, the starting hint switches to that node’s name. Last values may stay greyed out until the connection is back.
 
 ## During a run
 
 Header: run id, start time, duration, rough step, active LLMs (local vs cloud).
 
-**Network (read-only):** the same graph, node colours by status (idle, waiting, running, done, error). Click a node to filter log/activity and open node detail (role, status, waiting on LLM/tool/input, last message, tokens). No editing, no second editor.
+**Network (read-only):** the same graph, node colours by status (idle, waiting, running, done, error). Click a node to filter log/activity and open node detail (role, status, waiting on LLM/tool/input/index, last message, tokens). No editing, no second editor.
+
+If knowledge hangs off an agent, start already shows the run while indexing: the knowledge node runs with wait reason **index**, the log names reading and embeddings, and the header and dashboard show the same name. An index that is already current is skipped and only noted as current.
 
 **Activity:** current nodes, progress “step x of y”, tokens in/out, optional context window.
 
@@ -29,7 +31,7 @@ Header: run id, start time, duration, rough step, active LLMs (local vs cloud).
 
 ## Run chat (monitoring)
 
-**Chat** tab: messages into the running graph’s **chat input**. Only while the run is active. If the chat node requires input, the graph waits for the first line.
+**Chat** tab: the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. Follow-ups stay open in the same run. Agent text and internal commands do not appear here.
 
 This is **not** the help bubble. History and tools belong to the network.
 

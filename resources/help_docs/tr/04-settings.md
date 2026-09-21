@@ -12,15 +12,15 @@ Açık, koyu veya sistem — başlık dahil tüm uygulamada geçerlidir. **Dil**
 
 Bulut modelleri, web araması ve bazı MCP tarifleri için adlı sırlar. Oluştur: ad, tür, sır **bir kez**. Sonra yalnızca **maske**. Düzenleme sırrı değiştirebilir (boş = değişmez).
 
-Türler arasında: xAI, OpenAI uyumlu, web araması, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, belirteç.
+Türler arasında: xAI, OpenAI, Claude, Gemini, OpenAI uyumlu, web araması, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, belirteç.
 
 Yardım profili, bir ağ (LLM/araç) veya bir MCP sunucusu kimlik bilgisini kullanırken **Sil** kilitlidir. Önce atamayı kaldır.
 
 ## Çalışma zamanı
 
-**Ollama temel URL’si** (genelde Ollama’nın yerel adresi) ve isteğe bağlı **OpenAI uyumlu temel URL**. **Bağlantıyı denetle** ve **model listesi** tarayıcıdan değil uygulamadan gider.
+**Ollama temel URL’si** (genelde Ollama’nın yerel adresi). **Bağlantıyı denetle** ve **model listesi** uygulamadan gider. Liste **Normal modeller** ve **Gömme modelleri** diye ayrılır. Adında `embed` geçen model gömme sayılır. Boş grup **Yok** gösterir.
 
-Ollama’ya erişilemezse yerel LLM düğümleri ve varsayılan yardım durur. Modelleri Ollama ile veya kurulumda yüklersin; uygulama çalışma anında sessizce **çekmez**.
+Adres yerel ise ve Ollama kurulu ama kapalıysa uygulama pencere açılınca hizmeti başlatır ve durdurmaz. Ollama’ya erişilemezse yerel LLM düğümleri ve varsayılan yardım durur. Modelleri Ollama ile veya kurulumda yüklersin; uygulama çalışma anında sessizce **çekmez**. OpenAI uyumlu bir temel URL burada artık sunulmaz.
 
 ## Yardım sohbeti
 
@@ -33,9 +33,9 @@ Yardım widget’ının tek yeri. Sohbet sağlayıcısı ve modeli olmadan eksik
 - web araması aç/kapa artı arama kimlik bilgisi; kimlik bilgisi olmadan sohbet yapılandırılmış kalır, arama kapalıdır
 - bağlantıyı denetle, geçmişi sil, **dizini yeniden oluştur**, karşılama ekranını yeniden göster
 
-Gömme modelini değiştirdikten veya yardım derlemine yeni dosya ekledikten sonra: **dizini yeniden oluştur**. Derlem, veri klasöründeki yardım belgeleri klasörüdür, ağ bilgisi değildir.
+Gömme modelini değiştirdikten veya yardım derlemine yeni dosya ekledikten sonra: **dizini yeniden oluştur**. Ayarlardan çıksan da iş sürer. İkinci tıklama ikinci bir dizin başlatmaz. Derlem, veri klasöründeki yardım belgeleri klasörüdür, ağ bilgisi değildir. Uygulamayla gelen yeni kılavuzlar orada duran dosyaların üzerine yazmaz.
 
-Yardım **hiçbir** MCP sunucusu ve grafiklerin knowledge’ını kullanmaz.
+Yardım arayüz dilinde yanıtlar. Model o dili kullanamazsa İngilizce yanıtlar. Kılavuzların belge başlıklarını söylemez. Yalnız web araması kaynak gösterir: başlık ve adres. Modelin iç düşünme blokları görünmez. Yardım **hiçbir** MCP sunucusu ve grafiklerin knowledge’ını kullanmaz.
 
 ## MCP sunucuları
 

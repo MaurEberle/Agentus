@@ -2,7 +2,7 @@
 
 Agentus Network es una **aplicación de escritorio local**. En este PC construyes redes de agentes, modelos de idioma y herramientas, inicias **una** ejecución y la ves en vivo. La interfaz pertenece a la propia app (su ventana), no a Chrome ni a una página `file://`.
 
-Ollama es un **servicio aparte**. Cerrar o desinstalar Agentus Network no detiene Ollama ni borra modelos.
+Ollama es un **servicio aparte**. Cerrar o desinstalar Agentus Network no detiene Ollama ni borra modelos. Si Ollama está instalado en este PC, la dirección en Ajustes es local y el servicio está parado, la app lo arranca al abrir la ventana.
 
 ## Ventana y navegación
 
@@ -22,7 +22,7 @@ Arrastra el logotipo o el encabezado vacío para mover la ventana. Iniciar, Dete
 
 ## Primer recorrido
 
-1. Ollama debe estar en marcha (el instalador puede crearlo y traer los modelos pequeños `nomic-embed-text` y `llama3.2:1b`).
+1. Ollama debe ser alcanzable. La app arranca sola un servicio local si está instalado pero parado. El setup puede crear Ollama, iniciarlo un momento en segundo plano y traer los modelos pequeños `nomic-embed-text` y `llama3.2:1b`, solo si Ollama responde. Un setup silencioso sin el interruptor de modelos no descarga nada. Una descarga fallida termina el setup igual con éxito.
 2. En **Ajustes → Runtime** comprueba la conexión; la lista de modelos no debe estar vacía.
 3. En **Ajustes → Chat de ayuda** elige proveedor y modelo de chat (predeterminado: Ollama + `llama3.2:1b`). Los embeddings son **otro** modelo (`nomic-embed-text`).
 4. En la **Biblioteca** o en el editor crea una red, guárdala y **actívala** en la selección rápida.
@@ -34,16 +34,18 @@ El panel muestra los pasos que faltan como tarjetas de configuración.
 
 En el editor (**Red**) al menos:
 
-1. **Entrada de chat** (`chat_input`) — como máximo una
+1. **Chat** (`chat_input`) — como máximo una
 2. **Agente** — prompt de sistema
 3. **LLM** — proveedor y modelo
 4. **Fin** (`end`) — al menos uno
 
 Conexiones (puertos tipados, no flechas arbitrarias):
 
-- Entrada de chat **Mensaje** → Agente **Mensaje**
+- Chat **Mensaje** → Agente **Mensaje**
 - LLM **LLM** → Agente **LLM**
 - Agente **Mensaje** → Fin
+
+**Orquestador** opcional: el chat solo al orquestador, un LLM al orquestador, un **Canal** del orquestador al canal de cada agente y **Mensaje** del orquestador a **Fin**. Es la única voz del chat de la ejecución, hace preguntas y llama a los agentes de uno en uno. Los textos de los agentes y las órdenes internas no aparecen como burbujas. La app adjunta el último resultado al siguiente encargo; no hace falta pegarlo en el chat. El chat sigue abierto hasta que él termina la ejecución. Sin orquestador cada agente es su propia cadena por mensaje y transferencia. Un agente está en el canal o en la cadena, nunca en ambos.
 
 Opcional: **Herramienta** al puerto **Herramienta** del agente, **Conocimiento** a **Conocimiento**. Guardar. En la **Biblioteca**, «Definir como activa» si la selección rápida aún no lo está.
 
@@ -63,16 +65,16 @@ Cerrar la ventana termina la ejecución y la app. Ollama sigue vivo.
 
 Abajo a la derecha: burbuja = **ayuda de la app** (esta guía, términos del grafo, búsqueda web opcional). El onboarding lo explica la primera vez.
 
-En **Supervisión**, la pestaña **Chat** = **chat de la ejecución** del grafo (nodo entrada de chat). Habla con la red de agentes.
+En **Supervisión**, la pestaña **Chat** = **chat de la ejecución** del grafo (nodo Chat). Sin orquestador es la entrada a los agentes. Con orquestador es la conversación: puede preguntarte antes de llamar a un agente.
 
 No comparten **historial**, herramientas ni credenciales. La ayuda **no** usa servidores MCP.
 
 ## Ollama y la nube
 
 - **Local:** Ollama, en Ajustes como Runtime. Allí listas y pruebas modelos. La app **no** descarga modelos en silencio en tiempo de ejecución.
-- **Nube:** credenciales en **Ajustes → Credenciales** (xAI, compatible con OpenAI, búsqueda web, …). Las listas muestran solo una **máscara**, nunca el secreto. Los nodos LLM y la ayuda apuntan a la credencial por nombre, no con la clave en el grafo.
+- **Nube:** credenciales en **Ajustes → Credenciales** (xAI, OpenAI, Claude, Gemini, búsqueda web, …). En el nodo LLM eliges Ollama, xAI, OpenAI, Claude o Gemini. Nube sin credencial adecuada no es válida. Las listas muestran solo una **máscara**, nunca el secreto. Los nodos LLM y la ayuda apuntan a la credencial por nombre, no con la clave en el grafo.
 
-Compatible con OpenAI (por ejemplo un servidor local) necesita la URL base en **Runtime** y a menudo una credencial.
+Una URL base compatible con OpenAI ya no se ofrece en Runtime. Las credenciales de ese tipo que ya existan siguen en Credenciales.
 
 ## Una instancia
 

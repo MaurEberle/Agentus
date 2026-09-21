@@ -15,7 +15,7 @@ L’éditeur sous **Réseau** édite **un** document de graphe. La **Bibliothèq
 
 En haut le **ruban** : Nouveau, Enregistrer, Enregistrer sous, Ouvrir, Dupliquer, Exporter, Valider, Annuler/Rétablir, Affichage (ajuster, grille, magnétisme, mini-carte), Vers la bibliothèque.
 
-Centre : **Palette** (gauche), **canevas**, **Inspecteur** (droite). Sur écrans étroits, palette et inspecteur sont des tiroirs.
+Centre : **Palette** (gauche), **canevas**, **Inspecteur** (droite). Sur le bureau, on peut les replier. Sur écrans étroits, ce sont des tiroirs. Un réseau vide n’affiche que l’indication de glisser le premier nœud de la palette sur le canevas. Les arêtes sont des courbes, comme en supervision et dans l’historique.
 
 Nœuds par glisser depuis la palette. Les cartes restent compactes ; les formulaires sont dans l’inspecteur. Sélection multiple avec Maj ou lasso. Suppr efface la sélection. Annuler : Ctrl+Z.
 
@@ -25,11 +25,11 @@ Pendant que **précisément ce** réseau tourne : bannière **Lecture seule** �
 
 | Nom | Type | Rôle |
 |-------------|-----|---------|
-| Chat | `chat_input` | Conversation de l’exécution. **Au plus un.** Sortie **Message**. |
-| Orchestrateur | `orchestrator` | Voix du chat. Entrées **Message** et **LLM**. Une sortie **Canal** par agent. **Message** seulement vers **Fin**. **Au plus un.** |
-| LLM | `llm` | Fournisseur (Ollama, xAI, OpenAI, Claude, Gemini, compatible OpenAI), modèle, identifiant cloud, température, limite de jetons. Sortie **LLM**. |
+| Chat | `chat_input` | Conversation de l’exécution. **Au plus un.** Sortie **Message**. Avec orchestrateur, le chat reste ouvert pour les questions. |
+| Orchestrateur | `orchestrator` | Voix du chat de l’exécution. Entrées **Message** et **LLM**. Une sortie **Canal** par agent. **Message** seulement vers **Fin** (ou un routeur). **Au plus un.** |
+| LLM | `llm` | Fournisseur (Ollama, xAI, OpenAI, Claude, Gemini), modèle, identifiant cloud, température, limite de jetons. Sortie **LLM**. |
 | Agent | `agent` | Invite système. Entrées Message, LLM, Outil, Connaissances, **Canal** optionnel. Sorties Message et transfert. Le canal vient seulement de l’orchestrateur. Sans canal, l’agent s’exécute une fois via le message. |
-| Outil | `tool` | First-party : HTTP, recherche web, date/heure, calculatrice — ou **MCP**. Sortie **Outil**. |
+| Outil | `tool` | First-party : HTTP, recherche web, date/heure, calculatrice, accès aux fichiers — ou **MCP**. Sortie **Outil**. |
 | Connaissances | `knowledge` | Dossier de fichiers pour le réseau. Sortie **Connaissances**, uniquement vers le port Connaissances de l’agent. |
 | Routeur | `router` | Branche le message selon des conditions (première ligne / branches nommées) plus sortie par défaut. |
 | Fin | `end` | Clôture. **Au moins une.** |
@@ -38,8 +38,9 @@ Pendant que **précisément ce** réseau tourne : bannière **Lecture seule** �
 
 Uniquement des ports compatibles :
 
-- Message vers Message (Chat → Agent, Agent → Fin, Agent → Routeur, branches du routeur → …)
-- Sortie LLM uniquement vers **LLM** de l’agent — chaque agent a besoin d’**exactement une** telle arête
+- Message vers Message (Chat → Agent ou Chat → Orchestrateur, Agent → Fin, Agent → Routeur, branches du routeur → …). L’orchestrateur n’envoie Message qu’à Fin ou à un routeur.
+- Canal vers Canal (Orchestrateur → Agent). Un port par agent. La réponse revient dans l’exécution, sans seconde arête.
+- Sortie LLM vers **LLM** de l’agent ou de l’orchestrateur — chaque agent et l’orchestrateur ont besoin d’**exactement une** telle arête
 - Sortie d’outil vers **Outil** de l’agent (plusieurs autorisées)
 - Sortie de connaissances uniquement vers **Connaissances** de l’agent
 - Les cycles sont interdits (graphe orienté sans boucle)
@@ -53,10 +54,11 @@ Aucun nœud choisi : nom, description, étiquettes, statistiques, liste de valid
 Nœud choisi :
 
 - **LLM :** fournisseur, modèle (liste du runtime), identifiant cloud, ping, avancé température / jetons max. Cloud sans identifiant est invalide.
-- **Agent :** seulement invite système et nom affiché.
-- **Outil :** type. HTTP : méthode et URL, identifiant optionnel. Recherche web : identifiant de type recherche web. MCP : serveur activé dans Paramètres ; par défaut tous les outils de ce serveur.
-- **Connaissances :** dossier source (choix de dossier), topK, seuil de score, **Reconstruire l’index**. Le dossier doit être **sous le dossier de données**, pas la racine d’un lecteur ni le corpus d’aide.
-- **Entrée de chat :** espace réservé, texte de départ, interrupteur « Saisie obligatoire ».
+- **Agent :** invite système et nom affiché. Si l’agent est sur un canal, l’inspecteur explique que les tâches viennent de l’orchestrateur.
+- **Outil :** type. HTTP : méthode et URL, identifiant optionnel. Recherche web : identifiant de type recherche web. Accès aux fichiers : dossier racine, pas la racine d’un lecteur ; l’agent ne travaille qu’en dessous, et écrire et supprimer sont des interrupteurs. MCP : serveur activé dans Paramètres ; par défaut tous les outils de ce serveur.
+- **Connaissances :** dossier source (choix de dossier), fournisseur d’embeddings (Ollama, OpenAI ou Gemini) et modèle d’embeddings, topK, seuil de score, **Reconstruire l’index**. Le dossier peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Les embeddings cloud exigent un identifiant. L’index appartient à ce réseau, pas à l’aide.
+- **Chat :** espace réservé, texte de départ, interrupteur « Saisie obligatoire ».
+- **Orchestrateur :** invite système. Le modèle choisit une question, une tâche vers un agent par son canal, une réponse ou la fin. Les agents sont les canaux, pas une seconde liste.
 - **Routeur :** branches nommées (nom + condition) et défaut.
 
 Les secrets n’appartiennent **pas** au texte de l’inspecteur ni à l’export du graphe — seulement le choix d’un identifiant.
@@ -66,11 +68,11 @@ Les secrets n’appartiennent **pas** au texte de l’inspecteur ni à l’expor
 **Valider** dans le ruban vérifie notamment :
 
 - Nom non vide
-- au plus une entrée de chat, au moins une fin
-- chaque agent : exactement une arête LLM et un message entrant
+- au plus un chat, au plus un orchestrateur, au moins une fin
+- chaque agent : exactement une arête LLM. Sans orchestrateur, un message entrant. Avec orchestrateur, exactement un canal et pas de chaîne de messages sur le même agent
 - LLM : modèle défini ; cloud : identifiant
-- Outil : type ; MCP : serveur actif, chemin racine si la recette l’exige
-- Connaissances : chemin, bac à sable, pas le corpus d’aide
+- Outil : type ; MCP : serveur actif, chemin racine si la recette l’exige ; accès aux fichiers : un dossier qui n’est pas une racine de lecteur
+- Connaissances : chemin défini, pas une racine, pas le corpus d’aide, identifiant d’embeddings si le fournisseur l’exige
 - pas d’arêtes pendantes, pas de cycles, types de ports compatibles
 
 Valide/Invalide se voit comme badge. Les réseaux invalides se sauvegardent, mais démarrent mal.

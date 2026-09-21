@@ -12,27 +12,31 @@ Uma passagem do grafo ativo. Corre no máximo **uma**. Iniciar e parar no cabeç
 
 ## Nós e arestas
 
-Peças (entrada de chat, agente, LLM, ferramenta, conhecimento, router, fim) e ligações tipadas. Setas arbitrárias entre caixas são inválidas.
+Peças (chat, orquestrador, agente, LLM, ferramenta, conhecimento, router, fim) e ligações tipadas. Setas arbitrárias entre caixas são inválidas.
 
 ## Agente
 
-Nó com prompt de sistema. Modelo, mensagem, ferramentas e conhecimento chegam por portos, não como chaves embutidas.
+Nó com prompt de sistema. Modelo, mensagem, ferramentas e conhecimento chegam por portos. Sem orquestrador a mensagem inicia-o, e mensagem ou transferência seguem com a resposta. Com orquestrador fica no seu próprio canal: uma tarefa entra, um resultado volta.
 
 ## Nó LLM
 
-Escolhe fornecedor e modelo. Local via Ollama, senão nuvem ou URL compatível com OpenAI mais credencial.
+Escolhe fornecedor e modelo. Local via Ollama; senão, nuvem mais credencial.
 
-## Entrada de chat
+## Chat
 
-Única entrada de texto do utilizador na execução. No máximo uma por rede. O chat de monitorização escreve aqui.
+Única entrada de texto do utilizador na execução. No máximo um por rede. O chat de monitorização escreve aqui. Com orquestrador a conversa fica aberta em várias mensagens.
+
+## Orquestrador
+
+Nó com o seu próprio LLM. É a única voz do chat da execução, faz perguntas e chama os agentes ligados um de cada vez, cada um por um canal. No máximo um. O chat só se liga a ele. A saída de mensagem vai para o Fim ou para um router. Não vês os textos dos agentes nem as ordens internas como bolhas. A app junta o último resultado à tarefa seguinte. Um agente está no canal ou na cadeia de mensagens.
 
 ## Ferramenta
 
-First-party (HTTP, pesquisa web, data/hora, calculadora) ou MCP. Configuração no inspetor, execução só no run.
+First-party (HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros) ou MCP. O acesso a ficheiros fica numa pasta raiz, não na raiz da unidade. Configuração no inspetor, execução só durante o run.
 
 ## Conhecimento (rede)
 
-Nó knowledge: pasta **sob** a pasta de dados da app. Índice próprio, topK e pontuação. **Não** é o corpus de ajuda. Não é a raiz da unidade.
+Nó de conhecimento: uma pasta de textos para a rede. Pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Modelo de embeddings próprio, índice, topK e pontuação. **Não** é o corpus de ajuda. Ao iniciar vês a indexação; um índice já atual é saltado.
 
 ## Ajuda-RAG
 
@@ -48,11 +52,11 @@ Model Context Protocol: servidores de ferramentas externos. Cria-os e ativa-os n
 
 ## Fornecedor
 
-`ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (nuvem, primeiro a chave API, depois a lista de modelos), `openai_compat` (API HTTP compatível própria, p. ex. LM Studio).
+Na lista: `ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (nuvem: primeiro a credencial, depois a lista de modelos). Embeddings: Ollama, OpenAI, Gemini. `openai_compat` continua válido em grafos e credenciais antigos, mas já não está na lista de modelos.
 
 ## Ollama
 
-Serviço separado para modelos locais. A app é o cliente. O setup pode criar o Ollama e dois modelos pequenos por omissão. Fechar a app deixa o Ollama a correr.
+Serviço separado para modelos locais. A app é o cliente. Se está instalado, o endereço é local e a porta não responde, a app inicia-o e não o pára. O setup pode criar o Ollama, esperar um momento e carregar dois modelos pequenos por omissão se ele responder.
 
 ## Painel, monitorização, histórico
 

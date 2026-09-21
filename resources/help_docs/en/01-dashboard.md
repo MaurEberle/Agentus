@@ -18,7 +18,7 @@ The same card as on **Monitoring**: CPU, RAM, and GPU/VRAM of **this PC**, not o
 
 ## Status
 
-Shows whether the service is **stopped**, **starting**, **running**, or **stopping**, plus the active network. While running: **Monitoring** link and optional “running since …”. With empty quick select: a hint and a link to the **library**.
+Shows whether the service is **stopped**, **starting**, **running**, or **stopping**, plus the active network. While knowledge is indexing, the status reads **Indexing knowledge** and the node name. The same line sits on the Start button. While running: **Monitoring** link and optional “running since …”. With empty quick select: a hint and a link to the **library**.
 
 Start and Stop stay in the **header**, not on this card.
 

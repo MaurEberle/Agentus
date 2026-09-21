@@ -18,7 +18,7 @@ Ortam tamamsa kart kaybolur. Sessiz kurulumda çekilmeyen isteğe bağlı modell
 
 ## Durum
 
-Hizmetin **durdurulmuş**, **başlıyor**, **çalışıyor** veya **duruyor** olduğunu ve etkin ağı gösterir. Çalışan ağda: **İzleme** bağlantısı ve isteğe bağlı «… beri çalışıyor». Hızlı seçim yoksa: uyarı ve **Kitaplık** bağlantısı.
+Hizmetin **durdurulmuş**, **başlıyor**, **çalışıyor** veya **duruyor** olduğunu ve etkin ağı gösterir. Bilgi dizini oluşurken durum **Bilgi dizini oluşturuluyor** ve düğüm adını gösterir. Aynı satır Başlat düğmesindedir. Çalışan ağda: **İzleme** bağlantısı ve isteğe bağlı «… beri çalışıyor». Hızlı seçim yoksa: uyarı ve **Kitaplık** bağlantısı.
 
 Başlat ve durdur **başlık çubuğunda** kalır, bu kartta değil.
 

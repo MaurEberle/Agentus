@@ -15,7 +15,7 @@ The editor under **Network** edits **one** graph document. The **library** is th
 
 Top **ribbon**: New, Save, Save as, Load, Duplicate, Export, Validate, Undo/Redo, View (fit, grid, snap, minimap), To library.
 
-Middle: **palette** (left), **canvas**, **inspector** (right). On narrow screens, palette and inspector are sheets.
+Middle: **palette** (left), **canvas**, **inspector** (right). On the desktop, palette and inspector can collapse. On narrow screens they are sheets. An empty network shows only a hint to drag the first node from the palette onto the canvas. Edges are curves, the same as in monitoring and history.
 
 Drag nodes from the palette. Cards stay compact; forms live in the inspector. Multi-select with Shift or marquee. Delete removes the selection. Undo: Ctrl+Z.
 
@@ -29,7 +29,7 @@ While **this** network is running: **read-only** banner — stop it in the heade
 | Orchestrator | `orchestrator` | Voice of the run chat. Inputs **message** and **LLM**. One **channel** output per agent. **Message** only to **end** (or a router). **At most one.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-compatible), model, credential for cloud, temperature, token limit. Output **llm**. |
 | Agent | `agent` | System prompt. Inputs message, llm, tool, knowledge, optional **channel**. Outputs message and handoff. The channel comes only from the orchestrator. Without it the agent runs once along the message. |
-| Tool | `tool` | First-party: HTTP, web search, date/time, calculator — or **MCP**. Output **tool**. |
+| Tool | `tool` | First-party: HTTP, web search, date/time, calculator, file access — or **MCP**. Output **tool**. |
 | Knowledge | `knowledge` | Folder of files for the network. Output **knowledge**, only to the agent knowledge port. |
 | Router | `router` | Branches the message by conditions (first line / named branches) plus a default output. |
 | End | `end` | Finish. **At least one.** |
@@ -38,11 +38,12 @@ While **this** network is running: **read-only** banner — stop it in the heade
 
 Only matching ports:
 
-- Message to message (chat → agent, agent → end, agent → router, router branches → …)
-- LLM output only to agent **llm** — each agent needs **exactly one** such edge
+- Message to message (chat → agent or chat → orchestrator, agent → end, agent → router, router branches → …). The orchestrator sends message only to end or a router.
+- Channel to channel (orchestrator → agent). One port per agent. The reply comes back inside the run, without a second edge.
+- LLM output to agent **llm** or orchestrator **llm** — each agent and the orchestrator need **exactly one** such edge
 - Tool output to agent **tool** (several allowed)
 - Knowledge output only to agent **knowledge**
-- Cycles are forbidden (DAG)
+- Cycles are forbidden (directed graph without a loop)
 
 Invalid drags are rejected.
 
@@ -53,10 +54,11 @@ No node selected: name, description, tags, stats, validation list of the **open*
 Node selected:
 
 - **LLM:** provider, model (list from runtime), credential for cloud, ping, advanced temperature / max tokens. Cloud without a credential is invalid.
-- **Agent:** system prompt and display name only.
-- **Tool:** kind. HTTP: method and URL, optional credential. Web search: a web-search credential. MCP: an enabled server from Settings; default is all tools on that server.
-- **Knowledge:** source folder (folder picker), topK, score threshold, **Reindex**. The folder must sit **under the data directory**, must not be a drive root, and must not be the help corpus.
-- **Chat input:** placeholder, start text, “input required”.
+- **Agent:** system prompt and display name. If the agent is on a channel, the inspector explains that tasks come from the orchestrator.
+- **Tool:** kind. HTTP: method and URL, optional credential. Web search: a web-search credential. File access: a root folder, not a drive root; the agent works only under it, and write and delete are switches. MCP: an enabled server from Settings; default is all tools on that server.
+- **Knowledge:** source folder (folder picker), embedding provider (Ollama, OpenAI, or Gemini) and embedding model, topK, score threshold, **Reindex**. The folder may sit anywhere except a drive or system root and the help corpus. Cloud embeddings need a credential. The index belongs to this network, not to help.
+- **Chat:** placeholder, start text, “input required”.
+- **Orchestrator:** system prompt. The model chooses a follow-up, one agent task on that agent’s channel, a reply, or finish. The agents are the channels, not a second list.
 - **Router:** named branches (name + condition) and default.
 
 Secrets do **not** belong in inspector text or graph export — only the choice of a credential.
@@ -66,11 +68,11 @@ Secrets do **not** belong in inspector text or graph export — only the choice 
 **Validate** on the ribbon checks, among other things:
 
 - name not empty
-- at most one chat input, at least one end
-- each agent: exactly one LLM edge and one incoming message
+- at most one chat, at most one orchestrator, at least one end
+- each agent: exactly one LLM edge. Without an orchestrator, one incoming message. With an orchestrator, exactly one channel and no message chain on the same agent
 - LLM: model set; cloud: credential
-- tool: kind; MCP: enabled server, root path if the recipe needs it
-- knowledge: path, sandbox, not the help corpus
+- tool: kind; MCP: enabled server, root path if the recipe needs it; file access: a folder that is not a drive root
+- knowledge: path set, not a root, not the help corpus, embedding credential when the provider needs one
 - no dangling edges, no cycles, matching port types
 
 Valid/invalid shows as a badge. Invalid networks can be saved but should not be started.

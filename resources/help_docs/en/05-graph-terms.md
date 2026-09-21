@@ -12,27 +12,31 @@ One execution of the active graph. At most **one** at a time. Start and Stop in 
 
 ## Nodes and edges
 
-Building blocks (chat input, agent, LLM, tool, knowledge, router, end) and typed connections. Arbitrary box-to-box arrows are invalid.
+Building blocks (chat, orchestrator, agent, LLM, tool, knowledge, router, end) and typed connections. Arbitrary box-to-box arrows are invalid.
 
 ## Agent
 
-Node with a system prompt. Model, message, tools, and knowledge arrive through ports, not as embedded keys.
+Node with a system prompt. Model, message, tools, and knowledge arrive through ports. Without an orchestrator the message starts it, and message or handoff passes the answer on. With an orchestrator it hangs on its own channel: one task in, one result back.
 
 ## LLM node
 
-Chooses provider and model. Local via Ollama, otherwise cloud or an OpenAI-compatible URL plus a credential.
+Chooses provider and model. Local via Ollama, otherwise cloud plus a credential.
 
-## Chat input
+## Chat
 
-The only entry for user text in a run. At most one per network. Monitoring chat writes here.
+The only entry for user text in a run. At most one per network. Monitoring chat writes here. With an orchestrator the conversation stays open across several messages.
+
+## Orchestrator
+
+A node with its own LLM. It is the only voice in the run chat, asks follow-ups, and calls connected agents one at a time through a channel each. At most one. Chat connects only to it. Its message output goes to end or a router. You do not see agent text or internal commands as chat bubbles. The app attaches the latest result to the next task. An agent is either on the channel or on the message chain.
 
 ## Tool
 
-First-party (HTTP, web search, date/time, calculator) or MCP. Configured in the inspector, executed only during a run.
+First-party (HTTP, web search, date/time, calculator, file access) or MCP. File access stays inside a root folder, not a drive root. Configured in the inspector, executed only during a run.
 
 ## Knowledge (network)
 
-Knowledge node: a folder **under** the app data directory. Its own index, topK, and score. **Not** the help corpus. Not a drive root.
+Knowledge node: a folder of text for the network. It may sit anywhere except a drive or system root and the help corpus. Its own embedding model, index, topK, and score. **Not** the help corpus. At start you see the indexing; an index that is already current is skipped.
 
 ## Help RAG
 
@@ -48,11 +52,11 @@ Model Context Protocol: external tool servers. Create and enable them in Setting
 
 ## Provider
 
-`ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (cloud: API key first, then model list), `openai_compat` (your own compatible HTTP API, e.g. LM Studio).
+In the picker: `ollama` (local), `xai`, `openai`, `anthropic` (Claude), `gemini` (cloud: credential first, then the model list). Embeddings: Ollama, OpenAI, Gemini. `openai_compat` stays valid for older graphs and credentials, but it is no longer in the model picker.
 
 ## Ollama
 
-A separate service for local models. The app is the client. Setup can install Ollama and two small default models. Closing the app leaves Ollama running.
+A separate service for local models. The app is the client. If it is installed, the address is local, and the port is down, the app starts it and does not stop it. Setup can install Ollama, wait briefly, and pull two small default models when it answers.
 
 ## Dashboard, monitoring, history
 

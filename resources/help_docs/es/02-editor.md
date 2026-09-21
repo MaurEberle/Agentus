@@ -15,7 +15,7 @@ El editor en **Red** edita **un** documento de grafo. La **Biblioteca** es el ca
 
 Arriba la **cinta**: Nuevo, Guardar, Guardar como, Abrir, Duplicar, Exportar, Validar, Deshacer/Rehacer, Vista (ajustar, cuadrícula, ajuste, mini-mapa), A la biblioteca.
 
-Centro: **Paleta** (izquierda), **lienzo**, **Inspector** (derecha). En pantallas estrechas paleta e inspector son cajones.
+Centro: **Paleta** (izquierda), **lienzo**, **Inspector** (derecha). En el escritorio se pueden plegar. En pantallas estrechas son cajones. Una red vacía solo muestra la indicación de arrastrar el primer nodo de la paleta al lienzo. Las aristas son curvas, como en supervisión e historial.
 
 Nodos arrastrando desde la paleta. Las tarjetas se quedan compactas; los formularios están en el inspector. Selección múltiple con Mayús o lazo. Supr borra la selección. Deshacer: Ctrl+Z.
 
@@ -25,11 +25,11 @@ Mientras corre **exactamente esta** red: banner **Solo lectura** — primero det
 
 | Nombre | Tipo | Tarea |
 |-------------|-----|---------|
-| Chat | `chat_input` | Conversación de la ejecución. **Como máximo uno.** Salida **Mensaje**. |
-| Orquestador | `orchestrator` | Voz del chat. Entradas **Mensaje** y **LLM**. Una salida **Canal** por agente. **Mensaje** solo hacia **Fin**. **Como máximo uno.** |
-| LLM | `llm` | Proveedor (Ollama, xAI, OpenAI, Claude, Gemini, compatible con OpenAI), modelo, credencial para la nube, temperatura, límite de tokens. Salida **LLM**. |
+| Chat | `chat_input` | Conversación de la ejecución. **Como máximo uno.** Salida **Mensaje**. Con orquestador el chat sigue abierto para preguntas. |
+| Orquestador | `orchestrator` | Voz del chat de la ejecución. Entradas **Mensaje** y **LLM**. Una salida **Canal** por agente. **Mensaje** solo hacia **Fin** (o enrutador). **Como máximo uno.** |
+| LLM | `llm` | Proveedor (Ollama, xAI, OpenAI, Claude, Gemini), modelo, credencial para la nube, temperatura, límite de tokens. Salida **LLM**. |
 | Agente | `agent` | Prompt de sistema. Entradas Mensaje, LLM, Herramienta, Conocimiento y **Canal** opcional. Salidas Mensaje y Transferencia. El canal viene solo del orquestador. Sin canal el agente corre una vez por el mensaje. |
-| Herramienta | `tool` | First-party: HTTP, búsqueda web, fecha/hora, calculadora — o **MCP**. Salida **Herramienta**. |
+| Herramienta | `tool` | First-party: HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos — o **MCP**. Salida **Herramienta**. |
 | Conocimiento | `knowledge` | Carpeta con archivos para la red. Salida **Conocimiento**, solo al puerto Conocimiento del agente. |
 | Enrutador | `router` | Bifurca el mensaje según condiciones (primera línea / ramas con nombre) más salida por defecto. |
 | Fin | `end` | Cierre. **Al menos uno.** |
@@ -38,8 +38,9 @@ Mientras corre **exactamente esta** red: banner **Solo lectura** — primero det
 
 Solo puertos compatibles:
 
-- Mensaje a Mensaje (Chat → Agente, Agente → Fin, Agente → Enrutador, ramas del enrutador → …)
-- Salida LLM solo al **LLM** del agente — cada agente necesita **exactamente una** arista así
+- Mensaje a Mensaje (Chat → Agente o Chat → Orquestador, Agente → Fin, Agente → Enrutador, ramas del enrutador → …). El orquestador envía Mensaje solo a Fin o a un enrutador.
+- Canal a Canal (Orquestador → Agente). Un puerto por agente. La respuesta vuelve dentro de la ejecución, sin una segunda arista.
+- Salida LLM al **LLM** del agente o del orquestador — cada agente y el orquestador necesitan **exactamente una** arista así
 - Salida de herramienta al **Herramienta** del agente (varias permitidas)
 - Salida de conocimiento solo al **Conocimiento** del agente
 - Los ciclos están prohibidos (grafo dirigido sin bucles)
@@ -53,10 +54,11 @@ Ningún nodo elegido: nombre, descripción, etiquetas, estadísticas, lista de v
 Nodo elegido:
 
 - **LLM:** proveedor, modelo (lista del runtime), credencial para la nube, ping, avanzado temperatura / máx. tokens. Nube sin credencial es inválida.
-- **Agente:** solo prompt de sistema y nombre visible.
-- **Herramienta:** tipo. HTTP: método y URL, credencial opcional. Búsqueda web: credencial de tipo búsqueda web. MCP: servidor activado de Ajustes; por defecto todas las herramientas de ese servidor.
-- **Conocimiento:** carpeta de origen (selector), topK, umbral de puntuación, **Reconstruir índice**. La carpeta debe estar **bajo la carpeta de datos**, no ser la raíz de la unidad ni el corpus de ayuda.
-- **Entrada de chat:** marcador, texto inicial, interruptor «Entrada necesaria».
+- **Agente:** prompt de sistema y nombre visible. Si el agente está en un canal, el inspector explica que los encargos vienen del orquestador.
+- **Herramienta:** tipo. HTTP: método y URL, credencial opcional. Búsqueda web: credencial de tipo búsqueda web. Acceso a archivos: carpeta raíz, no la raíz de la unidad; el agente solo trabaja debajo, y escribir y borrar son interruptores. MCP: servidor activado de Ajustes; por defecto todas las herramientas de ese servidor.
+- **Conocimiento:** carpeta de origen (selector), proveedor de embeddings (Ollama, OpenAI o Gemini) y modelo de embeddings, topK, umbral de puntuación, **Reconstruir índice**. La carpeta puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Los embeddings en la nube necesitan credencial. El índice pertenece a esta red, no a la ayuda.
+- **Chat:** marcador, texto inicial, interruptor «Entrada necesaria».
+- **Orquestador:** prompt de sistema. El modelo elige una pregunta, un encargo a un agente por su canal, una respuesta o el cierre. Los agentes son los canales, no una segunda lista.
 - **Enrutador:** ramas con nombre (nombre + condición) y predeterminada.
 
 Los secretos **no** van en el texto del inspector ni en la exportación del grafo — solo la elección de una credencial.
@@ -66,11 +68,11 @@ Los secretos **no** van en el texto del inspector ni en la exportación del graf
 **Validar** en la cinta comprueba, entre otras cosas:
 
 - Nombre no vacío
-- como máximo una entrada de chat, al menos un fin
-- cada agente: exactamente una arista LLM y un mensaje entrante
+- como máximo un chat, como máximo un orquestador, al menos un fin
+- cada agente: exactamente una arista LLM. Sin orquestador, un mensaje entrante. Con orquestador, exactamente un canal y ninguna cadena de mensajes en el mismo agente
 - LLM: modelo definido; nube: credencial
-- Herramienta: tipo; MCP: servidor activo, ruta raíz si la receta la exige
-- Conocimiento: ruta, sandbox, no corpus de ayuda
+- Herramienta: tipo; MCP: servidor activo, ruta raíz si la receta la exige; acceso a archivos: una carpeta que no sea la raíz de la unidad
+- Conocimiento: ruta puesta, no una raíz, no el corpus de ayuda, credencial de embeddings si el proveedor la exige
 - sin aristas colgantes, sin ciclos, tipos de puerto compatibles
 
 Válido/Inválido se ve como insignia. Las redes inválidas se pueden guardar, pero arrancan mal.

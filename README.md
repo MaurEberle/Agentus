@@ -16,9 +16,13 @@ Version: `0.1.0` (eine Quelle: `backend/pyproject.toml`).
 | Historie | `/history`, `/history/:runId` | Archiv und Statistik |
 | Einstellungen | `/settings` | Runtime, Zugänge, Hilfe-Chat, MCP, Datenort, About |
 
-Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App und zum Graphen.
+Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App in der gewählten Oberflächensprache. Quellen nennt er nur bei der Websuche (Titel und Adresse), nicht für die eingebauten Anleitungen.
 
-Sprachen: Deutsch (Default), Englisch und Spanisch.
+Ein Netz ist entweder eine **Kette** (Chat → Agent → Ende, optional Router, Werkzeug, Wissen) oder hat **einen** Orchestrator. Der Orchestrator ist die einzige Stimme im Lauf-Chat. Er ruft angeschlossene Agenten nacheinander über je einen Kanal auf. Deren Texte erscheinen nicht als eigene Chatblasen. Ohne Orchestrator läuft jeder Agent einmal über Nachricht und Übergabe.
+
+Wissen darf auf einen beliebigen Ordner zeigen, außer auf eine Laufwerk- oder Systemwurzel und auf den Hilfe-Korpus. Hängt Wissen an einem Agenten, bleibt der Start in „startet“, bis der Index fertig oder als aktuell erkannt ist. Monitoring, Kopfzeile und Dashboard nennen den Knoten.
+
+Sprachen der Oberfläche und der Hilfe: Deutsch (Default), English, Español, Français, Türkçe, Português, 中文, 日本語, العربية.
 
 ## Voraussetzungen
 
@@ -43,9 +47,13 @@ Sprachen: Deutsch (Default), Englisch und Spanisch.
 2. Per-User nach `%LOCALAPPDATA%\Programs\Agentus-Network`.
 3. Startmenü: **Agentus Network** → `AgentusNetwork.exe`.
 
-Das Setup installiert bei Bedarf die **WebView2**-Runtime (Evergreen-Bootstrapper, mitgepackt) und **Ollama** (Download zur Install-Zeit, SHA256 in `installer/vendor.lock.json`). Bereits vorhanden → skip. LM Studio wird nicht installiert.
+Das Setup installiert bei Bedarf die **WebView2**-Runtime (Evergreen-Bootstrapper, mitgepackt) und **Ollama** (Download der offiziellen `OllamaSetup.exe` zur Install-Zeit, SHA256 in `installer/vendor.lock.json`). Bereits vorhanden → skip. LM Studio wird nicht installiert.
 
-Modelle (GUI, Default an): `nomic-embed-text` und `llama3.2:1b`. Ein Fehlschlag beendet das Setup trotzdem erfolgreich; die Dashboard-Setup-Karte fängt das auf.
+Ist Ollama schon da oder gerade installiert, startet das Setup ihn **im Hintergrund** (`ollama app.exe --hide --fast-startup`, sonst `ollama.exe serve` über `start`). Es wartet nicht auf das Ollama-Fenster. Mit `curl.exe` prüft es `http://127.0.0.1:11434/` (`--ipv4`, Connect-Timeout 1 s, gesamt 2 s), höchstens 15-mal mit 2 s Pause. Fehlt `curl.exe`, entfällt die Warte. Danach geht das Setup weiter, auch wenn der Port noch nicht antwortet.
+
+Modelle (in der Komponentenliste an): `nomic-embed-text` und `llama3.2:1b`, **nur** wenn diese Prüfung Ollama erreicht hat. Ein fehlgeschlagener `ollama pull` beendet das Setup trotzdem erfolgreich; die Dashboard-Setup-Karte zeigt den Runtime-Status. Die Desktop-Verknüpfung ist in der Komponentenliste aus, das Startmenü an.
+
+Die App selbst startet einen lokalen Ollama ebenfalls, wenn die Runtime-Adresse Loopback ist und Port 11434 nicht antwortet. Sie beendet ihn beim Schließen nie. `AGENTUS_NETWORK_NO_OLLAMA=1` unterdrückt diesen Start.
 
 ### Silent
 
@@ -75,7 +83,7 @@ Apps & Features → **Agentus Network**. Programmdateien, Shortcuts und Uninstal
 | `%LOCALAPPDATA%\Agentus-Network\data\` | vier SQLite-Stores + Hilfe-Korpus `agentus_network_rag_documents/` |
 | Windows-Anmeldeinformationsverwaltung | Secrets, Target `Agentus-Network` / `credential/{id}` |
 
-Portable: Config und `data\` neben der EXE. Hilfe-Markdown wird beim **ersten App-Start** einmal in den Korpus kopiert, wenn der Ordner leer ist — nicht vom Setup.
+Portable: Config und `data\` neben der EXE. Hilfe-Markdown liegt als Quelle unter `resources/help_docs/` (neun Sprachen). Beim App-Start kopiert der Seed **fehlende** Dateien nach `agentus_network_rag_documents/`. Vorhandene Dateien werden nicht überschrieben. Das Setup kopiert den Korpus nicht. Der Hilfe-Chat liest den Index, nicht die Markdown-Dateien direkt: neue Texte gelten erst nach **Index neu aufbauen** unter Einstellungen → Hilfe-Chatbot.
 
 ## Entwicklung
 
@@ -143,9 +151,9 @@ Ollama (eigener Prozess) ◄──────────── Runtime-Complet
 ```
 
 - Ein Prozess, JSON camelCase, Fehler `{ messageKey, message? }`.
-- Provider: `ollama` | `xai` | `openai_compat` — kein `lmstudio` als eigener Dienst.
-- Completions nur `POST {base}/v1/chat/completions`. Kein stilles `ollama pull` zur Laufzeit.
-- First-Party-Tools: HTTP, Websuche, Datum/Zeit, Taschenrechner. MCP über vendored Rezepte, Sessions lazy.
+- Provider in der Oberfläche: `ollama`, `xai`, `openai`, `anthropic`, `gemini`. `openai_compat` bleibt für gespeicherte Graphen und Zugänge gültig, steht aber nicht in den Modell-Auswahlen. Embeddings: `ollama`, `openai`, `gemini`. Kein `lmstudio` als eigener Dienst.
+- Completions nur `POST {base}/v1/chat/completions`, gestreamt. Ein Lauf bricht ab, wenn eine Weile keine Tokens mehr kommen, nicht nach einer festen Gesamtdauer. Kein stilles `ollama pull` zur Laufzeit.
+- First-Party-Tools: HTTP, Websuche, Datum/Zeit, Taschenrechner, Dateizugriff. MCP über vendored Rezepte, Sessions lazy.
 - Secrets nie in Node-Daten, Export oder Git. Listen zeigen nur Masken.
 
 Umgebung (Prefix `AGENTUS_NETWORK_*`): Host/Port, `DEV` / `NO_HOST`, `STATIC_DIR`, `HOME`, `DATA_DIR`, `VAULT=memory` (Tests). Tabelle: [`backend/README.md`](backend/README.md).
@@ -157,7 +165,7 @@ frontend/     Vite + React (Shell, Module, i18n)
 backend/      Python-Paket `app` (API, Persistenz, Host)
 packaging/    PyInstaller-Spec
 installer/    NSIS, vendor.lock.json, Lizenz
-resources/    Hilfe-Markdown (de/en), App-Icon
+resources/    Hilfe-Markdown (de, en, es, fr, tr, pt, zh, ja, ar), App-Icon
 scripts/      build-windows.ps1
 prompts/      Produkt- und Coding-Prompts (features.md, build.md)
 ```

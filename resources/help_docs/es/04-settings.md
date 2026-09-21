@@ -12,15 +12,15 @@ Interruptor **Botón de ayuda**: muestra u oculta la burbuja abajo a la derecha.
 
 Secretos con nombre para modelos en la nube, búsqueda web y algunas recetas MCP. Crear: nombre, tipo, secreto **una vez**. Después solo la **máscara**. Editar puede sustituir el secreto (vacío = sin cambios).
 
-Tipos entre otros: xAI, compatible con OpenAI, búsqueda web, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, token.
+Tipos entre otros: xAI, OpenAI, Claude, Gemini, compatible con OpenAI, búsqueda web, GitHub, Azure, GitLab, Slack, Notion, Atlassian, Linear, Postgres, token.
 
 **Borrar** está bloqueado mientras el perfil de ayuda, una red (LLM/herramienta) o un servidor MCP usen la credencial. Primero quita la asignación.
 
 ## Runtime
 
-**URL base de Ollama** (suele ser la dirección local de Ollama) y opcionalmente **URL base compatible con OpenAI**. **Comprobar conexión** y la **lista de modelos** pasan por la app, no por el navegador.
+**URL base de Ollama** (suele ser la dirección local de Ollama). **Comprobar conexión** y la **lista de modelos** pasan por la app. La lista se divide en **Modelos normales** y **Modelos de embeddings**. Un modelo cuenta como embedding si el nombre contiene `embed`. Un grupo vacío muestra **Ninguno**.
 
-Sin Ollama alcanzable, los nodos LLM locales y la ayuda predeterminada se quedan parados. Los modelos los instalas con Ollama o en el setup; la app **no** hace pull en silencio en tiempo de ejecución.
+Si la dirección es local y Ollama está instalado pero parado, la app arranca el servicio al abrir la ventana y no lo detiene. Sin Ollama alcanzable, los nodos LLM locales y la ayuda predeterminada se quedan parados. Los modelos los instalas con Ollama o en el setup; la app **no** hace pull en silencio en tiempo de ejecución. Aquí ya no se ofrece una URL base compatible con OpenAI.
 
 ## Chat de ayuda
 
@@ -33,9 +33,9 @@ Sin Ollama alcanzable, los nodos LLM locales y la ayuda predeterminada se quedan
 - búsqueda web sí/no más credencial de búsqueda; sin credencial el chat sigue configurado y la búsqueda apagada
 - comprobar conexión, borrar historial, **reconstruir índice**, volver a mostrar el onboarding
 
-Tras cambiar el modelo de embeddings o añadir archivos al corpus de ayuda: **reconstruir índice**. El corpus es la carpeta de documentos de ayuda en la carpeta de datos, no el conocimiento de la red.
+Tras cambiar el modelo de embeddings o añadir archivos al corpus de ayuda: **reconstruir índice**. El trabajo sigue aunque salgas de Ajustes. Un segundo clic no inicia otro índice. El corpus es la carpeta de documentos de ayuda en la carpeta de datos, no el conocimiento de la red. Las guías nuevas que trae la app no sustituyen solas los archivos que ya están ahí.
 
-La ayuda **no** usa servidores MCP ni el conocimiento de los grafos.
+La ayuda responde en el idioma de la interfaz. Si el modelo no puede usar ese idioma, responde en inglés. No cita títulos de las guías. Solo una búsqueda web muestra fuentes, como título y dirección. Los bloques internos de razonamiento del modelo no se ven. La ayuda **no** usa servidores MCP ni el conocimiento de los grafos.
 
 ## Servidores MCP
 

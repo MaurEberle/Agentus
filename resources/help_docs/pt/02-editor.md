@@ -15,7 +15,7 @@ O editor em **Rede** edita **um** documento de grafo. A **Biblioteca** é o cat�
 
 Em cima a **faixa**: Novo, Guardar, Guardar como, Abrir, Duplicar, Exportar, Validar, Anular/Refazer, Vista (ajustar, grelha, ajuste, mini-mapa), Para a biblioteca.
 
-Centro: **Paleta** (esquerda), **canvas**, **Inspetor** (direita). Em ecrãs estreitos paleta e inspetor são gavetas.
+Centro: **Paleta** (esquerda), **canvas**, **Inspetor** (direita). No ambiente de trabalho podem recolher-se. Em ecrãs estreitos são gavetas. Uma rede vazia só mostra a indicação de arrastar o primeiro nó da paleta para o canvas. As arestas são curvas, como na monitorização e no histórico.
 
 Nós ao arrastar da paleta. Os cartões ficam compactos; os formulários estão no inspetor. Seleção múltipla com Shift ou laço. Delete apaga a seleção. Anular: Ctrl+Z.
 
@@ -25,11 +25,11 @@ Enquanto corre **exactamente esta** rede: faixa **Só de leitura** — primeiro 
 
 | Nome | Tipo | Tarefa |
 |-------------|-----|---------|
-| Chat | `chat_input` | Conversa da execução. **No máximo um.** Saída **Mensagem**. |
-| Orquestrador | `orchestrator` | Voz do chat. Entradas **Mensagem** e **LLM**. Uma saída **Canal** por agente. **Mensagem** só para o **Fim**. **No máximo um.** |
-| LLM | `llm` | Fornecedor (Ollama, xAI, OpenAI, Claude, Gemini, compatível com OpenAI), modelo, credencial na nuvem, temperatura, limite de tokens. Saída **LLM**. |
+| Chat | `chat_input` | Conversa da execução. **No máximo um.** Saída **Mensagem**. Com orquestrador o chat fica aberto para perguntas. |
+| Orquestrador | `orchestrator` | Voz do chat da execução. Entradas **Mensagem** e **LLM**. Uma saída **Canal** por agente. **Mensagem** só para o **Fim** (ou router). **No máximo um.** |
+| LLM | `llm` | Fornecedor (Ollama, xAI, OpenAI, Claude, Gemini), modelo, credencial na nuvem, temperatura, limite de tokens. Saída **LLM**. |
 | Agente | `agent` | Prompt de sistema. Entradas Mensagem, LLM, Ferramenta, Conhecimento e **Canal** opcional. Saídas Mensagem e transferência. O canal vem só do orquestrador. Sem canal o agente corre uma vez pela mensagem. |
-| Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora — ou **MCP**. Saída **Ferramenta**. |
+| Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros — ou **MCP**. Saída **Ferramenta**. |
 | Conhecimento | `knowledge` | Pasta com ficheiros para a rede. Saída **Conhecimento**, só para o porto Conhecimento do agente. |
 | Router | `router` | Bifurca a mensagem segundo condições (primeira linha / ramos com nome) mais saída predefinida. |
 | Fim | `end` | Encerramento. **Pelo menos um.** |
@@ -38,8 +38,9 @@ Enquanto corre **exactamente esta** rede: faixa **Só de leitura** — primeiro 
 
 Só portos compatíveis:
 
-- Mensagem para Mensagem (Chat → Agente, Agente → Fim, Agente → Router, ramos do router → …)
-- Saída LLM só para **LLM** do agente — cada agente precisa de **exactamente uma** aresta destas
+- Mensagem para Mensagem (Chat → Agente ou Chat → Orquestrador, Agente → Fim, Agente → Router, ramos do router → …). O orquestrador envia Mensagem só para o Fim ou para um router.
+- Canal para Canal (Orquestrador → Agente). Um porto por agente. A resposta volta dentro da execução, sem segunda aresta.
+- Saída LLM para **LLM** do agente ou do orquestrador — cada agente e o orquestrador precisam de **exactamente uma** aresta destas
 - Saída de ferramenta para **Ferramenta** do agente (várias permitidas)
 - Saída de conhecimento só para **Conhecimento** do agente
 - Ciclos são proibidos (grafo dirigido sem ciclo)
@@ -53,10 +54,11 @@ Nenhum nó escolhido: nome, descrição, etiquetas, estatísticas, lista de vali
 Nó escolhido:
 
 - **LLM:** fornecedor, modelo (lista do runtime), credencial na nuvem, ping, avançado temperatura / máx. tokens. Nuvem sem credencial é inválida.
-- **Agente:** só prompt de sistema e nome visível.
-- **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. MCP: servidor ativado nas Definições; predefinição todas as ferramentas desse servidor.
-- **Conhecimento:** pasta de origem (escolha de pasta), topK, limiar de pontuação, **Reconstruir índice**. A pasta tem de estar **sob a pasta de dados**, não ser a raiz da unidade nem o corpus de ajuda.
-- **Entrada de chat:** marcador, texto inicial, interruptor «Entrada necessária».
+- **Agente:** prompt de sistema e nome visível. Se o agente está num canal, o inspetor explica que as tarefas vêm do orquestrador.
+- **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. Acesso a ficheiros: pasta raiz, não a raiz da unidade; o agente só trabalha por baixo, e escrever e apagar são interruptores. MCP: servidor ativado nas Definições; predefinição todas as ferramentas desse servidor.
+- **Conhecimento:** pasta de origem (escolha de pasta), fornecedor de embeddings (Ollama, OpenAI ou Gemini) e modelo de embeddings, topK, limiar de pontuação, **Reconstruir índice**. A pasta pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Embeddings na nuvem precisam de credencial. O índice pertence a esta rede, não à ajuda.
+- **Chat:** marcador, texto inicial, interruptor «Entrada necessária».
+- **Orquestrador:** prompt de sistema. O modelo escolhe uma pergunta, uma tarefa para um agente pelo canal dele, uma resposta ou o fim. Os agentes são os canais, não uma segunda lista.
 - **Router:** ramos com nome (nome + condição) e predefinição.
 
 Os segredos **não** vão para o texto do inspetor nem para a exportação do grafo — só a escolha de uma credencial.
@@ -66,11 +68,11 @@ Os segredos **não** vão para o texto do inspetor nem para a exportação do gr
 **Validar** na faixa verifica, entre outras coisas:
 
 - Nome não vazio
-- no máximo uma entrada de chat, pelo menos um fim
-- cada agente: exactamente uma aresta LLM e uma mensagem de entrada
+- no máximo um chat, no máximo um orquestrador, pelo menos um fim
+- cada agente: exactamente uma aresta LLM. Sem orquestrador, uma mensagem de entrada. Com orquestrador, exactamente um canal e nenhuma cadeia de mensagens no mesmo agente
 - LLM: modelo definido; nuvem: credencial
-- Ferramenta: tipo; MCP: servidor ativo, caminho raiz se a receita o exigir
-- Conhecimento: caminho, sandbox, não corpus de ajuda
+- Ferramenta: tipo; MCP: servidor ativo, caminho raiz se a receita o exigir; acesso a ficheiros: uma pasta que não seja a raiz da unidade
+- Conhecimento: caminho definido, não uma raiz, não o corpus de ajuda, credencial de embeddings se o fornecedor a exigir
 - sem arestas penduradas, sem ciclos, tipos de porto compatíveis
 
 Válido/Inválido vê-se como distintivo. Redes inválidas podem guardar-se, mas arrancam mal.

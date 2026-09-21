@@ -15,7 +15,7 @@ Ein noch laufender Historieneintrag ist nur ein Sprung ins Monitoring („Live a
 
 ## Monitoring ohne Lauf
 
-Leerzustand: **Kein Lauf** — Starte über die Kopfzeile. Zeigt das aktive Netz oder den Hinweis, dass die Schnellwahl leer ist. Getrennt / Fehler / Startet / Stoppt haben eigene Texte. Letzte Werte können ausgegraut bleiben, bis die Verbindung steht.
+Ohne aktiven Lauf zeigt die Seite den **letzten gespeicherten Lauf** zum Ansehen (Graph, Aktivität, Log, Chat). Ein Hinweis sagt, dass nichts live ist. Ganz leer ist die Seite nur, wenn noch kein Lauf gespeichert ist: **Kein Lauf**, plus das aktive Netz oder der Hinweis, dass die Schnellwahl leer ist. Getrennt / Fehler / Startet / Stoppt haben eigene Texte. Während der Indizierung wechselt der Start-Hinweis auf den Namen des Wissensknotens. Letzte Werte können ausgegraut bleiben, bis die Verbindung steht.
 
 ## Während eines Laufs
 
@@ -31,7 +31,7 @@ Hängt Wissen an einem Agenten, zeigt der Start den Lauf schon während der Indi
 
 ## Netz-Chat (Monitoring)
 
-Tab **Chat**: Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile. Mit Orchestrator bleiben Rückfragen im selben Lauf offen, bis er fertig ist.
+Tab **Chat**: Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Rückfragen bleiben im selben Lauf offen. Agententexte und interne Aufträge siehst du hier nicht.
 
 Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 

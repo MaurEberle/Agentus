@@ -18,7 +18,7 @@ Dieselbe Karte wie unter **Monitoring**: CPU, Arbeitsspeicher und GPU/VRAM **die
 
 ## Status
 
-Zeigt, ob der Dienst **gestoppt**, **startet**, **läuft** oder **stoppt**, plus das aktive Netz. Bei laufendem Netz: Link **Monitoring** und optional „läuft seit …“. Ohne Schnellwahl: Hinweis und Link zur **Verwaltung**.
+Zeigt, ob der Dienst **gestoppt**, **startet**, **läuft** oder **stoppt**, plus das aktive Netz. Während der Indizierung von Wissen steht dort **Wissen wird indiziert** und der Name des Knotens. Dieselbe Zeile hängt an der Start-Schaltfläche. Bei laufendem Netz: Link **Monitoring** und optional „läuft seit …“. Ohne Schnellwahl: Hinweis und Link zur **Verwaltung**.
 
 Start und Stopp bleiben in der **Kopfzeile**, nicht auf dieser Karte.
 
