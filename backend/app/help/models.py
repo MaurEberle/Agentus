@@ -39,5 +39,6 @@ class HelpMessageList(ApiModel):
 
 
 class HelpReindexResult(ApiModel):
-    state: Literal["ready", "error"]
+    state: Literal["idle", "running", "ready", "error"]
     message_key: str | None = Field(default=None, alias="messageKey")
+    job_id: str | None = Field(default=None, alias="id")

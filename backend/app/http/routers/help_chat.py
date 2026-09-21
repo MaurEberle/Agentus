@@ -4,7 +4,7 @@ from fastapi import APIRouter, Response
 
 from app.db.help_chat import clear_messages, list_messages
 from app.help.abort import abort_current
-from app.help.index import reindex
+from app.help.reindex_job import begin, snapshot
 from app.help.models import (
     HelpMessage,
     HelpMessageList,
@@ -76,9 +76,21 @@ def help_clear() -> Response:
     return Response(status_code=204)
 
 
+def _reindex_result() -> HelpReindexResult:
+    current = snapshot()
+    return HelpReindexResult(
+        state=current.state,
+        message_key=current.message_key,
+        job_id=current.job_id,
+    )
+
+
+@router.get("/help-chat/reindex", response_model=HelpReindexResult, response_model_exclude_none=True)
+def help_reindex_status() -> HelpReindexResult:
+    return _reindex_result()
+
+
 @router.post("/help-chat/reindex", response_model=HelpReindexResult, response_model_exclude_none=True)
 def help_reindex() -> HelpReindexResult:
-    state, key = reindex()
-    if state == "error" and key is None:
-        key = "help.index.failed"
-    return HelpReindexResult(state=state, message_key=key)
+    begin()
+    return _reindex_result()

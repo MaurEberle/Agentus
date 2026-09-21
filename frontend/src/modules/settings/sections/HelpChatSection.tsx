@@ -22,18 +22,17 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ModelCombobox } from '@/components/ModelCombobox';
-import i18n from '@/i18n';
 import { notify } from '@/lib/notifications';
 import {
   clearHelpChatMessages,
   patchSettings,
   pingHelpChat,
-  reindexHelpChat,
   resetHelpChatOnboarding,
   useCredentialsQuery,
   useRuntimeModelsQuery,
   useSettingsQuery,
 } from '@/modules/settings/api';
+import { startHelpReindex, useHelpReindexRunning } from '@/modules/settings/helpReindex';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -124,7 +123,7 @@ export function HelpChatSection() {
   const [pingStatus, setPingStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
   const [saving, setSaving] = useState(false);
   const [pinging, setPinging] = useState(false);
-  const [reindexing, setReindexing] = useState(false);
+  const reindexing = useHelpReindexRunning();
   const [confirmClear, setConfirmClear] = useState(false);
 
   const configured = help ? helpChatConfigured(help) : false;
@@ -461,25 +460,7 @@ export function HelpChatSection() {
               variant="outline"
               disabled={reindexing}
               loading={reindexing}
-              onClick={() => {
-                setReindexing(true);
-                void reindexHelpChat()
-                  .then((result) => {
-                    const failed = result.state !== 'ready';
-                    const reported = result.messageKey;
-                    notify({
-                      titleKey:
-                        !failed
-                          ? 'settings.notify.reindexed'
-                          : reported && i18n.exists(reported)
-                            ? reported
-                            : 'help.index.failed',
-                      variant: failed ? 'error' : 'success',
-                    });
-                  })
-                  .catch(() => notify({ titleKey: 'help.index.failed', variant: 'error' }))
-                  .finally(() => setReindexing(false));
-              }}
+              onClick={() => startHelpReindex()}
             >
               {t('settings.helpChat.reindex')}
             </Button>
