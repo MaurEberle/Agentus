@@ -72,7 +72,7 @@ def _query_target(chunks: list[HelpRagChunk]) -> tuple[str, str, str | None] | N
     return provider, model, credential_id
 
 
-def retrieve_scored(query: str, locale: str | None = None) -> list[tuple[float, HelpSource]]:
+def retrieve_scored(query: str, locale: str | None = None) -> list[tuple[float, HelpSource, str]]:
     chunks = _chunks_for_locale(list_all_chunks(), locale)
     if not chunks:
         return []
@@ -96,7 +96,7 @@ def retrieve_scored(query: str, locale: str | None = None) -> list[tuple[float, 
     if not result.vectors:
         return []
     query_vec = result.vectors[0]
-    scored: list[tuple[float, HelpSource]] = []
+    scored: list[tuple[float, HelpSource, str]] = []
     for chunk in chunks:
         score = cosine(query_vec, chunk.embedding)
         if score < SCORE_MIN:
@@ -109,6 +109,7 @@ def retrieve_scored(query: str, locale: str | None = None) -> list[tuple[float, 
                     title=chunk.source or "",
                     section=chunk.section,
                 ),
+                chunk.text,
             )
         )
     scored.sort(key=lambda item: item[0], reverse=True)
@@ -116,4 +117,4 @@ def retrieve_scored(query: str, locale: str | None = None) -> list[tuple[float, 
 
 
 def retrieve(query: str, locale: str | None = None) -> list[HelpSource]:
-    return [source for _score, source in retrieve_scored(query, locale)]
+    return [item[1] for item in retrieve_scored(query, locale)]

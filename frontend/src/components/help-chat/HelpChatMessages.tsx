@@ -61,7 +61,9 @@ function Bubble({
           ) : (
             <LightMarkdown text={message.content} />
           )}
-          {!isUser && message.sources ? <Sources sources={message.sources} /> : null}
+          {!isUser && message.sources ? (
+            <Sources sources={message.sources.filter((source) => source.kind === 'web')} />
+          ) : null}
         </div>
         <time className="text-[11px] text-muted-foreground">{time}</time>
       </div>
