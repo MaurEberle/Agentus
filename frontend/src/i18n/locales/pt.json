@@ -678,8 +678,7 @@
       "preview": "{{nodes}} nós · {{edges}} arestas"
     },
     "empty": {
-      "body": "Arraste um nó da paleta para a superfície ou abra uma rede guardada.",
-      "insert": "Paleta"
+      "body": "Arraste o primeiro nó da paleta para a superfície."
     },
     "context": {
       "insert": "Inserir",

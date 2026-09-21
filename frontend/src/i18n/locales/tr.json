@@ -678,8 +678,7 @@
       "preview": "{{nodes}} düğüm · {{edges}} kenar"
     },
     "empty": {
-      "body": "Paletten bir düğümü yüzeye sürükleyin veya kayıtlı bir ağ açın.",
-      "insert": "Palet"
+      "body": "Paletten ilk düğümü yüzeye sürükleyin."
     },
     "context": {
       "insert": "Ekle",

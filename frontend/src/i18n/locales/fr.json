@@ -678,8 +678,7 @@
       "preview": "{{nodes}} nœuds · {{edges}} arêtes"
     },
     "empty": {
-      "body": "Faites glisser un nœud de la palette sur la surface ou ouvrez un réseau enregistré.",
-      "insert": "Palette"
+      "body": "Glissez le premier nœud de la palette sur la surface."
     },
     "context": {
       "insert": "Insérer",

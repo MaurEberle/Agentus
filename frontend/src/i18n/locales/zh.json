@@ -678,8 +678,7 @@
       "preview": "{{nodes}} 个节点 · {{edges}} 条边"
     },
     "empty": {
-      "body": "从面板将节点拖到画布，或打开已保存的网络。",
-      "insert": "面板"
+      "body": "从面板将第一个节点拖到画布上。"
     },
     "context": {
       "insert": "插入",

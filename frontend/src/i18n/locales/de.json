@@ -678,8 +678,7 @@
       "preview": "{{nodes}} Knoten · {{edges}} Kanten"
     },
     "empty": {
-      "body": "Zieh einen Knoten aus der Palette auf die Fläche oder öffne ein gespeichertes Netz.",
-      "insert": "Palette"
+      "body": "Ziehe den ersten Knoten aus der Palette auf die Fläche."
     },
     "context": {
       "insert": "Einfügen",

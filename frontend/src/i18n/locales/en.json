@@ -678,8 +678,7 @@
       "preview": "{{nodes}} nodes · {{edges}} edges"
     },
     "empty": {
-      "body": "Drag a node from the palette onto the canvas or open a saved network.",
-      "insert": "Palette"
+      "body": "Drag the first node from the palette onto the canvas."
     },
     "context": {
       "insert": "Insert",

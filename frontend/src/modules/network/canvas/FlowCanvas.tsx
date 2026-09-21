@@ -18,7 +18,6 @@ import {
 } from '@xyflow/react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
 import { connectionAllowed } from '@/modules/network/schema/ports';
 import { createNode } from '@/modules/network/schema/defaults';
 import { issuesForNode, validateDocument } from '@/modules/network/validation/validate';
@@ -230,17 +229,9 @@ export function FlowCanvas({
       </ReactFlow>
       {empty ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
-          <div className="pointer-events-auto max-w-sm rounded-lg border bg-card/95 p-4 text-center shadow-sm">
-            <p className="text-sm text-muted-foreground">{t('network.empty.body')}</p>
-            <div className="mt-3 flex flex-wrap justify-center gap-2">
-              <Button type="button" size="sm" onClick={() => onRequestInsert({ x: 120, y: 120 })}>
-                {t('network.empty.insert')}
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => fitView()}>
-                {t('network.view.fit')}
-              </Button>
-            </div>
-          </div>
+          <p className="max-w-xs rounded-md bg-background/80 px-3 py-1.5 text-center text-sm text-muted-foreground">
+            {t('network.empty.body')}
+          </p>
         </div>
       ) : null}
       {menu ? (

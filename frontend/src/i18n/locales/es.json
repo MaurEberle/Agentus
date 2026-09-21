@@ -678,8 +678,7 @@
       "preview": "{{nodes}} nodos · {{edges}} aristas"
     },
     "empty": {
-      "body": "Arrastra un nodo de la paleta al lienzo o abre una red guardada.",
-      "insert": "Paleta"
+      "body": "Arrastra el primer nodo de la paleta al lienzo."
     },
     "context": {
       "insert": "Insertar",
