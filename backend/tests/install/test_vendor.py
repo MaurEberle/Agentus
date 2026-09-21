@@ -72,7 +72,20 @@ def test_nsi_is_per_user_without_portable_marker() -> None:
     assert "Start-Process" not in text
     assert "cmd.exe" in text
     assert "--noproxy 127.0.0.1" in text
+    assert "--connect-timeout 1" in text
+    assert "--ipv4" in text
+    assert "OllamaReady" in text
+    assert "waiting for ollama ($0/15)" in text
+    assert "skip model pulls, ollama not ready" in text
     assert r"$LOCALAPPDATA\Programs\Ollama\ollama app.exe" in text
+    assert (
+        r"""Exec '"$LOCALAPPDATA\Programs\Ollama\ollama app.exe" --hide --fast-startup'"""
+        in text
+    )
+    assert (
+        r"""nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c start "" "$LOCALAPPDATA\Programs\Ollama\ollama app.exe" --hide --fast-startup'"""
+        not in text
+    )
     assert 'File "/oname=app.ico"' in text
     assert r'DisplayIcon" "$INSTDIR\app.ico"' in text
     assert r'"$INSTDIR\app.ico" 0' in text

@@ -55,6 +55,16 @@ def _bootstrap() -> None:
         pass
 
 
+def _maybe_start_ollama() -> None:
+    """Installed Ollama that is stopped: start it. Never stop it later."""
+    try:
+        from app.runtime.ollama_daemon import start_local_ollama_background
+
+        start_local_ollama_background()
+    except Exception:
+        pass
+
+
 def _run() -> None:
     if getattr(sys, "frozen", False):
         import multiprocessing
@@ -65,6 +75,7 @@ def _run() -> None:
     port = _port()
     assert_loopback(host)
     _bootstrap()
+    _maybe_start_ollama()
     if _want_host():
         from app.host.window import run_host
 

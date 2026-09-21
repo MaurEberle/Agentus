@@ -101,6 +101,7 @@ hiddenimports = [
     "uvicorn.lifespan.on",
     "app.host.window",
     "app.main",
+    "app.runtime.ollama_daemon",
     "yaml",
     "multipart",
 ]
