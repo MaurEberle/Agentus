@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Falta el modelo de respaldo de ayuda"
       },
-      "stepLimit": "Límite de pasos alcanzado"
+      "stepLimit": "Límite de pasos alcanzado",
+      "orchestrator": {
+        "repair": "La orden no se pudo leer, nuevo intento."
+      }
     },
     "graph": {
       "router": {

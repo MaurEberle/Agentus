@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Help fallback model is missing"
       },
-      "stepLimit": "Step limit reached"
+      "stepLimit": "Step limit reached",
+      "orchestrator": {
+        "repair": "Control message was unreadable, trying again."
+      }
     },
     "graph": {
       "router": {

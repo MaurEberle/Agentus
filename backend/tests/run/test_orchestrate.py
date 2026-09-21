@@ -20,6 +20,31 @@ def test_plain_text_is_a_reply() -> None:
     assert parse_orchestrator_action("Hallo")["text"] == "Hallo"
 
 
+def test_truncated_call_json_still_calls() -> None:
+    # The task string is closed; the object is cut off after the next quote, as in the Storymaker run.
+    raw = '{"action":"call","agent":"Autor","task":"Schreibe eine freundliche Kindergeschichte.","'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "Autor"
+    assert parsed["task"] == "Schreibe eine freundliche Kindergeschichte."
+
+
+def test_prose_call_addresses_the_agent() -> None:
+    parsed = parse_orchestrator_action(
+        'Call agent-7fef4344 with the full German story under the title "Der Tiger auf dem Bauernhof".'
+    )
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "agent-7fef4344"
+    assert "Der Tiger auf dem Bauernhof" in parsed["task"]
+
+
+def test_pasted_story_with_broken_quotes_is_not_a_call() -> None:
+    story = "Wort " * 80 + 'fragte: "hallo" und weiter'
+    raw = '{"action":"call","agent":"Translate","task":"' + story + '"}'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+
+
 def test_instructions_name_each_channel_and_stay_sequential() -> None:
     text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
     assert "one agent at a time" in text

@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "缺少帮助备用模型"
       },
-      "stepLimit": "已达到步骤上限"
+      "stepLimit": "已达到步骤上限",
+      "orchestrator": {
+        "repair": "控制指令无法读取，正在重试。"
+      }
     },
     "graph": {
       "router": {

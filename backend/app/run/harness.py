@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import traceback
 import time
 import uuid
@@ -20,7 +21,12 @@ from app.run.limits import (
     MAX_TOOL_ROUNDS,
     STREAM_IDLE_TIMEOUT_SEC,
 )
-from app.run.orchestrate import match_agent, orchestrator_instructions, parse_orchestrator_action
+from app.run.orchestrate import (
+    looks_like_control,
+    match_agent,
+    orchestrator_instructions,
+    parse_orchestrator_action,
+)
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
 from app.run.models import ActivityTokens, ChatMessage, NodeRuntime, NodeTokens
 from app.run.sse import publish
@@ -28,6 +34,12 @@ from app.runtime.errors import RuntimeApiError
 from app.runtime.completions import estimate_token_count
 from app.runtime.models import ChatMessage as LlmMessage
 from app.runtime.models import CompletionRequest, CompletionResult
+
+_ORCHESTRATOR_REPAIR = (
+    "That message was not one valid JSON object. It was not shown to the user and no agent was called. "
+    "Reply with one JSON object only. The task must be a short instruction. "
+    "Do not paste the previous agent result into the task. It is attached automatically."
+)
 from app.tools.catalog import openai_tools_for_kinds
 from app.tools import execute as tools_execute
 
@@ -531,6 +543,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     system = orchestrator_instructions(orch.system_prompt, roster)
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
+    repairs = 0
+    previous = ""
     while not ctrl.stop_event.is_set():
         steps += 1
         if steps > MAX_ORCHESTRATOR_STEPS:
@@ -541,6 +555,27 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             return "cancelled" if ctrl.stop_event.is_set() else "failed"
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
+        if kind == "reply" and looks_like_control(text):
+            repairs += 1
+            emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
+            history.append(LlmMessage(role="assistant", content=text[:400]))
+            if repairs <= 2:
+                history.append(LlmMessage(role="user", content=_ORCHESTRATOR_REPAIR))
+                continue
+            _speak(
+                ctrl,
+                compiled,
+                "Ich konnte den nächsten Schritt nicht lesen. Sag kurz, wie es weitergehen soll.",
+                history,
+                wait=True,
+            )
+            reply = _queue_get(ctrl)
+            if not reply or ctrl.stop_event.is_set():
+                return "cancelled"
+            history.append(LlmMessage(role="user", content=reply))
+            repairs = 0
+            continue
+        repairs = 0
         if kind == "ask":
             _speak(ctrl, compiled, text or "…", history, wait=True)
             reply = _queue_get(ctrl)
@@ -553,15 +588,26 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             agent_id = match_agent(token, names)
             task = (action.get("task") or text or user_text).strip()
             if agent_id is None or agent_id not in compiled.agents:
-                history.append(LlmMessage(role="user", content=f"Unknown agent: {token}"))
+                history.append(LlmMessage(role="user", content=f"Unknown agent: {token}. Use an id from the roster."))
                 continue
-            history.append(LlmMessage(role="assistant", content=f"Call {agent_id}: {task}"))
+            delivered = task or user_text or " "
+            if previous and previous not in delivered:
+                delivered = f"{delivered}\n\nPrevious agent result:\n{previous}"
+            history.append(
+                LlmMessage(
+                    role="assistant",
+                    content=json.dumps(
+                        {"action": "call", "agent": agent_id, "task": task},
+                        ensure_ascii=False,
+                    ),
+                )
+            )
             result = _agent_turn(
                 ctrl,
                 compiled,
                 agent_id,
                 task,
-                [LlmMessage(role="user", content=task or " ")],
+                [LlmMessage(role="user", content=delivered)],
                 publish_chat=False,
             )
             if result is None:
@@ -569,7 +615,18 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                     return "cancelled"
                 history.append(LlmMessage(role="user", content=f"Agent {agent_id} produced no result."))
                 continue
-            history.append(LlmMessage(role="user", content=f"Agent {agent_id} result:\n{result}"))
+            previous = result
+            preview = result.strip()
+            history.append(
+                LlmMessage(
+                    role="user",
+                    content=(
+                        f"Result from {agent_id} is stored ({len(preview)} characters) and will be attached "
+                        "to the next agent automatically. Do not paste it into the task.\n"
+                        f"Preview:\n{preview[:800]}"
+                    ),
+                )
+            )
             continue
         if kind == "finish":
             if text.strip():

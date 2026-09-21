@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "نموذج احتياطي المساعدة ناقص"
       },
-      "stepLimit": "وُصل حد الخطوات"
+      "stepLimit": "وُصل حد الخطوات",
+      "orchestrator": {
+        "repair": "تعذّر قراءة أمر التحكم، محاولة جديدة."
+      }
     },
     "graph": {
       "router": {

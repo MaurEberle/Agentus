@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Falta o modelo de recurso da ajuda"
       },
-      "stepLimit": "Limite de passos atingido"
+      "stepLimit": "Limite de passos atingido",
+      "orchestrator": {
+        "repair": "Comando ilegível, nova tentativa."
+      }
     },
     "graph": {
       "router": {

@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Hilfe-Fallback-Modell fehlt"
       },
-      "stepLimit": "Schrittlimit erreicht"
+      "stepLimit": "Schrittlimit erreicht",
+      "orchestrator": {
+        "repair": "Steuerbefehl war unlesbar, neuer Versuch."
+      }
     },
     "graph": {
       "router": {

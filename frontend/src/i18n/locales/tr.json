@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Yardım yedek modeli yok"
       },
-      "stepLimit": "Adım sınırına ulaşıldı"
+      "stepLimit": "Adım sınırına ulaşıldı",
+      "orchestrator": {
+        "repair": "Komut okunamadı, yeniden deneniyor."
+      }
     },
     "graph": {
       "router": {

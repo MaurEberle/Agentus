@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "Le modèle de repli de l’aide manque"
       },
-      "stepLimit": "Limite d’étapes atteinte"
+      "stepLimit": "Limite d’étapes atteinte",
+      "orchestrator": {
+        "repair": "Commande illisible, nouvel essai."
+      }
     },
     "graph": {
       "router": {

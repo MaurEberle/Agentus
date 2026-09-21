@@ -1288,7 +1288,10 @@
       "help": {
         "fallbackMissing": "ヘルプのフォールバックモデルがありません"
       },
-      "stepLimit": "ステップ上限に達しました"
+      "stepLimit": "ステップ上限に達しました",
+      "orchestrator": {
+        "repair": "制御メッセージを読めなかったので再試行します。"
+      }
     },
     "graph": {
       "router": {
