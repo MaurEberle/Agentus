@@ -8,11 +8,13 @@ import type { HelpChatUiStatus } from '@/components/help-chat/model';
 export function HelpChatFab({
   open,
   status,
+  size,
   onClick,
   buttonRef,
 }: {
   open: boolean;
   status: HelpChatUiStatus;
+  size: number;
   onClick: () => void;
   buttonRef: Ref<HTMLButtonElement>;
 }) {
@@ -26,7 +28,11 @@ export function HelpChatFab({
       type="button"
       variant="ghost"
       size="icon"
-      className="app-no-drag relative h-[72px] w-[72px] min-h-[72px] min-w-[72px] rounded-full border border-border bg-white p-1 shadow-md hover:bg-white hover:shadow-lg"
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+      className={cn(
+        'app-no-drag relative rounded-full border border-border bg-white shadow-md hover:bg-white hover:shadow-lg',
+        status === 'generating' ? 'p-1' : 'p-2.5',
+      )}
       aria-label={open ? t('helpChat.fab.close') : t('helpChat.fab.open')}
       aria-expanded={open}
       onClick={onClick}

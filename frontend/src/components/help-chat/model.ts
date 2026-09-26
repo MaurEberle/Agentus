@@ -38,11 +38,30 @@ export type HelpChatHandle = {
 
 export const HELP_CHAT_MIN_WIDTH = 280;
 export const HELP_CHAT_MIN_HEIGHT = 320;
+/** Original panel `bottom-20` (80px). Extra FAB height is taken from panel height so the top edge stays put. */
+export const HELP_CHAT_REF_BOTTOM = 80;
+
+export function helpFabSize(viewport: { w: number; h: number }) {
+  const scale = Math.min(viewport.w / 1280, viewport.h / 800);
+  return Math.round(Math.min(80, Math.max(56, 64 * scale)));
+}
+
+export function helpChatAnchor(viewport: { w: number; h: number }) {
+  const fab = helpFabSize(viewport);
+  const inset = viewport.w >= 768 ? 24 : 16;
+  return { fab, inset, bottom: inset + fab + 8, right: inset };
+}
 
 export function clampHelpChatSize(width: number, height: number, viewport: { w: number; h: number }) {
+  const { bottom } = helpChatAnchor(viewport);
+  const extra = Math.max(0, bottom - HELP_CHAT_REF_BOTTOM);
+  const fitH = Math.max(160, viewport.h - bottom - 16);
+  const maxH = Math.min(viewport.h * 0.8 - extra, fitH);
+  const maxW = Math.max(HELP_CHAT_MIN_WIDTH, viewport.w * 0.3);
+  const minH = Math.min(HELP_CHAT_MIN_HEIGHT, maxH);
   return {
-    width: Math.min(Math.max(width, HELP_CHAT_MIN_WIDTH), Math.max(HELP_CHAT_MIN_WIDTH, viewport.w * 0.3)),
-    height: Math.min(Math.max(height, HELP_CHAT_MIN_HEIGHT), Math.max(HELP_CHAT_MIN_HEIGHT, viewport.h * 0.8)),
+    width: Math.min(Math.max(width, HELP_CHAT_MIN_WIDTH), maxW),
+    height: Math.min(Math.max(height, minH), maxH),
   };
 }
 

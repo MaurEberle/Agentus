@@ -4,10 +4,11 @@ import { HelpChatFab } from '@/components/help-chat/HelpChatFab';
 import { HelpChatOnboarding } from '@/components/help-chat/HelpChatOnboarding';
 import { HelpChatPanel } from '@/components/help-chat/HelpChatPanel';
 import { useHelpChatStatusQuery } from '@/components/help-chat/api';
-import { deriveHelpStatus } from '@/components/help-chat/model';
+import { deriveHelpStatus, helpChatAnchor } from '@/components/help-chat/model';
 import { useHelpChatWidget } from '@/components/help-chat/store';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useViewportSize } from '@/hooks/useViewportSize';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 
@@ -22,6 +23,8 @@ export function HelpChatHost() {
   const errorKey = useHelpChatWidget((state) => state.errorKey);
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const viewport = useViewportSize();
+  const { fab, inset, bottom, right } = helpChatAnchor(viewport);
   const fabRef = useRef<HTMLButtonElement>(null);
   const [onboarding, setOnboarding] = useState(false);
 
@@ -51,17 +54,21 @@ export function HelpChatHost() {
 
   return (
     <>
-      <div className="pointer-events-none fixed bottom-4 right-4 z-30 md:bottom-6 md:right-6">
+      <div
+        className="pointer-events-none fixed z-30"
+        style={{ bottom: inset, right: inset }}
+      >
         <div className="pointer-events-auto">
-          <HelpChatFab open={open} status={uiStatus} onClick={toggle} buttonRef={fabRef} />
+          <HelpChatFab open={open} status={uiStatus} size={fab} onClick={toggle} buttonRef={fabRef} />
         </div>
       </div>
       {isDesktop && open ? (
         <div
           className={cn(
-            'fixed bottom-28 right-6 z-40',
+            'fixed z-40',
             reducedMotion ? 'opacity-100' : 'animate-in fade-in slide-in-from-bottom-2 duration-200',
           )}
+          style={{ bottom, right }}
         >
           <HelpChatPanel compact={false} status={status} onClose={close} />
         </div>
