@@ -226,22 +226,10 @@ def _tool_schemas(
     tools = openai_tools_for_kinds(kinds)
     bridge = get_mcp()
     if bridge and mcp_pairs:
-        from app.db.settings import get_mcp_server
-        from app.mcp.models import McpToolInfo
         from app.run.mcp_bridge import mcp_openai_tools
 
         for server_id, allow in mcp_pairs:
-            row = get_mcp_server(server_id) or {}
-            cached = row.get("cached_tools") or []
-            infos = [
-                McpToolInfo(
-                    name=str(item.get("name")),
-                    description=item.get("description"),
-                    input_schema=item.get("input_schema") or {},
-                )
-                for item in cached
-                if isinstance(item, dict) and item.get("name")
-            ]
+            infos = bridge.listed_tools(server_id)
             if allow:
                 infos = [info for info in infos if info.name in allow]
             tools.extend(mcp_openai_tools(server_id, infos))
@@ -281,8 +269,27 @@ def _dispatch_tool(
     if reused is not None:
         tool_result = reused
     elif mapped and mcp:
-        out = mcp.call(mapped[0], mapped[1], args)
-        tool_result = out.get("result") if out.get("ok") else out
+        from app.run.graph_models import is_mcp_node
+
+        for edge in compiled.doc.edges:
+            if edge.target != owner_id or edge.target_handle != "tool":
+                continue
+            src = compiled.by_id.get(edge.source)
+            if (
+                src
+                and is_mcp_node(src)
+                and str(src.data.get("mcpServerId") or "") == mapped[0]
+            ):
+                tool_node_id = src.id
+                break
+        if tool_node_id != owner_id:
+            _set_node(ctrl, tool_node_id, "running", wait="tool", message=call_name)
+        try:
+            out = mcp.call(mapped[0], mapped[1], args)
+            tool_result = out.get("result") if out.get("ok") else out
+        finally:
+            if tool_node_id != owner_id:
+                _set_node(ctrl, tool_node_id, "idle")
     elif call_name in tool_kinds:
         tool_result: object = {"ok": False, "error": "unknown tool"}
         for edge in compiled.doc.edges:

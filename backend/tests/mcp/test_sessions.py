@@ -24,10 +24,13 @@ def test_open_for_and_call_masks(api_env, monkeypatch) -> None:
 
     monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
     monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
-    item = create_server(McpServerCreate(recipe_id="github", enabled=False))
-    # github needsRoot false, can enable
+    item = create_server(
+        McpServerCreate(recipe_id="github", credential_ids=["cred-1"], enabled=False)
+    )
     set_enabled(item.id, True)
     SESSIONS.open_for([item.id])
+    listed = SESSIONS.listed_tools(item.id)
+    assert [tool.name for tool in listed] == ["search"]
     out = SESSIONS.call(item.id, "search", {"q": "x"})
     assert out["ok"] is True
     assert "sk-abcdefghij" not in str(out["result"])

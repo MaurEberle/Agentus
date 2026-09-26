@@ -29,7 +29,8 @@ Enquanto corre **exactamente esta** rede: faixa **Só de leitura** — primeiro 
 | Orquestrador | `orchestrator` | Voz do chat da execução. Entradas **Mensagem**, **LLM** e **Ferramenta**. Uma saída **Canal** por agente. **Mensagem** só para o **Fim** (ou router). **No máximo um.** |
 | LLM | `llm` | Fornecedor (Ollama, xAI, OpenAI, Claude, Gemini), modelo, credencial na nuvem, temperatura, limite de tokens. Saída **LLM**. |
 | Agente | `agent` | Prompt de sistema. Entradas Mensagem, LLM, Ferramenta, Conhecimento e **Canal** opcional. Saídas Mensagem e transferência. O canal vem só do orquestrador. Sem canal o agente corre uma vez pela mensagem. |
-| Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros — ou **MCP**. Saída **Ferramenta**. |
+| Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros. Saída **Ferramenta**. |
+| MCP | `mcp` | Um servidor criado e **ativado** nas **Definições**. Saída **Ferramenta**, como um nó de ferramenta. |
 | Conhecimento | `knowledge` | Pasta com ficheiros para a rede. Saída **Conhecimento**, só para o porto Conhecimento do agente. |
 | Router | `router` | Bifurca a mensagem segundo condições (primeira linha / ramos com nome) mais saída predefinida. |
 | Fim | `end` | Encerramento. **Pelo menos um.** |
@@ -55,7 +56,8 @@ Nó escolhido:
 
 - **LLM:** fornecedor, modelo (lista do runtime), credencial na nuvem, ping, avançado temperatura / máx. tokens. Nuvem sem credencial é inválida.
 - **Agente:** prompt de sistema e nome visível. Se o agente está num canal, o inspetor explica que as tarefas vêm do orquestrador.
-- **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. Acesso a ficheiros: pasta raiz, não a raiz da unidade; o agente só trabalha por baixo, e escrever e apagar são interruptores. MCP: servidor ativado nas Definições; predefinição todas as ferramentas desse servidor.
+- **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. Acesso a ficheiros: pasta raiz, não a raiz da unidade; o agente só trabalha por baixo, e escrever e apagar são interruptores.
+- **MCP:** servidor ativo em **Definições → Servidores MCP**. Predefinição todas as ferramentas; após uma sonda podes escolher um subconjunto. Credenciais e caminho raiz ficam nas Definições, não no inspector.
 - **Conhecimento:** pasta de origem (escolha de pasta), fornecedor de embeddings (Ollama, OpenAI ou Gemini) e modelo de embeddings, topK, limiar de pontuação, **Reconstruir índice**. A pasta pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Embeddings na nuvem precisam de credencial. O índice pertence a esta rede, não à ajuda.
 - **Chat:** marcador, texto inicial, interruptor «Entrada necessária».
 - **Orquestrador:** prompt de sistema. O modelo escolhe uma pergunta, uma tarefa para um agente pelo canal dele, uma resposta ou o fim. Os agentes são os canais, não uma segunda lista. Chama ele próprio as ferramentas ligadas. Só uma pergunta espera pelo utilizador.

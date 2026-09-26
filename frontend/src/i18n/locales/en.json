@@ -216,6 +216,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Token"
+      },
+      "kindHint": {
+        "xai": "API key from xAI.",
+        "openai": "API key from OpenAI.",
+        "anthropic": "API key from Anthropic (Claude).",
+        "gemini": "API key from Google Gemini.",
+        "openai_compat": "Bearer token for an OpenAI-compatible URL.",
+        "web_search": "Key for web search in the network.",
+        "github": "GitHub personal access token (PAT). Classic: repo, issues, or actions scopes as needed.",
+        "azure": "Azure or Entra token, or a PAT.",
+        "gitlab": "GitLab personal access token.",
+        "slack": "Slack bot token (xoxb-…).",
+        "notion": "Notion integration token.",
+        "atlassian": "Atlassian Cloud API token (Jira/Confluence).",
+        "linear": "Linear API key.",
+        "postgres": "Postgres connection string (not the app databases).",
+        "token": "Generic API key or bearer token (Context7, Sentry, and similar)."
       }
     },
     "runtime": {
@@ -273,11 +290,12 @@
       "resetOnboarding": "Show onboarding again"
     },
     "mcp": {
-      "lead": "Recipes and custom servers. Default: inactive. Help does not use these servers.",
+      "lead": "Recipes and custom servers. Default: inactive. Help does not use these servers. Create and enable them here, then connect an MCP node in the network.",
+      "credentialsLead": "Create PATs, tokens, and connection strings under Credentials, then assign them here. Without a matching credential the server stays invalid.",
       "recipes": "Recipes",
       "servers": "Configured servers",
       "empty": "No MCP servers yet.",
-      "enable": "Enable",
+      "enable": "Set up",
       "added": "Added",
       "custom": "Custom",
       "customCreate": "Custom server",
@@ -285,18 +303,45 @@
       "enabled": "Enabled",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Credentials and optional root path from the recipe. Saving creates the server immediately.",
+      "presetHint": "Credentials and optional root path from the recipe. Saving creates and enables the server.",
       "officeHint": "Office bundles PDF and Office formats. Enable the individual presets in parallel only if needed.",
       "rootPath": "Root path",
+      "pickRoot": "Folder",
+      "needsNone": "No credential needed",
+      "needsRoot": "Root folder",
+      "runtimeNeed": "Local runtime required: {{runtime}} (on PATH).",
+      "credentialHelp": "Create a credential of the matching kind first.",
+      "noCredentialOfKind": "No credential of this kind — add one under Credentials first.",
       "untrusted": "An untrusted process will start with the given privileges. Use trusted commands only.",
       "command": "Command",
       "args": "Arguments",
       "url": "URL",
       "deleteTitle": "Delete server?",
-      "deleteBody": "This custom server configuration will be removed.",
+      "deleteBody": "This server configuration will be removed. The recipe stays in the list.",
       "pingOk": "MCP server responded",
       "pingError": "MCP probe failed",
       "runtimeMissing": "Runtime missing (Node, npx, Docker, or uvx).",
+      "hint": {
+        "github": "GitHub PAT under Credentials (kind GitHub). Local npx. No root folder.",
+        "azure": "Azure/Entra token or PAT (kind Azure). Local npx.",
+        "gitlab": "GitLab personal access token (kind GitLab). Local npx.",
+        "filesystem": "No credential. Choose a root folder — not C:\\. Local npx.",
+        "git": "No credential. Working directory as root. Local npx.",
+        "playwright": "No credential. Node/npx plus a browser runtime.",
+        "postgres": "Connection string (kind Postgres), not the app SQLite files. Local npx.",
+        "context7": "API key as a Token credential. Remote HTTP, no npx.",
+        "slack": "Slack bot token (kind Slack). Local npx.",
+        "notion": "Notion integration token (kind Notion). Local npx.",
+        "atlassian": "Atlassian Cloud API token (kind Atlassian). Remote via mcp-remote.",
+        "linear": "Linear API key (kind Linear). Remote HTTP.",
+        "fetch": "No credential. Public URLs as text. Local npx.",
+        "sentry": "Sentry auth token (kind Token). Local npx.",
+        "pdf": "No credential. Root folder for files. Local uvx.",
+        "excel": "No credential. Root folder for .xlsx. Local uvx.",
+        "powerpoint": "No credential. Root folder for .pptx. Local uvx.",
+        "word": "No credential. Root folder for .docx. Local uvx.",
+        "office": "No credential. One server for PDF and Office formats. Root folder. Local uvx."
+      },
       "statusName": {
         "unknown": "Unknown",
         "ok": "OK",
@@ -381,6 +426,64 @@
       "mcpSaved": "MCP server saved",
       "mcpDeleted": "MCP server deleted",
       "dataDirOk": "Data folder updated"
+    }
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "pdf": "PDF",
+      "excel": "Excel",
+      "powerpoint": "PowerPoint",
+      "word": "Word",
+      "office": "Office"
+    },
+    "runtime": {
+      "missing": "Runtime missing (Node, npx, Docker, or uvx)."
+    },
+    "ping": {
+      "failed": "MCP probe failed."
+    },
+    "root": {
+      "required": "A root folder is required.",
+      "invalid": "A drive or system root is not allowed.",
+      "denied": "This folder is blocked for MCP."
+    },
+    "credential": {
+      "required": "This recipe needs a credential of the matching kind."
+    },
+    "custom": {
+      "invalid": "A custom server needs a command or a URL."
+    },
+    "postgres": {
+      "appDb": "Postgres must not point at the app databases."
+    },
+    "session": {
+      "closed": "MCP session is closed."
+    },
+    "call": {
+      "failed": "MCP call failed."
+    },
+    "notFound": "MCP server not found."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Choose an enabled MCP server.",
+      "disabled": "This MCP server is disabled.",
+      "root": "This MCP server needs a root path in Settings.",
+      "unavailable": "MCP is not available in this install."
     }
   },
   "helpChat": {
@@ -572,7 +675,9 @@
       "agent": "Agent",
       "agentHint": "System prompt. On its own via message, or on an orchestrator via a channel.",
       "tool": "Tool",
-      "toolHint": "Catalog kind, optional MCP. Connect to an agent or the orchestrator.",
+      "toolHint": "HTTP, web search, date/time, calculator, file access. Connect to an agent or the orchestrator.",
+      "mcp": "MCP",
+      "mcpHint": "An enabled server from Settings. Connects like a tool.",
       "knowledge": "Knowledge",
       "knowledgeHint": "Source folder, only to the agent knowledge port.",
       "router": "Router",
@@ -659,6 +764,16 @@
         "mcpHint": "Default: all tools of the server. Create servers in Settings.",
         "mcpSettings": "MCP settings"
       },
+      "mcp": {
+        "hint": "An enabled server from Settings → MCP servers. Tool output to an agent or the orchestrator.",
+        "server": "MCP server",
+        "empty": "No server",
+        "noneEnabled": "No enabled server. Set up a recipe in Settings and enable it.",
+        "tools": "Tools on this server",
+        "toolsHint": "Empty = all tools after a probe.",
+        "probeHint": "A probe in Settings lists this server’s tools.",
+        "settings": "MCP settings"
+      },
       "knowledge": {
         "path": "Source folder",
         "pick": "Folder",
@@ -738,8 +853,9 @@
       "modelRequired": "Model is required.",
       "credentialRequired": "Cloud provider needs a credential.",
       "toolKind": "Tool kind is missing.",
-      "mcpServer": "Choose an enabled MCP server.",
+      "mcpServer": "Choose an enabled MCP server. Create and enable it in Settings.",
       "mcpRoot": "This MCP server needs a root path in Settings.",
+      "mcpDisabled": "This MCP server is disabled in Settings.",
       "fileAccessRoot": "File access needs a folder that is not a drive root.",
       "knowledgePath": "Source folder is required.",
       "knowledgeRoot": "Drive or system root is not allowed.",
@@ -950,6 +1066,7 @@
       "llm": "LLM",
       "agent": "Agent",
       "tool": "Tool",
+      "mcp": "MCP",
       "knowledge": "Knowledge",
       "router": "Router",
       "end": "End"

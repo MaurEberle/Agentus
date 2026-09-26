@@ -216,6 +216,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Belirteç"
+      },
+      "kindHint": {
+        "xai": "xAI API anahtarı.",
+        "openai": "OpenAI API anahtarı.",
+        "anthropic": "Anthropic (Claude) API anahtarı.",
+        "gemini": "Google Gemini API anahtarı.",
+        "openai_compat": "OpenAI uyumlu URL için Bearer jetonu.",
+        "web_search": "Ağdaki web araması için anahtar.",
+        "github": "GitHub kişisel erişim jetonu (PAT). Classic: göreve göre repo, issue veya action hakları.",
+        "azure": "Azure/Entra jetonu veya PAT.",
+        "gitlab": "GitLab kişisel erişim jetonu.",
+        "slack": "Slack bot jetonu (xoxb-…).",
+        "notion": "Notion entegrasyon jetonu.",
+        "atlassian": "Atlassian Cloud API jetonu (Jira/Confluence).",
+        "linear": "Linear API anahtarı.",
+        "postgres": "Postgres bağlantı dizesi (uygulama veritabanları değil).",
+        "token": "Genel API anahtarı veya Bearer jetonu (Context7, Sentry vb.)."
       }
     },
     "runtime": {
@@ -273,11 +290,11 @@
       "resetOnboarding": "Karşılama ekranını yeniden göster"
     },
     "mcp": {
-      "lead": "Tarifler ve özel sunucular. Varsayılan: kapalı. Yardım bu sunucuları kullanmaz.",
+      "lead": "Tarifler ve özel sunucular. Varsayılan: kapalı. Yardım bunları kullanmaz. Burada oluşturup etkinleştirin, sonra ağda bir MCP düğümü bağlayın.",
       "recipes": "Tarifler",
       "servers": "Yapılandırılmış sunucular",
       "empty": "Henüz MCP sunucusu yok.",
-      "enable": "Etkinleştir",
+      "enable": "Kur",
       "added": "Eklendi",
       "custom": "Özel",
       "customCreate": "Özel sunucu",
@@ -293,7 +310,7 @@
       "args": "Argümanlar",
       "url": "URL",
       "deleteTitle": "Sunucu silinsin mi?",
-      "deleteBody": "Bu özel sunucu yapılandırması kaldırılacak.",
+      "deleteBody": "Bu sunucu yapılandırması silinir. Tarif listede kalır.",
       "pingOk": "MCP sunucusu yanıt verdi",
       "pingError": "MCP sondası başarısız",
       "runtimeMissing": "Çalışma zamanı yok (Node, npx, Docker veya uvx).",
@@ -323,6 +340,34 @@
         "powerpoint": "PowerPoint",
         "word": "Word",
         "office": "Office"
+      },
+      "credentialsLead": "PAT, jeton ve bağlantı dizelerini Kimlik bilgilerinde oluşturup burada atayın. Uygun kimlik olmadan sunucu geçersiz kalır.",
+      "pickRoot": "Klasör",
+      "needsNone": "Kimlik gerekmez",
+      "needsRoot": "Kök klasör",
+      "runtimeNeed": "Yerel çalışma zamanı: {{runtime}} (PATH’te).",
+      "credentialHelp": "Önce uygun türde bir kimlik oluşturun.",
+      "noCredentialOfKind": "Bu türde kimlik yok — önce Kimlik bilgilerinde ekleyin.",
+      "hint": {
+        "github": "Kimlik bilgilerinde GitHub PAT (tür GitHub). Yerel npx. Kök klasör yok.",
+        "azure": "Azure/Entra jetonu veya PAT (tür Azure). Yerel npx.",
+        "gitlab": "GitLab kişisel erişim jetonu (tür GitLab). Yerel npx.",
+        "filesystem": "Kimlik gerekmez. Kök klasör seçin — C:\\\\ değil. Yerel npx.",
+        "git": "Kimlik gerekmez. Çalışma dizini kök olsun. Yerel npx.",
+        "playwright": "Kimlik gerekmez. Node/npx ve tarayıcı çalışma zamanı.",
+        "postgres": "Bağlantı dizesi (tür Postgres), uygulamanın SQLite dosyaları değil. Yerel npx.",
+        "context7": "Token türünde API anahtarı. Uzak HTTP, npx yok.",
+        "slack": "Slack bot jetonu (tür Slack). Yerel npx.",
+        "notion": "Notion entegrasyon jetonu (tür Notion). Yerel npx.",
+        "atlassian": "Atlassian Cloud API jetonu (tür Atlassian). mcp-remote ile uzak.",
+        "linear": "Linear API anahtarı (tür Linear). Uzak HTTP.",
+        "fetch": "Kimlik gerekmez. Genel URL’ler metin olarak. Yerel npx.",
+        "sentry": "Sentry kimlik jetonu (tür Token). Yerel npx.",
+        "pdf": "Kimlik gerekmez. Dosyalar için kök klasör. Yerel uvx.",
+        "excel": "Kimlik gerekmez. .xlsx için kök klasör. Yerel uvx.",
+        "powerpoint": "Kimlik gerekmez. .pptx için kök klasör. Yerel uvx.",
+        "word": "Kimlik gerekmez. .docx için kök klasör. Yerel uvx.",
+        "office": "Kimlik gerekmez. PDF ve Office için tek sunucu. Kök klasör. Yerel uvx."
       }
     },
     "data": {
@@ -572,13 +617,15 @@
       "agent": "Ajan",
       "agentHint": "Sistem istemi. Tek başına iletiyle veya orkestratörün bir kanalıyla.",
       "tool": "Araç",
-      "toolHint": "Katalog türü, isteğe bağlı MCP. Ajana veya orkestratöre bağlanır.",
+      "toolHint": "HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi. Ajan veya orkestratöre.",
       "knowledge": "Bilgi",
       "knowledgeHint": "Kaynak klasör, yalnızca ajan knowledge bağlantı noktasına.",
       "router": "Yönlendirici",
       "routerHint": "İletileri koşullara göre ayırır.",
       "end": "Son",
-      "endHint": "En az bir tane. Çalıştırmayı bitirir."
+      "endHint": "En az bir tane. Çalıştırmayı bitirir.",
+      "mcp": "MCP",
+      "mcpHint": "Ayarlar’daki etkin bir sunucu. Bir araç gibi bağlanır."
     },
     "ports": {
       "message": "İleti",
@@ -682,6 +729,16 @@
         "placeholder": "Yer tutucu",
         "startMessage": "Başlangıç metni",
         "requireInput": "Giriş gerekli"
+      },
+      "mcp": {
+        "hint": "Ayarlar → MCP sunucularındaki etkin sunucu. Araç çıkışı ajana veya orkestratöre.",
+        "server": "MCP sunucusu",
+        "empty": "Sunucu yok",
+        "noneEnabled": "Etkin sunucu yok. Ayarlar’da bir tarif kurun ve açın.",
+        "tools": "Bu sunucunun araçları",
+        "toolsHint": "Boş = yoklamadan sonra tüm araçlar.",
+        "probeHint": "Ayarlar’daki yoklama bu sunucunun araçlarını listeler.",
+        "settings": "MCP ayarları"
       }
     },
     "load": {
@@ -738,7 +795,7 @@
       "modelRequired": "Model zorunludur.",
       "credentialRequired": "Bulut sağlayıcısı bir kimlik bilgisi ister.",
       "toolKind": "Araç türü eksik.",
-      "mcpServer": "Etkin bir MCP sunucusu seçin.",
+      "mcpServer": "Etkin bir MCP sunucusu seçin. Ayarlar’da oluşturup açın.",
       "mcpRoot": "Bu MCP sunucusunun Ayarlar’da bir kök yoluna ihtiyacı var.",
       "fileAccessRoot": "Dosya erişimi, sürücü kökü olmayan bir klasör ister.",
       "knowledgePath": "Kaynak klasör zorunludur.",
@@ -751,7 +808,8 @@
         "missing": "Dizin yok.",
         "stale": "Dizin eski.",
         "error": "Dizin hatası."
-      }
+      },
+      "mcpDisabled": "Bu MCP sunucusu Ayarlar’da kapalı."
     },
     "notify": {
       "saved": "Ağ kaydedildi",
@@ -952,7 +1010,8 @@
       "tool": "Araç",
       "knowledge": "Bilgi",
       "router": "Yönlendirici",
-      "end": "Son"
+      "end": "Son",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "Boşta",
@@ -1333,5 +1392,63 @@
     "modelNotFound": "Gömme modeli bulunamadı.",
     "missingCredential": "Bu gömme modeli bir kimlik bilgisi gerektiriyor.",
     "unauthorized": "Gömme kimlik bilgisi reddedildi."
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "pdf": "PDF",
+      "excel": "Excel",
+      "powerpoint": "PowerPoint",
+      "word": "Word",
+      "office": "Office"
+    },
+    "runtime": {
+      "missing": "Çalışma zamanı yok (Node, npx, Docker veya uvx)."
+    },
+    "ping": {
+      "failed": "MCP yoklaması başarısız."
+    },
+    "root": {
+      "required": "Kök klasör zorunlu.",
+      "invalid": "Sürücü veya sistem kökü izinli değil.",
+      "denied": "Bu klasör MCP için kilitli."
+    },
+    "credential": {
+      "required": "Bu tarif uygun türde bir kimlik ister."
+    },
+    "custom": {
+      "invalid": "Özel sunucu komut veya URL ister."
+    },
+    "postgres": {
+      "appDb": "Postgres uygulama veritabanlarına bağlanamaz."
+    },
+    "session": {
+      "closed": "MCP oturumu kapalı."
+    },
+    "call": {
+      "failed": "MCP çağrısı başarısız."
+    },
+    "notFound": "MCP sunucusu bulunamadı."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Etkin bir MCP sunucusu seçin.",
+      "disabled": "Bu MCP sunucusu kapalı.",
+      "root": "Bu MCP sunucusunun Ayarlar’da bir kök yolu olmalı.",
+      "unavailable": "Bu kurulumda MCP yok."
+    }
   }
 }

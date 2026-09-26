@@ -161,3 +161,48 @@ def test_knowledge_outside_data_dir_ok(tmp_path) -> None:
         data_dir=str(tmp_path / "data"),
     )
     assert not any(e.message_key == "graph.knowledge.path" for e in errors)
+
+
+def _with_mcp(raw: dict, *, node_type: str = "mcp", kind: str | None = None, server_id: str = "srv-1") -> dict:
+    data: dict = {"mcpServerId": server_id}
+    if kind:
+        data["kind"] = kind
+    raw["nodes"].append(
+        {"id": "mcp1", "type": node_type, "position": {"x": 0, "y": 0}, "data": data}
+    )
+    raw["edges"].append(
+        {
+            "id": "em",
+            "source": "mcp1",
+            "sourceHandle": "tool",
+            "target": "ag",
+            "targetHandle": "tool",
+        }
+    )
+    return raw
+
+
+def test_mcp_node_needs_an_enabled_server() -> None:
+    raw = _with_mcp(mini_doc(), server_id="")
+    errors = validate_document(AgentNetworkDocument.model_validate(raw), data_dir="C:/data")
+    assert any(e.message_key == "graph.mcp.server" for e in errors)
+
+
+def test_mcp_node_rejects_a_disabled_server() -> None:
+    raw = _with_mcp(mini_doc())
+    errors = validate_document(
+        AgentNetworkDocument.model_validate(raw),
+        data_dir="C:/data",
+        mcp_enabled=lambda _sid: False,
+    )
+    assert any(e.message_key == "graph.mcp.disabled" for e in errors)
+
+
+def test_legacy_tool_kind_mcp_validates_as_mcp() -> None:
+    raw = _with_mcp(mini_doc(), node_type="tool", kind="mcp")
+    errors = validate_document(
+        AgentNetworkDocument.model_validate(raw),
+        data_dir="C:/data",
+        mcp_enabled=lambda _sid: True,
+    )
+    assert not any(e.message_key.startswith("graph.mcp.") for e in errors)

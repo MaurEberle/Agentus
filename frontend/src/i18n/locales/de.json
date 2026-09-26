@@ -216,6 +216,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Token"
+      },
+      "kindHint": {
+        "xai": "API-Key von xAI.",
+        "openai": "API-Key von OpenAI.",
+        "anthropic": "API-Key von Anthropic (Claude).",
+        "gemini": "API-Key von Google Gemini.",
+        "openai_compat": "Bearer-Token für eine OpenAI-kompatible URL.",
+        "web_search": "Schlüssel für die Websuche im Netz.",
+        "github": "GitHub Personal Access Token (PAT). Classic: Rechte für Repos, Issues oder Actions, je nach Aufgabe.",
+        "azure": "Azure- oder Entra-Token bzw. PAT.",
+        "gitlab": "GitLab Personal Access Token.",
+        "slack": "Slack Bot-Token (xoxb-…).",
+        "notion": "Notion Integration Token.",
+        "atlassian": "Atlassian Cloud API-Token (Jira/Confluence).",
+        "linear": "Linear API-Key.",
+        "postgres": "Postgres-Verbindungszeichenfolge (nicht die App-Datenbanken).",
+        "token": "Allgemeiner API-Key oder Bearer-Token (Context7, Sentry u. a.)."
       }
     },
     "runtime": {
@@ -273,11 +290,12 @@
       "resetOnboarding": "Onboarding erneut zeigen"
     },
     "mcp": {
-      "lead": "Rezepte und eigene Server. Standard: inaktiv. Die Hilfe nutzt diese Server nicht.",
+      "lead": "Rezepte und eigene Server. Standard: inaktiv. Die Hilfe nutzt diese Server nicht. Erst hier anlegen und aktivieren, dann im Netz als MCP-Knoten verbinden.",
+      "credentialsLead": "Zugänge (PAT, Token, Verbindungszeichenfolge) legst du unter Zugänge an und ordnest sie hier dem Rezept zu. Ohne passenden Zugang bleibt der Server ungültig.",
       "recipes": "Rezepte",
       "servers": "Konfigurierte Server",
       "empty": "Noch keine MCP-Server.",
-      "enable": "Aktivieren",
+      "enable": "Einrichten",
       "added": "Vorhanden",
       "custom": "Benutzerdefiniert",
       "customCreate": "Eigener Server",
@@ -285,18 +303,45 @@
       "enabled": "Aktiv",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Zugänge und optionaler Wurzelpfad laut Rezept. Speichern legt den Server sofort an.",
+      "presetHint": "Zugänge und optionaler Wurzelpfad laut Rezept. Speichern legt den Server an und aktiviert ihn.",
       "officeHint": "Office bündelt PDF und Office-Formate. Einzel-Presets parallel nur bei Bedarf aktivieren.",
       "rootPath": "Wurzelpfad",
+      "pickRoot": "Ordner",
+      "needsNone": "Kein Zugang nötig",
+      "needsRoot": "Wurzelordner",
+      "runtimeNeed": "Lokal nötig: {{runtime}} (im PATH).",
+      "credentialHelp": "Lege zuerst einen Zugang der passenden Art an.",
+      "noCredentialOfKind": "Kein Zugang dieser Art — zuerst unter Zugänge anlegen.",
       "untrusted": "Ein unbekannter Prozess wird mit den angegebenen Rechten gestartet. Nur vertrauenswürdige Befehle verwenden.",
       "command": "Befehl",
       "args": "Argumente",
       "url": "URL",
       "deleteTitle": "Server löschen?",
-      "deleteBody": "Die Konfiguration dieses eigenen Servers wird entfernt.",
+      "deleteBody": "Die Konfiguration dieses Servers wird entfernt. Das Rezept bleibt in der Liste.",
       "pingOk": "MCP-Server antwortet",
       "pingError": "MCP-Probe fehlgeschlagen",
       "runtimeMissing": "Runtime fehlt (Node, npx, Docker oder uvx).",
+      "hint": {
+        "github": "GitHub PAT unter Zugänge (Art GitHub). Lokal npx. Kein Wurzelordner.",
+        "azure": "Azure-/Entra-Token oder PAT (Art Azure). Lokal npx.",
+        "gitlab": "GitLab Personal Access Token (Art GitLab). Lokal npx.",
+        "filesystem": "Kein Zugang. Wurzelordner wählen — nicht C:\\. Lokal npx.",
+        "git": "Kein Zugang. Arbeitsverzeichnis als Wurzel. Lokal npx.",
+        "playwright": "Kein Zugang. Node/npx plus Browser-Runtime.",
+        "postgres": "Verbindungszeichenfolge (Art Postgres), nicht die App-SQLite. Lokal npx.",
+        "context7": "API-Key als Zugang der Art Token. Remote-HTTP, kein npx.",
+        "slack": "Slack Bot-Token (Art Slack). Lokal npx.",
+        "notion": "Notion Integration Token (Art Notion). Lokal npx.",
+        "atlassian": "Atlassian Cloud API-Token (Art Atlassian). Remote über mcp-remote.",
+        "linear": "Linear API-Key (Art Linear). Remote-HTTP.",
+        "fetch": "Kein Zugang. Öffentliche URLs als Text. Lokal npx.",
+        "sentry": "Sentry Auth-Token (Art Token). Lokal npx.",
+        "pdf": "Kein Zugang. Wurzelordner für Dateien. Lokal uvx.",
+        "excel": "Kein Zugang. Wurzelordner für .xlsx. Lokal uvx.",
+        "powerpoint": "Kein Zugang. Wurzelordner für .pptx. Lokal uvx.",
+        "word": "Kein Zugang. Wurzelordner für .docx. Lokal uvx.",
+        "office": "Kein Zugang. Ein Server für PDF und Office-Formate. Wurzelordner. Lokal uvx."
+      },
       "statusName": {
         "unknown": "Unbekannt",
         "ok": "OK",
@@ -381,6 +426,64 @@
       "mcpSaved": "MCP-Server gespeichert",
       "mcpDeleted": "MCP-Server gelöscht",
       "dataDirOk": "Datenordner aktualisiert"
+    }
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Dateisystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "pdf": "PDF",
+      "excel": "Excel",
+      "powerpoint": "PowerPoint",
+      "word": "Word",
+      "office": "Office"
+    },
+    "runtime": {
+      "missing": "Runtime fehlt (Node, npx, Docker oder uvx)."
+    },
+    "ping": {
+      "failed": "MCP-Probe fehlgeschlagen."
+    },
+    "root": {
+      "required": "Wurzelordner ist Pflicht.",
+      "invalid": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "denied": "Dieser Ordner ist für MCP gesperrt."
+    },
+    "credential": {
+      "required": "Dieses Rezept braucht einen Zugang der passenden Art."
+    },
+    "custom": {
+      "invalid": "Eigener Server braucht Befehl oder URL."
+    },
+    "postgres": {
+      "appDb": "Postgres darf nicht auf die App-Datenbanken zeigen."
+    },
+    "session": {
+      "closed": "MCP-Sitzung ist geschlossen."
+    },
+    "call": {
+      "failed": "MCP-Aufruf fehlgeschlagen."
+    },
+    "notFound": "MCP-Server nicht gefunden."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Aktiven MCP-Server wählen.",
+      "disabled": "Dieser MCP-Server ist deaktiviert.",
+      "root": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "unavailable": "MCP ist in dieser Installation nicht verfügbar."
     }
   },
   "helpChat": {
@@ -572,7 +675,9 @@
       "agent": "Agent",
       "agentHint": "Systemprompt. Allein über Nachricht, oder über einen Kanal am Orchestrator.",
       "tool": "Werkzeug",
-      "toolHint": "Katalog-Art, optional MCP. An Agent oder Orchestrator.",
+      "toolHint": "HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. An Agent oder Orchestrator.",
+      "mcp": "MCP",
+      "mcpHint": "Ein aktivierter Server aus den Einstellungen. Anschluss wie ein Werkzeug.",
       "knowledge": "Wissen",
       "knowledgeHint": "Quellenordner, nur zum Agenten-Port knowledge.",
       "router": "Router",
@@ -659,6 +764,16 @@
         "mcpHint": "Standard: alle Tools des Servers. Server anlegen unter Einstellungen.",
         "mcpSettings": "Zu MCP-Einstellungen"
       },
+      "mcp": {
+        "hint": "Ein aktivierter Server aus Einstellungen → MCP-Server. Ausgang Werkzeug an Agent oder Orchestrator.",
+        "server": "MCP-Server",
+        "empty": "Kein Server",
+        "noneEnabled": "Kein aktiver Server. Unter Einstellungen ein Rezept einrichten und aktivieren.",
+        "tools": "Tools dieses Servers",
+        "toolsHint": "Leer = alle Tools nach der Probe.",
+        "probeHint": "Probe in den Einstellungen listet die Tools dieses Servers.",
+        "settings": "Zu MCP-Einstellungen"
+      },
       "knowledge": {
         "path": "Quellenordner",
         "pick": "Ordner",
@@ -738,8 +853,9 @@
       "modelRequired": "Modell ist Pflicht.",
       "credentialRequired": "Cloud-Provider braucht einen Zugang.",
       "toolKind": "Werkzeug-Art fehlt.",
-      "mcpServer": "Aktiven MCP-Server wählen.",
+      "mcpServer": "Aktiven MCP-Server wählen. Server unter Einstellungen anlegen und aktivieren.",
       "mcpRoot": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "mcpDisabled": "Dieser MCP-Server ist in den Einstellungen deaktiviert.",
       "fileAccessRoot": "Dateizugriff braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "knowledgePath": "Quellenordner ist Pflicht.",
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
@@ -950,6 +1066,7 @@
       "llm": "LLM",
       "agent": "Agent",
       "tool": "Werkzeug",
+      "mcp": "MCP",
       "knowledge": "Wissen",
       "router": "Router",
       "end": "Ende"

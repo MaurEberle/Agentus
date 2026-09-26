@@ -29,7 +29,8 @@ Düğümler paletten sürüklenir. Kartlar kompakt kalır; formlar denetçidedir
 | Orkestratör | `orchestrator` | Çalıştırma sohbetinin sesi. Girişler **İleti**, **LLM** ve **Araç**. Ajan başına bir **Kanal** çıkışı. **İleti** yalnız **Son** veya yönlendiriciye. **En fazla bir.** |
 | LLM | `llm` | Sağlayıcı (Ollama, xAI, OpenAI, Claude, Gemini), model, bulut kimlik bilgisi, sıcaklık, belirteç sınırı. Çıkış **LLM**. |
 | Ajan | `agent` | Sistem istemi. Girişler İleti, LLM, Araç, Bilgi ve isteğe bağlı **Kanal**. Çıkışlar İleti ve Devretme. Kanal yalnız orkestratörden gelir. Kanalsız ajan ileti üzerinden bir kez çalışır. |
-| Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi — veya **MCP**. Çıkış **Araç**. |
+| Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi. Çıkış **Araç**. |
+| MCP | `mcp` | **Ayarlar**’da oluşturulup **etkinleştirilen** bir sunucu. Çıkış **Araç**, bir araç düğümü gibi. |
 | Bilgi | `knowledge` | Ağ için dosya klasörü. Çıkış **Bilgi**, yalnızca ajanın Bilgi bağlantı noktasına. |
 | Yönlendirici | `router` | İletiyi koşullara göre ayırır (ilk satır / adlı dallar) artı varsayılan çıkış. |
 | Son | `end` | Bitiş. **En az bir.** |
@@ -55,7 +56,8 @@ Düğüm seçili:
 
 - **LLM:** sağlayıcı, model (çalışma zamanı listesi), bulut kimlik bilgisi, ping, gelişmiş sıcaklık / en fazla belirteç. Kimlik bilgisi olmadan bulut geçersizdir.
 - **Ajan:** sistem istemi ve görünen ad. Ajan bir kanaldaysa denetçi görevlerin orkestratörden geldiğini açıklar.
-- **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. Dosya erişimi: kök klasör, sürücü kökü değil; ajan yalnız onun altında çalışır, yazma ve silme anahtardır. MCP: Ayarlar’dan etkin sunucu; varsayılan o sunucunun tüm araçları.
+- **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. Dosya erişimi: kök klasör, sürücü kökü değil; ajan yalnız onun altında çalışır, yazma ve silme anahtardır.
+- **MCP:** **Ayarlar → MCP sunucuları**ndaki etkin sunucu. Varsayılan tüm araçlar; yoklamadan sonra alt küme seçebilirsiniz. Kimlik ve kök yolu Ayarlar’dadır, denetçide değil.
 - **Bilgi:** kaynak klasör (klasör seçimi), gömme sağlayıcısı (Ollama, OpenAI veya Gemini) ve gömme modeli, topK, puan eşiği, **Dizini yenile**. Klasör sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Bulut gömmeleri kimlik bilgisi ister. Dizin bu ağa aittir, yardıma değil.
 - **Sohbet:** yer tutucu, başlangıç metni, «Giriş gerekli» anahtarı.
 - **Orkestratör:** sistem istemi. Model bir soru, bir ajanın kanalından tek görev, bir yanıt veya bitiş seçer. Ajanlar kanallardır, ikinci bir liste değil. Bağlı araçları kendisi çağırır. Yalnız soru kullanıcıyı bekler.

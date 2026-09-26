@@ -31,6 +31,14 @@ def test_filesystem_enable_without_root(api_env) -> None:
     assert err.value.message_key == "mcp.root.required"
 
 
+def test_github_enable_without_credential(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="github"))
+    with pytest.raises(AppError) as err:
+        set_enabled(item.id, True)
+    assert err.value.message_key == "mcp.credential.required"
+
+
 def test_custom_without_command_or_url(api_env) -> None:
     init()
     with pytest.raises(AppError) as err:

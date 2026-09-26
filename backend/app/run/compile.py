@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from app.run.channels import normalize_channel_edges
-from app.run.graph_models import AgentNetworkDocument, GraphNode
+from app.run.graph_models import AgentNetworkDocument, GraphNode, is_mcp_node, normalize_mcp_nodes
 
 
 @dataclass
@@ -93,16 +93,19 @@ def _compile_tools(
         tool = by_id.get(edge.source)
         if not tool:
             continue
-        kind = str(tool.data.get("kind") or "")
-        if kind == "mcp":
+        if is_mcp_node(tool):
             names = tool.data.get("mcpToolNames")
-            mcp.append(
-                (
-                    str(tool.data.get("mcpServerId") or ""),
-                    list(names) if isinstance(names, list) else None,
+            server_id = str(tool.data.get("mcpServerId") or "").strip()
+            if server_id:
+                mcp.append(
+                    (
+                        server_id,
+                        list(names) if isinstance(names, list) else None,
+                    )
                 )
-            )
-        elif kind:
+            continue
+        kind = str(tool.data.get("kind") or "")
+        if kind:
             tool_kinds.append(kind)
     return tool_kinds, mcp
 
@@ -145,7 +148,7 @@ def _compile_orchestrator(
 def compile_document(
     doc: AgentNetworkDocument, *, network_id: str, network_name: str
 ) -> CompiledGraph:
-    doc = normalize_channel_edges(doc)
+    doc = normalize_mcp_nodes(normalize_channel_edges(doc))
     by_id = {n.id: n for n in doc.nodes}
     chats = [n for n in doc.nodes if n.type == "chat_input"]
     chat_input = chats[0] if chats else None

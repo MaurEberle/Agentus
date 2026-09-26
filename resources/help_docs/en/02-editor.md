@@ -29,7 +29,8 @@ While **this** network is running: **read-only** banner — stop it in the heade
 | Orchestrator | `orchestrator` | Voice of the run chat. Inputs **message**, **LLM**, and **tool**. One **channel** output per agent. **Message** only to **end** (or a router). **At most one.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-compatible), model, credential for cloud, temperature, token limit. Output **llm**. |
 | Agent | `agent` | System prompt. Inputs message, llm, tool, knowledge, optional **channel**. Outputs message and handoff. The channel comes only from the orchestrator. Without it the agent runs once along the message. |
-| Tool | `tool` | First-party: HTTP, web search, date/time, calculator, file access — or **MCP**. Output **tool**. |
+| Tool | `tool` | First-party: HTTP, web search, date/time, calculator, file access. Output **tool**. |
+| MCP | `mcp` | One server created and **enabled** in **Settings**. Output **tool**, same as a tool node. |
 | Knowledge | `knowledge` | Folder of files for the network. Output **knowledge**, only to the agent knowledge port. |
 | Router | `router` | Branches the message by conditions (first line / named branches) plus a default output. |
 | End | `end` | Finish. **At least one.** |
@@ -41,7 +42,7 @@ Only matching ports:
 - Message to message (chat → agent or chat → orchestrator, agent → end, agent → router, router branches → …). The orchestrator sends message only to end or a router.
 - Channel to channel (orchestrator → agent). One port per agent. The reply comes back inside the run, without a second edge.
 - LLM output to agent **llm** or orchestrator **llm** — each agent and the orchestrator need **exactly one** such edge
-- Tool output to agent or orchestrator **tool** (several allowed). One tool may connect to both.
+- Tool output to agent or orchestrator **tool** (several allowed). A tool or MCP node may connect to both.
 - Knowledge output only to agent **knowledge**
 - Cycles are forbidden (directed graph without a loop)
 
@@ -55,7 +56,8 @@ Node selected:
 
 - **LLM:** provider, model (list from runtime), credential for cloud, ping, advanced temperature / max tokens. Cloud without a credential is invalid.
 - **Agent:** system prompt and display name. If the agent is on a channel, the inspector explains that tasks come from the orchestrator.
-- **Tool:** kind. HTTP: method and URL, optional credential. Web search: a web-search credential. File access: a root folder, not a drive root; the agent works only under it, and write and delete are switches. MCP: an enabled server from Settings; default is all tools on that server.
+- **Tool:** kind. HTTP: method and URL, optional credential. Web search: a web-search credential. File access: a root folder, not a drive root; the agent works only under it, and write and delete are switches.
+- **MCP:** an enabled server from **Settings → MCP servers**. Default is all tools on that server; after a probe you can pick a subset. Credentials and root path belong in Settings, not the inspector.
 - **Knowledge:** source folder (folder picker), embedding provider (Ollama, OpenAI, or Gemini) and embedding model, topK, score threshold, **Reindex**. The folder may sit anywhere except a drive or system root and the help corpus. Cloud embeddings need a credential. The index belongs to this network, not to help.
 - **Chat:** placeholder, start text, “input required”.
 - **Orchestrator:** system prompt. The model chooses a follow-up, one agent task on that agent’s channel, a reply, or finish. The agents are the channels, not a second list. It calls connected tools itself. Only a follow-up question waits for you.
@@ -71,7 +73,7 @@ Secrets do **not** belong in inspector text or graph export — only the choice 
 - at most one chat, at most one orchestrator, at least one end
 - each agent: exactly one LLM edge. Without an orchestrator, one incoming message. With an orchestrator, exactly one channel and no message chain on the same agent
 - LLM: model set; cloud: credential
-- tool: kind; MCP: enabled server, root path if the recipe needs it; file access: a folder that is not a drive root
+- tool: kind. MCP: an enabled server from Settings; root path if the recipe needs it; file access: a folder that is not a drive root
 - knowledge: path set, not a root, not the help corpus, embedding credential when the provider needs one
 - no dangling edges, no cycles, matching port types
 

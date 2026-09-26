@@ -12,7 +12,7 @@ Eine Ausführung des aktiven Graphen. Es läuft höchstens **einer**. Start und 
 
 ## Knoten und Kanten
 
-Bausteine (Chat, Orchestrator, Agent, LLM, Werkzeug, Wissen, Router, Ende) und typisierte Verbindungen. Beliebige Pfeile zwischen Kästen sind ungültig.
+Bausteine (Chat, Orchestrator, Agent, LLM, Werkzeug, MCP, Wissen, Router, Ende) und typisierte Verbindungen. Beliebige Pfeile zwischen Kästen sind ungültig.
 
 ## Agent
 
@@ -32,7 +32,7 @@ Knoten mit eigenem LLM. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfrag
 
 ## Werkzeug
 
-First-Party (HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff) oder MCP. Dateizugriff bleibt in einem Wurzelordner, nicht auf der Laufwerkswurzel. Konfiguration im Inspector, Ausführung nur im Lauf.
+First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. Dateizugriff bleibt in einem Wurzelordner, nicht auf der Laufwerkswurzel. Konfiguration im Inspector, Ausführung nur im Lauf.
 
 ## Wissen (Netz)
 
@@ -48,7 +48,7 @@ Gespeicherter Schlüssel im Windows-Tresor. In Listen nur Maske. Im Graphen nur 
 
 ## MCP
 
-Model Context Protocol: externe Tool-Server. In den Einstellungen anlegen und aktivieren, im Graphen als Werkzeug-Knoten der Art MCP verbinden. Die Hilfe verwendet MCP nicht.
+Model Context Protocol: externe Tool-Server. In den **Einstellungen** anlegen, Zugang zuordnen und **aktivieren**. Im Graphen eigener Knoten **MCP**, Ausgang wie ein Werkzeug. Die Hilfe verwendet MCP nicht.
 
 ## Provider
 

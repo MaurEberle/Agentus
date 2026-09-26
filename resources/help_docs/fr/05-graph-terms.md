@@ -48,7 +48,7 @@ Clé stockée dans le coffre Windows. Dans les listes, seulement un masque. Dans
 
 ## MCP
 
-Model Context Protocol : serveurs d’outils externes. À créer et activer dans Paramètres, à relier dans le graphe comme nœud d’outil de type MCP. L’aide n’utilise pas MCP.
+Model Context Protocol : serveurs d’outils externes. Créez-les dans **Paramètres**, assignez un identifiant et **activez-les**. Dans le graphe c’est un nœud **MCP** à part, avec une sortie outil. L’aide n’utilise pas MCP.
 
 ## Fournisseur
 

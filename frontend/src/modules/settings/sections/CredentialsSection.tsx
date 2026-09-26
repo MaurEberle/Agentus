@@ -191,6 +191,7 @@ export function CredentialsSection() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">{t(`settings.credentials.kindHint.${form.kind}`)}</p>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="cred-secret">{t('settings.credentials.secret')}</Label>

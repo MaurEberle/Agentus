@@ -113,6 +113,8 @@ export type McpRecipe = {
   transport: McpTransport;
   credentialKinds: CredentialKind[];
   needsRoot?: boolean;
+  runtime?: string;
+  notes?: string;
 };
 
 export type McpServerListItem = {
@@ -127,6 +129,7 @@ export type McpServerListItem = {
   command?: string;
   args?: string[];
   url?: string;
+  toolNames?: string[];
 };
 
 export type RuntimePing = { ok: boolean; messageKey?: string };

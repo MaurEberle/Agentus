@@ -48,7 +48,7 @@ Clave guardada en el almacén de Windows. En las listas solo máscara. En el gra
 
 ## MCP
 
-Model Context Protocol: servidores de herramientas externos. Créalos y actívalos en Ajustes, conéctalos en el grafo como nodo de herramienta de tipo MCP. La ayuda no usa MCP.
+Model Context Protocol: servidores de herramientas externos. Créalos en **Ajustes**, asigna una credencial y **actívalos**. En el grafo son un nodo **MCP** propio, con salida de herramienta. La ayuda no usa MCP.
 
 ## Proveedor
 

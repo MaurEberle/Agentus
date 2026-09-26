@@ -216,6 +216,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Jeton"
+      },
+      "kindHint": {
+        "xai": "Clé API xAI.",
+        "openai": "Clé API OpenAI.",
+        "anthropic": "Clé API Anthropic (Claude).",
+        "gemini": "Clé API Google Gemini.",
+        "openai_compat": "Jeton Bearer pour une URL compatible OpenAI.",
+        "web_search": "Clé pour la recherche web du réseau.",
+        "github": "Jeton d’accès personnel GitHub (PAT). Classic : repos, issues ou actions selon la tâche.",
+        "azure": "Jeton Azure/Entra ou PAT.",
+        "gitlab": "Jeton d’accès personnel GitLab.",
+        "slack": "Jeton bot Slack (xoxb-…).",
+        "notion": "Jeton d’intégration Notion.",
+        "atlassian": "Jeton API Atlassian Cloud (Jira/Confluence).",
+        "linear": "Clé API Linear.",
+        "postgres": "Chaîne de connexion Postgres (pas les bases de l’app).",
+        "token": "Clé API ou jeton Bearer générique (Context7, Sentry, etc.)."
       }
     },
     "runtime": {
@@ -273,11 +290,11 @@
       "resetOnboarding": "Réafficher l’introduction"
     },
     "mcp": {
-      "lead": "Recettes et serveurs personnalisés. Par défaut : inactif. L’aide n’utilise pas ces serveurs.",
+      "lead": "Recettes et serveurs personnalisés. Inactifs par défaut. L’aide ne les utilise pas. Créez-les ici, puis connectez un nœud MCP dans le réseau.",
       "recipes": "Recettes",
       "servers": "Serveurs configurés",
       "empty": "Aucun serveur MCP pour le moment.",
-      "enable": "Activer",
+      "enable": "Configurer",
       "added": "Présent",
       "custom": "Personnalisé",
       "customCreate": "Serveur personnalisé",
@@ -293,7 +310,7 @@
       "args": "Arguments",
       "url": "URL",
       "deleteTitle": "Supprimer le serveur ?",
-      "deleteBody": "La configuration de ce serveur personnalisé sera supprimée.",
+      "deleteBody": "La configuration de ce serveur est supprimée. La recette reste dans la liste.",
       "pingOk": "Le serveur MCP a répondu",
       "pingError": "Sonde MCP échouée",
       "runtimeMissing": "Runtime manquant (Node, npx, Docker ou uvx).",
@@ -323,6 +340,34 @@
         "powerpoint": "PowerPoint",
         "word": "Word",
         "office": "Office"
+      },
+      "credentialsLead": "Créez PAT, jetons et chaînes de connexion dans Identifiants, puis assignez-les ici. Sans identifiant adapté, le serveur reste invalide.",
+      "pickRoot": "Dossier",
+      "needsNone": "Aucun identifiant requis",
+      "needsRoot": "Dossier racine",
+      "runtimeNeed": "Runtime local : {{runtime}} (dans le PATH).",
+      "credentialHelp": "Créez d’abord un identifiant du type adapté.",
+      "noCredentialOfKind": "Aucun identifiant de ce type — créez-en un dans Identifiants.",
+      "hint": {
+        "github": "PAT GitHub dans Identifiants (type GitHub). npx local. Pas de dossier racine.",
+        "azure": "Jeton Azure/Entra ou PAT (type Azure). npx local.",
+        "gitlab": "Jeton d’accès personnel GitLab (type GitLab). npx local.",
+        "filesystem": "Aucun identifiant. Choisissez un dossier racine — pas C:\\\\. npx local.",
+        "git": "Aucun identifiant. Répertoire de travail comme racine. npx local.",
+        "playwright": "Aucun identifiant. Node/npx plus un runtime de navigateur.",
+        "postgres": "Chaîne de connexion (type Postgres), pas les SQLite de l’app. npx local.",
+        "context7": "Clé API en identifiant Token. HTTP distant, pas de npx.",
+        "slack": "Jeton bot Slack (type Slack). npx local.",
+        "notion": "Jeton d’intégration Notion (type Notion). npx local.",
+        "atlassian": "Jeton API Atlassian Cloud (type Atlassian). Distant via mcp-remote.",
+        "linear": "Clé API Linear (type Linear). HTTP distant.",
+        "fetch": "Aucun identifiant. URL publiques en texte. npx local.",
+        "sentry": "Jeton Sentry (type Token). npx local.",
+        "pdf": "Aucun identifiant. Dossier racine pour les fichiers. uvx local.",
+        "excel": "Aucun identifiant. Dossier racine pour .xlsx. uvx local.",
+        "powerpoint": "Aucun identifiant. Dossier racine pour .pptx. uvx local.",
+        "word": "Aucun identifiant. Dossier racine pour .docx. uvx local.",
+        "office": "Aucun identifiant. Un serveur pour PDF et Office. Dossier racine. uvx local."
       }
     },
     "data": {
@@ -572,13 +617,15 @@
       "agent": "Agent",
       "agentHint": "Invite système. Seul via le message, ou via un canal de l’orchestrateur.",
       "tool": "Outil",
-      "toolHint": "Type du catalogue, MCP facultatif. Branchez sur un agent ou l’orchestrateur.",
+      "toolHint": "HTTP, recherche web, date/heure, calculatrice, accès fichiers. Vers l’agent ou l’orchestrateur.",
       "knowledge": "Connaissances",
       "knowledgeHint": "Dossier source, uniquement vers le port knowledge de l’agent.",
       "router": "Routeur",
       "routerHint": "Aiguille les messages selon des conditions.",
       "end": "Fin",
-      "endHint": "Au moins un. Termine l’exécution."
+      "endHint": "Au moins un. Termine l’exécution.",
+      "mcp": "MCP",
+      "mcpHint": "Un serveur activé dans Paramètres. Se connecte comme un outil."
     },
     "ports": {
       "message": "Message",
@@ -682,6 +729,16 @@
         "placeholder": "Espace réservé",
         "startMessage": "Texte de départ",
         "requireInput": "Saisie obligatoire"
+      },
+      "mcp": {
+        "hint": "Un serveur activé dans Paramètres → Serveurs MCP. Sortie outil vers l’agent ou l’orchestrateur.",
+        "server": "Serveur MCP",
+        "empty": "Aucun serveur",
+        "noneEnabled": "Aucun serveur actif. Configurez une recette dans Paramètres et activez-la.",
+        "tools": "Outils de ce serveur",
+        "toolsHint": "Vide = tous les outils après une sonde.",
+        "probeHint": "Une sonde dans Paramètres liste les outils de ce serveur.",
+        "settings": "Paramètres MCP"
       }
     },
     "load": {
@@ -738,7 +795,7 @@
       "modelRequired": "Le modèle est obligatoire.",
       "credentialRequired": "Un fournisseur cloud a besoin d’un identifiant.",
       "toolKind": "Le type d’outil manque.",
-      "mcpServer": "Choisissez un serveur MCP actif.",
+      "mcpServer": "Choisissez un serveur MCP actif. Créez-le et activez-le dans Paramètres.",
       "mcpRoot": "Ce serveur MCP a besoin d’un chemin racine dans Paramètres.",
       "fileAccessRoot": "L’accès aux fichiers nécessite un dossier qui n’est pas la racine d’un lecteur.",
       "knowledgePath": "Le dossier source est obligatoire.",
@@ -751,7 +808,8 @@
         "missing": "L’index manque.",
         "stale": "L’index est obsolète.",
         "error": "Erreur d’index."
-      }
+      },
+      "mcpDisabled": "Ce serveur MCP est désactivé dans Paramètres."
     },
     "notify": {
       "saved": "Réseau enregistré",
@@ -952,7 +1010,8 @@
       "tool": "Outil",
       "knowledge": "Connaissances",
       "router": "Routeur",
-      "end": "Fin"
+      "end": "Fin",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "Inactif",
@@ -1333,5 +1392,63 @@
     "modelNotFound": "Le modèle d’embeddings est introuvable.",
     "missingCredential": "Ce modèle d’embeddings exige un accès.",
     "unauthorized": "L’accès pour les embeddings a été refusé."
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "pdf": "PDF",
+      "excel": "Excel",
+      "powerpoint": "PowerPoint",
+      "word": "Word",
+      "office": "Office"
+    },
+    "runtime": {
+      "missing": "Runtime manquant (Node, npx, Docker ou uvx)."
+    },
+    "ping": {
+      "failed": "La sonde MCP a échoué."
+    },
+    "root": {
+      "required": "Le dossier racine est obligatoire.",
+      "invalid": "La racine d’un disque ou du système n’est pas autorisée.",
+      "denied": "Ce dossier est bloqué pour MCP."
+    },
+    "credential": {
+      "required": "Cette recette nécessite un identifiant du type adapté."
+    },
+    "custom": {
+      "invalid": "Un serveur personnalisé nécessite une commande ou une URL."
+    },
+    "postgres": {
+      "appDb": "Postgres ne doit pas pointer vers les bases de l’app."
+    },
+    "session": {
+      "closed": "La session MCP est fermée."
+    },
+    "call": {
+      "failed": "L’appel MCP a échoué."
+    },
+    "notFound": "Serveur MCP introuvable."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Choisissez un serveur MCP actif.",
+      "disabled": "Ce serveur MCP est désactivé.",
+      "root": "Ce serveur MCP a besoin d’un chemin racine dans Paramètres.",
+      "unavailable": "MCP n’est pas disponible dans cette installation."
+    }
   }
 }

@@ -216,6 +216,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "رمز"
+      },
+      "kindHint": {
+        "xai": "مفتاح API من xAI.",
+        "openai": "مفتاح API من OpenAI.",
+        "anthropic": "مفتاح API من Anthropic (Claude).",
+        "gemini": "مفتاح API من Google Gemini.",
+        "openai_compat": "رمز Bearer لعنوان متوافق مع OpenAI.",
+        "web_search": "مفتاح بحث الويب في الشبكة.",
+        "github": "رمز وصول شخصي من GitHub (PAT). Classic: صلاحيات المستودعات أو القضايا أو الإجراءات حسب المهمة.",
+        "azure": "رمز Azure/Entra أو PAT.",
+        "gitlab": "رمز وصول شخصي من GitLab.",
+        "slack": "رمز بوت Slack (xoxb-…).",
+        "notion": "رمز تكامل Notion.",
+        "atlassian": "رمز Atlassian Cloud API (Jira/Confluence).",
+        "linear": "مفتاح Linear API.",
+        "postgres": "سلسلة اتصال Postgres (وليس قواعد التطبيق).",
+        "token": "مفتاح API عام أو رمز Bearer (Context7 وSentry وغيرهما)."
       }
     },
     "runtime": {
@@ -273,11 +290,11 @@
       "resetOnboarding": "إظهار الترحيب مجددًا"
     },
     "mcp": {
-      "lead": "وصفات وخوادم مخصصة. الافتراضي: غير نشط. المساعدة لا تستخدم هذه الخوادم.",
+      "lead": "وصفات وخوادم مخصصة. الافتراضي: غير نشطة. المساعدة لا تستخدمها. أنشئها هنا ثم اربط عقدة MCP في الشبكة.",
       "recipes": "الوصفات",
       "servers": "الخوادم المُعدّة",
       "empty": "لا توجد خوادم MCP بعد.",
-      "enable": "تفعيل",
+      "enable": "إعداد",
       "added": "مضاف",
       "custom": "مخصص",
       "customCreate": "خادم مخصص",
@@ -293,7 +310,7 @@
       "args": "الوسائط",
       "url": "URL",
       "deleteTitle": "حذف الخادم؟",
-      "deleteBody": "ستُزال إعدادات هذا الخادم المخصص.",
+      "deleteBody": "تُحذف إعدادات هذا الخادم. تبقى الوصفة في القائمة.",
       "pingOk": "استجاب خادم MCP",
       "pingError": "فشل فحص MCP",
       "runtimeMissing": "وقت التشغيل ناقص (Node أو npx أو Docker أو uvx).",
@@ -323,6 +340,34 @@
         "powerpoint": "PowerPoint",
         "word": "Word",
         "office": "Office"
+      },
+      "credentialsLead": "أنشئ PAT والرموز وسلاسل الاتصال في بيانات الاعتماد ثم عيّنها هنا. بلا اعتماد مناسب يبقى الخادم غير صالح.",
+      "pickRoot": "مجلد",
+      "needsNone": "لا يلزم اعتماد",
+      "needsRoot": "مجلد جذر",
+      "runtimeNeed": "يلزم تشغيل محلي: {{runtime}} (في PATH).",
+      "credentialHelp": "أنشئ أولاً اعتمادًا من النوع المناسب.",
+      "noCredentialOfKind": "لا اعتماد من هذا النوع — أضفه أولاً في بيانات الاعتماد.",
+      "hint": {
+        "github": "رمز وصول شخصي من GitHub في بيانات الاعتماد (النوع GitHub). npx محلي. بلا مجلد جذر.",
+        "azure": "رمز Azure/Entra أو PAT (النوع Azure). npx محلي.",
+        "gitlab": "رمز وصول شخصي من GitLab (النوع GitLab). npx محلي.",
+        "filesystem": "بلا اعتماد. اختر مجلدًا جذرًا — ليس C:\\\\. npx محلي.",
+        "git": "بلا اعتماد. دليل العمل كجذر. npx محلي.",
+        "playwright": "بلا اعتماد. Node/npx مع تشغيل المتصفح.",
+        "postgres": "سلسلة اتصال (النوع Postgres)، وليست قواعد SQLite للتطبيق. npx محلي.",
+        "context7": "مفتاح API كاعتماد Token. HTTP بعيد، بلا npx.",
+        "slack": "رمز بوت Slack (النوع Slack). npx محلي.",
+        "notion": "رمز تكامل Notion (النوع Notion). npx محلي.",
+        "atlassian": "رمز Atlassian Cloud API (النوع Atlassian). بعيد عبر mcp-remote.",
+        "linear": "مفتاح Linear API (النوع Linear). HTTP بعيد.",
+        "fetch": "بلا اعتماد. عناوين عامة كنص. npx محلي.",
+        "sentry": "رمز Sentry (النوع Token). npx محلي.",
+        "pdf": "بلا اعتماد. مجلد جذر للملفات. uvx محلي.",
+        "excel": "بلا اعتماد. مجلد جذر لـ .xlsx. uvx محلي.",
+        "powerpoint": "بلا اعتماد. مجلد جذر لـ .pptx. uvx محلي.",
+        "word": "بلا اعتماد. مجلد جذر لـ .docx. uvx محلي.",
+        "office": "بلا اعتماد. خادم واحد لـ PDF وOffice. مجلد جذر. uvx محلي."
       }
     },
     "data": {
@@ -572,13 +617,15 @@
       "agent": "وكيل",
       "agentHint": "موجّه النظام. وحده عبر الرسالة، أو عبر قناة من المنسّق.",
       "tool": "أداة",
-      "toolHint": "نوع الكتالوج، MCP اختياري. يُوصل بالوكيل أو بالمنسّق.",
+      "toolHint": "HTTP، بحث ويب، تاريخ/وقت، حاسبة، وصول للملفات. إلى الوكيل أو المنسّق.",
       "knowledge": "معرفة",
       "knowledgeHint": "مجلد المصدر، إلى منفذ knowledge للوكيل فقط.",
       "router": "موجّه",
       "routerHint": "يفرّع الرسائل حسب الشروط.",
       "end": "نهاية",
-      "endHint": "واحدة على الأقل. تُنهي التشغيل."
+      "endHint": "واحدة على الأقل. تُنهي التشغيل.",
+      "mcp": "MCP",
+      "mcpHint": "خادم مفعّل من الإعدادات. يُربط كأداة."
     },
     "ports": {
       "message": "رسالة",
@@ -682,6 +729,16 @@
         "placeholder": "عنصر نائب",
         "startMessage": "نص البداية",
         "requireInput": "الإدخال مطلوب"
+      },
+      "mcp": {
+        "hint": "خادم مفعّل من الإعدادات → خوادم MCP. مخرج الأداة إلى الوكيل أو المنسّق.",
+        "server": "خادم MCP",
+        "empty": "لا خادم",
+        "noneEnabled": "لا خادم نشط. أعد وصفة في الإعدادات وفعّلها.",
+        "tools": "أدوات هذا الخادم",
+        "toolsHint": "فارغ = كل الأدوات بعد الفحص.",
+        "probeHint": "الفحص في الإعدادات يعرض أدوات هذا الخادم.",
+        "settings": "إعدادات MCP"
       }
     },
     "load": {
@@ -738,7 +795,7 @@
       "modelRequired": "النموذج إلزامي.",
       "credentialRequired": "المزوّد السحابي يحتاج إلى اعتماد.",
       "toolKind": "نوع الأداة ناقص.",
-      "mcpServer": "اختر خادم MCP نشطًا.",
+      "mcpServer": "اختر خادم MCP نشطًا. أنشئه وفعّله في الإعدادات.",
       "mcpRoot": "يحتاج خادم MCP هذا إلى مسار جذر في الإعدادات.",
       "fileAccessRoot": "الوصول إلى الملفات يحتاج إلى مجلد ليس جذر القرص.",
       "knowledgePath": "مجلد المصدر إلزامي.",
@@ -751,7 +808,8 @@
         "missing": "الفهرس ناقص.",
         "stale": "الفهرس قديم.",
         "error": "خطأ في الفهرس."
-      }
+      },
+      "mcpDisabled": "خادم MCP هذا معطّل في الإعدادات."
     },
     "notify": {
       "saved": "تم حفظ الشبكة",
@@ -952,7 +1010,8 @@
       "tool": "أداة",
       "knowledge": "معرفة",
       "router": "موجّه",
-      "end": "نهاية"
+      "end": "نهاية",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "خامل",
@@ -1333,5 +1392,63 @@
     "modelNotFound": "لم يُعثر على نموذج التضمين.",
     "missingCredential": "نموذج التضمين هذا يحتاج إلى بيانات اعتماد.",
     "unauthorized": "رُفضت بيانات اعتماد التضمين."
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "pdf": "PDF",
+      "excel": "Excel",
+      "powerpoint": "PowerPoint",
+      "word": "Word",
+      "office": "Office"
+    },
+    "runtime": {
+      "missing": "التشغيل مفقود (Node أو npx أو Docker أو uvx)."
+    },
+    "ping": {
+      "failed": "فشل فحص MCP."
+    },
+    "root": {
+      "required": "مجلد الجذر إلزامي.",
+      "invalid": "جذر القرص أو النظام غير مسموح.",
+      "denied": "هذا المجلد محظور على MCP."
+    },
+    "credential": {
+      "required": "هذه الوصفة تحتاج اعتمادًا من النوع المناسب."
+    },
+    "custom": {
+      "invalid": "الخادم المخصص يحتاج أمرًا أو عنوانًا."
+    },
+    "postgres": {
+      "appDb": "يجب ألا يشير Postgres إلى قواعد التطبيق."
+    },
+    "session": {
+      "closed": "جلسة MCP مغلقة."
+    },
+    "call": {
+      "failed": "فشل استدعاء MCP."
+    },
+    "notFound": "خادم MCP غير موجود."
+  },
+  "graph": {
+    "mcp": {
+      "server": "اختر خادم MCP نشطًا.",
+      "disabled": "خادم MCP هذا معطّل.",
+      "root": "يحتاج خادم MCP هذا إلى مسار جذر في الإعدادات.",
+      "unavailable": "MCP غير متاح في هذا التثبيت."
+    }
   }
 }

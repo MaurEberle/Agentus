@@ -35,9 +35,23 @@ def list_recipes() -> list[McpRecipe]:
             transport=item.transport,  # type: ignore[arg-type]
             credential_kinds=item.credential_kinds,
             needs_root=item.needs_root,
+            runtime=item.runtime,
+            notes=item.notes,
         )
         for item in load_recipes()
     ]
+
+
+def _tool_names(row: dict[str, Any]) -> list[str] | None:
+    cached = row.get("cached_tools") or []
+    if not isinstance(cached, list):
+        return None
+    names = [
+        str(item["name"])
+        for item in cached
+        if isinstance(item, dict) and item.get("name")
+    ]
+    return names or None
 
 
 def _item(row: dict[str, Any]) -> McpServerListItem:
@@ -50,6 +64,7 @@ def _item(row: dict[str, Any]) -> McpServerListItem:
         status=row.get("status") or "unknown",
         credential_ids=row.get("credential_ids"),
         root_path=row.get("root_path"),
+        tool_names=_tool_names(row),
     )
 
 
@@ -77,6 +92,19 @@ def _check_root(recipe: RecipeRecord | None, root_path: str | None, enabled: boo
         )
 
 
+def _check_credentials(
+    recipe: RecipeRecord | None, credential_ids: list[str] | None, enabled: bool
+) -> None:
+    if not enabled or recipe is None:
+        return
+    kinds = list(recipe.credential_kinds or [])
+    if not kinds:
+        return
+    filled = [item for item in (credential_ids or []) if str(item).strip()]
+    if len(filled) < len(kinds):
+        raise AppError("mcp.credential.required", status_code=400)
+
+
 def _save(payload: dict[str, Any]) -> McpServerListItem:
     put_mcp_server(payload["id"], payload)
     return _item(payload)
@@ -92,6 +120,7 @@ def create_server(body: McpServerCreate) -> McpServerListItem:
         creds = list(body.credential_ids or [])[: len(kinds)] if kinds else list(body.credential_ids or [])
         enabled = bool(body.enabled)
         _check_root(recipe, body.root_path, enabled)
+        _check_credentials(recipe, creds, enabled)
         payload = {
             "id": server_id,
             "recipe_id": recipe.id,
@@ -152,6 +181,7 @@ def patch_server(server_id: str, body: McpServerPatch) -> McpServerListItem:
     enabled = row.get("enabled", False) if body.enabled is None else body.enabled
     row["enabled"] = enabled
     _check_root(recipe, row.get("root_path"), bool(enabled))
+    _check_credentials(recipe, row.get("credential_ids"), bool(enabled))
     return _save(row)
 
 

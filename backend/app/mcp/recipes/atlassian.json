@@ -4,7 +4,7 @@
   "transport": "stdio",
   "runtime": "npx",
   "command": "npx",
-  "args": ["-y", "mcp-remote@0.1.13"],
+  "args": ["-y", "mcp-remote@0.1.13", "https://mcp.atlassian.com/v1/sse"],
   "credentialKinds": ["atlassian"],
   "envFromKind": { "atlassian": "ATLASSIAN_API_TOKEN" },
   "needsRoot": false

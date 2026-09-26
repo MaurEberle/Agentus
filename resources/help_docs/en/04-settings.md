@@ -39,15 +39,36 @@ Help answers in the UI language. If the model cannot use that language, it answe
 
 ## MCP servers
 
-**Recipes** for external tools: GitHub, filesystem, Git, Playwright, Postgres, Slack, Notion, Office formats, and others. Recipes are not bundled binaries. Many need Node/`npx`, Docker, or `uvx` on the PC plus a credential.
+**Recipes** for external tools. Recipes are not bundled binaries. Many need Node/`npx`, Docker, or `uvx` on the PC plus a **credential**.
 
-Default: servers **off**. The app does not start MCP processes when you open Settings — only when a run needs a connected MCP tool node.
+Default: servers **off**. The app does not start MCP processes when you open Settings — only when a run needs a connected **MCP node**.
 
-Create from a recipe (credential, optional root path) or as a **custom server** (command, args, or URL). Use unknown commands only if you trust them. Probe checks reachability; “runtime missing” if Node/Docker/`uvx` is absent.
+**Set up:** pick a recipe, assign credentials of the matching kind, and for file recipes a root folder (not `C:\`). Saving creates and enables the server. **Probe** calls `tools/list`. “Runtime missing” if Node/Docker/`uvx` is absent.
+
+What each recipe needs:
+
+| Recipe | Credential | Other |
+|--------|------------|--------|
+| GitHub | PAT, kind **GitHub** | local `npx` |
+| GitLab | PAT, kind **GitLab** | local `npx` |
+| Azure | token/PAT, kind **Azure** | local `npx` |
+| Slack | bot token, kind **Slack** | local `npx` |
+| Notion | integration token, kind **Notion** | local `npx` |
+| Atlassian | Cloud token, kind **Atlassian** | remote |
+| Linear | API key, kind **Linear** | remote HTTP |
+| Context7 | API key, kind **Token** | remote HTTP |
+| Sentry | auth token, kind **Token** | local `npx` |
+| Postgres | connection string, kind **Postgres** (not the app SQLite) | local `npx` |
+| Filesystem, Git, PDF, Excel, PowerPoint, Word, Office | none | **root folder** required; `npx` or `uvx` |
+| Fetch, Playwright | none | local `npx`; Playwright also needs a browser |
+
+Create credentials under **Credentials**, not in the recipe dialog. Without a matching credential the server stays invalid.
+
+Or a **custom server** (command, args, or URL). Use unknown commands only if you trust them.
 
 Office bundles PDF and Office formats; enable single presets only if you really need them.
 
-Delete removes the server config, not Ollama and not credentials.
+Delete removes the server config, not Ollama and not credentials. In the network you attach the server with the palette node **MCP**, not a tool kind.
 
 ## Data
 

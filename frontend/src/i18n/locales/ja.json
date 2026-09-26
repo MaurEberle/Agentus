@@ -216,6 +216,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "トークン"
+      },
+      "kindHint": {
+        "xai": "xAI の API キー。",
+        "openai": "OpenAI の API キー。",
+        "anthropic": "Anthropic（Claude）の API キー。",
+        "gemini": "Google Gemini の API キー。",
+        "openai_compat": "OpenAI 互換 URL 用の Bearer トークン。",
+        "web_search": "ネットワークのウェブ検索用キー。",
+        "github": "GitHub の個人アクセストークン（PAT）。Classic: リポジトリ、Issue、Actions など必要な権限。",
+        "azure": "Azure/Entra トークンまたは PAT。",
+        "gitlab": "GitLab の個人アクセストークン。",
+        "slack": "Slack ボットトークン（xoxb-…）。",
+        "notion": "Notion 連携トークン。",
+        "atlassian": "Atlassian Cloud API トークン（Jira/Confluence）。",
+        "linear": "Linear API キー。",
+        "postgres": "Postgres の接続文字列（アプリのデータベースは不可）。",
+        "token": "汎用 API キーまたは Bearer トークン（Context7、Sentry など）。"
       }
     },
     "runtime": {
@@ -273,11 +290,11 @@
       "resetOnboarding": "オンボーディングを再表示"
     },
     "mcp": {
-      "lead": "レシピと独自サーバー。既定は無効です。ヘルプはこれらのサーバーを使いません。",
+      "lead": "レシピと独自サーバー。既定は無効。ヘルプは使いません。ここで作成して有効化し、ネットワークで MCP ノードを接続します。",
       "recipes": "レシピ",
       "servers": "設定済みサーバー",
       "empty": "MCPサーバーはまだありません。",
-      "enable": "有効化",
+      "enable": "設定",
       "added": "追加済み",
       "custom": "カスタム",
       "customCreate": "独自サーバー",
@@ -293,7 +310,7 @@
       "args": "引数",
       "url": "URL",
       "deleteTitle": "サーバーを削除しますか？",
-      "deleteBody": "この独自サーバーの設定が削除されます。",
+      "deleteBody": "このサーバー設定を削除します。レシピは一覧に残ります。",
       "pingOk": "MCPサーバーが応答しました",
       "pingError": "MCPプローブに失敗しました",
       "runtimeMissing": "ランタイムがありません（Node、npx、Docker、uvx）。",
@@ -323,6 +340,34 @@
         "powerpoint": "PowerPoint",
         "word": "Word",
         "office": "Office"
+      },
+      "credentialsLead": "PAT、トークン、接続文字列は認証情報で作り、ここで割り当てます。合う認証情報がないとサーバーは無効のままです。",
+      "pickRoot": "フォルダー",
+      "needsNone": "認証情報は不要",
+      "needsRoot": "ルートフォルダー",
+      "runtimeNeed": "ローカル実行環境が必要: {{runtime}}（PATH 上）。",
+      "credentialHelp": "先に合う種類の認証情報を作成してください。",
+      "noCredentialOfKind": "この種類の認証情報がありません。先に認証情報で追加します。",
+      "hint": {
+        "github": "認証情報で GitHub PAT（種類 GitHub）。ローカル npx。ルートフォルダー不要。",
+        "azure": "Azure/Entra トークンまたは PAT（種類 Azure）。ローカル npx。",
+        "gitlab": "GitLab 個人アクセストークン（種類 GitLab）。ローカル npx。",
+        "filesystem": "認証情報は不要。ルートフォルダーを選ぶ（C:\\\\ は不可）。ローカル npx。",
+        "git": "認証情報は不要。作業ディレクトリをルートに。ローカル npx。",
+        "playwright": "認証情報は不要。Node/npx とブラウザランタイム。",
+        "postgres": "接続文字列（種類 Postgres）。アプリの SQLite は不可。ローカル npx。",
+        "context7": "Token 種類の API キー。リモート HTTP、npx 不要。",
+        "slack": "Slack ボットトークン（種類 Slack）。ローカル npx。",
+        "notion": "Notion 連携トークン（種類 Notion）。ローカル npx。",
+        "atlassian": "Atlassian Cloud API トークン（種類 Atlassian）。mcp-remote でリモート。",
+        "linear": "Linear API キー（種類 Linear）。リモート HTTP。",
+        "fetch": "認証情報は不要。公開 URL をテキスト化。ローカル npx。",
+        "sentry": "Sentry 認証トークン（種類 Token）。ローカル npx。",
+        "pdf": "認証情報は不要。ファイルのルートフォルダー。ローカル uvx。",
+        "excel": "認証情報は不要。.xlsx のルート。ローカル uvx。",
+        "powerpoint": "認証情報は不要。.pptx のルート。ローカル uvx。",
+        "word": "認証情報は不要。.docx のルート。ローカル uvx。",
+        "office": "認証情報は不要。PDF と Office 用の 1 サーバー。ルートフォルダー。ローカル uvx。"
       }
     },
     "data": {
@@ -572,13 +617,15 @@
       "agent": "エージェント",
       "agentHint": "システムプロンプト。単体ではメッセージ、オーケストレーター配下ではチャネル。",
       "tool": "ツール",
-      "toolHint": "カタログの種類。任意でMCP。エージェントかオーケストレーターへ接続。",
+      "toolHint": "HTTP、ウェブ検索、日時、電卓、ファイルアクセス。エージェントまたはオーケストレーターへ。",
       "knowledge": "知識",
       "knowledgeHint": "ソースフォルダー。エージェントの knowledge ポートのみ。",
       "router": "ルーター",
       "routerHint": "条件に応じてメッセージを分岐します。",
       "end": "終了",
-      "endHint": "少なくとも1つ。実行を終えます。"
+      "endHint": "少なくとも1つ。実行を終えます。",
+      "mcp": "MCP",
+      "mcpHint": "設定で有効にしたサーバー。ツールと同じつなぎ方です。"
     },
     "ports": {
       "message": "メッセージ",
@@ -682,6 +729,16 @@
         "placeholder": "プレースホルダー",
         "startMessage": "開始テキスト",
         "requireInput": "入力必須"
+      },
+      "mcp": {
+        "hint": "設定 → MCP サーバーの有効なサーバー。ツール出力をエージェントまたはオーケストレーターへ。",
+        "server": "MCP サーバー",
+        "empty": "サーバーなし",
+        "noneEnabled": "有効なサーバーがありません。設定でレシピを用意して有効化してください。",
+        "tools": "このサーバーのツール",
+        "toolsHint": "空 = 確認後にすべてのツール。",
+        "probeHint": "設定の確認でこのサーバーのツールが一覧になります。",
+        "settings": "MCP 設定"
       }
     },
     "load": {
@@ -738,7 +795,7 @@
       "modelRequired": "モデルは必須です。",
       "credentialRequired": "クラウドプロバイダーには資格情報が必要です。",
       "toolKind": "ツールの種類がありません。",
-      "mcpServer": "有効なMCPサーバーを選んでください。",
+      "mcpServer": "有効な MCP サーバーを選んでください。設定で作成して有効化します。",
       "mcpRoot": "このMCPサーバーには設定でルートパスが必要です。",
       "fileAccessRoot": "ファイルアクセスにはドライブルートではないフォルダーが必要です。",
       "knowledgePath": "ソースフォルダーは必須です。",
@@ -751,7 +808,8 @@
         "missing": "インデックスがありません。",
         "stale": "インデックスが古くなっています。",
         "error": "インデックスエラー。"
-      }
+      },
+      "mcpDisabled": "この MCP サーバーは設定で無効です。"
     },
     "notify": {
       "saved": "ネットワークを保存しました",
@@ -952,7 +1010,8 @@
       "tool": "ツール",
       "knowledge": "知識",
       "router": "ルーター",
-      "end": "終了"
+      "end": "終了",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "アイドル",
@@ -1333,5 +1392,63 @@
     "modelNotFound": "埋め込みモデルが見つかりません。",
     "missingCredential": "この埋め込みモデルには認証情報が必要です。",
     "unauthorized": "埋め込みの認証情報は拒否されました。"
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "pdf": "PDF",
+      "excel": "Excel",
+      "powerpoint": "PowerPoint",
+      "word": "Word",
+      "office": "Office"
+    },
+    "runtime": {
+      "missing": "ランタイムがありません（Node、npx、Docker、uvx）。"
+    },
+    "ping": {
+      "failed": "MCP の確認に失敗しました。"
+    },
+    "root": {
+      "required": "ルートフォルダーは必須です。",
+      "invalid": "ドライブやシステムのルートは使えません。",
+      "denied": "このフォルダーは MCP で使えません。"
+    },
+    "credential": {
+      "required": "このレシピには合う種類の認証情報が必要です。"
+    },
+    "custom": {
+      "invalid": "独自サーバーにはコマンドまたは URL が必要です。"
+    },
+    "postgres": {
+      "appDb": "Postgres をアプリのデータベースに向けてはいけません。"
+    },
+    "session": {
+      "closed": "MCP セッションは閉じています。"
+    },
+    "call": {
+      "failed": "MCP の呼び出しに失敗しました。"
+    },
+    "notFound": "MCP サーバーが見つかりません。"
+  },
+  "graph": {
+    "mcp": {
+      "server": "有効な MCP サーバーを選んでください。",
+      "disabled": "この MCP サーバーは無効です。",
+      "root": "この MCP サーバーには設定でルートパスが必要です。",
+      "unavailable": "このインストールでは MCP を使えません。"
+    }
   }
 }

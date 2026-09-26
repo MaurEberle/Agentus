@@ -216,6 +216,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Token"
+      },
+      "kindHint": {
+        "xai": "Clave API de xAI.",
+        "openai": "Clave API de OpenAI.",
+        "anthropic": "Clave API de Anthropic (Claude).",
+        "gemini": "Clave API de Google Gemini.",
+        "openai_compat": "Token Bearer para una URL compatible con OpenAI.",
+        "web_search": "Clave para la búsqueda web de la red.",
+        "github": "Token de acceso personal de GitHub (PAT). Classic: repos, issues o actions según la tarea.",
+        "azure": "Token Azure/Entra o PAT.",
+        "gitlab": "Token de acceso personal de GitLab.",
+        "slack": "Token de bot de Slack (xoxb-…).",
+        "notion": "Token de integración de Notion.",
+        "atlassian": "Token API de Atlassian Cloud (Jira/Confluence).",
+        "linear": "Clave API de Linear.",
+        "postgres": "Cadena de conexión Postgres (no las bases de la app).",
+        "token": "Clave API o token Bearer genérico (Context7, Sentry y similares)."
       }
     },
     "runtime": {
@@ -273,11 +290,11 @@
       "resetOnboarding": "Mostrar la introducción otra vez"
     },
     "mcp": {
-      "lead": "Recetas y servidores propios. Por defecto: inactivos. La ayuda no usa estos servidores.",
+      "lead": "Recetas y servidores propios. Por defecto inactivos. La ayuda no los usa. Créalos y actívalos aquí, luego conecta un nodo MCP en la red.",
       "recipes": "Recetas",
       "servers": "Servidores configurados",
       "empty": "Aún no hay servidores MCP.",
-      "enable": "Activar",
+      "enable": "Configurar",
       "added": "Añadido",
       "custom": "Personalizado",
       "customCreate": "Servidor propio",
@@ -293,7 +310,7 @@
       "args": "Argumentos",
       "url": "URL",
       "deleteTitle": "¿Eliminar servidor?",
-      "deleteBody": "Se eliminará la configuración de este servidor propio.",
+      "deleteBody": "Se elimina la configuración de este servidor. La receta permanece en la lista.",
       "pingOk": "El servidor MCP ha respondido",
       "pingError": "La prueba MCP ha fallado",
       "runtimeMissing": "Falta el runtime (Node, npx, Docker o uvx).",
@@ -323,6 +340,34 @@
         "powerpoint": "PowerPoint",
         "word": "Word",
         "office": "Office"
+      },
+      "credentialsLead": "Crea PAT, tokens y cadenas de conexión en Credenciales y asígnalos aquí. Sin credencial adecuada el servidor sigue inválido.",
+      "pickRoot": "Carpeta",
+      "needsNone": "No hace falta credencial",
+      "needsRoot": "Carpeta raíz",
+      "runtimeNeed": "Runtime local: {{runtime}} (en el PATH).",
+      "credentialHelp": "Crea primero una credencial del tipo adecuado.",
+      "noCredentialOfKind": "No hay credencial de este tipo: créala primero en Credenciales.",
+      "hint": {
+        "github": "PAT de GitHub en Credenciales (tipo GitHub). npx local. Sin carpeta raíz.",
+        "azure": "Token Azure/Entra o PAT (tipo Azure). npx local.",
+        "gitlab": "Token personal de GitLab (tipo GitLab). npx local.",
+        "filesystem": "Sin credencial. Elige una carpeta raíz, no C:\\\\. npx local.",
+        "git": "Sin credencial. Directorio de trabajo como raíz. npx local.",
+        "playwright": "Sin credencial. Node/npx y un runtime de navegador.",
+        "postgres": "Cadena de conexión (tipo Postgres), no las SQLite de la app. npx local.",
+        "context7": "Clave API como credencial Token. HTTP remoto, sin npx.",
+        "slack": "Token de bot Slack (tipo Slack). npx local.",
+        "notion": "Token de integración Notion (tipo Notion). npx local.",
+        "atlassian": "Token API de Atlassian Cloud (tipo Atlassian). Remoto vía mcp-remote.",
+        "linear": "Clave API de Linear (tipo Linear). HTTP remoto.",
+        "fetch": "Sin credencial. URLs públicas como texto. npx local.",
+        "sentry": "Token de Sentry (tipo Token). npx local.",
+        "pdf": "Sin credencial. Carpeta raíz para archivos. uvx local.",
+        "excel": "Sin credencial. Carpeta raíz para .xlsx. uvx local.",
+        "powerpoint": "Sin credencial. Carpeta raíz para .pptx. uvx local.",
+        "word": "Sin credencial. Carpeta raíz para .docx. uvx local.",
+        "office": "Sin credencial. Un servidor para PDF y Office. Carpeta raíz. uvx local."
       }
     },
     "data": {
@@ -572,13 +617,15 @@
       "agent": "Agente",
       "agentHint": "Prompt de sistema. Solo por mensaje, o por un canal del orquestador.",
       "tool": "Herramienta",
-      "toolHint": "Tipo del catálogo, MCP opcional. Conecta a un agente o al orquestador.",
+      "toolHint": "HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos. Al agente o al orquestador.",
       "knowledge": "Conocimiento",
       "knowledgeHint": "Carpeta de origen, solo al puerto knowledge del agente.",
       "router": "Enrutador",
       "routerHint": "Bifurca mensajes según condiciones.",
       "end": "Fin",
-      "endHint": "Al menos uno. Cierra la ejecución."
+      "endHint": "Al menos uno. Cierra la ejecución.",
+      "mcp": "MCP",
+      "mcpHint": "Un servidor activo de Ajustes. Se conecta como una herramienta."
     },
     "ports": {
       "message": "Mensaje",
@@ -682,6 +729,16 @@
         "placeholder": "Marcador de posición",
         "startMessage": "Texto inicial",
         "requireInput": "Se requiere entrada"
+      },
+      "mcp": {
+        "hint": "Un servidor activo de Ajustes → Servidores MCP. Salida herramienta al agente o al orquestador.",
+        "server": "Servidor MCP",
+        "empty": "Sin servidor",
+        "noneEnabled": "Ningún servidor activo. Configura una receta en Ajustes y actívala.",
+        "tools": "Herramientas de este servidor",
+        "toolsHint": "Vacío = todas las herramientas tras la prueba.",
+        "probeHint": "Una prueba en Ajustes lista las herramientas de este servidor.",
+        "settings": "Ir a ajustes MCP"
       }
     },
     "load": {
@@ -738,7 +795,7 @@
       "modelRequired": "El modelo es obligatorio.",
       "credentialRequired": "El proveedor en la nube necesita una credencial.",
       "toolKind": "Falta el tipo de herramienta.",
-      "mcpServer": "Elige un servidor MCP activo.",
+      "mcpServer": "Elige un servidor MCP activo. Créalo y actívalo en Ajustes.",
       "mcpRoot": "Este servidor MCP necesita una ruta raíz en Ajustes.",
       "fileAccessRoot": "El acceso a archivos necesita una carpeta que no sea la raíz de una unidad.",
       "knowledgePath": "La carpeta de origen es obligatoria.",
@@ -751,7 +808,8 @@
         "missing": "Falta el índice.",
         "stale": "El índice está desactualizado.",
         "error": "Error de índice."
-      }
+      },
+      "mcpDisabled": "Este servidor MCP está desactivado en Ajustes."
     },
     "notify": {
       "saved": "Red guardada",
@@ -952,7 +1010,8 @@
       "tool": "Herramienta",
       "knowledge": "Conocimiento",
       "router": "Enrutador",
-      "end": "Fin"
+      "end": "Fin",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "Inactivo",
@@ -1333,5 +1392,63 @@
     "modelNotFound": "No se encontró el modelo de embeddings.",
     "missingCredential": "Este modelo de embeddings necesita una credencial.",
     "unauthorized": "La credencial de embeddings fue rechazada."
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "pdf": "PDF",
+      "excel": "Excel",
+      "powerpoint": "PowerPoint",
+      "word": "Word",
+      "office": "Office"
+    },
+    "runtime": {
+      "missing": "Falta el runtime (Node, npx, Docker o uvx)."
+    },
+    "ping": {
+      "failed": "La prueba MCP ha fallado."
+    },
+    "root": {
+      "required": "La carpeta raíz es obligatoria.",
+      "invalid": "No se permite la raíz del disco o del sistema.",
+      "denied": "Esta carpeta está bloqueada para MCP."
+    },
+    "credential": {
+      "required": "Esta receta necesita una credencial del tipo adecuado."
+    },
+    "custom": {
+      "invalid": "Un servidor propio necesita comando o URL."
+    },
+    "postgres": {
+      "appDb": "Postgres no puede apuntar a las bases de la app."
+    },
+    "session": {
+      "closed": "La sesión MCP está cerrada."
+    },
+    "call": {
+      "failed": "La llamada MCP ha fallado."
+    },
+    "notFound": "Servidor MCP no encontrado."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Elige un servidor MCP activo.",
+      "disabled": "Este servidor MCP está desactivado.",
+      "root": "Este servidor MCP necesita una ruta raíz en Ajustes.",
+      "unavailable": "MCP no está disponible en esta instalación."
+    }
   }
 }

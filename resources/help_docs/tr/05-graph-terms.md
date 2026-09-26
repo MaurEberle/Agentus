@@ -48,7 +48,7 @@ Windows kasasında saklanan anahtar. Listelerde yalnızca maske. Grafikte yalnı
 
 ## MCP
 
-Model Context Protocol: dış araç sunucuları. Ayarlar’da oluşturup etkinleştir, grafikte MCP türünde araç düğümü olarak bağla. Yardım MCP kullanmaz.
+Model Context Protocol: dış araç sunucuları. **Ayarlar**’da oluşturun, kimlik atayın ve **etkinleştirin**. Grafikte kendi **MCP** düğümleridir, araç çıkışı vardır. Yardım MCP kullanmaz.
 
 ## Sağlayıcı
 

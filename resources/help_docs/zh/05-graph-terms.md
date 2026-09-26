@@ -48,7 +48,7 @@
 
 ## MCP
 
-Model Context Protocol：外部工具服务器。在设置中创建并启用，在图中作为 MCP 类型的工具节点连接。帮助不使用 MCP。
+Model Context Protocol：外部工具服务器。在**设置**中创建、分配凭据并**启用**。图中是独立的 **MCP** 节点，输出与工具相同。帮助不使用 MCP。
 
 ## 提供方
 

@@ -8,7 +8,13 @@ from typing import Any
 from app.common.types import NEEDS_CREDENTIAL, PROVIDERS
 from app.db.paths import RAG_DIR_NAME
 from app.run.channels import agent_id_from_channel, normalize_channel_edges
-from app.run.graph_models import AgentNetworkDocument, GraphEdge, GraphNode
+from app.run.graph_models import (
+    AgentNetworkDocument,
+    GraphEdge,
+    GraphNode,
+    is_mcp_node,
+    normalize_mcp_nodes,
+)
 from app.run.models import ValidationError
 from app.tools.file_access_tool import is_forbidden_root
 from app.tools.kinds import FIRST_PARTY_KINDS
@@ -18,6 +24,7 @@ _OUT_HANDLES = {
     "llm": {"llm"},
     "agent": {"message", "handoff"},
     "tool": {"tool"},
+    "mcp": {"tool"},
     "knowledge": {"knowledge"},
     "end": set(),
 }
@@ -97,7 +104,7 @@ def validate_document(
     mcp_root: Callable[[str], str | None] | None = None,
     mcp_available: bool = True,
 ) -> list[ValidationError]:
-    doc = normalize_channel_edges(doc)
+    doc = normalize_mcp_nodes(normalize_channel_edges(doc))
     errors: list[ValidationError] = []
     if not doc.nodes:
         errors.append(_err("graph.end.missing"))
@@ -159,7 +166,7 @@ def validate_document(
             errors.append(_err("graph.edge.invalid", dst.id))
         if src.type == "knowledge" and not (dst.type == "agent" and edge.target_handle == "knowledge"):
             errors.append(_err("graph.edge.invalid", src.id))
-        if src.type == "tool" and not (
+        if src.type in {"tool", "mcp"} and not (
             dst.type in {"agent", "orchestrator"} and edge.target_handle == "tool"
         ):
             errors.append(_err("graph.edge.invalid", src.id))
@@ -210,19 +217,27 @@ def validate_document(
                 errors.append(_err("graph.llm.credential", node.id))
             if provider in NEEDS_CREDENTIAL and not str(node.data.get("credentialId") or "").strip():
                 errors.append(_err("graph.llm.credential", node.id))
+        if node.type == "mcp" or is_mcp_node(node):
+            if not mcp_available:
+                errors.append(_err("graph.mcp.unavailable", node.id))
+            server_id = str(node.data.get("mcpServerId") or "").strip()
+            if not server_id:
+                errors.append(_err("graph.mcp.server", node.id))
+            elif mcp_enabled is not None and not mcp_enabled(server_id):
+                errors.append(_err("graph.mcp.disabled", node.id))
+            elif mcp_root is not None:
+                from app.db.settings import get_mcp_server
+                from app.mcp.recipe_loader import get_recipe
+
+                row = get_mcp_server(server_id) or {}
+                recipe_id = str(row.get("recipe_id") or "")
+                recipe = get_recipe(recipe_id) if recipe_id else None
+                if recipe and recipe.needs_root and mcp_root(server_id) is None:
+                    errors.append(_err("graph.mcp.root", node.id))
         if node.type == "tool":
             kind = str(node.data.get("kind") or "")
             if kind == "mcp":
-                if not mcp_available:
-                    errors.append(_err("graph.mcp.unavailable", node.id))
-                server_id = str(node.data.get("mcpServerId") or "")
-                if not server_id:
-                    errors.append(_err("graph.mcp.server", node.id))
-                elif mcp_enabled is not None and not mcp_enabled(server_id):
-                    errors.append(_err("graph.mcp.disabled", node.id))
-                elif mcp_root is not None and mcp_root(server_id) is None:
-                    # only if recipe needs root — unknown without recipe; skip unless None always errors
-                    pass
+                pass
             elif kind and kind not in FIRST_PARTY_KINDS:
                 errors.append(_err("graph.mcp.server", node.id))
             if kind == "file_access":

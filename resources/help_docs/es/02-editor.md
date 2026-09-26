@@ -29,7 +29,8 @@ Mientras corre **exactamente esta** red: banner **Solo lectura** — primero det
 | Orquestador | `orchestrator` | Voz del chat de la ejecución. Entradas **Mensaje**, **LLM** y **Herramienta**. Una salida **Canal** por agente. **Mensaje** solo hacia **Fin** (o enrutador). **Como máximo uno.** |
 | LLM | `llm` | Proveedor (Ollama, xAI, OpenAI, Claude, Gemini), modelo, credencial para la nube, temperatura, límite de tokens. Salida **LLM**. |
 | Agente | `agent` | Prompt de sistema. Entradas Mensaje, LLM, Herramienta, Conocimiento y **Canal** opcional. Salidas Mensaje y Transferencia. El canal viene solo del orquestador. Sin canal el agente corre una vez por el mensaje. |
-| Herramienta | `tool` | First-party: HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos — o **MCP**. Salida **Herramienta**. |
+| Herramienta | `tool` | First-party: HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos. Salida **Herramienta**. |
+| MCP | `mcp` | Un servidor creado y **activado** en **Ajustes**. Salida **Herramienta**, como un nodo de herramienta. |
 | Conocimiento | `knowledge` | Carpeta con archivos para la red. Salida **Conocimiento**, solo al puerto Conocimiento del agente. |
 | Enrutador | `router` | Bifurca el mensaje según condiciones (primera línea / ramas con nombre) más salida por defecto. |
 | Fin | `end` | Cierre. **Al menos uno.** |
@@ -55,7 +56,8 @@ Nodo elegido:
 
 - **LLM:** proveedor, modelo (lista del runtime), credencial para la nube, ping, avanzado temperatura / máx. tokens. Nube sin credencial es inválida.
 - **Agente:** prompt de sistema y nombre visible. Si el agente está en un canal, el inspector explica que los encargos vienen del orquestador.
-- **Herramienta:** tipo. HTTP: método y URL, credencial opcional. Búsqueda web: credencial de tipo búsqueda web. Acceso a archivos: carpeta raíz, no la raíz de la unidad; el agente solo trabaja debajo, y escribir y borrar son interruptores. MCP: servidor activado de Ajustes; por defecto todas las herramientas de ese servidor.
+- **Herramienta:** tipo. HTTP: método y URL, credencial opcional. Búsqueda web: credencial de tipo búsqueda web. Acceso a archivos: carpeta raíz, no la raíz de la unidad; el agente solo trabaja debajo, y escribir y borrar son interruptores.
+- **MCP:** servidor activo en **Ajustes → Servidores MCP**. Por defecto todas las herramientas; tras una prueba puedes elegir un subconjunto. Credenciales y ruta raíz van en Ajustes, no en el inspector.
 - **Conocimiento:** carpeta de origen (selector), proveedor de embeddings (Ollama, OpenAI o Gemini) y modelo de embeddings, topK, umbral de puntuación, **Reconstruir índice**. La carpeta puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Los embeddings en la nube necesitan credencial. El índice pertenece a esta red, no a la ayuda.
 - **Chat:** marcador, texto inicial, interruptor «Entrada necesaria».
 - **Orquestador:** prompt de sistema. El modelo elige una pregunta, un encargo a un agente por su canal, una respuesta o el cierre. Los agentes son los canales, no una segunda lista. Llama él mismo las herramientas conectadas. Solo una pregunta espera al usuario.

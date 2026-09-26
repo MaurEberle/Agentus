@@ -41,7 +41,7 @@ La ayuda responde en el idioma de la interfaz. Si el modelo no puede usar ese id
 
 Plantillas (**recetas**) para herramientas externas: GitHub, sistema de archivos, Git, Playwright, Postgres, Slack, Notion, formatos Office y otras. Las recetas no son programas incluidos. Muchas necesitan Node/`npx`, Docker o `uvx` en el PC más una credencial.
 
-Predeterminado: servidor **inactivo**. La app no arranca procesos MCP al abrir, sino cuando una ejecución necesita un nodo de herramienta MCP conectado.
+Predeterminado: servidor **inactivo**. La app no arranca procesos MCP al abrir, sino cuando una ejecución necesita un **nodo MCP** conectado. Primero **Ajustes → Credenciales** (PAT, token o cadena), luego la receta. En el grafo usa el nodo de paleta **MCP**.
 
 Crear desde una receta (credencial, ruta raíz opcional) o como **servidor propio** (comando, argumentos o URL). Usa comandos desconocidos solo si confías en ellos. La sonda comprueba si responde; «Falta el runtime» si no hay Node/Docker/`uvx`.
 

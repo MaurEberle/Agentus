@@ -13,6 +13,8 @@ export function defaultData(type: NodeType): Record<string, unknown> {
       return { displayName: '', systemPrompt: '' };
     case 'tool':
       return { displayName: '', kind: 'datetime' };
+    case 'mcp':
+      return { displayName: '', mcpServerId: undefined, mcpToolNames: undefined };
     case 'knowledge':
       return { displayName: '', sourcePath: '', topK: 5, embeddingProvider: 'ollama', embeddingModel: '' };
     case 'router':

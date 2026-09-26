@@ -40,3 +40,16 @@ def test_filesystem_needs_root_placeholder() -> None:
     recipe = next(r for r in load_recipes() if r.id == "filesystem")
     assert recipe.needs_root is True
     assert any("{{rootPath}}" in arg for arg in recipe.args)
+
+
+def test_github_needs_pat_and_no_root() -> None:
+    recipe = next(r for r in load_recipes() if r.id == "github")
+    assert recipe.needs_root is False
+    assert recipe.credential_kinds == ["github"]
+    assert recipe.env_from_kind.get("github") == "GITHUB_PERSONAL_ACCESS_TOKEN"
+
+
+def test_fetch_needs_no_credentials() -> None:
+    recipe = next(r for r in load_recipes() if r.id == "fetch")
+    assert recipe.credential_kinds == []
+    assert recipe.needs_root is False

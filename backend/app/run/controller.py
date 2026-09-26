@@ -19,7 +19,7 @@ from app.run.graph_models import AgentNetworkDocument
 from app.run.help_bridge import set_help_degraded
 from app.run.knowledge import index_node
 from app.run.limits import LOG_PAYLOAD_MAX
-from app.run.mcp_bridge import get_mcp
+from app.run.mcp_bridge import get_mcp, validation_kwargs
 from app.run.models import (
     Activity,
     ActivityDag,
@@ -137,17 +137,16 @@ class RunController:
             data_dir = str(get_bootstrap().data_dir)
             mcp = get_mcp()
             doc = normalize_channel_edges(AgentNetworkDocument.model_validate(row.document))
-            has_mcp = any(
-                n.type == "tool" and str(n.data.get("kind")) == "mcp" for n in doc.nodes
-            )
+            from app.run.graph_models import is_mcp_node, normalize_mcp_nodes
+
+            doc = normalize_mcp_nodes(doc)
+            has_mcp = any(is_mcp_node(n) for n in doc.nodes)
             if has_mcp and mcp is None:
                 raise AppError("graph.mcp.unavailable", status_code=409)
             errors = validate_document(
                 doc,
                 data_dir=data_dir,
-                mcp_enabled=(mcp.is_enabled if mcp else None),
-                mcp_root=(mcp.root_path if mcp else None),
-                mcp_available=mcp is not None,
+                **validation_kwargs(),
             )
             if errors:
                 keys = ",".join(e.message_key for e in errors[:8])
@@ -188,6 +187,8 @@ class RunController:
                 self.finish("cancelled")
                 return {"serviceStatus": "stopped", "runId": run_id}
             server_ids = [sid for ag in compiled.agents.values() for sid, _ in ag.mcp if sid]
+            if compiled.orchestrator:
+                server_ids.extend(sid for sid, _ in compiled.orchestrator.mcp if sid)
             if server_ids and mcp is not None:
                 mcp.open_for(list(dict.fromkeys(server_ids)))
             self._phase = None

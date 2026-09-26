@@ -12,7 +12,7 @@ One execution of the active graph. At most **one** at a time. Start and Stop in 
 
 ## Nodes and edges
 
-Building blocks (chat, orchestrator, agent, LLM, tool, knowledge, router, end) and typed connections. Arbitrary box-to-box arrows are invalid.
+Building blocks (chat, orchestrator, agent, LLM, tool, MCP, knowledge, router, end) and typed connections. Arbitrary box-to-box arrows are invalid.
 
 ## Agent
 
@@ -32,7 +32,7 @@ A node with its own LLM. It is the only voice in the run chat, asks follow-ups, 
 
 ## Tool
 
-First-party (HTTP, web search, date/time, calculator, file access) or MCP. File access stays inside a root folder, not a drive root. Configured in the inspector, executed only during a run.
+First-party: HTTP, web search, date/time, calculator, file access. File access stays inside a root folder, not a drive root. Configured in the inspector, executed only during a run.
 
 ## Knowledge (network)
 
@@ -48,7 +48,7 @@ A stored secret in the Windows vault. Lists show a mask. The graph stores only t
 
 ## MCP
 
-Model Context Protocol: external tool servers. Create and enable them in Settings, connect them in the graph as a tool node of kind MCP. Help does not use MCP.
+Model Context Protocol: external tool servers. Create them in **Settings**, assign a credential, and **enable** them. In the graph they are their own **MCP** node, with a tool output. Help does not use MCP.
 
 ## Provider
 

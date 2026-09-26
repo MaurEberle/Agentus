@@ -17,7 +17,9 @@ def test_ping_populates_catalog_group(api_env, monkeypatch) -> None:
     )
     monkeypatch.setattr("app.mcp.sessions.connect_transport", lambda **k: fake)
     monkeypatch.setattr("app.mcp.service.runtime_available", lambda runtime: True)
-    item = create_server(McpServerCreate(recipe_id="github", enabled=True))
+    item = create_server(
+        McpServerCreate(recipe_id="github", credential_ids=["cred-1"], enabled=True)
+    )
     from app.mcp.service import ping_server
 
     status, key = ping_server(item.id)

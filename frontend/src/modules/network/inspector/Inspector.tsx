@@ -16,7 +16,7 @@ import {
   reindexNetworkKnowledge,
   testLlmConnection,
 } from '@/modules/network/api';
-import { useRuntimeModelsQuery } from '@/modules/settings/api';
+import { useMcpRecipesQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
 import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
@@ -144,6 +144,7 @@ export function Inspector({
       {node.type === 'agent' ? <AgentFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'orchestrator' ? <OrchestratorFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'tool' ? <ToolFields node={node} readOnly={readOnly} /> : null}
+      {node.type === 'mcp' ? <McpFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'knowledge' ? <KnowledgeFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'router' ? <RouterFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'chat_input' ? <ChatInputFields node={node} readOnly={readOnly} /> : null}
@@ -441,10 +442,8 @@ function AgentFields({ node, readOnly }: { node: GraphNode; readOnly: boolean })
 function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
-  const mcp = useMcpServersQuery();
   const kind = String(node.data.kind ?? 'datetime');
-  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access', 'mcp'] as const;
-  const enabledServers = (mcp.data?.items ?? []).filter((item) => item.enabled);
+  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access'] as const;
 
   return (
     <>
@@ -508,35 +507,93 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
         </Field>
       ) : null}
       {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
-      {kind === 'mcp' ? (
-        <>
-          <Field label={t('network.inspector.tool.mcpServer')}>
-            <Select
-              value={String(node.data.mcpServerId ?? 'none')}
-              disabled={readOnly}
-              onValueChange={(value) =>
-                editorUpdateNodeData(node.id, { mcpServerId: value === 'none' ? undefined : value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t('network.inspector.tool.mcpEmpty')}</SelectItem>
-                {enabledServers.map((server) => (
-                  <SelectItem key={server.id} value={server.id}>
-                    {server.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <p className="text-xs text-muted-foreground">{t('network.inspector.tool.mcpHint')}</p>
-          <Button asChild size="sm" variant="link">
-            <Link to="/settings#mcp">{t('network.inspector.tool.mcpSettings')}</Link>
-          </Button>
-        </>
+    </>
+  );
+}
+
+function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const mcp = useMcpServersQuery();
+  const recipes = useMcpRecipesQuery();
+  const enabledServers = (mcp.data?.items ?? []).filter((item) => item.enabled);
+  const serverId = String(node.data.mcpServerId ?? '');
+  const selected = enabledServers.find((item) => item.id === serverId);
+  const recipe = recipes.data?.items.find((item) => item.id === selected?.recipeId);
+  const selectedNames = Array.isArray(node.data.mcpToolNames)
+    ? (node.data.mcpToolNames as string[])
+    : undefined;
+  const toolNames = selected?.toolNames ?? [];
+
+  function selectServer(value: string) {
+    const nextId = value === 'none' ? undefined : value;
+    const next = enabledServers.find((item) => item.id === nextId);
+    const patch: Record<string, unknown> = { mcpServerId: nextId, mcpToolNames: undefined };
+    const currentName = String(node.data.displayName ?? '').trim();
+    if (!currentName && next) {
+      patch.displayName = next.recipeId
+        ? t(`mcp.recipe.${next.recipeId}`, { defaultValue: next.name })
+        : next.name;
+    }
+    editorUpdateNodeData(node.id, patch);
+  }
+
+  function toggleTool(name: string, on: boolean) {
+    const current = selectedNames ?? toolNames;
+    const next = on ? [...new Set([...current, name])] : current.filter((item) => item !== name);
+    editorUpdateNodeData(node.id, {
+      mcpToolNames: next.length === 0 || next.length === toolNames.length ? undefined : next,
+    });
+  }
+
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.mcp.hint')}</p>
+      <Field label={t('network.inspector.mcp.server')}>
+        <Select value={serverId || 'none'} disabled={readOnly} onValueChange={selectServer}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t('network.inspector.mcp.empty')}</SelectItem>
+            {enabledServers.map((server) => (
+              <SelectItem key={server.id} value={server.id}>
+                {server.recipeId
+                  ? t(`mcp.recipe.${server.recipeId}`, { defaultValue: server.name })
+                  : server.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      {recipe ? (
+        <p className="text-xs text-muted-foreground">
+          {t(`settings.mcp.hint.${recipe.id}`, { defaultValue: t('network.inspector.mcp.hint') })}
+        </p>
       ) : null}
+      {enabledServers.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.mcp.noneEnabled')}</p>
+      ) : null}
+      {toolNames.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t('network.inspector.mcp.tools')}</p>
+          <p className="text-xs text-muted-foreground">{t('network.inspector.mcp.toolsHint')}</p>
+          {toolNames.map((name) => (
+            <label key={name} className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={selectedNames ? selectedNames.includes(name) : true}
+                disabled={readOnly}
+                onCheckedChange={(value) => toggleTool(name, value === true)}
+              />
+              <span className="font-mono text-xs">{name}</span>
+            </label>
+          ))}
+        </div>
+      ) : selected ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.mcp.probeHint')}</p>
+      ) : null}
+      <Button asChild size="sm" variant="link" className="h-auto px-0">
+        <Link to="/settings#mcp">{t('network.inspector.mcp.settings')}</Link>
+      </Button>
     </>
   );
 }

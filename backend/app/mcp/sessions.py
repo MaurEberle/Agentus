@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 from app.common.secrets import mask_obj
 from app.db.errors import PersistError
-from app.db.settings import get_mcp_server
+from app.db.settings import get_mcp_server, put_mcp_server
 from app.db.vault import get as vault_get
 from app.mcp.models import McpToolInfo
 from app.mcp.recipe_loader import get_recipe
@@ -183,8 +183,11 @@ def _content(raw: Any) -> Any:
 
 
 class _Live:
-    def __init__(self, session: TransportSession) -> None:
+    def __init__(
+        self, session: TransportSession, tools: list[McpToolInfo] | None = None
+    ) -> None:
         self.session = session
+        self.tools = list(tools or [])
         self.last_used = time.monotonic()
         self.timer: threading.Timer | None = None
 
@@ -241,10 +244,43 @@ class McpSessions:
             cwd=cwd,
             headers=headers,
         )
-        live = _Live(session)
+        tools = session.list_tools()
+        row["status"] = "ok"
+        row["cached_tools"] = [
+            {
+                "name": item.name,
+                "description": item.description,
+                "input_schema": item.input_schema,
+            }
+            for item in tools
+        ]
+        put_mcp_server(server_id, row)
+        live = _Live(session, tools)
         with self._lock:
             self._live[server_id] = live
         self._arm_idle(server_id)
+
+    def listed_tools(self, server_id: str) -> list[McpToolInfo]:
+        with self._lock:
+            live = self._live.get(server_id)
+            if live is not None:
+                return list(live.tools)
+        row = get_mcp_server(server_id) or {}
+        cached = row.get("cached_tools") or []
+        out: list[McpToolInfo] = []
+        if isinstance(cached, list):
+            for item in cached:
+                if not isinstance(item, dict) or not item.get("name"):
+                    continue
+                schema = item.get("input_schema") or item.get("inputSchema") or {}
+                out.append(
+                    McpToolInfo(
+                        name=str(item["name"]),
+                        description=item.get("description"),
+                        input_schema=schema if isinstance(schema, dict) else {},
+                    )
+                )
+        return out
 
     def close_all(self) -> None:
         with self._lock:

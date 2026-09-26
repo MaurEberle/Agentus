@@ -35,6 +35,7 @@ import { downloadJson, duplicateNodes, exportDocument } from '@/modules/network/
 import { Palette } from '@/modules/network/palette/Palette';
 import { Ribbon } from '@/modules/network/ribbon/Ribbon';
 import { validateDocument } from '@/modules/network/validation/validate';
+import { useMcpServersQuery } from '@/modules/settings/api';
 import {
   editorDeleteSelection,
   editorDuplicateSelection,
@@ -108,7 +109,15 @@ function NetworkEditor() {
   const dirty = useNetworkEditor((state) => state.isDirty());
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
-  const issues = useMemo(() => validateDocument(document), [document]);
+  const mcp = useMcpServersQuery();
+  const issues = useMemo(
+    () =>
+      validateDocument(document, {
+        mcpServers: mcp.data?.items,
+        mcpReady: !mcp.isLoading,
+      }),
+    [document, mcp.data, mcp.isLoading],
+  );
   const readOnly = Boolean(
     (serviceStatus === 'running' || serviceStatus === 'starting') && document.id && document.id === activeNetworkId,
   );

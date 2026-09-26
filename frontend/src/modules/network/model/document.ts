@@ -9,6 +9,7 @@ export const NODE_TYPES = [
   'llm',
   'agent',
   'tool',
+  'mcp',
   'knowledge',
   'router',
   'end',
@@ -62,19 +63,23 @@ export type OrchestratorNodeData = {
   systemPrompt?: string;
 };
 
-export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'mcp';
+export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access';
 
 export type ToolNodeData = {
   displayName?: string;
   kind: ToolKind;
   credentialId?: string;
-  mcpServerId?: string;
-  mcpToolNames?: string[];
   method?: string;
   url?: string;
   rootPath?: string;
   allowWrite?: boolean;
   allowDelete?: boolean;
+};
+
+export type McpNodeData = {
+  displayName?: string;
+  mcpServerId?: string;
+  mcpToolNames?: string[];
 };
 
 export type KnowledgeNodeData = {
@@ -102,6 +107,7 @@ export type NodeDataMap = {
   llm: LlmNodeData;
   agent: AgentNodeData;
   tool: ToolNodeData;
+  mcp: McpNodeData;
   knowledge: KnowledgeNodeData;
   router: RouterNodeData;
   end: EndNodeData;
@@ -120,13 +126,35 @@ export function asGraphNode(node: {
   position: { x: number; y: number };
   data?: Record<string, unknown>;
 }): GraphNode | undefined {
-  if (!(NODE_TYPES as readonly string[]).includes(node.type)) return undefined;
-  return {
+  const migrated = migrateMcpNode({
     id: node.id,
     type: node.type as NodeType,
     position: node.position,
     data: node.data ?? {},
-  };
+  });
+  if (!(NODE_TYPES as readonly string[]).includes(migrated.type)) return undefined;
+  return migrated;
+}
+
+export function isMcpNode(node: { type: string; data?: Record<string, unknown> }): boolean {
+  return node.type === 'mcp' || (node.type === 'tool' && node.data?.kind === 'mcp');
+}
+
+export function migrateMcpNode(node: GraphNode): GraphNode {
+  if (node.type !== 'tool' || node.data.kind !== 'mcp') return node;
+  const data = { ...node.data };
+  delete data.kind;
+  return { ...node, type: 'mcp', data };
+}
+
+export function migrateMcpNodes(doc: AgentNetworkDocument): AgentNetworkDocument {
+  let changed = false;
+  const nodes = doc.nodes.map((node) => {
+    const next = migrateMcpNode(node);
+    if (next !== node) changed = true;
+    return next;
+  });
+  return changed ? { ...doc, nodes } : doc;
 }
 
 export type GraphEdge = {

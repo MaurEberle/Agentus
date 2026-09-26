@@ -29,7 +29,8 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 | Orchestrator | `orchestrator` | Stimme im Lauf-Chat. Eingänge **Nachricht**, **LLM** und **Werkzeug**. Pro Agent ein Ausgang **Kanal**. **Nachricht** nur zum **Ende** (oder Router). **Höchstens einer.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel), Modell, Zugang für Cloud, Temperature, Token-Limit. Ausgang **LLM**. |
 | Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen, optional **Kanal**. Ausgänge Nachricht und Übergabe. Der Kanal kommt nur vom Orchestrator. Ohne Kanal läuft der Agent einmal über die Nachricht. |
-| Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff — oder **MCP**. Ausgang **Werkzeug**. |
+| Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. Ausgang **Werkzeug**. |
+| MCP | `mcp` | Ein in den **Einstellungen** angelegter und **aktiver** Server. Ausgang **Werkzeug**, wie ein Werkzeug-Knoten. |
 | Wissen | `knowledge` | Ordner mit Dateien für das Netz. Ausgang **Wissen**, nur zum Agent-Anschluss Wissen. |
 | Router | `router` | Verzweigt die Nachricht nach Bedingungen (erste Zeile / benannte Zweige) plus Standard-Ausgang. |
 | Ende | `end` | Abschluss. **Mindestens eines.** |
@@ -41,7 +42,7 @@ Nur passende Anschlüsse:
 - Nachricht zu Nachricht (Chat → Agent oder Chat → Orchestrator, Agent → Ende, Agent → Router, Router-Zweige → …). Der Orchestrator schickt Nachricht nur an Ende oder Router.
 - Kanal zu Kanal (Orchestrator → Agent). Ein Anschluss pro Agent. Die Antwort kommt im Lauf zurück, ohne zweite Kante.
 - LLM-Ausgang an Agent **LLM** oder Orchestrator **LLM** — jeder Agent und der Orchestrator brauchen **genau eine** solche Kante
-- Werkzeug-Ausgang an Agent oder Orchestrator **Werkzeug** (mehrere erlaubt). Ein Werkzeug darf an beide.
+- Werkzeug-Ausgang an Agent oder Orchestrator **Werkzeug** (mehrere erlaubt). Ein Werkzeug- oder MCP-Knoten darf an beide.
 - Wissen-Ausgang nur an Agent **Wissen**
 - Zyklen sind verboten (gerichteter Graph ohne Schleife)
 
@@ -55,7 +56,8 @@ Knoten gewählt:
 
 - **LLM:** Provider, Modell (Liste von der Runtime), Zugang für Cloud, Ping, erweitert Temperature / max. Tokens. Cloud ohne Zugang ist ungültig.
 - **Agent:** Systemprompt und Anzeigename. Hängt der Agent an einem Kanal, erklärt der Inspector, dass Aufträge vom Orchestrator kommen.
-- **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. Dateizugriff: Wurzelordner, nicht die Laufwerkswurzel; der Agent arbeitet nur darunter, Schreiben und Löschen sind Schalter. MCP: aktivierter Server aus den Einstellungen; Standard alle Tools dieses Servers.
+- **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. Dateizugriff: Wurzelordner, nicht die Laufwerkswurzel; der Agent arbeitet nur darunter, Schreiben und Löschen sind Schalter.
+- **MCP:** aktiver Server aus **Einstellungen → MCP-Server**. Standard alle Tools dieses Servers; nach einer Probe kannst du eine Teilmenge wählen. Zugänge und Wurzelpfad gehören in die Einstellungen, nicht in den Inspector.
 - **Wissen:** Quellenordner (Ordnerwahl), Embedding-Provider (Ollama, OpenAI oder Gemini) und Embedding-Modell, topK, Score-Schwelle, **Index neu**. Der Ordner darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Cloud-Embeddings brauchen einen Zugang. Der Index gehört zu diesem Netz, nicht zur Hilfe.
 - **Chat:** Platzhalter, Starttext, Schalter „Eingabe nötig“.
 - **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Die Agenten sind die Kanäle, keine zweite Liste. Angeschlossene Werkzeuge ruft er selbst auf. Nur die Rückfrage wartet auf den Nutzer.
@@ -71,7 +73,7 @@ Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Expo
 - höchstens ein Chat, höchstens ein Orchestrator, mindestens ein Ende
 - jeder Agent: genau eine LLM-Kante. Ohne Orchestrator eine eingehende Nachricht. Mit Orchestrator genau ein Kanal und keine Nachrichten-Kette am selben Agenten
 - LLM: Modell gesetzt; Cloud: Zugang
-- Werkzeug: Art; MCP: aktiver Server, Wurzelpfad wenn das Rezept ihn braucht
+- Werkzeug: Art. MCP: aktiver Server aus den Einstellungen; Wurzelpfad wenn das Rezept ihn braucht
 - Wissen: Pfad gesetzt, keine Wurzel, nicht der Hilfe-Korpus, Embedding-Zugang wenn der Provider ihn braucht
 - keine hängenden Kanten, keine Zyklen, passende Anschlusstypen
 

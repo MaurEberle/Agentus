@@ -39,15 +39,36 @@ Die Hilfe antwortet in der Oberflächensprache. Kann das Modell die Sprache nich
 
 ## MCP-Server
 
-Vorlagen (**Rezepte**) für externe Tools: GitHub, Dateisystem, Git, Playwright, Postgres, Slack, Notion, Office-Formate und andere. Rezepte sind keine mitgelieferten Programme. Viele brauchen Node/`npx`, Docker oder `uvx` auf dem PC plus einen Zugang.
+Vorlagen (**Rezepte**) für externe Tools. Rezepte sind keine mitgelieferten Programme. Viele brauchen Node/`npx`, Docker oder `uvx` auf dem PC plus einen **Zugang**.
 
-Standard: Server **inaktiv**. Die App startet MCP-Prozesse nicht beim Öffnen, sondern wenn ein Lauf einen verbundenen MCP-Werkzeugknoten braucht.
+Standard: Server **inaktiv**. Die App startet MCP-Prozesse nicht beim Öffnen, sondern wenn ein Lauf einen verbundenen **MCP-Knoten** braucht.
 
-Anlegen aus einem Rezept (Zugang, optionaler Wurzelpfad) oder als **eigener Server** (Befehl, Argumente oder URL). Unbekannte Befehle nur verwenden, wenn du ihnen vertraust. Probe prüft Erreichbarkeit; „Runtime fehlt“, wenn Node/Docker/`uvx` nicht da ist.
+**Einrichten:** Rezept wählen, Zugänge der passenden Art zuordnen, bei Datei-Rezepten einen Wurzelordner (nicht `C:\`). Speichern legt den Server an und aktiviert ihn. **Probe** spricht `tools/list`. „Runtime fehlt“, wenn Node/Docker/`uvx` nicht da ist.
+
+Was welches Rezept braucht:
+
+| Rezept | Zugang | Sonst |
+|--------|--------|--------|
+| GitHub | PAT, Art **GitHub** | lokal `npx` |
+| GitLab | PAT, Art **GitLab** | lokal `npx` |
+| Azure | Token/PAT, Art **Azure** | lokal `npx` |
+| Slack | Bot-Token, Art **Slack** | lokal `npx` |
+| Notion | Integration-Token, Art **Notion** | lokal `npx` |
+| Atlassian | Cloud-Token, Art **Atlassian** | remote |
+| Linear | API-Key, Art **Linear** | remote HTTP |
+| Context7 | API-Key, Art **Token** | remote HTTP |
+| Sentry | Auth-Token, Art **Token** | lokal `npx` |
+| Postgres | Verbindungszeichenfolge, Art **Postgres** (nicht die App-SQLite) | lokal `npx` |
+| Dateisystem, Git, PDF, Excel, PowerPoint, Word, Office | keiner | **Wurzelordner** Pflicht; `npx` oder `uvx` |
+| Fetch, Playwright | keiner | lokal `npx`; Playwright zusätzlich Browser |
+
+Zugänge legst du unter **Zugänge** an, nicht im Rezept-Dialog. Ohne passenden Zugang bleibt der Server ungültig.
+
+Oder **eigener Server** (Befehl, Argumente oder URL). Unbekannte Befehle nur verwenden, wenn du ihnen vertraust.
 
 Office bündelt PDF und Office-Formate; Einzel-Presets nur extra aktivieren, wenn du sie wirklich brauchst.
 
-Löschen entfernt die Server-Konfiguration, nicht Ollama und nicht Zugänge.
+Löschen entfernt die Server-Konfiguration, nicht Ollama und nicht Zugänge. Im Netz verbindest du den Server über den Palette-Knoten **MCP**, nicht über die Werkzeug-Art.
 
 ## Daten
 

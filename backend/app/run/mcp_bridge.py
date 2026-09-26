@@ -17,6 +17,17 @@ class McpSessions(Protocol):
 
     def root_path(self, server_id: str) -> str | None: ...
 
+    def listed_tools(self, server_id: str) -> list[McpToolInfo]: ...
+
+
+def validation_kwargs() -> dict[str, Any]:
+    mcp = get_mcp()
+    return {
+        "mcp_available": mcp is not None,
+        "mcp_enabled": mcp.is_enabled if mcp else None,
+        "mcp_root": mcp.root_path if mcp else None,
+    }
+
 
 def get_mcp() -> McpSessions | None:
     try:

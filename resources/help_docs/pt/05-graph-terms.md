@@ -48,7 +48,7 @@ Chave guardada no cofre do Windows. Nas listas só máscara. No grafo só o ID/e
 
 ## MCP
 
-Model Context Protocol: servidores de ferramentas externos. Cria-os e ativa-os nas Definições, liga-os no grafo como nó de ferramenta do tipo MCP. A ajuda não usa MCP.
+Model Context Protocol: servidores de ferramentas externos. Cria-os nas **Definições**, atribui uma credencial e **ativa-os**. No grafo são um nó **MCP** próprio, com saída de ferramenta. A ajuda não usa MCP.
 
 ## Fornecedor
 
