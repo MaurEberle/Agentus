@@ -59,7 +59,7 @@ export function HelpChatHost() {
       {isDesktop && open ? (
         <div
           className={cn(
-            'fixed bottom-20 right-6 z-40',
+            'fixed bottom-28 right-6 z-40',
             reducedMotion ? 'opacity-100' : 'animate-in fade-in slide-in-from-bottom-2 duration-200',
           )}
         >

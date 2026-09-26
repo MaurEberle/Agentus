@@ -32,6 +32,7 @@ import { downloadBlob, zipStore } from '@/modules/networks/model/zip';
 import { LibraryRibbon } from '@/modules/networks/ribbon/Ribbon';
 import { useNetworksUi } from '@/modules/networks/store';
 import type { AgentNetworkDocument } from '@/modules/network/model/document';
+import { ModuleLoading } from '@/components/layout/ModuleLoading';
 
 export function NetworksModule() {
   const { t } = useTranslation();
@@ -240,6 +241,8 @@ export function NetworksModule() {
             </Button>
           </div>
         </div>
+      ) : query.isLoading ? (
+        <ModuleLoading />
       ) : emptyFilter ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
           <p className="text-sm text-muted-foreground">{t('networks.empty.filter')}</p>
@@ -259,7 +262,7 @@ export function NetworksModule() {
       ) : (
         <div className="flex min-h-0 flex-1">
           <div className="min-h-0 min-w-0 flex-1">
-            <NetworkList items={filtered} loading={query.isLoading} onOpen={openEditor} />
+            <NetworkList items={filtered} loading={false} onOpen={openEditor} />
           </div>
           {isDesktop ? (
             <aside className="hidden w-80 shrink-0 overflow-auto border-l md:block">

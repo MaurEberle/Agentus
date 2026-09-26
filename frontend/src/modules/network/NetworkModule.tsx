@@ -33,6 +33,7 @@ import { Inspector } from '@/modules/network/inspector/Inspector';
 import { LoadDialog } from '@/modules/network/library/LoadDialog';
 import { downloadJson, duplicateNodes, exportDocument } from '@/modules/network/model/serialize';
 import { Palette } from '@/modules/network/palette/Palette';
+import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { Ribbon } from '@/modules/network/ribbon/Ribbon';
 import { validateDocument } from '@/modules/network/validation/validate';
 import { useMcpServersQuery } from '@/modules/settings/api';
@@ -401,6 +402,10 @@ function NetworkEditor() {
     } catch {
       return { x: 120, y: 120 };
     }
+  }
+
+  if (id && query.isLoading && !query.data) {
+    return <ModuleLoading />;
   }
 
   if (id && query.isError) {

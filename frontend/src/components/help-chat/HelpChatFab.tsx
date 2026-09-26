@@ -26,14 +26,14 @@ export function HelpChatFab({
       type="button"
       variant="ghost"
       size="icon"
-      className="app-no-drag relative size-[52px] rounded-full border border-border bg-white p-1 shadow-md hover:bg-white hover:shadow-lg"
+      className="app-no-drag relative h-[72px] w-[72px] min-h-[72px] min-w-[72px] rounded-full border border-border bg-white p-1 shadow-md hover:bg-white hover:shadow-lg"
       aria-label={open ? t('helpChat.fab.close') : t('helpChat.fab.open')}
       aria-expanded={open}
       onClick={onClick}
     >
-      <BrandMark className="size-full" alt="" />
+      <BrandMark spinning={status === 'generating'} className="size-full" alt="" />
       {dot ? (
-        <span className={cn('absolute right-1.5 top-1.5 size-2.5 rounded-full border border-background', dot)} />
+        <span className={cn('absolute right-2 top-2 size-2.5 rounded-full border border-background', dot)} />
       ) : null}
     </Button>
   );

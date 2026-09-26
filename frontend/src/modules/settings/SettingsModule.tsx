@@ -29,6 +29,7 @@ import { McpSection } from '@/modules/settings/sections/McpSection';
 import { RuntimeSection } from '@/modules/settings/sections/RuntimeSection';
 import { useSettingsDraft } from '@/modules/settings/store';
 import { useAppStore } from '@/store';
+import { ModuleLoading } from '@/components/layout/ModuleLoading';
 
 const SECTION_COMPONENTS: Record<SettingsSectionId, () => JSX.Element> = {
   appearance: AppearanceSection,
@@ -44,7 +45,7 @@ export function SettingsModule() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { data: settings } = useSettingsQuery();
+  const { data: settings, isLoading: settingsLoading } = useSettingsQuery();
   const hydrate = useSettingsDraft((state) => state.hydrate);
   const reset = useSettingsDraft((state) => state.reset);
   const isDirty = useSettingsDraft((state) => state.isDirty(settings));
@@ -122,6 +123,10 @@ export function SettingsModule() {
   }
 
   const Section = SECTION_COMPONENTS[section];
+
+  if (settingsLoading && !settings) {
+    return <ModuleLoading />;
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col md:flex-row">
