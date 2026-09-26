@@ -25,6 +25,7 @@ class RecipeRecord:
     env_from_kind: dict[str, str] = field(default_factory=dict)
     append_root: bool = False
     notes: str | None = None
+    tool_schemas: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
@@ -45,6 +46,12 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
     append = raw.get("appendRoot")
     if append is None:
         append = needs_root
+    raw_schemas = raw.get("toolSchemas") if isinstance(raw.get("toolSchemas"), dict) else {}
+    tool_schemas = {
+        str(name): dict(schema)
+        for name, schema in raw_schemas.items()
+        if isinstance(name, str) and isinstance(schema, dict)
+    }
     return RecipeRecord(
         id=recipe_id,
         title_key=title,
@@ -58,6 +65,7 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
         env_from_kind={str(k): str(v) for k, v in env_map.items()},
         append_root=bool(append),
         notes=str(raw["notes"]) if raw.get("notes") else None,
+        tool_schemas=tool_schemas,
     )
 
 

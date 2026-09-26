@@ -8,13 +8,14 @@ import threading
 import time
 from typing import Any, Protocol
 
-from app.common.secrets import mask_obj
+from app.common.secrets import mask_obj, mask_text
 from app.db.errors import PersistError
 from app.db.settings import get_mcp_server, put_mcp_server
 from app.db.vault import get as vault_get
 from app.mcp.models import McpToolInfo
 from app.mcp.recipe_loader import get_recipe
 from app.mcp.runtime_check import runtime_available
+from app.mcp.payload import coerce_tool_arguments, compact_tool_result
 from app.mcp.sandbox import reject_app_db_dsn, resolve_args
 
 IDLE_SEC = 300.0
@@ -87,9 +88,7 @@ class _SdkSession:
         return self._run(_list_tools_tolerant(self._session), timeout=15)
 
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        raw = self._run(self._session.call_tool(name, arguments), timeout=60)
-        is_error = bool(getattr(raw, "isError", False) or (isinstance(raw, dict) and raw.get("isError")))
-        return {"isError": is_error, "result": _content(raw)}
+        return self._run(_call_tool_tolerant(self._session, name, arguments), timeout=60)
 
     def close(self) -> None:
         try:
@@ -102,15 +101,112 @@ class _SdkSession:
             pass
 
 
+def _inline_json_schema_ref(schema: dict[str, Any]) -> dict[str, Any]:
+    ref = schema.get("$ref")
+    if not isinstance(ref, str) or not ref.startswith("#/"):
+        return schema
+    defs = schema.get("$defs") or schema.get("definitions") or {}
+    if not isinstance(defs, dict):
+        return schema
+    target = defs.get(ref.rsplit("/", 1)[-1])
+    if not isinstance(target, dict):
+        return schema
+    merged = dict(target)
+    for key, value in schema.items():
+        if key != "$ref":
+            merged[key] = value
+    return merged
+
+
+def schema_properties_empty(schema: dict[str, Any]) -> bool:
+    props = schema.get("properties")
+    return not isinstance(props, dict) or len(props) == 0
+
+
 def repair_input_schema(schema: object) -> dict[str, Any]:
-    """Older MCP servers omit JSON Schema ``type``; the Python SDK requires it."""
+    """Older MCP servers omit JSON Schema ``type``; the Python SDK requires it.
+
+    npm MCP 0.6.x plus Zod 4 often yields only ``$schema`` (zod-to-json-schema
+    cannot convert Zod 4). Inline ``$ref`` when present; callers overlay
+    recipe fallbacks when properties stay empty.
+    """
     if not isinstance(schema, dict):
         return {"type": "object", "properties": {}}
-    out = dict(schema)
+    out = _inline_json_schema_ref(dict(schema))
     if "type" not in out:
         out["type"] = "object"
     if out.get("type") == "object" and "properties" not in out:
         out["properties"] = {}
+    return out
+
+
+def github_login(token: str | None) -> str | None:
+    if not token:
+        return None
+    try:
+        import urllib.request
+
+        request = urllib.request.Request(
+            "https://api.github.com/user",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "agentus-network",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=8) as response:
+            body = json.loads(response.read().decode("utf-8"))
+        login = body.get("login") if isinstance(body, dict) else None
+        return str(login) if login else None
+    except Exception:
+        return None
+
+
+def annotate_github_login(tools: list[McpToolInfo], token: str | None) -> list[McpToolInfo]:
+    login = github_login(token)
+    if not login:
+        return tools
+    note = (
+        f" Authenticated user is {login}. "
+        f"To list that user's repositories, set query to user:{login}."
+    )
+    out: list[McpToolInfo] = []
+    for tool in tools:
+        description = tool.description or ""
+        schema = dict(tool.input_schema or {})
+        if tool.name == "search_repositories":
+            description = (description + note).strip()
+            props = dict(schema.get("properties") or {})
+            query = dict(props.get("query") or {"type": "string"})
+            extra = f" For the signed-in account use user:{login}."
+            if extra not in str(query.get("description") or ""):
+                query["description"] = (query.get("description") or "Search query") + extra
+            props["query"] = query
+            schema["properties"] = props
+        out.append(
+            McpToolInfo(name=tool.name, description=description, input_schema=schema)
+        )
+    return out
+
+
+def apply_recipe_tool_schemas(
+    tools: list[McpToolInfo], recipe: Any | None
+) -> list[McpToolInfo]:
+    fallbacks = dict(getattr(recipe, "tool_schemas", None) or {})
+    out: list[McpToolInfo] = []
+    for tool in tools:
+        schema = repair_input_schema(tool.input_schema)
+        if schema_properties_empty(schema):
+            overlay = fallbacks.get(tool.name)
+            if isinstance(overlay, dict):
+                schema = repair_input_schema(overlay)
+        out.append(
+            McpToolInfo(
+                name=tool.name,
+                description=tool.description,
+                input_schema=schema,
+            )
+        )
     return out
 
 
@@ -149,18 +245,84 @@ def tools_from_list_payload(raw: object) -> list[McpToolInfo]:
     return out
 
 
+def _output_schema_from_item(item: object) -> dict[str, Any] | None:
+    if isinstance(item, dict):
+        schema = item.get("outputSchema") or item.get("output_schema")
+    else:
+        schema = getattr(item, "outputSchema", None) or getattr(item, "output_schema", None)
+    if isinstance(schema, dict) and schema.get("type"):
+        return schema
+    return None
+
+
+def seed_tool_output_cache(
+    session: Any, tools: list[McpToolInfo], raw_items: object = None
+) -> None:
+    """Fill ClientSession._tool_output_schemas so call_tool does not re-list.
+
+    MCP SDK 2.x re-runs tools/list after a successful tools/call when the
+    cache is empty. Older servers (GitHub 0.6.2) omit inputSchema.type, so
+    that re-list raises ValidationError and the tool result is discarded.
+    """
+    cache = getattr(session, "_tool_output_schemas", None)
+    if not isinstance(cache, dict):
+        return
+    raw_by_name: dict[str, object] = {}
+    if isinstance(raw_items, list):
+        for item in raw_items:
+            name = None
+            if isinstance(item, dict):
+                name = item.get("name")
+            else:
+                name = getattr(item, "name", None)
+            if name:
+                raw_by_name[str(name)] = item
+    for tool in tools:
+        if tool.name in cache:
+            continue
+        cache[tool.name] = _output_schema_from_item(raw_by_name.get(tool.name))
+
+
 async def _list_tools_tolerant(session: Any) -> list[McpToolInfo]:
     from pydantic import ValidationError
 
+    raw_items: object = None
     try:
         listed = await session.list_tools()
-        return tools_from_list_payload(listed)
+        tools = tools_from_list_payload(listed)
+        raw_items = getattr(listed, "tools", None)
     except ValidationError:
         dispatcher = getattr(session, "_dispatcher", None)
         if dispatcher is None:
             raise
-        raw = await dispatcher.send_raw_request("tools/list", None, {})
-        return tools_from_list_payload(raw)
+        raw = await dispatcher.send_raw_request("tools/list", None)
+        tools = tools_from_list_payload(raw)
+        raw_items = raw.get("tools") if isinstance(raw, dict) else None
+    seed_tool_output_cache(session, tools, raw_items)
+    return tools
+
+
+def call_result_from_payload(raw: object) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        is_error = bool(raw.get("isError") or raw.get("is_error"))
+        return {"isError": is_error, "result": _content(raw)}
+    is_error = bool(getattr(raw, "isError", False) or getattr(raw, "is_error", False))
+    return {"isError": is_error, "result": _content(raw)}
+
+
+async def _call_tool_tolerant(
+    session: Any, name: str, arguments: dict[str, Any]
+) -> dict[str, Any]:
+    """Call via raw JSON-RPC so old servers are not re-validated as ListToolsResult."""
+    dispatcher = getattr(session, "_dispatcher", None)
+    if dispatcher is not None:
+        payload = await dispatcher.send_raw_request(
+            "tools/call",
+            {"name": name, "arguments": arguments or {}},
+        )
+        return call_result_from_payload(payload)
+    raw = await session.call_tool(name, arguments)
+    return call_result_from_payload(raw)
 
 
 async def _setup(
@@ -210,25 +372,54 @@ async def _teardown(holder: _SdkSession) -> None:
             pass
 
 
-def _content(raw: Any) -> Any:
+def _content_blocks(raw: Any) -> Any:
     if isinstance(raw, dict):
-        return raw.get("result", raw)
-    content = getattr(raw, "content", None)
-    if not content:
+        if "content" in raw:
+            return raw.get("content")
         return None
+    return getattr(raw, "content", None)
+
+
+def _structured(raw: Any) -> Any:
+    if isinstance(raw, dict):
+        if "structuredContent" in raw:
+            return raw.get("structuredContent")
+        if "result" in raw and "content" not in raw:
+            return raw.get("result")
+        return None
+    return getattr(raw, "structured_content", None) or getattr(raw, "structuredContent", None)
+
+
+def _texts_from_blocks(content: Any) -> list[str]:
     texts: list[str] = []
-    for item in content:
-        text = getattr(item, "text", None)
+    if not content:
+        return texts
+    items = content if isinstance(content, list) else [content]
+    for item in items:
+        if isinstance(item, dict):
+            text = item.get("text")
+        else:
+            text = getattr(item, "text", None)
         if isinstance(text, str):
             texts.append(text)
-    if not texts:
-        return None
+    return texts
+
+
+def _content(raw: Any) -> Any:
+    texts = _texts_from_blocks(_content_blocks(raw))
     if len(texts) == 1:
         try:
             return json.loads(texts[0])
         except ValueError:
             return texts[0]
-    return texts
+    if len(texts) > 1:
+        return texts
+    structured = _structured(raw)
+    if structured is not None:
+        return structured
+    if isinstance(raw, dict) and "result" in raw:
+        return raw.get("result")
+    return None
 
 
 class _Live:
@@ -301,7 +492,9 @@ class McpSessions:
             cwd=cwd,
             headers=headers,
         )
-        tools = session.list_tools()
+        tools = apply_recipe_tool_schemas(session.list_tools(), recipe)
+        if recipe and recipe.id == "github":
+            tools = annotate_github_login(tools, env.get("GITHUB_PERSONAL_ACCESS_TOKEN"))
         stored["status"] = "ok"
         stored["cached_tools"] = [
             {
@@ -358,17 +551,22 @@ class McpSessions:
             return {"ok": False, "errorKey": "mcp.session.closed"}
         live.last_used = time.monotonic()
         self._arm_idle(server_id)
+        args = coerce_tool_arguments(arguments) if isinstance(arguments, dict) else arguments
         try:
-            raw = live.session.call_tool(tool_name, arguments)
-        except Exception:
-            return {"ok": False, "errorKey": "mcp.call.failed"}
+            raw = live.session.call_tool(tool_name, args)
+        except Exception as exc:
+            return {
+                "ok": False,
+                "errorKey": "mcp.call.failed",
+                "error": mask_text(str(exc)[:400]),
+            }
         if raw.get("isError"):
             return {
                 "ok": False,
                 "errorKey": "mcp.call.failed",
                 "result": mask_obj(raw.get("result")),
             }
-        return {"ok": True, "result": mask_obj(raw.get("result"))}
+        return {"ok": True, "result": mask_obj(compact_tool_result(raw.get("result")))}
 
     def is_enabled(self, server_id: str) -> bool:
         row = get_mcp_server(server_id)

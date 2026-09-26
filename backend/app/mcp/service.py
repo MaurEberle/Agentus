@@ -232,7 +232,11 @@ def ping_server(server_id: str) -> tuple[McpServerStatus, str | None]:
             headers=headers,
         )
         try:
-            tools = session.list_tools()
+            tools = mcp_sessions.apply_recipe_tool_schemas(session.list_tools(), recipe)
+            if recipe and recipe.id == "github":
+                tools = mcp_sessions.annotate_github_login(
+                    tools, env.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+                )
         finally:
             session.close()
         row["status"] = "ok"

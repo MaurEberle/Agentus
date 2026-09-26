@@ -40,6 +40,7 @@ from app.run.orchestrate import (
     reject_reason,
 )
 from app.run import window as run_window
+from app.mcp.payload import format_tool_result
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
 from app.run.models import ActivityDag, ActivityTokens, ChatMessage, NodeLlmInfo, NodeRuntime, NodeTokens
 from app.run.sse import publish
@@ -54,6 +55,11 @@ _REPAIR_NOTE = (
 )
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
 _TOOL_USE_NOTE = "You have tools. Call a tool. A sentence without a tool call is discarded."
+_TOOL_REQUIRED = "You must call a tool with a tool call. A sentence without a tool call is discarded."
+_TOOL_ANSWER = (
+    "You already have tool results. Answer the user from those results. "
+    "Call a tool only if you still need data you do not have."
+)
 _FINISH_FILES_NOTE = (
     "A tool agent made no successful write or delete. Check with a tool or call that agent again. "
     "Finish only when the files exist."
@@ -319,14 +325,25 @@ def _dispatch_tool(
     else:
         tool_result = {"ok": False, "error": f"unknown tool {call_name}"}
     ok_tool = not (isinstance(tool_result, dict) and tool_result.get("ok") is False)
+    payload: dict = {"name": call_name, "waitReason": "tool", "ok": ok_tool}
+    if args:
+        import json as _json
+
+        payload["arguments"] = _json.dumps(mask_obj(args), ensure_ascii=False)[:400]
+    if isinstance(tool_result, dict) and not ok_tool:
+        if tool_result.get("errorKey"):
+            payload["errorKey"] = tool_result["errorKey"]
+        err = tool_result.get("error")
+        if err:
+            payload["error"] = str(err)[:240]
     emit_log(
         "info" if ok_tool else "warn",
         "run.tool.call",
         node_id=tool_node_id,
-        payload={"name": call_name, "waitReason": "tool", "ok": ok_tool},
+        payload=payload,
     )
     fact = None if reused is not None else file_fact(call_name, args, tool_result, ok=ok_tool)
-    masked = str(mask_obj(tool_result))
+    masked = format_tool_result(mask_obj(tool_result))
     if record is not None:
         record_tool(
             record,
@@ -389,10 +406,7 @@ def _agent_turn(
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
     tools = _tool_schemas(agent.tool_kinds, agent.mcp)
     if tools:
-        system = (
-            system
-            + "\n\nYou must call a tool with a tool call. A sentence without a tool call is discarded."
-        )
+        system = system + "\n\n" + _TOOL_REQUIRED
     mcp = get_mcp()
     secret = None
     if agent.llm.provider != "ollama" and agent.llm.credential_id:
@@ -403,6 +417,8 @@ def _agent_turn(
     rounds = 0
     nudges = 0
     content = ""
+    offered = tools
+    tool_ok = bool(record is not None and record.tool_ok)
     llm_node_id = agent.llm.node_id or agent_id
     while rounds <= MAX_TOOL_ROUNDS:
         choice = _bind_window(agent.llm, messages, memory) if memory is not None else None
@@ -439,7 +455,7 @@ def _agent_turn(
                     secret=secret,
                     temperature=agent.llm.temperature,
                     max_tokens=agent.llm.max_tokens,
-                    tools=tools or None,
+                    tools=offered or None,
                     timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
                     ollama_options=options,
                 ),
@@ -556,7 +572,7 @@ def _agent_turn(
                 )
             )
             for call in result.tool_calls:
-                body, _fact, _ok = _dispatch_tool(
+                body, _fact, ok_call = _dispatch_tool(
                     ctrl,
                     compiled,
                     owner_id=agent_id,
@@ -567,15 +583,21 @@ def _agent_turn(
                     record=record,
                     reuse=reuse,
                 )
+                if ok_call:
+                    tool_ok = True
                 messages.append(
                     LlmMessage(role="tool", content=body, tool_call_id=call.id)
                 )
+            if tool_ok:
+                _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
+            if rounds >= MAX_TOOL_ROUNDS:
+                offered = []
             continue
         content = result.content or ""
         if (
-            tools
+            offered
             and not result.tool_calls
-            and not (record is not None and record.tool_ok)
+            and not tool_ok
             and nudges < 1
         ):
             nudges += 1
@@ -585,17 +607,33 @@ def _agent_turn(
         break
     _set_node(ctrl, agent_id, "done")
     emit_log("info", "run.agent.done", node_id=agent_id)
-    if publish_chat and compiled.chat_input and content:
-        msg = ChatMessage(
-            id=str(uuid.uuid4()),
-            run_id=ctrl.run_id or "",
-            role="assistant",
-            content=content,
-            created_at=utc_now(),
-        )
-        ctrl.remember_chat(msg, generating=False)
-        conversation.append(LlmMessage(role="assistant", content=content))
+    if publish_chat and compiled.chat_input:
+        text = (content or "").strip()
+        if not text and record is not None:
+            for event in reversed(record.tools):
+                if event.result:
+                    text = event.result[:4000]
+                    break
+        if text:
+            msg = ChatMessage(
+                id=str(uuid.uuid4()),
+                run_id=ctrl.run_id or "",
+                role="assistant",
+                content=text,
+                created_at=utc_now(),
+            )
+            ctrl.remember_chat(msg, generating=False)
+            conversation.append(LlmMessage(role="assistant", content=text))
+            content = text
     return content
+
+
+def _set_system_note(messages: list[LlmMessage], old: str, new: str) -> None:
+    if not messages or messages[0].role != "system":
+        return
+    text = messages[0].content or ""
+    if old in text:
+        messages[0] = messages[0].model_copy(update={"content": text.replace(old, new)})
 
 
 def _parse_args(raw: str) -> dict:

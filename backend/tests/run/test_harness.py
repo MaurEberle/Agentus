@@ -877,3 +877,104 @@ def test_tool_agent_without_a_call_is_an_anomaly(monkeypatch, api_env) -> None:
     assert "Schreiber is done." not in texts
     assert "Fertig." in texts
     assert stored["memory"]["calls"][0]["error"] == "no tool used"
+
+
+def test_mcp_answer_after_success_is_published(monkeypatch, api_env) -> None:
+    from app.db import init
+    from app.db.settings import put_mcp_server
+    from app.mcp.models import McpToolInfo
+    from app.runtime.models import ToolCall
+    from tests.run.conftest import mini_doc
+
+    init()
+    put_mcp_server(
+        "srv-9",
+        {
+            "name": "gh",
+            "enabled": True,
+            "cached_tools": [{"name": "search_repositories"}],
+        },
+    )
+    raw = mini_doc()
+    raw["nodes"].append(
+        {
+            "id": "mcp1",
+            "type": "mcp",
+            "position": {"x": 0, "y": 0},
+            "data": {"mcpServerId": "srv-9"},
+        }
+    )
+    raw["edges"].append(
+        {
+            "id": "em",
+            "source": "mcp1",
+            "sourceHandle": "tool",
+            "target": "ag",
+            "targetHandle": "tool",
+        }
+    )
+
+    class FakeMcp:
+        def open_for(self, ids, credential_overrides=None):
+            return None
+
+        def close_all(self):
+            return None
+
+        def is_enabled(self, sid):
+            return sid == "srv-9"
+
+        def root_path(self, sid):
+            return None
+
+        def listed_tools(self, sid):
+            return [
+                McpToolInfo(
+                    name="search_repositories",
+                    description="search",
+                    input_schema={
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                        "required": ["query"],
+                    },
+                )
+            ]
+
+        def call(self, server_id, tool_name, arguments):
+            assert arguments.get("query") == "user:me"
+            return {
+                "ok": True,
+                "result": {
+                    "total_count": 1,
+                    "items": [{"full_name": "me/repo", "html_url": "https://github.com/me/repo"}],
+                },
+            }
+
+    fake = FakeMcp()
+    monkeypatch.setattr("app.run.harness.get_mcp", lambda: fake)
+    monkeypatch.setattr("app.run.controller.get_mcp", lambda: fake)
+    n = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        n["n"] += 1
+        if n["n"] == 1:
+            name = req.tools[0]["function"]["name"]
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(id="c1", name=name, arguments='{"query":"user:me"}')
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        assert "already have tool results" in system
+        assert "me/repo" in blob
+        return CompletionResult(content="Repo: me/repo", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=raw)
+    assert stored["outcome"] == "succeeded"
+    assert n["n"] == 2
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert any("Repo: me/repo" in (item or "") for item in texts)
