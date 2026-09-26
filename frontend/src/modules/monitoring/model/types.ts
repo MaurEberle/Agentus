@@ -68,6 +68,8 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
 };
 
 export type RunSnapshot = {

@@ -623,7 +623,9 @@
         "noModels": "Aucun modèle chargé.",
         "useModel": "Utiliser « {{name}} »",
         "temperature": "Température",
-        "maxTokens": "Jetons max."
+        "maxTokens": "Jetons max.",
+        "numCtx": "Fenêtre de contexte",
+        "numCtxHint": "Vide conserve la valeur du modèle. Au-delà de 8192 jetons, une fenêtre plus grande est chargée."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",
@@ -991,7 +993,9 @@
       "waitInput": "Écrivez le premier message. Le graphe attend une saisie.",
       "waitReply": "Question : l’exécution attend votre réponse.",
       "empty": "Aucun message dans cette exécution.",
-      "disabled": "Chat uniquement pendant une exécution."
+      "disabled": "Chat uniquement pendant une exécution.",
+      "agentDone": "{{name}} est terminé.",
+      "agentDoneFiles": "{{name}} est terminé. Fichiers : {{files}}."
     },
     "log": {
       "pause": "Pause",
@@ -1123,7 +1127,8 @@
       "llm_error": "LLM",
       "validation": "Validation",
       "service": "Service",
-      "unknown": "Inconnu"
+      "unknown": "Inconnu",
+      "orchestrator": "Orchestrateur"
     },
     "tab": {
       "history": "Historique",
@@ -1290,7 +1295,9 @@
       },
       "stepLimit": "Limite d’étapes atteinte",
       "orchestrator": {
-        "repair": "Commande illisible, nouvel essai."
+        "repair": "Commande illisible, nouvel essai.",
+        "unreadable": "L’orchestrateur n’a pas fourni d’étape lisible.",
+        "window": "L’invite ne tient dans aucune fenêtre de contexte."
       }
     },
     "graph": {

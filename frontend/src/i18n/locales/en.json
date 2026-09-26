@@ -623,7 +623,9 @@
         "noModels": "No models loaded.",
         "useModel": "Use “{{name}}”",
         "temperature": "Temperature",
-        "maxTokens": "Max tokens"
+        "maxTokens": "Max tokens",
+        "numCtx": "Context window",
+        "numCtxHint": "Empty keeps the model default. Above 8192 tokens the run loads a larger window."
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
@@ -991,7 +993,9 @@
       "waitInput": "Write the first message. The graph is waiting for input.",
       "waitReply": "Follow-up: the run is waiting for your answer.",
       "empty": "No messages in this run yet.",
-      "disabled": "Chat is available only while a run is active."
+      "disabled": "Chat is available only while a run is active.",
+      "agentDone": "{{name}} is done.",
+      "agentDoneFiles": "{{name}} is done. Files: {{files}}."
     },
     "log": {
       "pause": "Hold",
@@ -1123,7 +1127,8 @@
       "llm_error": "LLM",
       "validation": "Validation",
       "service": "Service",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "orchestrator": "Orchestrator"
     },
     "tab": {
       "history": "History",
@@ -1290,7 +1295,9 @@
       },
       "stepLimit": "Step limit reached",
       "orchestrator": {
-        "repair": "Control message was unreadable, trying again."
+        "repair": "Control message was unreadable, trying again.",
+        "unreadable": "The orchestrator did not produce a readable next step.",
+        "window": "The prompt does not fit any context window."
       }
     },
     "graph": {

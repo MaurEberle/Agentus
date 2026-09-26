@@ -1,6 +1,10 @@
 MAX_AGENT_INVOCATIONS = 32
 MAX_ORCHESTRATOR_STEPS = 24
 MAX_TOOL_ROUNDS = 8
+# Extra attempts after an unreadable orchestrator decision. Not part of the step cap.
+MAX_CONTROL_REPAIRS = 2
+# One same-prompt retry when the model died before any tool succeeded.
+MAX_SAME_RETRIES = 1
 # Idle gap between stream chunks (or first byte). Not a total run duration.
 STREAM_IDLE_TIMEOUT_SEC = 180.0
 RESOURCES_INTERVAL_SEC = 1.5

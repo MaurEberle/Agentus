@@ -222,3 +222,13 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
         except Exception:
             conn.execute("ROLLBACK")
             raise
+        current = 2
+    if store == "history" and current < 3:
+        conn.execute("BEGIN")
+        try:
+            conn.execute("ALTER TABLE runs ADD COLUMN memory TEXT")
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (3)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise

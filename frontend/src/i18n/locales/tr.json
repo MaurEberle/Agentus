@@ -623,7 +623,9 @@
         "noModels": "Yüklenmiş model yok.",
         "useModel": "“{{name}}” kullan",
         "temperature": "Sıcaklık",
-        "maxTokens": "En fazla belirteç"
+        "maxTokens": "En fazla belirteç",
+        "numCtx": "Bağlam penceresi",
+        "numCtxHint": "Boş, model varsayılanını kullanır. 8192 belirtecin üstünde daha büyük bir pencere yüklenir."
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",
@@ -991,7 +993,9 @@
       "waitInput": "İlk iletiyi yazın. Grafik giriş bekliyor.",
       "waitReply": "Soru: çalışma yanıtınızı bekliyor.",
       "empty": "Bu çalıştırmada henüz ileti yok.",
-      "disabled": "Sohbet yalnızca çalıştırma sırasında."
+      "disabled": "Sohbet yalnızca çalıştırma sırasında.",
+      "agentDone": "{{name}} bitti.",
+      "agentDoneFiles": "{{name}} bitti. Dosyalar: {{files}}."
     },
     "log": {
       "pause": "Duraklat",
@@ -1123,7 +1127,8 @@
       "llm_error": "LLM",
       "validation": "Doğrulama",
       "service": "Hizmet",
-      "unknown": "Bilinmiyor"
+      "unknown": "Bilinmiyor",
+      "orchestrator": "Orkestratör"
     },
     "tab": {
       "history": "Geçmiş",
@@ -1290,7 +1295,9 @@
       },
       "stepLimit": "Adım sınırına ulaşıldı",
       "orchestrator": {
-        "repair": "Komut okunamadı, yeniden deneniyor."
+        "repair": "Komut okunamadı, yeniden deneniyor.",
+        "unreadable": "Orkestratör okunabilir bir sonraki adım üretmedi.",
+        "window": "İstem hiçbir bağlam penceresine sığmıyor."
       }
     },
     "graph": {

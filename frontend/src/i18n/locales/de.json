@@ -623,7 +623,9 @@
         "noModels": "Keine Modelle geladen.",
         "useModel": "„{{name}}“ verwenden",
         "temperature": "Temperature",
-        "maxTokens": "Max. Tokens"
+        "maxTokens": "Max. Tokens",
+        "numCtx": "Kontextfenster",
+        "numCtxHint": "Leer lässt die Vorgabe des Modells. Über 8192 Token lädt der Lauf ein größeres Fenster."
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",
@@ -991,7 +993,9 @@
       "waitInput": "Erste Nachricht schreiben. Der Graph wartet auf Eingabe.",
       "waitReply": "Rückfrage: der Lauf wartet auf deine Antwort.",
       "empty": "Noch keine Nachrichten in diesem Lauf.",
-      "disabled": "Chat nur während eines Laufs."
+      "disabled": "Chat nur während eines Laufs.",
+      "agentDone": "{{name}} ist fertig.",
+      "agentDoneFiles": "{{name}} ist fertig. Dateien: {{files}}."
     },
     "log": {
       "pause": "Halten",
@@ -1123,7 +1127,8 @@
       "llm_error": "LLM",
       "validation": "Validierung",
       "service": "Dienst",
-      "unknown": "Unbekannt"
+      "unknown": "Unbekannt",
+      "orchestrator": "Orchestrator"
     },
     "tab": {
       "history": "Historie",
@@ -1290,7 +1295,9 @@
       },
       "stepLimit": "Schrittlimit erreicht",
       "orchestrator": {
-        "repair": "Steuerbefehl war unlesbar, neuer Versuch."
+        "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
+        "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
+        "window": "Der Prompt passt in kein Kontextfenster."
       }
     },
     "graph": {

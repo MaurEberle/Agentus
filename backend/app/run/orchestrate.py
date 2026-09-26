@@ -9,7 +9,6 @@ from app.help.visible import strip_think
 
 _ACTIONS = {"ask", "call", "reply", "finish"}
 _ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish)"')
-_PROSE_CALL = re.compile(r"^call\s+(\S+)\s+with\s+(.+)$", re.IGNORECASE | re.DOTALL)
 # A salvaged task longer than this is a pasted document with broken quotes, not an instruction.
 _MAX_SALVAGED_TASK = 500
 
@@ -22,18 +21,21 @@ def orchestrator_instructions(user_prompt: str, agents: list[tuple[str, str, str
     roster = "\n".join(lines) if lines else "(no agents connected)"
     protocol = f"""You orchestrate this agent network.
 You are the only voice in the run chat. Agents do not speak to the user.
-Each agent below is one private channel. A call sends one task down that channel and returns one result to you.
-The agent sees only that task, not this chat.
+Each agent below is one private channel. A call sends one short task down that channel and returns one result to the runtime.
+You see a status line afterwards: name, id, whether the call finished, character count, and file lines. You do not see the agent text.
+The run keeps the full course in memory. That course is not in this prompt.
+When an agent fails, the runtime adds one anomaly excerpt for that agent only. The following step does not keep it.
 Call one agent at a time, wait for the result, then decide again. You may call the same agent later with a new task.
-The task field is a short instruction of a few sentences. Do not paste an earlier agent result into it.
-The runtime attaches the latest agent result to the next agent for you.
+The task field is a short instruction of a few sentences. Do not paste an agent result into it.
+A call may set source to an agent id when a tool agent must use that agent's text. You write the id, not the text.
 If a missing detail would change the task, ask the user before calling.
 You may answer yourself when no agent is needed. Domain work belongs to the agents.
+A status line without a successful write or delete means no file was written or deleted. You decide whether to finish.
 Write ask, reply, and finish text in the user's language.
 Use reply when the user may want to continue. Use finish only when the task is done and the run should stop.
 Reply with one JSON object and no other text. Do not describe the call in a sentence:
 {{"action":"ask","text":"..."}}
-{{"action":"call","agent":"<id or name>","task":"..."}}
+{{"action":"call","agent":"<id or name>","task":"...","source":""}}
 {{"action":"reply","text":"..."}}
 {{"action":"finish","text":"..."}}
 
@@ -54,10 +56,23 @@ def parse_orchestrator_action(raw: str) -> dict[str, str]:
     salvaged = _salvage(text)
     if salvaged is not None:
         return salvaged
-    prose = _prose_call(text)
-    if prose is not None:
-        return prose
-    return {"action": "reply", "text": text, "agent": "", "task": ""}
+    return {"action": "reply", "text": text, "agent": "", "task": "", "source": ""}
+
+
+def reject_reason(raw: str) -> str | None:
+    """Unreadable control text is discarded. The body must not re-enter a prompt."""
+    visible = _prepare(raw)
+    if not visible:
+        return "empty"
+    action = parse_orchestrator_action(visible)
+    kind = action.get("action") or "reply"
+    if kind == "reply" and looks_like_control(visible):
+        return "unreadable"
+    if kind in {"ask", "reply", "finish"} and not (action.get("text") or "").strip():
+        return "empty"
+    if kind == "call" and not (action.get("agent") or "").strip():
+        return "empty"
+    return None
 
 
 def looks_like_control(text: str) -> bool:
@@ -96,6 +111,7 @@ def _parse_json_object(text: str) -> dict[str, str] | None:
             str(value.get("text") or ""),
             str(value.get("agent") or ""),
             str(value.get("task") or ""),
+            str(value.get("source") or ""),
         )
     return None
 
@@ -120,22 +136,11 @@ def _salvage(text: str) -> dict[str, str] | None:
                 return None
         if len(task) > _MAX_SALVAGED_TASK:
             return None
-        return _action(action, "", agent_found[0].strip(), task.strip())
+        return _action(action, "", agent_found[0].strip(), task.strip(), "")
     spoken = _closed_string(text, "text")
     if spoken is None:
         return None
-    return _action(action, spoken[0].strip(), "", "")
-
-
-def _prose_call(text: str) -> dict[str, str] | None:
-    match = _PROSE_CALL.match(text.strip())
-    if not match:
-        return None
-    agent = match.group(1).strip().strip("\"'")
-    task = match.group(2).strip()
-    if not agent or not task:
-        return None
-    return _action("call", "", agent, task)
+    return _action(action, spoken[0].strip(), "", "", "")
 
 
 def _closed_string(text: str, name: str) -> tuple[str, int] | None:
@@ -160,8 +165,8 @@ def _closed_string(text: str, name: str) -> tuple[str, int] | None:
     return None
 
 
-def _action(action: str, text: str, agent: str, task: str) -> dict[str, str]:
-    return {"action": action, "text": text, "agent": agent, "task": task}
+def _action(action: str, text: str, agent: str, task: str, source: str = "") -> dict[str, str]:
+    return {"action": action, "text": text, "agent": agent, "task": task, "source": source}
 
 
 def match_agent(token: str, agents: list[tuple[str, str]]) -> str | None:

@@ -623,7 +623,9 @@
         "noModels": "No hay modelos cargados.",
         "useModel": "Usar «{{name}}»",
         "temperature": "Temperatura",
-        "maxTokens": "Máx. tokens"
+        "maxTokens": "Máx. tokens",
+        "numCtx": "Ventana de contexto",
+        "numCtxHint": "Vacío usa el valor del modelo. Por encima de 8192 tokens se carga una ventana mayor."
       },
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",
@@ -991,7 +993,9 @@
       "waitInput": "Escribe el primer mensaje. El grafo espera una entrada.",
       "waitReply": "Pregunta: la ejecución espera tu respuesta.",
       "empty": "Aún no hay mensajes en esta ejecución.",
-      "disabled": "El chat solo está disponible durante una ejecución."
+      "disabled": "El chat solo está disponible durante una ejecución.",
+      "agentDone": "{{name}} ha terminado.",
+      "agentDoneFiles": "{{name}} ha terminado. Archivos: {{files}}."
     },
     "log": {
       "pause": "Pausar",
@@ -1123,7 +1127,8 @@
       "llm_error": "LLM",
       "validation": "Validación",
       "service": "Servicio",
-      "unknown": "Desconocido"
+      "unknown": "Desconocido",
+      "orchestrator": "Orquestador"
     },
     "tab": {
       "history": "Historial",
@@ -1290,7 +1295,9 @@
       },
       "stepLimit": "Límite de pasos alcanzado",
       "orchestrator": {
-        "repair": "La orden no se pudo leer, nuevo intento."
+        "repair": "La orden no se pudo leer, nuevo intento.",
+        "unreadable": "El orquestador no entregó un paso legible.",
+        "window": "El prompt no cabe en ninguna ventana de contexto."
       }
     },
     "graph": {

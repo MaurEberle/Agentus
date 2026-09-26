@@ -55,6 +55,8 @@ class ChatMessage(ApiModel):
     role: Literal["user", "assistant"]
     content: str
     created_at: str = Field(alias="createdAt")
+    message_key: str | None = Field(default=None, alias="messageKey")
+    message_params: dict[str, Any] | None = Field(default=None, alias="messageParams")
 
 
 class ActivityDag(ApiModel):

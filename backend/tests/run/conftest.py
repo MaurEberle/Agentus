@@ -69,6 +69,8 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     get_controller().reset()
     unloads.clear()
     monkeypatch.setattr("app.runtime.ollama.ensure_loaded", lambda *a, **k: None)
+    monkeypatch.setattr("app.run.window.loaded_context", lambda *a, **k: None)
+    monkeypatch.setattr("app.run.window.architecture_context", lambda *a, **k: None)
     monkeypatch.setattr(
         "app.runtime.ollama.list_ollama_models",
         lambda *a, **k: [OllamaModel(name="llama3.2:1b", size_bytes=None)],

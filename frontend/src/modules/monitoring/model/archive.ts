@@ -52,6 +52,8 @@ export function snapshotFromHistory(detail: RunDetail): RunSnapshot {
     role: message.role,
     content: message.content,
     createdAt: message.createdAt,
+    messageKey: message.messageKey,
+    messageParams: message.messageParams,
   }));
   const done = Object.values(nodesRuntime).filter((node) => node.status === 'done').length;
   return {

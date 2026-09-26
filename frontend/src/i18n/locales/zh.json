@@ -623,7 +623,9 @@
         "noModels": "未加载模型。",
         "useModel": "使用“{{name}}”",
         "temperature": "温度",
-        "maxTokens": "最大 token 数"
+        "maxTokens": "最大 token 数",
+        "numCtx": "上下文窗口",
+        "numCtxHint": "留空使用模型默认值。超过 8192 个 token 时会加载更大的窗口。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",
@@ -991,7 +993,9 @@
       "waitInput": "请写下第一条消息。图正在等待输入。",
       "waitReply": "追问：运行正在等待你的回答。",
       "empty": "此运行尚无消息。",
-      "disabled": "仅在运行期间可聊天。"
+      "disabled": "仅在运行期间可聊天。",
+      "agentDone": "{{name}} 已完成。",
+      "agentDoneFiles": "{{name}} 已完成。文件：{{files}}。"
     },
     "log": {
       "pause": "暂停",
@@ -1123,7 +1127,8 @@
       "llm_error": "LLM",
       "validation": "验证",
       "service": "服务",
-      "unknown": "未知"
+      "unknown": "未知",
+      "orchestrator": "编排器"
     },
     "tab": {
       "history": "历史",
@@ -1290,7 +1295,9 @@
       },
       "stepLimit": "已达到步骤上限",
       "orchestrator": {
-        "repair": "控制指令无法读取，正在重试。"
+        "repair": "控制指令无法读取，正在重试。",
+        "unreadable": "编排器没有给出可读的下一步。",
+        "window": "提示词无法放入任何上下文窗口。"
       }
     },
     "graph": {

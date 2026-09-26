@@ -64,6 +64,8 @@ class RunController:
         self._unloads: list[str] = []
         self._help_model: str | None = None
         self.last_error_node_id: str | None = None
+        self.fail_message: str | None = None
+        self.fail_class: str | None = None
         self.tokens_in = 0
         self.tokens_out = 0
         self._phase = None
@@ -85,6 +87,8 @@ class RunController:
         self._unloads = []
         self._help_model = None
         self.last_error_node_id = None
+        self.fail_message = None
+        self.fail_class = None
         self.tokens_in = 0
         self.tokens_out = 0
         self._phase = None
@@ -115,6 +119,8 @@ class RunController:
             self.chat_input_queue = queue.Queue()
             self.conversation = []
             self.last_error_node_id = None
+            self.fail_message = None
+            self.fail_class = None
             self.tokens_in = 0
             self.tokens_out = 0
         publish("service", {"serviceStatus": "starting"})
@@ -372,7 +378,7 @@ class RunController:
                 row = get_run(run_id)
             except StoreUnavailable:
                 row = None
-            chat = [item.model_dump(by_alias=True) for item in self.conversation] or None
+            chat = [item.model_dump(by_alias=True, exclude_none=True) for item in self.conversation] or None
             if row is None or row.get("outcome") == "running":
                 fields: dict[str, Any] = {
                     "outcome": outcome,
@@ -466,7 +472,7 @@ class RunController:
         return fallback_missing
 
     def _chat_payload(self) -> list[dict[str, Any]]:
-        return [item.model_dump(by_alias=True) for item in self.conversation]
+        return [item.model_dump(by_alias=True, exclude_none=True) for item in self.conversation]
 
     def flush_chat(self, *, generating: bool | None = None) -> None:
         payload = self._chat_payload()
@@ -490,7 +496,7 @@ class RunController:
             self.conversation.append(msg)
             run_id = self.run_id or ""
         self.flush_chat(generating=generating)
-        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True)})
+        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True, exclude_none=True)})
 
     def send_chat(self, text: str) -> None:
         with self.lock:

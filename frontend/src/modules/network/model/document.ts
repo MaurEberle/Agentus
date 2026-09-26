@@ -49,6 +49,7 @@ export type LlmNodeData = {
   credentialId?: string;
   temperature?: number;
   maxTokens?: number;
+  numCtx?: number;
 };
 
 export type AgentNodeData = {

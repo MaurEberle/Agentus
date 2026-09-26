@@ -15,6 +15,7 @@ class CompiledLlm:
     credential_id: str | None
     temperature: float | None
     max_tokens: int | None
+    num_ctx: int | None
     node_id: str
 
 
@@ -63,8 +64,20 @@ def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id
         credential_id=data.get("credentialId"),
         temperature=data.get("temperature"),
         max_tokens=data.get("maxTokens"),
+        num_ctx=_num_ctx(data),
         node_id=llm_node.id if llm_node else "",
     )
+
+
+def _num_ctx(data: dict) -> int | None:
+    raw = data.get("numCtx")
+    if isinstance(raw, bool) or raw is None:
+        return None
+    if isinstance(raw, int) and raw > 0:
+        return raw
+    if isinstance(raw, float) and raw > 0:
+        return int(raw)
+    return None
 
 
 def _compile_orchestrator(

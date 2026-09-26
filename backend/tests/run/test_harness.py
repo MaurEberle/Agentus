@@ -214,3 +214,152 @@ def test_execute_first_party_allowlist(monkeypatch, api_env) -> None:
 
     messages = [row["message"] for row in list_logs(run_id)]
     assert "run.tool.call" in messages
+
+
+def _drive(monkeypatch, complete, *, doc=None, user_texts=("Hallo",)):
+    from app.db import init
+    from app.db.engine import utc_now
+    from app.db.networks import NetworkRow, upsert_network
+    from app.db.runs import get_run
+    from app.run.controller import get_controller
+    from app.settings.models import AppSettingsPatch
+    from app.settings.service import patch_settings
+    from tests.run.test_validate import _orchestrator_doc
+
+    init()
+    monkeypatch.setattr("app.runtime.completions.complete_live", complete)
+    upsert_network(
+        NetworkRow(
+            id="net-1",
+            name="mini",
+            description=None,
+            tags=[],
+            document=doc or _orchestrator_doc(),
+            updated_at=utc_now(),
+            last_used_at=None,
+            last_run_id=None,
+        )
+    )
+    patch_settings(AppSettingsPatch(active_network_id="net-1"))
+    ctrl = get_controller()
+    started = ctrl.start()
+    for text in user_texts:
+        ctrl.chat_input_queue.put(text)
+    assert ctrl.thread is not None
+    ctrl.thread.join(timeout=5)
+    assert ctrl.thread.is_alive() is False
+    stored = get_run(started["runId"])
+    assert stored is not None
+    return stored
+
+
+def test_agent_timeout_lets_the_orchestrator_finish(monkeypatch, api_env) -> None:
+    from app.runtime.errors import RuntimeApiError
+
+    agent_calls = {"n": 0}
+    prompts: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" in system:
+            prompts.append("\n".join(message.content or "" for message in req.messages))
+            if len(prompts) == 1:
+                return CompletionResult(
+                    content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_calls["n"] += 1
+        raise RuntimeApiError("runtime.timeout")
+
+    stored = _drive(monkeypatch, _complete)
+    assert agent_calls["n"] == 2
+    assert stored["outcome"] == "succeeded"
+    assert "runtime.timeout" in prompts[1]
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+    assert "Ich konnte den nächsten Schritt nicht lesen" not in "\n".join(texts)
+    assert "is done" not in "\n".join(texts)
+
+
+def test_three_prose_calls_fail_without_asking(monkeypatch, api_env) -> None:
+    prose = 'Call agent-7fef4344 with the full German story under the title "Der Tiger auf dem Bauernhof".'
+    prompts: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        prompts.append("\n".join(message.content or "" for message in req.messages))
+        return CompletionResult(content=prose, model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.orchestrator.unreadable"
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert prose not in "\n".join(texts)
+    assert all(prose not in item for item in prompts)
+    rejected = (stored["memory"] or {}).get("rejected") or []
+    assert len(rejected) == 3
+    assert all(item["reason"] == "unreadable" for item in rejected)
+
+
+def test_orchestrator_prompt_does_not_contain_the_manuscript(monkeypatch, api_env) -> None:
+    manuscript = "EINMALIGES-MANUSKRIPT-9f3a"
+    prompts: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" in system:
+            prompts.append("\n".join(message.content or "" for message in req.messages))
+            if len(prompts) == 1:
+                return CompletionResult(
+                    content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        return CompletionResult(content=manuscript, model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    assert manuscript not in prompts[1]
+    assert "Previous agent result" not in prompts[1]
+    assert f"characters: {len(manuscript)}" in prompts[1]
+    assert stored["memory"]["calls"][0]["text"] == manuscript
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert manuscript not in "\n".join(texts)
+    assert "Schreiber is done." in texts
+    done = next(item for item in stored["chat"] if item["content"] == "Schreiber is done.")
+    assert done["messageKey"] == "monitoring.chat.agentDone"
+    assert done["messageParams"]["name"] == "Schreiber"
+
+
+def test_num_ctx_wish_is_sent_to_ollama(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        options.append(req.ollama_options)
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numCtx"] = 8192
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] == {"num_ctx": 8192}
+    assert stored["memory"]["windows"][0]["contextMax"] == 8192
+    assert stored["memory"]["raised"]["llama3.2:1b"] == 8192

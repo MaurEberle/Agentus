@@ -380,6 +380,19 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
               }
             />
           </Field>
+          <Field label={t('network.inspector.llm.numCtx')}>
+            <Input
+              type="number"
+              value={node.data.numCtx == null ? '' : String(node.data.numCtx)}
+              disabled={readOnly}
+              onChange={(event) =>
+                editorUpdateNodeData(node.id, {
+                  numCtx: event.target.value === '' ? undefined : Number(event.target.value),
+                })
+              }
+            />
+            <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numCtxHint')}</p>
+          </Field>
         </>
       ) : null}
     </>
