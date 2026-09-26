@@ -47,7 +47,7 @@ Verbindungen (typisierte Anschlüsse, keine beliebigen Pfeile):
 
 Optional **Orchestrator**: Chat nur an den Orchestrator, LLM an den Orchestrator, pro Agent ein **Kanal** vom Orchestrator an den Kanal des Agenten, **Nachricht** vom Orchestrator an **Ende**. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die Agenten nacheinander auf. Agententexte und interne Aufträge erscheinen nicht als Chatblasen. Den letzten Agententext hängt die App an den nächsten Auftrag, du musst ihn nicht in den Chat kopieren. Der Chat bleibt offen, bis er den Lauf beendet. Ohne Orchestrator bleibt jeder Agent eine eigene Kette über Nachricht und Übergabe. Ein Agent hängt entweder am Kanal oder an der Kette, nie an beidem.
 
-Optional: **Werkzeug** an den Agent-Anschluss **Werkzeug**, **Wissen** an **Wissen**. Speichern. In der **Verwaltung** „Als aktiv setzen“, wenn die Schnellwahl es noch nicht ist.
+Optional: **Werkzeug** an den Anschluss **Werkzeug** von Agent oder Orchestrator, **Wissen** an **Wissen**. Speichern. In der **Verwaltung** „Als aktiv setzen“, wenn die Schnellwahl es noch nicht ist.
 
 ## Start und Stopp
 

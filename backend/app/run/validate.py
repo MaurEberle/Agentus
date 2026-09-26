@@ -23,7 +23,7 @@ _OUT_HANDLES = {
 }
 _IN_HANDLES = {
     "agent": {"message", "llm", "tool", "knowledge", "channel"},
-    "orchestrator": {"message", "llm"},
+    "orchestrator": {"message", "llm", "tool"},
     "router": {"message"},
     "end": {"message"},
 }
@@ -159,7 +159,9 @@ def validate_document(
             errors.append(_err("graph.edge.invalid", dst.id))
         if src.type == "knowledge" and not (dst.type == "agent" and edge.target_handle == "knowledge"):
             errors.append(_err("graph.edge.invalid", src.id))
-        if src.type == "tool" and not (dst.type == "agent" and edge.target_handle == "tool"):
+        if src.type == "tool" and not (
+            dst.type in {"agent", "orchestrator"} and edge.target_handle == "tool"
+        ):
             errors.append(_err("graph.edge.invalid", src.id))
         if src.type == "llm" and not (
             dst.type in {"agent", "orchestrator"} and edge.target_handle == "llm"

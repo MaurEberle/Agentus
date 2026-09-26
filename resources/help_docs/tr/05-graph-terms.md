@@ -28,7 +28,7 @@ Sağlayıcı ve modeli seçer. Yerel Ollama; değilse bulut artı kimlik bilgisi
 
 ## Orkestratör
 
-Kendi LLM’i olan düğüm. Çalıştırma sohbetinin tek sesidir, soru sorar ve bağlı ajanları teker teker, her birini bir kanaldan çağırır. En fazla bir. Sohbet yalnız ona bağlanır. İleti çıkışı Son’a veya bir yönlendiriciye gider. Ajan metinlerini ve iç komutları baloncuk olarak görmezsin. Uygulama son sonucu sonraki göreve ekler. Bir ajan ya kanaldadır ya ileti zincirindedir.
+Kendi LLM’i olan düğüm. Çalıştırma sohbetinin tek sesidir, soru sorar ve bağlı ajanları teker teker, her birini bir kanaldan çağırır. En fazla bir. Sohbet yalnız ona bağlanır. İleti çıkışı Son’a veya bir yönlendiriciye gider. Ajan metinlerini ve iç komutları baloncuk olarak görmezsin. Uygulama son sonucu sonraki göreve ekler. Bir ajan ya kanaldadır ya ileti zincirindedir. Araçlar onun Araç girişine bağlanabilir. Onları kendisi çağırır.
 
 ## Araç
 

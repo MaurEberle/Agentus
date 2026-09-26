@@ -31,7 +31,7 @@ Si des connaissances sont reliées à un agent, le démarrage montre déjà l’
 
 ## Chat réseau (supervision)
 
-Onglet **Chat** : conversation du graphe en cours. Actif seulement pendant l’exécution. Sans orchestrateur, le chat attend la première ligne et la passe à la chaîne. Avec orchestrateur, tu ne parles qu’à lui. Les questions restent ouvertes dans la même exécution. Les textes des agents et les ordres internes n’apparaissent pas ici.
+Onglet **Chat** : conversation du graphe en cours. Actif seulement pendant l’exécution. Sans orchestrateur, le chat attend la première ligne et la passe à la chaîne. Avec orchestrateur, tu ne parles qu’à lui. L’exécution n’attend que sur une question. Les textes des agents et les ordres internes n’apparaissent pas ici.
 
 Ce n’est **pas** la bulle d’aide. Historique et outils sont ceux du réseau.
 

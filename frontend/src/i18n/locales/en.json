@@ -566,13 +566,13 @@
       "chat_input": "Chat",
       "chat_inputHint": "At most one. The run conversation. With an orchestrator it stays open for follow-ups.",
       "orchestrator": "Orchestrator",
-      "orchestratorHint": "Runs the chat. One channel per agent, and message out to the end.",
+      "orchestratorHint": "Runs the chat. One channel per agent, and message out to the end. Tools connect to the tool port.",
       "llm": "LLM",
       "llmHint": "Model and provider. Edge to the agent llm port.",
       "agent": "Agent",
       "agentHint": "System prompt. On its own via message, or on an orchestrator via a channel.",
       "tool": "Tool",
-      "toolHint": "Catalog kind, optional MCP.",
+      "toolHint": "Catalog kind, optional MCP. Connect to an agent or the orchestrator.",
       "knowledge": "Knowledge",
       "knowledgeHint": "Source folder, only to the agent knowledge port.",
       "router": "Router",
@@ -633,7 +633,7 @@
         "systemPrompt": "System prompt"
       },
       "orchestrator": {
-        "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end.",
+        "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end. It calls tools on the tool port.",
         "systemPrompt": "System prompt"
       },
       "tool": {

@@ -26,6 +26,8 @@ class CompiledOrchestrator:
     llm: CompiledLlm
     agents: list[str]
     finals: list[str]
+    tool_kinds: list[str] = field(default_factory=list)
+    mcp: list[tuple[str, list[str] | None]] = field(default_factory=list)
 
 
 @dataclass
@@ -80,6 +82,31 @@ def _num_ctx(data: dict) -> int | None:
     return None
 
 
+def _compile_tools(
+    doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str
+) -> tuple[list[str], list[tuple[str, list[str] | None]]]:
+    tool_kinds: list[str] = []
+    mcp: list[tuple[str, list[str] | None]] = []
+    for edge in doc.edges:
+        if edge.target != node_id or edge.target_handle != "tool":
+            continue
+        tool = by_id.get(edge.source)
+        if not tool:
+            continue
+        kind = str(tool.data.get("kind") or "")
+        if kind == "mcp":
+            names = tool.data.get("mcpToolNames")
+            mcp.append(
+                (
+                    str(tool.data.get("mcpServerId") or ""),
+                    list(names) if isinstance(names, list) else None,
+                )
+            )
+        elif kind:
+            tool_kinds.append(kind)
+    return tool_kinds, mcp
+
+
 def _compile_orchestrator(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode]
 ) -> CompiledOrchestrator | None:
@@ -103,12 +130,15 @@ def _compile_orchestrator(
             agents.append(target.id)
         elif edge.source_handle == "message":
             finals.append(target.id)
+    tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
     return CompiledOrchestrator(
         node_id=node.id,
         system_prompt=str(node.data.get("systemPrompt") or ""),
         llm=_compile_llm(doc, by_id, node.id),
         agents=agents,
         finals=finals,
+        tool_kinds=tool_kinds,
+        mcp=mcp,
     )
 
 
@@ -136,25 +166,7 @@ def compile_document(
         if node.type != "agent":
             continue
         llm = _compile_llm(doc, by_id, node.id)
-        tool_kinds: list[str] = []
-        mcp: list[tuple[str, list[str] | None]] = []
-        for edge in doc.edges:
-            if edge.target != node.id or edge.target_handle != "tool":
-                continue
-            tool = by_id.get(edge.source)
-            if not tool:
-                continue
-            kind = str(tool.data.get("kind") or "")
-            if kind == "mcp":
-                names = tool.data.get("mcpToolNames")
-                mcp.append(
-                    (
-                        str(tool.data.get("mcpServerId") or ""),
-                        list(names) if isinstance(names, list) else None,
-                    )
-                )
-            elif kind:
-                tool_kinds.append(kind)
+        tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
         knowledge_ids = [
             e.source
             for e in doc.edges

@@ -566,13 +566,13 @@
       "chat_input": "Chat",
       "chat_inputHint": "Höchstens einer. Gespräch im Lauf. Mit Orchestrator bleiben Rückfragen offen.",
       "orchestrator": "Orchestrator",
-      "orchestratorHint": "Führt den Lauf-Chat. Pro Agent ein Kanal, das Ende über Nachricht.",
+      "orchestratorHint": "Führt den Lauf-Chat. Pro Agent ein Kanal, das Ende über Nachricht. Werkzeuge am Anschluss Werkzeug.",
       "llm": "LLM",
       "llmHint": "Modell und Provider. Kante zum Agenten-Port llm.",
       "agent": "Agent",
       "agentHint": "Systemprompt. Allein über Nachricht, oder über einen Kanal am Orchestrator.",
       "tool": "Werkzeug",
-      "toolHint": "Katalog-Art, optional MCP.",
+      "toolHint": "Katalog-Art, optional MCP. An Agent oder Orchestrator.",
       "knowledge": "Wissen",
       "knowledgeHint": "Quellenordner, nur zum Agenten-Port knowledge.",
       "router": "Router",
@@ -633,7 +633,7 @@
         "systemPrompt": "Systemprompt"
       },
       "orchestrator": {
-        "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang.",
+        "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang. Angeschlossene Werkzeuge ruft er selbst auf.",
         "systemPrompt": "Systemprompt"
       },
       "tool": {

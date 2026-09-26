@@ -19,6 +19,13 @@ def test_parse_actions() -> None:
 def test_plain_text_is_a_reply() -> None:
     assert parse_orchestrator_action("Hallo")["action"] == "reply"
     assert parse_orchestrator_action("Hallo")["text"] == "Hallo"
+    assert reject_reason("Hallo") is None
+
+
+def test_json_reply_is_kept() -> None:
+    raw = '{"action":"reply","text":"Ich lasse den Autor schreiben."}'
+    assert parse_orchestrator_action(raw)["action"] == "reply"
+    assert reject_reason(raw) is None
 
 
 def test_truncated_call_json_still_calls() -> None:
@@ -62,6 +69,18 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "parallel" not in text
     assert "not in this prompt" in text
     assert "status line" in text
+    assert "waits only on ask" in text
+    assert "without waiting" in text
+
+
+def test_instructions_mention_connected_tools() -> None:
+    plain = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
+    assert "You have tools" not in plain
+    text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"])
+    assert "You have tools: file_access." in text
+    assert "not the tool result" in text
+    assert "instead of calling an agent" in text
+    assert "At most two tool rounds" in text
 
 
 def test_match_agent_by_id_or_name() -> None:

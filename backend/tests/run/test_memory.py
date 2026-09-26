@@ -20,6 +20,24 @@ def test_status_line_hides_the_manuscript() -> None:
     assert "Hallo" in blob
 
 
+def test_orchestrator_tool_lines_hide_the_result() -> None:
+    memory = RunMemory()
+    memory.note_own_tool(
+        ToolEvent(name="file_access", arguments="{}", ok=True, result="ROHER-LISTE"),
+        FileFact(tool="file_access", action="list", path=".", ok=True),
+    )
+    memory.note_own_tool(
+        ToolEvent(name="calculator", arguments="{}", ok=True, result="42"),
+        None,
+    )
+    blob = memory.prompt_text("system")
+    assert "ROHER-LISTE" not in blob
+    assert "42" not in blob
+    assert ". list ok" in blob
+    assert "calculator ok" in blob
+    assert memory.to_dict()["ownTools"][0]["result"] == "ROHER-LISTE"
+
+
 def test_rejected_body_stays_out_of_the_prompt() -> None:
     memory = RunMemory()
     memory.reject("MÜLL-BODY", "unreadable")

@@ -566,13 +566,13 @@
       "chat_input": "Sohbet",
       "chat_inputHint": "En fazla bir. Çalışma sohbeti. Orkestratör varken takip soruları için açık kalır.",
       "orchestrator": "Orkestratör",
-      "orchestratorHint": "Sohbeti yürütür. Ajan başına bir kanal, bitişe ileti.",
+      "orchestratorHint": "Sohbeti yürütür. Ajan başına bir kanal, bitişe ileti. Araçlar Araç girişine bağlanır.",
       "llm": "LLM",
       "llmHint": "Model ve sağlayıcı. Ajan llm bağlantı noktasına kenar.",
       "agent": "Ajan",
       "agentHint": "Sistem istemi. Tek başına iletiyle veya orkestratörün bir kanalıyla.",
       "tool": "Araç",
-      "toolHint": "Katalog türü, isteğe bağlı MCP.",
+      "toolHint": "Katalog türü, isteğe bağlı MCP. Ajana veya orkestratöre bağlanır.",
       "knowledge": "Bilgi",
       "knowledgeHint": "Kaynak klasör, yalnızca ajan knowledge bağlantı noktasına.",
       "router": "Yönlendirici",
@@ -633,7 +633,7 @@
         "systemPrompt": "Sistem istemi"
       },
       "orchestrator": {
-        "hint": "Bir LLM kenarı. Sohbet buraya gelir. Her ajanın kendi kanalı vardır. İleti çıkışı bitiştir.",
+        "hint": "Bir LLM kenarı. Sohbet buraya gelir. Her ajanın kendi kanalı vardır. İleti çıkışı bitiştir. Bağlı araçları kendisi çağırır.",
         "systemPrompt": "Sistem istemi"
       },
       "tool": {

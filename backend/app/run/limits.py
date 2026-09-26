@@ -1,6 +1,8 @@
 MAX_AGENT_INVOCATIONS = 32
 MAX_ORCHESTRATOR_STEPS = 24
 MAX_TOOL_ROUNDS = 8
+# Orchestrator checks files; it does not spend the run on tools instead of agents.
+MAX_ORCHESTRATOR_TOOL_ROUNDS = 2
 # Extra attempts after an unreadable orchestrator decision. Not part of the step cap.
 MAX_CONTROL_REPAIRS = 2
 # One same-prompt retry when the model died before any tool succeeded.

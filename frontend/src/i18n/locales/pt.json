@@ -566,13 +566,13 @@
       "chat_input": "Chat",
       "chat_inputHint": "No máximo um. Conversa da execução. Com orquestrador fica aberta para perguntas.",
       "orchestrator": "Orquestrador",
-      "orchestratorHint": "Conduz o chat. Um canal por agente e a mensagem até o fim.",
+      "orchestratorHint": "Conduz o chat. Um canal por agente e a mensagem até o fim. Ferramentas no porto ferramenta.",
       "llm": "LLM",
       "llmHint": "Modelo e fornecedor. Aresta para o porto llm do agente.",
       "agent": "Agente",
       "agentHint": "Prompt de sistema. Sozinho pela mensagem, ou por um canal do orquestrador.",
       "tool": "Ferramenta",
-      "toolHint": "Tipo do catálogo, MCP opcional.",
+      "toolHint": "Tipo do catálogo, MCP opcional. Liga a um agente ou ao orquestrador.",
       "knowledge": "Conhecimento",
       "knowledgeHint": "Pasta de origem, só para o porto knowledge do agente.",
       "router": "Router",
@@ -633,7 +633,7 @@
         "systemPrompt": "Prompt de sistema"
       },
       "orchestrator": {
-        "hint": "Um LLM por uma aresta. O chat chega aqui. Cada agente tem o seu canal. A saída de mensagem continua a ser o fim.",
+        "hint": "Um LLM por uma aresta. O chat chega aqui. Cada agente tem o seu canal. A saída de mensagem continua a ser o fim. Chama ele próprio as ferramentas ligadas.",
         "systemPrompt": "Prompt de sistema"
       },
       "tool": {

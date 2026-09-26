@@ -28,7 +28,7 @@ Einziger Einstieg für Nutzertext im Lauf. Höchstens einer pro Netz. Der Monito
 
 ## Orchestrator
 
-Knoten mit eigenem LLM. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende oder an einen Router. Agententexte und interne Aufträge siehst du nicht als Chatblasen. Die App hängt das letzte Ergebnis an den nächsten Auftrag. Ein Agent ist entweder am Kanal oder in der Nachrichtenkette.
+Knoten mit eigenem LLM. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende oder an einen Router. Agententexte und interne Aufträge siehst du nicht als Chatblasen. Die App hängt das letzte Ergebnis an den nächsten Auftrag. Ein Agent ist entweder am Kanal oder in der Nachrichtenkette. Werkzeuge dürfen an seinen Anschluss Werkzeug. Er ruft sie selbst auf.
 
 ## Werkzeug
 

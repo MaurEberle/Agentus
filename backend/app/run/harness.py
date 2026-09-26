@@ -18,12 +18,14 @@ from app.run.limits import (
     MAX_AGENT_INVOCATIONS,
     MAX_CONTROL_REPAIRS,
     MAX_ORCHESTRATOR_STEPS,
+    MAX_ORCHESTRATOR_TOOL_ROUNDS,
     MAX_SAME_RETRIES,
     MAX_TOOL_ROUNDS,
     STREAM_IDLE_TIMEOUT_SEC,
 )
 from app.run.memory import (
     AgentRecord,
+    FileFact,
     RunMemory,
     ToolEvent,
     file_fact,
@@ -50,6 +52,7 @@ _REPAIR_NOTE = (
     "The last decision was not one valid JSON object. It was not shown to the user and no agent was called. "
     "Reply with one JSON object only. The task must be a short instruction. Do not paste an agent result."
 )
+_TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
 from app.tools.catalog import openai_tools_for_kinds
 from app.tools import execute as tools_execute
@@ -81,6 +84,7 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
                 node_id=compiled.chat_input.id,
                 payload={"chars": len(user_text)},
             )
+            _clear_human_wait(ctrl, compiled)
         if compiled.orchestrator is not None:
             outcome = _run_orchestrator(ctrl, compiled, user_text or "")
         else:
@@ -211,6 +215,112 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
     return "failed"
 
 
+def _tool_schemas(
+    kinds: list[str], mcp_pairs: list[tuple[str, list[str] | None]]
+) -> list[dict]:
+    tools = openai_tools_for_kinds(kinds)
+    bridge = get_mcp()
+    if bridge and mcp_pairs:
+        from app.db.settings import get_mcp_server
+        from app.mcp.models import McpToolInfo
+        from app.run.mcp_bridge import mcp_openai_tools
+
+        for server_id, allow in mcp_pairs:
+            row = get_mcp_server(server_id) or {}
+            cached = row.get("cached_tools") or []
+            infos = [
+                McpToolInfo(
+                    name=str(item.get("name")),
+                    description=item.get("description"),
+                    input_schema=item.get("input_schema") or {},
+                )
+                for item in cached
+                if isinstance(item, dict) and item.get("name")
+            ]
+            if allow:
+                infos = [info for info in infos if info.name in allow]
+            tools.extend(mcp_openai_tools(server_id, infos))
+    return tools
+
+
+def _function_names(schemas: list[dict]) -> list[str]:
+    names: list[str] = []
+    for item in schemas:
+        function = item.get("function") or {}
+        name = function.get("name")
+        if name:
+            names.append(str(name))
+    return names
+
+
+def _dispatch_tool(
+    ctrl: RunController,
+    compiled: CompiledGraph,
+    *,
+    owner_id: str,
+    call_name: str,
+    call_arguments: str,
+    tool_kinds: list[str],
+    mcp,
+    record: AgentRecord | None,
+    reuse: bool,
+) -> tuple[str, FileFact | None, bool]:
+    tool_node_id = owner_id
+    args = _parse_args(call_arguments)
+    mapped = map_openai_tool_name(call_name)
+    reused = None
+    if reuse and record is not None and call_name == "file_access":
+        reused = reused_file_result(
+            record, str(args.get("action") or ""), str(args.get("path") or "")
+        )
+    if reused is not None:
+        tool_result = reused
+    elif mapped and mcp:
+        out = mcp.call(mapped[0], mapped[1], args)
+        tool_result = out.get("result") if out.get("ok") else out
+    elif call_name in tool_kinds:
+        tool_result: object = {"ok": False, "error": "unknown tool"}
+        for edge in compiled.doc.edges:
+            if edge.target != owner_id or edge.target_handle != "tool":
+                continue
+            tool_node = compiled.by_id.get(edge.source)
+            if tool_node and str(tool_node.data.get("kind")) == call_name:
+                tool_node_id = tool_node.id
+                cid = tool_node.data.get("credentialId")
+                cred = vault_get(str(cid)) if cid else None
+                out = tools_execute.execute_first_party(
+                    call_name,
+                    config=tool_node.data,
+                    args=args,
+                    secret=cred,
+                )
+                tool_result = out.model_dump(by_alias=True)
+                break
+    else:
+        tool_result = {"ok": False, "error": f"unknown tool {call_name}"}
+    ok_tool = not (isinstance(tool_result, dict) and tool_result.get("ok") is False)
+    emit_log(
+        "info" if ok_tool else "warn",
+        "run.tool.call",
+        node_id=tool_node_id,
+        payload={"name": call_name, "waitReason": "tool", "ok": ok_tool},
+    )
+    fact = None if reused is not None else file_fact(call_name, args, tool_result, ok=ok_tool)
+    masked = str(mask_obj(tool_result))
+    if record is not None:
+        record_tool(
+            record,
+            ToolEvent(
+                name=call_name,
+                arguments=call_arguments or "",
+                ok=ok_tool,
+                result=masked[:8000],
+            ),
+            fact,
+        )
+    return masked, fact, ok_tool
+
+
 def _agent_turn(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -250,28 +360,8 @@ def _agent_turn(
         )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
-    tools = openai_tools_for_kinds(agent.tool_kinds)
+    tools = _tool_schemas(agent.tool_kinds, agent.mcp)
     mcp = get_mcp()
-    if mcp and agent.mcp:
-        from app.db.settings import get_mcp_server
-        from app.mcp.models import McpToolInfo
-        from app.run.mcp_bridge import mcp_openai_tools
-
-        for server_id, allow in agent.mcp:
-            row = get_mcp_server(server_id) or {}
-            cached = row.get("cached_tools") or []
-            infos = [
-                McpToolInfo(
-                    name=str(t.get("name")),
-                    description=t.get("description"),
-                    input_schema=t.get("input_schema") or {},
-                )
-                for t in cached
-                if isinstance(t, dict) and t.get("name")
-            ]
-            if allow:
-                infos = [i for i in infos if i.name in allow]
-            tools.extend(mcp_openai_tools(server_id, infos))
     secret = None
     if agent.llm.provider != "ollama" and agent.llm.credential_id:
         secret = vault_get(agent.llm.credential_id)
@@ -430,69 +520,19 @@ def _agent_turn(
                 )
             )
             for call in result.tool_calls:
-                tool_node_id = agent_id
-                args = _parse_args(call.arguments)
-                mapped = map_openai_tool_name(call.name)
-                reused = None
-                if reuse and record is not None and call.name == "file_access":
-                    reused = reused_file_result(
-                        record, str(args.get("action") or ""), str(args.get("path") or "")
-                    )
-                if reused is not None:
-                    tool_result = reused
-                elif mapped and mcp:
-                    out = mcp.call(mapped[0], mapped[1], args)
-                    tool_result = out.get("result") if out.get("ok") else out
-                elif call.name in agent.tool_kinds:
-                    cred = None
-                    for edge in compiled.doc.edges:
-                        if edge.target == agent_id and edge.target_handle == "tool":
-                            tool_node = compiled.by_id.get(edge.source)
-                            if tool_node and str(tool_node.data.get("kind")) == call.name:
-                                tool_node_id = tool_node.id
-                                cid = tool_node.data.get("credentialId")
-                                if cid:
-                                    cred = vault_get(str(cid))
-                                out = tools_execute.execute_first_party(
-                                    call.name,
-                                    config=tool_node.data,
-                                    args=args,
-                                    secret=cred,
-                                )
-                                tool_result = out.model_dump(by_alias=True)
-                                break
-                    else:
-                        tool_result = {"ok": False, "error": "unknown tool"}
-                else:
-                    tool_result = {"ok": False, "error": f"unknown tool {call.name}"}
-                ok_tool = True
-                if isinstance(tool_result, dict) and tool_result.get("ok") is False:
-                    ok_tool = False
-                emit_log(
-                    "info" if ok_tool else "warn",
-                    "run.tool.call",
-                    node_id=tool_node_id,
-                    payload={"name": call.name, "waitReason": "tool", "ok": ok_tool},
+                body, _fact, _ok = _dispatch_tool(
+                    ctrl,
+                    compiled,
+                    owner_id=agent_id,
+                    call_name=call.name,
+                    call_arguments=call.arguments or "",
+                    tool_kinds=agent.tool_kinds,
+                    mcp=mcp,
+                    record=record,
+                    reuse=reuse,
                 )
-                if record is not None:
-                    record_tool(
-                        record,
-                        ToolEvent(
-                            name=call.name,
-                            arguments=call.arguments or "",
-                            ok=ok_tool,
-                            result=str(mask_obj(tool_result))[:8000],
-                        ),
-                        None
-                        if reused is not None
-                        else file_fact(call.name, args, tool_result, ok=ok_tool),
-                    )
                 messages.append(
-                    LlmMessage(
-                        role="tool",
-                        content=str(mask_obj(tool_result)),
-                        tool_call_id=call.id,
-                    )
+                    LlmMessage(role="tool", content=body, tool_call_id=call.id)
                 )
             continue
         content = result.content or ""
@@ -659,7 +699,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             name = str(node.data.get("displayName") or node.data.get("role") or agent_id).strip() or agent_id
             instructions = str(node.data.get("systemPrompt") or "")
         roster.append((agent_id, name, instructions))
-    system = orchestrator_instructions(orch.system_prompt, roster)
+    tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp)
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
     while not ctrl.stop_event.is_set():
@@ -668,7 +708,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             emit_log("error", "run.stepLimit", node_id=orch.node_id)
             _store_memory(ctrl, memory)
             return "failed"
-        action = _orchestrator_action(ctrl, compiled, system, memory)
+        offered = tool_schemas if memory.allow_own_tools else []
+        system = orchestrator_instructions(orch.system_prompt, roster, _function_names(offered))
+        action = _orchestrator_action(ctrl, compiled, system, memory, offered)
         memory.clear_anomaly()
         _store_memory(ctrl, memory)
         if action is None:
@@ -691,6 +733,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             if not reply or ctrl.stop_event.is_set():
                 return "cancelled"
             memory.add_user(reply)
+            _clear_human_wait(ctrl, compiled)
             continue
         if kind == "call":
             if _orchestrator_call(ctrl, compiled, memory, names, action, user_text) == "cancelled":
@@ -706,11 +749,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         if text.strip():
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
-        _wait_chat(ctrl, compiled)
-        reply = _queue_get(ctrl)
-        if not reply or ctrl.stop_event.is_set():
-            return "cancelled"
-        memory.add_user(reply)
+        continue
     _store_memory(ctrl, memory)
     return "cancelled"
 
@@ -742,6 +781,7 @@ def _orchestrator_call(
         emit_log("info", "run.memory.source", node_id=agent_id)
     name = dict(names).get(agent_id, agent_id)
     record = memory.begin_call(agent_id, name, task, has_tools)
+    memory.allow_own_tools = True
     delivered = memory.agent_message(agent_id, task, has_tools, source.text)
     attempt = 0
     continued = False
@@ -841,19 +881,28 @@ def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
     emit_log("info", "run.wait.human", node_id=orch.node_id if orch else None)
 
 
+def _clear_human_wait(ctrl: RunController, compiled: CompiledGraph) -> None:
+    if compiled.chat_input:
+        _set_node(ctrl, compiled.chat_input.id, "running")
+
+
 def _orchestrator_action(
     ctrl: RunController,
     compiled: CompiledGraph,
     system: str,
     memory: RunMemory,
+    tools: list[dict],
 ) -> dict[str, str] | None:
     orch = compiled.orchestrator
     if orch is None:
         return None
     repairs = 0
     model_retries = 0
+    rounds = 0
+    offered = list(tools)
+    messages = memory.orchestrator_messages(system)
+    mcp = get_mcp()
     while not ctrl.stop_event.is_set():
-        messages = memory.orchestrator_messages(system)
         choice = _bind_window(orch.llm, messages, memory)
         if not choice.fits:
             ctrl.fail_message = "run.orchestrator.window"
@@ -891,6 +940,7 @@ def _orchestrator_action(
                     secret=secret,
                     temperature=llm.temperature,
                     max_tokens=llm.max_tokens,
+                    tools=offered or None,
                     timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
                     ollama_options=options,
                 ),
@@ -952,6 +1002,56 @@ def _orchestrator_action(
             tokens_in=in_final,
             tokens_out=out_final,
         )
+        if result.tool_calls and rounds < MAX_ORCHESTRATOR_TOOL_ROUNDS and offered:
+            rounds += 1
+            model_retries = 0
+            memory.allow_own_tools = False
+            _set_node(ctrl, orch.node_id, "running", wait="tool")
+            messages.append(
+                LlmMessage(
+                    role="assistant",
+                    content=result.content,
+                    tool_calls=result.tool_calls,
+                )
+            )
+            for call in result.tool_calls:
+                body, fact, ok_tool = _dispatch_tool(
+                    ctrl,
+                    compiled,
+                    owner_id=orch.node_id,
+                    call_name=call.name,
+                    call_arguments=call.arguments or "",
+                    tool_kinds=orch.tool_kinds,
+                    mcp=mcp,
+                    record=None,
+                    reuse=False,
+                )
+                memory.note_own_tool(
+                    ToolEvent(
+                        name=call.name,
+                        arguments=call.arguments or "",
+                        ok=ok_tool,
+                        result=body[:8000],
+                    ),
+                    fact,
+                )
+                messages.append(LlmMessage(role="tool", content=body, tool_call_id=call.id))
+            if rounds >= MAX_ORCHESTRATOR_TOOL_ROUNDS:
+                offered = []
+                messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
+            continue
+        if result.tool_calls:
+            offered = []
+            memory.allow_own_tools = False
+            raw = result.content or ""
+            if not raw.strip():
+                repairs += 1
+                emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
+                if repairs <= MAX_CONTROL_REPAIRS:
+                    memory.add_note(_TOOL_DECIDE_NOTE)
+                    messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
+                    continue
+                return {"action": "unreadable"}
         raw = result.content or ""
         reason = reject_reason(raw)
         if reason:
@@ -960,6 +1060,7 @@ def _orchestrator_action(
             emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
             if repairs <= MAX_CONTROL_REPAIRS:
                 memory.add_note(_REPAIR_NOTE)
+                messages.append(LlmMessage(role="user", content=_REPAIR_NOTE))
                 continue
             return {"action": "unreadable"}
         return parse_orchestrator_action(raw)

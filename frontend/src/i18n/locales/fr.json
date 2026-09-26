@@ -566,13 +566,13 @@
       "chat_input": "Chat",
       "chat_inputHint": "Au plus un. Conversation de l’exécution. Avec un orchestrateur, elle reste ouverte pour les questions.",
       "orchestrator": "Orchestrateur",
-      "orchestratorHint": "Mène le chat. Un canal par agent, et le message vers la fin.",
+      "orchestratorHint": "Mène le chat. Un canal par agent, et le message vers la fin. Les outils se branchent sur le port outil.",
       "llm": "LLM",
       "llmHint": "Modèle et fournisseur. Arête vers le port llm de l’agent.",
       "agent": "Agent",
       "agentHint": "Invite système. Seul via le message, ou via un canal de l’orchestrateur.",
       "tool": "Outil",
-      "toolHint": "Type du catalogue, MCP facultatif.",
+      "toolHint": "Type du catalogue, MCP facultatif. Branchez sur un agent ou l’orchestrateur.",
       "knowledge": "Connaissances",
       "knowledgeHint": "Dossier source, uniquement vers le port knowledge de l’agent.",
       "router": "Routeur",
@@ -633,7 +633,7 @@
         "systemPrompt": "Invite système"
       },
       "orchestrator": {
-        "hint": "Un LLM par une arête. Le chat arrive ici. Chaque agent a son canal. La sortie message reste la fin.",
+        "hint": "Un LLM par une arête. Le chat arrive ici. Chaque agent a son canal. La sortie message reste la fin. Il appelle lui-même les outils branchés.",
         "systemPrompt": "Invite système"
       },
       "tool": {

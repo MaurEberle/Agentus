@@ -566,13 +566,13 @@
       "chat_input": "聊天",
       "chat_inputHint": "最多一个。运行中的对话。有编排器时会为追问保持打开。",
       "orchestrator": "编排器",
-      "orchestratorHint": "主持运行聊天。每个智能体一条通道，消息输出到结束。",
+      "orchestratorHint": "主持运行聊天。每个智能体一条通道，消息输出到结束。工具接到工具端口。",
       "llm": "LLM",
       "llmHint": "模型和提供方。连接到智能体 llm 端口。",
       "agent": "智能体",
       "agentHint": "系统提示。单独使用时走消息，或通过编排器的通道。",
       "tool": "工具",
-      "toolHint": "目录类型，可选 MCP。",
+      "toolHint": "目录类型，可选 MCP。可连到智能体或编排器。",
       "knowledge": "知识",
       "knowledgeHint": "源文件夹，仅连接到智能体 knowledge 端口。",
       "router": "路由器",
@@ -633,7 +633,7 @@
         "systemPrompt": "系统提示"
       },
       "orchestrator": {
-        "hint": "一条 LLM 连线。聊天进入这里。每个智能体有自己的通道。消息输出仍指向结束。",
+        "hint": "一条 LLM 连线。聊天进入这里。每个智能体有自己的通道。消息输出仍指向结束。已连接的工具由它自己调用。",
         "systemPrompt": "系统提示"
       },
       "tool": {

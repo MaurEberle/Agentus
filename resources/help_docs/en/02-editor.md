@@ -26,7 +26,7 @@ While **this** network is running: **read-only** banner — stop it in the heade
 | Label | Type | Job |
 |-------|------|-----|
 | Chat | `chat_input` | Run conversation. **At most one.** Output **message**. With an orchestrator it stays open for follow-ups. |
-| Orchestrator | `orchestrator` | Voice of the run chat. Inputs **message** and **LLM**. One **channel** output per agent. **Message** only to **end** (or a router). **At most one.** |
+| Orchestrator | `orchestrator` | Voice of the run chat. Inputs **message**, **LLM**, and **tool**. One **channel** output per agent. **Message** only to **end** (or a router). **At most one.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-compatible), model, credential for cloud, temperature, token limit. Output **llm**. |
 | Agent | `agent` | System prompt. Inputs message, llm, tool, knowledge, optional **channel**. Outputs message and handoff. The channel comes only from the orchestrator. Without it the agent runs once along the message. |
 | Tool | `tool` | First-party: HTTP, web search, date/time, calculator, file access — or **MCP**. Output **tool**. |
@@ -41,7 +41,7 @@ Only matching ports:
 - Message to message (chat → agent or chat → orchestrator, agent → end, agent → router, router branches → …). The orchestrator sends message only to end or a router.
 - Channel to channel (orchestrator → agent). One port per agent. The reply comes back inside the run, without a second edge.
 - LLM output to agent **llm** or orchestrator **llm** — each agent and the orchestrator need **exactly one** such edge
-- Tool output to agent **tool** (several allowed)
+- Tool output to agent or orchestrator **tool** (several allowed). One tool may connect to both.
 - Knowledge output only to agent **knowledge**
 - Cycles are forbidden (directed graph without a loop)
 
@@ -58,7 +58,7 @@ Node selected:
 - **Tool:** kind. HTTP: method and URL, optional credential. Web search: a web-search credential. File access: a root folder, not a drive root; the agent works only under it, and write and delete are switches. MCP: an enabled server from Settings; default is all tools on that server.
 - **Knowledge:** source folder (folder picker), embedding provider (Ollama, OpenAI, or Gemini) and embedding model, topK, score threshold, **Reindex**. The folder may sit anywhere except a drive or system root and the help corpus. Cloud embeddings need a credential. The index belongs to this network, not to help.
 - **Chat:** placeholder, start text, “input required”.
-- **Orchestrator:** system prompt. The model chooses a follow-up, one agent task on that agent’s channel, a reply, or finish. The agents are the channels, not a second list.
+- **Orchestrator:** system prompt. The model chooses a follow-up, one agent task on that agent’s channel, a reply, or finish. The agents are the channels, not a second list. It calls connected tools itself. Only a follow-up question waits for you.
 - **Router:** named branches (name + condition) and default.
 
 Secrets do **not** belong in inspector text or graph export — only the choice of a credential.

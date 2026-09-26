@@ -26,7 +26,7 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 | Anzeigename | Typ | Aufgabe |
 |-------------|-----|---------|
 | Chat | `chat_input` | Gespräch des Laufs. **Höchstens einer.** Ausgang **Nachricht**. Mit Orchestrator bleibt der Chat für Rückfragen offen. |
-| Orchestrator | `orchestrator` | Stimme im Lauf-Chat. Eingänge **Nachricht** und **LLM**. Pro Agent ein Ausgang **Kanal**. **Nachricht** nur zum **Ende** (oder Router). **Höchstens einer.** |
+| Orchestrator | `orchestrator` | Stimme im Lauf-Chat. Eingänge **Nachricht**, **LLM** und **Werkzeug**. Pro Agent ein Ausgang **Kanal**. **Nachricht** nur zum **Ende** (oder Router). **Höchstens einer.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel), Modell, Zugang für Cloud, Temperature, Token-Limit. Ausgang **LLM**. |
 | Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen, optional **Kanal**. Ausgänge Nachricht und Übergabe. Der Kanal kommt nur vom Orchestrator. Ohne Kanal läuft der Agent einmal über die Nachricht. |
 | Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff — oder **MCP**. Ausgang **Werkzeug**. |
@@ -41,7 +41,7 @@ Nur passende Anschlüsse:
 - Nachricht zu Nachricht (Chat → Agent oder Chat → Orchestrator, Agent → Ende, Agent → Router, Router-Zweige → …). Der Orchestrator schickt Nachricht nur an Ende oder Router.
 - Kanal zu Kanal (Orchestrator → Agent). Ein Anschluss pro Agent. Die Antwort kommt im Lauf zurück, ohne zweite Kante.
 - LLM-Ausgang an Agent **LLM** oder Orchestrator **LLM** — jeder Agent und der Orchestrator brauchen **genau eine** solche Kante
-- Werkzeug-Ausgang an Agent **Werkzeug** (mehrere erlaubt)
+- Werkzeug-Ausgang an Agent oder Orchestrator **Werkzeug** (mehrere erlaubt). Ein Werkzeug darf an beide.
 - Wissen-Ausgang nur an Agent **Wissen**
 - Zyklen sind verboten (gerichteter Graph ohne Schleife)
 
@@ -58,7 +58,7 @@ Knoten gewählt:
 - **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. Dateizugriff: Wurzelordner, nicht die Laufwerkswurzel; der Agent arbeitet nur darunter, Schreiben und Löschen sind Schalter. MCP: aktivierter Server aus den Einstellungen; Standard alle Tools dieses Servers.
 - **Wissen:** Quellenordner (Ordnerwahl), Embedding-Provider (Ollama, OpenAI oder Gemini) und Embedding-Modell, topK, Score-Schwelle, **Index neu**. Der Ordner darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Cloud-Embeddings brauchen einen Zugang. Der Index gehört zu diesem Netz, nicht zur Hilfe.
 - **Chat:** Platzhalter, Starttext, Schalter „Eingabe nötig“.
-- **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Die Agenten sind die Kanäle, keine zweite Liste.
+- **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Die Agenten sind die Kanäle, keine zweite Liste. Angeschlossene Werkzeuge ruft er selbst auf. Nur die Rückfrage wartet auf den Nutzer.
 - **Router:** benannte Zweige (Name + Bedingung) und Standard.
 
 Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Export — nur die Wahl eines Zugangs.

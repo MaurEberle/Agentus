@@ -28,7 +28,7 @@ The only entry for user text in a run. At most one per network. Monitoring chat 
 
 ## Orchestrator
 
-A node with its own LLM. It is the only voice in the run chat, asks follow-ups, and calls connected agents one at a time through a channel each. At most one. Chat connects only to it. Its message output goes to end or a router. You do not see agent text or internal commands as chat bubbles. The app attaches the latest result to the next task. An agent is either on the channel or on the message chain.
+A node with its own LLM. It is the only voice in the run chat, asks follow-ups, and calls connected agents one at a time through a channel each. At most one. Chat connects only to it. Its message output goes to end or a router. You do not see agent text or internal commands as chat bubbles. The app attaches the latest result to the next task. An agent is either on the channel or on the message chain. Tools may connect to its tool port. It calls them itself.
 
 ## Tool
 

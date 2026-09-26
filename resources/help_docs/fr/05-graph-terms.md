@@ -28,7 +28,7 @@ Seul point d’entrée du texte utilisateur dans l’exécution. Au plus un par 
 
 ## Orchestrateur
 
-Nœud avec son propre LLM. Il est la seule voix du chat de l’exécution, pose des questions et appelle les agents reliés un par un, chacun par un canal. Au plus un. Le chat ne se branche que sur lui. Sa sortie message va vers Fin ou un routeur. Tu ne vois ni les textes des agents ni les ordres internes comme bulles. L’app joint le dernier résultat à la tâche suivante. Un agent est sur le canal ou dans la chaîne de messages.
+Nœud avec son propre LLM. Il est la seule voix du chat de l’exécution, pose des questions et appelle les agents reliés un par un, chacun par un canal. Au plus un. Le chat ne se branche que sur lui. Sa sortie message va vers Fin ou un routeur. Tu ne vois ni les textes des agents ni les ordres internes comme bulles. L’app joint le dernier résultat à la tâche suivante. Un agent est sur le canal ou dans la chaîne de messages. Les outils peuvent se brancher sur son port Outil. Il les appelle lui-même.
 
 ## Outil
 

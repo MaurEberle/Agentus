@@ -44,6 +44,34 @@ def test_orchestrator_graph_is_valid() -> None:
     assert errors == []
 
 
+def test_orchestrator_accepts_a_tool_edge() -> None:
+    from app.run.compile import compile_document
+
+    raw = _orchestrator_doc()
+    raw["nodes"].append(
+        {
+            "id": "files",
+            "type": "tool",
+            "position": {"x": 0, "y": 0},
+            "data": {"kind": "file_access", "rootPath": "C:/stories"},
+        }
+    )
+    raw["edges"].append(
+        {
+            "id": "et",
+            "source": "files",
+            "sourceHandle": "tool",
+            "target": "orch",
+            "targetHandle": "tool",
+        }
+    )
+    doc = AgentNetworkDocument.model_validate(raw)
+    assert validate_document(doc, data_dir="C:/data") == []
+    compiled = compile_document(doc, network_id="n", network_name="mini")
+    assert compiled.orchestrator is not None
+    assert compiled.orchestrator.tool_kinds == ["file_access"]
+
+
 def test_legacy_orchestrator_message_edge_is_a_channel() -> None:
     from app.run.compile import compile_document
 

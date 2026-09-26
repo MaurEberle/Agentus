@@ -11,6 +11,7 @@ const STATIC_PORTS: Record<NodeType, PortDef[]> = {
   orchestrator: [
     { id: 'message', kind: 'message', direction: 'in', required: true },
     { id: 'llm', kind: 'llm', direction: 'in', required: true },
+    { id: 'tool', kind: 'tool', direction: 'in' },
     { id: 'message', kind: 'message', direction: 'out' },
   ],
   llm: [{ id: 'llm', kind: 'llm', direction: 'out' }],

@@ -70,6 +70,9 @@ class RunMemory:
     def __init__(self) -> None:
         self.turns: list[Turn] = []
         self.records: list[AgentRecord] = []
+        self.own_tools: list[ToolEvent] = []
+        self.own_files: list[FileFact] = []
+        self.allow_own_tools = True
         self.rejected: list[Rejected] = []
         self.windows: list[dict[str, object]] = []
         self.raised: dict[str, int] = {}
@@ -154,6 +157,9 @@ class RunMemory:
             messages.append(LlmMessage(role=role, content=turn.text))
         if self.records:
             messages.append(LlmMessage(role="user", content="\n".join(self._status(rec) for rec in self.records)))
+        own = self._own_block()
+        if own:
+            messages.append(LlmMessage(role="user", content="Your tools:\n" + own))
         if self._anomaly:
             messages.append(LlmMessage(role="user", content=self._anomaly))
         return messages
@@ -172,6 +178,11 @@ class RunMemory:
 
     def clear_anomaly(self) -> None:
         self._anomaly = None
+
+    def note_own_tool(self, event: ToolEvent, fact: FileFact | None) -> None:
+        self.own_tools.append(event)
+        if fact is not None and len(self.own_files) < _FILES_KEPT:
+            self.own_files.append(fact)
 
     def note_window(self, model: str, *, context_max: int | None, need: int) -> None:
         self.windows.append({"model": model, "contextMax": context_max, "need": need})
@@ -217,6 +228,25 @@ class RunMemory:
                 }
                 for rec in self.records
             ],
+            "ownFiles": [
+                {
+                    "tool": fact.tool,
+                    "action": fact.action,
+                    "path": fact.path,
+                    "ok": fact.ok,
+                    "size": fact.size,
+                }
+                for fact in self.own_files
+            ],
+            "ownTools": [
+                {
+                    "name": event.name,
+                    "arguments": event.arguments,
+                    "ok": event.ok,
+                    "result": event.result,
+                }
+                for event in self.own_tools
+            ],
             "rejected": [{"reason": item.reason, "body": item.body} for item in self.rejected],
             "windows": list(self.windows),
             "raised": dict(self.raised),
@@ -243,6 +273,14 @@ class RunMemory:
             if rec.agent_id == agent_id:
                 files.extend(rec.files)
         return files[-_FILES_KEPT:]
+
+    def _own_block(self) -> str:
+        lines = _file_block(self.own_files).splitlines() if self.own_files else []
+        for event in self.own_tools:
+            if event.name == "file_access":
+                continue
+            lines.append(f"{event.name} {'ok' if event.ok else 'failed'}")
+        return "\n".join(lines[-_FILES_SHOWN:])
 
     def _status(self, rec: AgentRecord) -> str:
         state = "finished" if rec.finished and not rec.error else "not finished"

@@ -28,7 +28,7 @@ Escolhe fornecedor e modelo. Local via Ollama; senão, nuvem mais credencial.
 
 ## Orquestrador
 
-Nó com o seu próprio LLM. É a única voz do chat da execução, faz perguntas e chama os agentes ligados um de cada vez, cada um por um canal. No máximo um. O chat só se liga a ele. A saída de mensagem vai para o Fim ou para um router. Não vês os textos dos agentes nem as ordens internas como bolhas. A app junta o último resultado à tarefa seguinte. Um agente está no canal ou na cadeia de mensagens.
+Nó com o seu próprio LLM. É a única voz do chat da execução, faz perguntas e chama os agentes ligados um de cada vez, cada um por um canal. No máximo um. O chat só se liga a ele. A saída de mensagem vai para o Fim ou para um router. Não vês os textos dos agentes nem as ordens internas como bolhas. A app junta o último resultado à tarefa seguinte. Um agente está no canal ou na cadeia de mensagens. As ferramentas podem ligar-se ao seu porto Ferramenta. Ele próprio as chama.
 
 ## Ferramenta
 

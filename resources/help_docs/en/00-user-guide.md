@@ -47,7 +47,7 @@ Connections (typed ports, not arbitrary arrows):
 
 Optional **orchestrator**: chat only to the orchestrator, an LLM to the orchestrator, one **channel** from the orchestrator to each agent’s channel, and **message** from the orchestrator to **end**. It is the only voice in the run chat, asks follow-ups, and calls agents one at a time. Agent text and internal commands do not appear as chat bubbles. The app attaches the latest agent result to the next task, so you do not paste it into the chat. The chat stays open until the orchestrator finishes the run. Without an orchestrator each agent stays its own chain through message and handoff. An agent is either on a channel or on the chain, never both.
 
-Optional: **tool** on the agent **tool** port, **knowledge** on **knowledge**. Save. In the **library**, **Set active** if quick select does not have it yet.
+Optional: **tool** on the agent or orchestrator **tool** port, **knowledge** on **knowledge**. Save. In the **library**, **Set active** if quick select does not have it yet.
 
 ## Start and stop
 

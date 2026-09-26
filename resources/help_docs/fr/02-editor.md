@@ -26,7 +26,7 @@ Pendant que **précisément ce** réseau tourne : bannière **Lecture seule** �
 | Nom | Type | Rôle |
 |-------------|-----|---------|
 | Chat | `chat_input` | Conversation de l’exécution. **Au plus un.** Sortie **Message**. Avec orchestrateur, le chat reste ouvert pour les questions. |
-| Orchestrateur | `orchestrator` | Voix du chat de l’exécution. Entrées **Message** et **LLM**. Une sortie **Canal** par agent. **Message** seulement vers **Fin** (ou un routeur). **Au plus un.** |
+| Orchestrateur | `orchestrator` | Voix du chat de l’exécution. Entrées **Message**, **LLM** et **Outil**. Une sortie **Canal** par agent. **Message** seulement vers **Fin** (ou un routeur). **Au plus un.** |
 | LLM | `llm` | Fournisseur (Ollama, xAI, OpenAI, Claude, Gemini), modèle, identifiant cloud, température, limite de jetons. Sortie **LLM**. |
 | Agent | `agent` | Invite système. Entrées Message, LLM, Outil, Connaissances, **Canal** optionnel. Sorties Message et transfert. Le canal vient seulement de l’orchestrateur. Sans canal, l’agent s’exécute une fois via le message. |
 | Outil | `tool` | First-party : HTTP, recherche web, date/heure, calculatrice, accès aux fichiers — ou **MCP**. Sortie **Outil**. |
@@ -41,7 +41,7 @@ Uniquement des ports compatibles :
 - Message vers Message (Chat → Agent ou Chat → Orchestrateur, Agent → Fin, Agent → Routeur, branches du routeur → …). L’orchestrateur n’envoie Message qu’à Fin ou à un routeur.
 - Canal vers Canal (Orchestrateur → Agent). Un port par agent. La réponse revient dans l’exécution, sans seconde arête.
 - Sortie LLM vers **LLM** de l’agent ou de l’orchestrateur — chaque agent et l’orchestrateur ont besoin d’**exactement une** telle arête
-- Sortie d’outil vers **Outil** de l’agent (plusieurs autorisées)
+- Sortie d’outil vers **Outil** de l’agent ou de l’orchestrateur (plusieurs autorisées). Un outil peut aller aux deux.
 - Sortie de connaissances uniquement vers **Connaissances** de l’agent
 - Les cycles sont interdits (graphe orienté sans boucle)
 
@@ -58,7 +58,7 @@ Nœud choisi :
 - **Outil :** type. HTTP : méthode et URL, identifiant optionnel. Recherche web : identifiant de type recherche web. Accès aux fichiers : dossier racine, pas la racine d’un lecteur ; l’agent ne travaille qu’en dessous, et écrire et supprimer sont des interrupteurs. MCP : serveur activé dans Paramètres ; par défaut tous les outils de ce serveur.
 - **Connaissances :** dossier source (choix de dossier), fournisseur d’embeddings (Ollama, OpenAI ou Gemini) et modèle d’embeddings, topK, seuil de score, **Reconstruire l’index**. Le dossier peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Les embeddings cloud exigent un identifiant. L’index appartient à ce réseau, pas à l’aide.
 - **Chat :** espace réservé, texte de départ, interrupteur « Saisie obligatoire ».
-- **Orchestrateur :** invite système. Le modèle choisit une question, une tâche vers un agent par son canal, une réponse ou la fin. Les agents sont les canaux, pas une seconde liste.
+- **Orchestrateur :** invite système. Le modèle choisit une question, une tâche vers un agent par son canal, une réponse ou la fin. Les agents sont les canaux, pas une seconde liste. Il appelle lui-même les outils branchés. Seule une question attend l’utilisateur.
 - **Routeur :** branches nommées (nom + condition) et défaut.
 
 Les secrets n’appartiennent **pas** au texte de l’inspecteur ni à l’export du graphe — seulement le choix d’un identifiant.

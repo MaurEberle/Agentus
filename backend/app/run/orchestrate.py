@@ -13,12 +13,29 @@ _ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish)"')
 _MAX_SALVAGED_TASK = 500
 
 
-def orchestrator_instructions(user_prompt: str, agents: list[tuple[str, str, str]]) -> str:
+def orchestrator_instructions(
+    user_prompt: str,
+    agents: list[tuple[str, str, str]],
+    tool_names: list[str] | None = None,
+) -> str:
     lines: list[str] = []
     for agent_id, name, instructions in agents:
         brief = " ".join(instructions.split())[:400]
         lines.append(f"- id: {agent_id}\n  name: {name}\n  instructions: {brief or '(none)'}")
     roster = "\n".join(lines) if lines else "(no agents connected)"
+    names = [name for name in (tool_names or []) if name]
+    tool_block = ""
+    if names:
+        tool_block = (
+            "You have tools: "
+            + ", ".join(names)
+            + ".\n"
+            "Call a tool with a tool call. Do not put a tool call in the JSON object and do not describe it in a sentence.\n"
+            "Use tools to check files after an agent. Do not use tools instead of calling an agent.\n"
+            "At most two tool rounds this step, then one JSON object.\n"
+            "After the tool result, decide again with one JSON object.\n"
+            "A later step sees only short lines for your own tools, not the tool result.\n"
+        )
     protocol = f"""You orchestrate this agent network.
 You are the only voice in the run chat. Agents do not speak to the user.
 Each agent below is one private channel. A call sends one short task down that channel and returns one result to the runtime.
@@ -28,12 +45,12 @@ When an agent fails, the runtime adds one anomaly excerpt for that agent only. T
 Call one agent at a time, wait for the result, then decide again. You may call the same agent later with a new task.
 The task field is a short instruction of a few sentences. Do not paste an agent result into it.
 A call may set source to an agent id when a tool agent must use that agent's text. You write the id, not the text.
-If a missing detail would change the task, ask the user before calling.
-You may answer yourself when no agent is needed. Domain work belongs to the agents.
+If a missing detail would change the task, ask. The run waits only on ask.
+You may answer yourself when no agent is needed. A reply is shown in the chat and the run continues. Domain work belongs to the agents.
 A status line without a successful write or delete means no file was written or deleted. You decide whether to finish.
 Write ask, reply, and finish text in the user's language.
-Use reply when the user may want to continue. Use finish only when the task is done and the run should stop.
-Reply with one JSON object and no other text. Do not describe the call in a sentence:
+Use ask for a question that needs an answer. Use reply to speak without waiting. Use finish only when the task is done and the run should stop.
+{tool_block}Reply with one JSON object and no other text. Do not describe the call in a sentence:
 {{"action":"ask","text":"..."}}
 {{"action":"call","agent":"<id or name>","task":"...","source":""}}
 {{"action":"reply","text":"..."}}
@@ -64,9 +81,10 @@ def reject_reason(raw: str) -> str | None:
     visible = _prepare(raw)
     if not visible:
         return "empty"
+    structured = _parse_json_object(visible)
     action = parse_orchestrator_action(visible)
     kind = action.get("action") or "reply"
-    if kind == "reply" and looks_like_control(visible):
+    if kind == "reply" and structured is None and looks_like_control(visible):
         return "unreadable"
     if kind in {"ask", "reply", "finish"} and not (action.get("text") or "").strip():
         return "empty"
