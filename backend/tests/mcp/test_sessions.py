@@ -8,6 +8,28 @@ from app.mcp.sessions import SESSIONS
 from tests.mcp.fakes import FakeSession
 
 
+def test_github_style_schema_without_type_is_repaired() -> None:
+    from app.mcp.sessions import tools_from_list_payload
+
+    tools = tools_from_list_payload(
+        {
+            "tools": [
+                {
+                    "name": "create_or_update_file",
+                    "description": "create",
+                    "inputSchema": {
+                        "$schema": "http://json-schema.org/draft-07/schema#",
+                        "properties": {"path": {"type": "string"}},
+                    },
+                }
+            ]
+        }
+    )
+    assert tools[0].name == "create_or_update_file"
+    assert tools[0].input_schema["type"] == "object"
+    assert "path" in tools[0].input_schema["properties"]
+
+
 def test_call_without_open(api_env) -> None:
     init()
     out = SESSIONS.call("missing", "search", {})

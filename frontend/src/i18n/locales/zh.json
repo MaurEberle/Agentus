@@ -1372,6 +1372,11 @@
     "runtime": {
       "timeout": "模型无进展",
       "unreachable": "运行时不可达"
+    },
+    "mcp": {
+      "ping": {
+        "failed": "MCP 服务器没有响应，或其工具列表无法读取。"
+      }
     }
   },
   "help": {

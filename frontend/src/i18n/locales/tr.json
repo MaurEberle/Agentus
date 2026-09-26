@@ -1372,6 +1372,11 @@
     "runtime": {
       "timeout": "Modelden ilerleme yok",
       "unreachable": "Çalışma zamanına erişilemiyor"
+    },
+    "mcp": {
+      "ping": {
+        "failed": "MCP sunucusu yanıt vermedi veya araç listesi okunamadı."
+      }
     }
   },
   "help": {

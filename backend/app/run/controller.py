@@ -190,7 +190,21 @@ class RunController:
             if compiled.orchestrator:
                 server_ids.extend(sid for sid, _ in compiled.orchestrator.mcp if sid)
             if server_ids and mcp is not None:
-                mcp.open_for(list(dict.fromkeys(server_ids)))
+                try:
+                    mcp.open_for(list(dict.fromkeys(server_ids)))
+                except AppError:
+                    raise
+                except Exception as exc:
+                    from app.common.secrets import mask_text
+                    from app.db.errors import PersistError
+
+                    if isinstance(exc, PersistError):
+                        raise AppError(exc.message_key, status_code=409) from exc
+                    raise AppError(
+                        "mcp.ping.failed",
+                        status_code=409,
+                        message=mask_text(str(exc)[:240]),
+                    ) from exc
             self._phase = None
             self._phase_label = None
             with self.lock:
@@ -216,23 +230,26 @@ class RunController:
             self.thread.start()
             return {"serviceStatus": "running", "runId": run_id}
         except AppError as exc:
-            self._fail_start()
+            self._fail_start(exc.message_key, exc.message)
             raise exc
         except Exception:
-            self._fail_start()
+            self._fail_start("run.invalidNetwork")
             raise AppError("run.invalidNetwork", status_code=409)
 
-    def _fail_start(self) -> None:
+    def _fail_start(self, message_key: str | None = None, message: str | None = None) -> None:
         run_id = self.run_id
         if run_id:
             try:
                 row = get_run(run_id)
                 if row and row.get("outcome") == "running":
+                    if message_key:
+                        emit_log("error", message_key)
                     complete_run(
                         run_id,
                         outcome="failed",
                         ended_at=utc_now(),
                         error_class="unknown",
+                        error_message=message_key or message,
                     )
             except Exception:
                 pass

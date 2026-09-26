@@ -1372,6 +1372,11 @@
     "runtime": {
       "timeout": "Aucun progrès du modèle",
       "unreachable": "Runtime injoignable"
+    },
+    "mcp": {
+      "ping": {
+        "failed": "Le serveur MCP n’a pas répondu, ou sa liste d’outils était illisible."
+      }
     }
   },
   "help": {

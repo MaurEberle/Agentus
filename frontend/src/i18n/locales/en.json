@@ -1422,6 +1422,11 @@
         "window": "The prompt does not fit any context window."
       }
     },
+    "mcp": {
+      "ping": {
+        "failed": "The MCP server did not respond, or its tool list was unreadable."
+      }
+    },
     "graph": {
       "router": {
         "noEdge": "Router has no matching edge"

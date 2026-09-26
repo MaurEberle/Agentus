@@ -84,19 +84,7 @@ class _SdkSession:
         return future.result(timeout=timeout)
 
     def list_tools(self) -> list[McpToolInfo]:
-        listed = self._run(self._session.list_tools(), timeout=15)
-        tools = getattr(listed, "tools", listed) or []
-        out: list[McpToolInfo] = []
-        for tool in tools:
-            schema = getattr(tool, "inputSchema", None) or getattr(tool, "input_schema", None) or {}
-            out.append(
-                McpToolInfo(
-                    name=str(getattr(tool, "name", "")),
-                    description=getattr(tool, "description", None),
-                    input_schema=schema if isinstance(schema, dict) else {},
-                )
-            )
-        return out
+        return self._run(_list_tools_tolerant(self._session), timeout=15)
 
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         raw = self._run(self._session.call_tool(name, arguments), timeout=60)
@@ -112,6 +100,67 @@ class _SdkSession:
             self._loop.call_soon_threadsafe(self._loop.stop)
         except Exception:
             pass
+
+
+def repair_input_schema(schema: object) -> dict[str, Any]:
+    """Older MCP servers omit JSON Schema ``type``; the Python SDK requires it."""
+    if not isinstance(schema, dict):
+        return {"type": "object", "properties": {}}
+    out = dict(schema)
+    if "type" not in out:
+        out["type"] = "object"
+    if out.get("type") == "object" and "properties" not in out:
+        out["properties"] = {}
+    return out
+
+
+def tools_from_list_payload(raw: object) -> list[McpToolInfo]:
+    items = raw.get("tools") if isinstance(raw, dict) else None
+    if not isinstance(items, list):
+        items = getattr(raw, "tools", None)
+    if not isinstance(items, list):
+        return []
+    out: list[McpToolInfo] = []
+    for item in items:
+        if isinstance(item, dict):
+            name = str(item.get("name") or "")
+            if not name:
+                continue
+            schema = item.get("inputSchema") or item.get("input_schema") or {}
+            out.append(
+                McpToolInfo(
+                    name=name,
+                    description=item.get("description"),
+                    input_schema=repair_input_schema(schema),
+                )
+            )
+            continue
+        name = str(getattr(item, "name", "") or "")
+        if not name:
+            continue
+        schema = getattr(item, "inputSchema", None) or getattr(item, "input_schema", None) or {}
+        out.append(
+            McpToolInfo(
+                name=name,
+                description=getattr(item, "description", None),
+                input_schema=repair_input_schema(schema),
+            )
+        )
+    return out
+
+
+async def _list_tools_tolerant(session: Any) -> list[McpToolInfo]:
+    from pydantic import ValidationError
+
+    try:
+        listed = await session.list_tools()
+        return tools_from_list_payload(listed)
+    except ValidationError:
+        dispatcher = getattr(session, "_dispatcher", None)
+        if dispatcher is None:
+            raise
+        raw = await dispatcher.send_raw_request("tools/list", None, {})
+        return tools_from_list_payload(raw)
 
 
 async def _setup(

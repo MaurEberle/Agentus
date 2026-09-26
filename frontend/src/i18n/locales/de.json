@@ -1422,6 +1422,11 @@
         "window": "Der Prompt passt in kein Kontextfenster."
       }
     },
+    "mcp": {
+      "ping": {
+        "failed": "MCP-Server hat nicht geantwortet oder die Tool-Liste war unlesbar."
+      }
+    },
     "graph": {
       "router": {
         "noEdge": "Router ohne passende Kante"
