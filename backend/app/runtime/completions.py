@@ -341,6 +341,7 @@ def complete_live(
 ) -> CompletionResult:
     """Stream a completion. ``timeout_sec`` is idle time without a chunk, not total duration."""
     texts: list[str] = []
+    reasons: list[str] = []
     tool_calls: list[ToolCall] = []
     usage: CompletionUsage | None = None
     finish: str | None = None
@@ -348,6 +349,9 @@ def complete_live(
     started = time.perf_counter()
     last_progress = 0.0
     emitted_progress = False
+
+    def _estimate() -> int:
+        return estimate_token_count("".join(texts)) + estimate_token_count("".join(reasons))
 
     def _emit(out: int) -> None:
         nonlocal last_progress, emitted_progress
@@ -367,9 +371,9 @@ def complete_live(
         if event.kind == "delta":
             if event.text:
                 texts.append(event.text)
-                estimated_out += estimate_token_count(event.text)
             if event.reasoning:
-                estimated_out += estimate_token_count(event.reasoning)
+                reasons.append(event.reasoning)
+            estimated_out = _estimate()
             live = usage.completion_tokens if (usage and usage.completion_tokens) else estimated_out
             if live:
                 _emit(live)
@@ -388,6 +392,7 @@ def complete_live(
             if _usage_nonzero(event.usage):
                 usage = event.usage
             finish = event.finish_reason
+    estimated_out = _estimate()
     if usage is None or (usage.completion_tokens == 0 and estimated_out):
         usage = CompletionUsage(
             prompt_tokens=usage.prompt_tokens if usage else 0,

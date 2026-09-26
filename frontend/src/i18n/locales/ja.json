@@ -966,7 +966,8 @@
       "llm": "LLM",
       "tool": "ツール",
       "human": "入力",
-      "index": "索引"
+      "index": "索引",
+      "knowledge": "知識"
     },
     "activity": {
       "title": "アクティビティ",

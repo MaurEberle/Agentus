@@ -313,6 +313,26 @@ def test_stream_zero_usage_falls_back_to_estimate(monkeypatch: pytest.MonkeyPatc
     assert result.usage.completion_tokens == estimate_token_count("abcdefgh")
 
 
+def test_small_deltas_match_the_full_text_estimate(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = b"".join(
+        f'data: {{"choices":[{{"delta":{{"content":"{ch}"}}}}]}}\n\n'.encode() for ch in "abcdefgh"
+    ) + b"data: [DONE]\n\n"
+    seen: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG),
+        on_progress=lambda count, rate: seen.append(count),
+    )
+    expect = estimate_token_count("abcdefgh")
+    assert result.usage is not None
+    assert result.usage.completion_tokens == expect
+    assert seen[-1] == expect
+
+
 def test_thinking_delta_counts_tokens_not_content(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = (
         b'data: {"choices":[{"delta":{"reasoning":"abcdefgh"}}]}\n\n'

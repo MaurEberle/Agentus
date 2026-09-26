@@ -966,7 +966,8 @@
       "llm": "LLM",
       "tool": "Werkzeug",
       "human": "Eingabe",
-      "index": "Index"
+      "index": "Index",
+      "knowledge": "Wissen"
     },
     "activity": {
       "title": "Aktivität",

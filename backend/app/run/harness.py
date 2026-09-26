@@ -286,15 +286,21 @@ def _dispatch_tool(
             tool_node = compiled.by_id.get(edge.source)
             if tool_node and str(tool_node.data.get("kind")) == call_name:
                 tool_node_id = tool_node.id
-                cid = tool_node.data.get("credentialId")
-                cred = vault_get(str(cid)) if cid else None
-                out = tools_execute.execute_first_party(
-                    call_name,
-                    config=tool_node.data,
-                    args=args,
-                    secret=cred,
-                )
-                tool_result = out.model_dump(by_alias=True)
+                if tool_node.type == "tool":
+                    _set_node(ctrl, tool_node_id, "running", wait="tool", message=call_name)
+                try:
+                    cid = tool_node.data.get("credentialId")
+                    cred = vault_get(str(cid)) if cid else None
+                    out = tools_execute.execute_first_party(
+                        call_name,
+                        config=tool_node.data,
+                        args=args,
+                        secret=cred,
+                    )
+                    tool_result = out.model_dump(by_alias=True)
+                finally:
+                    if tool_node.type == "tool":
+                        _set_node(ctrl, tool_node_id, "idle")
                 break
     else:
         tool_result = {"ok": False, "error": f"unknown tool {call_name}"}
@@ -338,19 +344,26 @@ def _agent_turn(
     emit_log("info", "run.agent.start", node_id=agent_id)
     snippets: list[str] = []
     for kid in agent.knowledge_node_ids:
-        node = compiled.by_id.get(kid)
-        top_k = int(node.data.get("topK") or DEFAULT_TOP_K) if node else DEFAULT_TOP_K
-        score_min = float(node.data.get("scoreThreshold") or DEFAULT_SCORE_MIN) if node else DEFAULT_SCORE_MIN
-        for snip in retrieve(
-            compiled.network_id,
-            kid,
-            user_text or " ",
-            top_k=top_k,
-            score_min=score_min,
-            node=compiled.by_id.get(kid),
-        ):
-            label = f"{snip.title}#{snip.section}" if snip.section else snip.title
-            snippets.append(f"- [{label}] {snip.text}")
+        kn = compiled.by_id.get(kid)
+        if kn is not None and kn.type == "knowledge":
+            _set_node(ctrl, kid, "running", wait="knowledge")
+        try:
+            node = kn
+            top_k = int(node.data.get("topK") or DEFAULT_TOP_K) if node else DEFAULT_TOP_K
+            score_min = float(node.data.get("scoreThreshold") or DEFAULT_SCORE_MIN) if node else DEFAULT_SCORE_MIN
+            for snip in retrieve(
+                compiled.network_id,
+                kid,
+                user_text or " ",
+                top_k=top_k,
+                score_min=score_min,
+                node=compiled.by_id.get(kid),
+            ):
+                label = f"{snip.title}#{snip.section}" if snip.section else snip.title
+                snippets.append(f"- [{label}] {snip.text}")
+        finally:
+            if kn is not None and kn.type == "knowledge":
+                _set_node(ctrl, kid, "idle")
     if agent.knowledge_node_ids:
         emit_log(
             "debug",

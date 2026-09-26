@@ -656,3 +656,111 @@ def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None
 
     steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
     assert steps.get("llm") == "idle"
+
+
+def test_tool_and_knowledge_nodes_run_while_used(monkeypatch, api_env, tmp_path) -> None:
+    from app.run.controller import get_controller
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+    from tests.run.test_validate import _orchestrator_doc
+
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    monkeypatch.setattr("app.run.controller.index_node", lambda *a, **k: "ready")
+
+    seen_tool: list[str] = []
+    seen_kn: list[str] = []
+
+    def _retrieve(*args, **kwargs):
+        del args, kwargs
+        snap = get_controller().snapshot
+        assert snap is not None
+        runtime = snap.nodes_runtime.get("kn")
+        if runtime is not None and runtime.status == "running":
+            seen_kn.append("kn")
+        return []
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        snap = get_controller().snapshot
+        assert snap is not None
+        runtime = snap.nodes_runtime.get("files")
+        if runtime is not None and runtime.status == "running":
+            seen_tool.append("files")
+        return ExecuteResult(ok=True, result={"path": ".", "entries": []})
+
+    monkeypatch.setattr("app.run.harness.retrieve", _retrieve)
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    agent_n = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            if "characters:" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(id="c1", name="file_access", arguments='{"action":"list","path":"."}')
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+
+    doc = _orchestrator_doc()
+    doc["nodes"].extend(
+        [
+            {
+                "id": "kn",
+                "type": "knowledge",
+                "position": {"x": 0, "y": 0},
+                "data": {"sourcePath": str(folder), "embeddingModel": "nomic-embed-text"},
+            },
+            {
+                "id": "files",
+                "type": "tool",
+                "position": {"x": 0, "y": 0},
+                "data": {"kind": "file_access", "rootPath": "C:/stories"},
+            },
+        ]
+    )
+    doc["edges"].extend(
+        [
+            {
+                "id": "ek",
+                "source": "kn",
+                "sourceHandle": "knowledge",
+                "target": "ag",
+                "targetHandle": "knowledge",
+            },
+            {
+                "id": "et",
+                "source": "files",
+                "sourceHandle": "tool",
+                "target": "ag",
+                "targetHandle": "tool",
+            },
+        ]
+    )
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert "kn" in seen_kn
+    assert "files" in seen_tool
+    from app.db.runs import list_steps
+
+    steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
+    assert steps.get("kn") == "idle"
+    assert steps.get("files") == "idle"
