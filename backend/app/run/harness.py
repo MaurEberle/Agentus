@@ -53,6 +53,11 @@ _REPAIR_NOTE = (
     "Reply with one JSON object only. The task must be a short instruction. Do not paste an agent result."
 )
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
+_TOOL_USE_NOTE = "You have tools. Call a tool. A sentence without a tool call is discarded."
+_FINISH_FILES_NOTE = (
+    "A tool agent made no successful write or delete. Check with a tool or call that agent again. "
+    "Finish only when the files exist."
+)
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
 from app.tools.catalog import openai_tools_for_kinds
 from app.tools import execute as tools_execute
@@ -374,6 +379,11 @@ def _agent_turn(
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
     tools = _tool_schemas(agent.tool_kinds, agent.mcp)
+    if tools:
+        system = (
+            system
+            + "\n\nYou must call a tool with a tool call. A sentence without a tool call is discarded."
+        )
     mcp = get_mcp()
     secret = None
     if agent.llm.provider != "ollama" and agent.llm.credential_id:
@@ -382,6 +392,7 @@ def _agent_turn(
     from app.runtime import completions as runtime_completions
 
     rounds = 0
+    nudges = 0
     content = ""
     llm_node_id = agent.llm.node_id or agent_id
     while rounds <= MAX_TOOL_ROUNDS:
@@ -552,6 +563,16 @@ def _agent_turn(
                 )
             continue
         content = result.content or ""
+        if (
+            tools
+            and not result.tool_calls
+            and not (record is not None and record.tool_ok)
+            and nudges < 1
+        ):
+            nudges += 1
+            messages.append(LlmMessage(role="assistant", content=content))
+            messages.append(LlmMessage(role="user", content=_TOOL_USE_NOTE))
+            continue
         break
     _set_node(ctrl, agent_id, "done")
     emit_log("info", "run.agent.done", node_id=agent_id)
@@ -812,6 +833,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 return "cancelled"
             continue
         if kind == "finish":
+            if _tool_work_unverified(memory) and not memory.finish_warned:
+                memory.finish_warned = True
+                memory.add_note(_FINISH_FILES_NOTE)
+                continue
             if text.strip():
                 _publish_assistant(ctrl, text.strip())
                 memory.add_spoken("finish", text.strip())
@@ -902,6 +927,10 @@ def _orchestrator_call(
             memory.set_anomaly(record)
             return "continue"
         record.text = visible
+        if has_tools and not record.tool_ok:
+            record.error = "no tool used"
+            memory.set_anomaly(record)
+            return "continue"
         record.finished = True
         if any(not fact.ok for fact in record.files):
             record.error = "tool failed"
@@ -911,6 +940,17 @@ def _orchestrator_call(
             memory.add_note(f"Status already shown to the user: {name} finished.")
         return "continue"
     return "cancelled"
+
+
+def _tool_work_unverified(memory: RunMemory) -> bool:
+    called = [rec for rec in memory.records if rec.has_tools]
+    if not called:
+        return False
+    return not any(
+        fact.ok and fact.action in {"write", "delete"}
+        for rec in called
+        for fact in rec.files
+    )
 
 
 def _finish_targets(ctrl: RunController, compiled: CompiledGraph, orch, text: str) -> None:

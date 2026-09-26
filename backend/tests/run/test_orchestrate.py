@@ -71,6 +71,7 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "status line" in text
     assert "result of that call" in text
     assert "text agent needs the source" in text
+    assert "did not write" in text
     assert "waits only on ask" in text
     assert "without waiting" in text
 

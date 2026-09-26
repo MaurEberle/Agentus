@@ -73,6 +73,7 @@ class RunMemory:
         self.own_tools: list[ToolEvent] = []
         self.own_files: list[FileFact] = []
         self.allow_own_tools = True
+        self.finish_warned = False
         self.rejected: list[Rejected] = []
         self.windows: list[dict[str, object]] = []
         self.raised: dict[str, int] = {}
@@ -355,6 +356,8 @@ def _file_block(files: list[FileFact]) -> str:
 
 
 def _anomaly_needs_text(record: AgentRecord) -> bool:
+    if record.error == "no tool used" and record.text:
+        return True
     if record.error != "tool failed" or not record.text:
         return False
     failed = [fact for fact in record.files if not fact.ok]

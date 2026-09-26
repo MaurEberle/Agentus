@@ -47,7 +47,7 @@ The task field is a short instruction of a few sentences. Do not paste an agent 
 To give an agent's result to another agent, set source to that agent's id. You write the id, not the text. A text agent needs the source as well as a tool agent.
 If a missing detail would change the task, ask. The run waits only on ask.
 You may answer yourself when no agent is needed. A reply is shown in the chat and the run continues. Domain work belongs to the agents.
-A status line without a successful write or delete means no file was written or deleted. You decide whether to finish.
+A status line without a successful write or delete means no file was written or deleted. A tool agent that returns text without a file line did not write. Call it again or check with your own tools before finish.
 Write ask, reply, and finish text in the user's language.
 Use ask for a question that needs an answer. Use reply to speak without waiting. Use finish only when the task is done and the run should stop.
 {tool_block}Reply with one JSON object and no other text. Do not describe the call in a sentence:
