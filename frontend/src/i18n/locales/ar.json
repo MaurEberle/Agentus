@@ -971,6 +971,10 @@
     "activity": {
       "title": "النشاط",
       "current": "العقد الحالية",
+      "now": "الآن",
+      "task": "المهمة",
+      "agents": "الوكلاء",
+      "agentsDone": "{{completed}} من {{total}} جاهز",
       "none": "لا عقدة نشطة",
       "dag": "الخطوة {{completed}} من {{total}}",
       "pending": "معلّق",

@@ -971,6 +971,10 @@
     "activity": {
       "title": "Actividad",
       "current": "Nodos actuales",
+      "now": "Ahora",
+      "task": "Encargo",
+      "agents": "Agentes",
+      "agentsDone": "{{completed}} de {{total}} listos",
       "none": "Ningún nodo activo",
       "dag": "Paso {{completed}} de {{total}}",
       "pending": "Pendiente",

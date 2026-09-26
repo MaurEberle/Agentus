@@ -20,12 +20,19 @@ class NodeTokens(ApiModel):
     context_max: int | None = Field(default=None, alias="contextMax")
 
 
+class NodeLlmInfo(ApiModel):
+    model: str = ""
+    provider: str = "ollama"
+    node_id: str = Field(default="", alias="nodeId")
+
+
 class NodeRuntime(ApiModel):
     status: NodeRuntimeStatus = "idle"
     role: str | None = None
     wait_reason: WaitReason | None = Field(default=None, alias="waitReason")
     last_message: str | None = Field(default=None, alias="lastMessage")
     error: str | None = None
+    llm: NodeLlmInfo | None = None
     tokens: NodeTokens | None = None
 
 

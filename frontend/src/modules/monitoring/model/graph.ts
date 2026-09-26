@@ -99,11 +99,25 @@ export function runTokenStats(run: RunSnapshot): {
   return { out, in: inn || undefined, perSecond: rate };
 }
 
-export function activeLlms(runtime: Record<string, NodeRuntime>): NodeRuntime['llm'][] {
-  const list: NodeRuntime['llm'][] = [];
-  for (const node of Object.values(runtime)) {
-    if (!node.llm) continue;
-    if (node.status === 'running' || node.status === 'waiting') list.push(node.llm);
+export function activeLlms(
+  graph: RunGraph,
+  runtime: Record<string, NodeRuntime>,
+): Array<{ model: string; provider: NonNullable<NodeRuntime['llm']>['provider']; nodeId: string }> {
+  const list: Array<{
+    model: string;
+    provider: NonNullable<NodeRuntime['llm']>['provider'];
+    nodeId: string;
+  }> = [];
+  for (const node of graph.nodes) {
+    if (node.type !== 'llm') continue;
+    const rt = runtime[node.id];
+    if (!rt || (rt.status !== 'running' && rt.status !== 'waiting')) continue;
+    const provider = (rt.llm?.provider ||
+      (typeof node.data.provider === 'string' && node.data.provider) ||
+      'ollama') as NonNullable<NodeRuntime['llm']>['provider'];
+    const model =
+      rt.llm?.model || (typeof node.data.model === 'string' ? node.data.model : '') || '';
+    list.push({ nodeId: node.id, model, provider });
   }
   return list;
 }

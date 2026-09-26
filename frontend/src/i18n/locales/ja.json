@@ -971,6 +971,10 @@
     "activity": {
       "title": "アクティビティ",
       "current": "現在のノード",
+      "now": "いま",
+      "task": "依頼",
+      "agents": "エージェント",
+      "agentsDone": "{{completed}} / {{total}} 完了",
       "none": "アクティブなノードはありません",
       "dag": "ステップ {{completed}} / {{total}}",
       "pending": "保留",

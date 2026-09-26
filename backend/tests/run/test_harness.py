@@ -639,6 +639,9 @@ def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None
             runtime = snap.nodes_runtime.get(node.id)
             if runtime is not None and runtime.status == "running":
                 seen.append(node.id)
+                if runtime.llm is not None:
+                    seen.append(runtime.llm.model)
+        assert "llm" in snap.activity.current_node_ids
         return CompletionResult(
             content='{"action":"finish","text":"Fertig."}',
             model=req.model,
@@ -648,6 +651,7 @@ def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None
     stored = _drive(monkeypatch, _complete, doc=_orchestrator_doc())
     assert stored["outcome"] == "succeeded"
     assert "llm" in seen
+    assert "llama3.2:1b" in seen
     from app.db.runs import list_steps
 
     steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}

@@ -971,6 +971,10 @@
     "activity": {
       "title": "Atividade",
       "current": "Nós atuais",
+      "now": "Agora",
+      "task": "Tarefa",
+      "agents": "Agentes",
+      "agentsDone": "{{completed}} de {{total}} prontos",
       "none": "Nenhum nó ativo",
       "dag": "Passo {{completed}} de {{total}}",
       "pending": "Pendente",

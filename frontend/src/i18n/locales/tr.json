@@ -971,6 +971,10 @@
     "activity": {
       "title": "Etkinlik",
       "current": "Geçerli düğümler",
+      "now": "Şimdi",
+      "task": "Görev",
+      "agents": "Ajanlar",
+      "agentsDone": "{{completed}} / {{total}} bitti",
       "none": "Etkin düğüm yok",
       "dag": "Adım {{completed}} / {{total}}",
       "pending": "Beklemede",

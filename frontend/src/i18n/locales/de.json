@@ -971,6 +971,10 @@
     "activity": {
       "title": "Aktivität",
       "current": "Aktuelle Knoten",
+      "now": "Jetzt",
+      "task": "Auftrag",
+      "agents": "Agenten",
+      "agentsDone": "{{completed}} von {{total}} fertig",
       "none": "Kein Knoten aktiv",
       "dag": "Schritt {{completed}} von {{total}}",
       "pending": "Offen",

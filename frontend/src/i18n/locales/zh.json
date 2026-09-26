@@ -971,6 +971,10 @@
     "activity": {
       "title": "活动",
       "current": "当前节点",
+      "now": "当前",
+      "task": "任务",
+      "agents": "智能体",
+      "agentsDone": "{{completed}} / {{total}} 已完成",
       "none": "无活动节点",
       "dag": "步骤 {{completed}} / {{total}}",
       "pending": "待处理",

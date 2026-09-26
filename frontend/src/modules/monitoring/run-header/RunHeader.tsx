@@ -36,7 +36,7 @@ export function RunHeader({
   const startMs = Date.parse(run.startedAt);
   const endMs = run.endedAt ? Date.parse(run.endedAt) : run.archived ? startMs : now;
   const duration = formatDuration(Math.max(0, endMs - startMs));
-  const llms = activeLlms(run.nodesRuntime);
+  const llms = activeLlms(run.graph, run.nodesRuntime);
   const others = activeNonLlm(run.graph, run.nodesRuntime);
   const runningCount = Object.values(run.nodesRuntime).filter((node) => node.status === 'running').length;
 

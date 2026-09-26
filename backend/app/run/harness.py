@@ -41,7 +41,7 @@ from app.run.orchestrate import (
 )
 from app.run import window as run_window
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
-from app.run.models import ActivityTokens, ChatMessage, NodeRuntime, NodeTokens
+from app.run.models import ActivityDag, ActivityTokens, ChatMessage, NodeLlmInfo, NodeRuntime, NodeTokens
 from app.run.sse import publish
 from app.runtime.errors import RuntimeApiError
 from app.runtime.completions import estimate_token_count
@@ -334,7 +334,7 @@ def _agent_turn(
     reuse: bool = False,
 ) -> str | None:
     agent = compiled.agents[agent_id]
-    _set_node(ctrl, agent_id, "running", wait="llm")
+    _set_node(ctrl, agent_id, "running", wait="llm", message=user_text)
     emit_log("info", "run.agent.start", node_id=agent_id)
     snippets: list[str] = []
     for kid in agent.knowledge_node_ids:
@@ -663,15 +663,25 @@ def _set_node(
     *,
     wait: str | None = None,
     error: str | None = None,
+    message: str | None = None,
+    llm: NodeLlmInfo | None = None,
+    clear_llm: bool = False,
 ) -> None:
     if not ctrl.snapshot:
         return
     runtime = dict(ctrl.snapshot.nodes_runtime)
     current = runtime.get(node_id, NodeRuntime())
-    runtime[node_id] = current.model_copy(
-        update={"status": status, "wait_reason": wait, "error": error}
-    )
+    update: dict[str, object] = {"status": status, "wait_reason": wait, "error": error}
+    if message is not None:
+        cleaned = " ".join(message.split())
+        update["last_message"] = cleaned[:240] or None
+    if llm is not None:
+        update["llm"] = llm
+    if clear_llm:
+        update["llm"] = None
+    runtime[node_id] = current.model_copy(update=update)
     ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime})
+    _refresh_activity(ctrl)
     node = ctrl.compiled.by_id.get(node_id) if ctrl.compiled else None
     upsert_step(
         run_id=ctrl.run_id or "",
@@ -686,6 +696,35 @@ def _set_node(
     publish("run", ctrl.snapshot.model_dump(by_alias=True))
 
 
+def _refresh_activity(ctrl: RunController) -> None:
+    snap = ctrl.snapshot
+    if snap is None:
+        return
+    current = [
+        nid for nid, rt in snap.nodes_runtime.items() if rt.status in {"running", "waiting"}
+    ]
+    dag = snap.activity.dag
+    compiled = ctrl.compiled
+    if compiled is not None:
+        ids = list(compiled.agents)
+        done = sum(
+            1
+            for aid in ids
+            if snap.nodes_runtime.get(aid) is not None and snap.nodes_runtime[aid].status == "done"
+        )
+        pending = [
+            aid
+            for aid in ids
+            if snap.nodes_runtime.get(aid) is None or snap.nodes_runtime[aid].status == "idle"
+        ]
+        dag = ActivityDag(completed=done, total=len(ids), pending_node_ids=pending)
+    ctrl.snapshot = snap.model_copy(
+        update={
+            "activity": snap.activity.model_copy(update={"current_node_ids": current, "dag": dag})
+        }
+    )
+
+
 def _set_llm(ctrl: RunController, compiled: CompiledGraph, llm_node_id: str, *, busy: bool) -> None:
     if not llm_node_id:
         return
@@ -693,9 +732,14 @@ def _set_llm(ctrl: RunController, compiled: CompiledGraph, llm_node_id: str, *, 
     if node is None or node.type != "llm":
         return
     if busy:
-        _set_node(ctrl, llm_node_id, "running", wait="llm")
+        info = NodeLlmInfo(
+            model=str(node.data.get("model") or ""),
+            provider=str(node.data.get("provider") or "ollama"),
+            node_id=llm_node_id,
+        )
+        _set_node(ctrl, llm_node_id, "running", wait="llm", llm=info)
     else:
-        _set_node(ctrl, llm_node_id, "idle")
+        _set_node(ctrl, llm_node_id, "idle", clear_llm=True)
 
 
 def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:

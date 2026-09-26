@@ -971,6 +971,10 @@
     "activity": {
       "title": "Activity",
       "current": "Current nodes",
+      "now": "Now",
+      "task": "Task",
+      "agents": "Agents",
+      "agentsDone": "{{completed}} of {{total}} done",
       "none": "No node active",
       "dag": "Step {{completed}} of {{total}}",
       "pending": "Pending",
