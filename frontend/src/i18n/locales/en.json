@@ -295,6 +295,7 @@
       "clearTitle": "Clear help history?",
       "clearBody": "All help-chat messages will be removed. The profile stays.",
       "reindex": "Rebuild index",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Show onboarding again"
     },
     "mcp": {

@@ -295,6 +295,7 @@
       "clearTitle": "清除帮助历史？",
       "clearBody": "将删除帮助聊天中的所有消息。配置保留。",
       "reindex": "重建索引",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "再次显示引导"
     },
     "mcp": {

@@ -42,3 +42,5 @@ class HelpReindexResult(ApiModel):
     state: Literal["idle", "running", "ready", "error"]
     message_key: str | None = Field(default=None, alias="messageKey")
     job_id: str | None = Field(default=None, alias="id")
+    done: int | None = None
+    total: int | None = None

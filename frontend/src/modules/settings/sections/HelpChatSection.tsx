@@ -32,7 +32,7 @@ import {
   useRuntimeModelsQuery,
   useSettingsQuery,
 } from '@/modules/settings/api';
-import { startHelpReindex, useHelpReindexRunning } from '@/modules/settings/helpReindex';
+import { startHelpReindex, useHelpReindexProgress, useHelpReindexRunning } from '@/modules/settings/helpReindex';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -125,6 +125,7 @@ export function HelpChatSection() {
   const [saving, setSaving] = useState(false);
   const [pinging, setPinging] = useState(false);
   const reindexing = useHelpReindexRunning();
+  const reindexProgress = useHelpReindexProgress();
   const [confirmClear, setConfirmClear] = useState(false);
 
   const configured = help ? helpChatConfigured(help) : false;
@@ -171,8 +172,8 @@ export function HelpChatSection() {
     credentialMatchesProvider(item.kind, help?.embeddingProvider ?? ''),
   );
 
-  async function save() {
-    if (!help) return;
+  async function save(): Promise<boolean> {
+    if (!help) return false;
     setSaving(true);
     try {
       const next = await patchSettings({
@@ -180,8 +181,10 @@ export function HelpChatSection() {
       });
       syncHelpChat(next);
       notify({ titleKey: 'settings.notify.saved', variant: 'success' });
+      return true;
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -461,11 +464,24 @@ export function HelpChatSection() {
             <Button
               type="button"
               variant="outline"
-              disabled={reindexing}
+              disabled={reindexing || saving}
               loading={reindexing}
-              onClick={() => startHelpReindex()}
+              onClick={() => {
+                void (async () => {
+                  if (dirty) {
+                    const ok = await save();
+                    if (!ok) return;
+                  }
+                  startHelpReindex();
+                })();
+              }}
             >
-              {t('settings.helpChat.reindex')}
+              {reindexing && reindexProgress && reindexProgress.total > 0
+                ? t('settings.helpChat.reindexProgress', {
+                    done: String(reindexProgress.done),
+                    total: String(reindexProgress.total),
+                  })
+                : t('settings.helpChat.reindex')}
             </Button>
             <Button
               type="button"

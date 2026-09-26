@@ -18,6 +18,8 @@ class ReindexSnapshot:
     state: ReindexState
     message_key: str | None = None
     job_id: str | None = None
+    done: int = 0
+    total: int = 0
 
 
 @dataclass
@@ -25,6 +27,8 @@ class _Job:
     job_id: str
     state: ReindexState
     message_key: str | None = None
+    done: int = 0
+    total: int = 0
 
 
 _lock = threading.Lock()
@@ -32,22 +36,49 @@ _job: _Job | None = None
 _thread: threading.Thread | None = None
 
 
+def _heal_locked() -> None:
+    global _job, _thread
+    if _job is None or _job.state != "running":
+        return
+    if _thread is not None and _thread.is_alive():
+        return
+    _job.state = "error"
+    _job.message_key = _job.message_key or "help.index.failed"
+
+
 def snapshot() -> ReindexSnapshot:
     with _lock:
+        _heal_locked()
         if _job is None:
             return ReindexSnapshot(state="idle")
         return ReindexSnapshot(
             state=_job.state,
             message_key=_job.message_key,
             job_id=_job.job_id,
+            done=_job.done,
+            total=_job.total,
         )
+
+
+def report_progress(done: int, total: int) -> None:
+    with _lock:
+        if _job is None or _job.state != "running":
+            return
+        _job.done = max(0, done)
+        _job.total = max(0, total)
 
 
 def begin() -> ReindexSnapshot:
     global _job, _thread
     with _lock:
+        _heal_locked()
         if _job is not None and _job.state == "running" and _thread is not None and _thread.is_alive():
-            return ReindexSnapshot(state="running", job_id=_job.job_id)
+            return ReindexSnapshot(
+                state="running",
+                job_id=_job.job_id,
+                done=_job.done,
+                total=_job.total,
+            )
         job = _Job(job_id=str(uuid.uuid4()), state="running")
         _job = job
         thread = threading.Thread(

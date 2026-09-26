@@ -111,6 +111,8 @@ export type HelpReindexResult = {
   state: HelpReindexState;
   messageKey?: string;
   id?: string;
+  done?: number;
+  total?: number;
 };
 
 export async function reindexHelpChat(): Promise<HelpReindexResult> {

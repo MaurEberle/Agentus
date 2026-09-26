@@ -83,6 +83,8 @@ def _reindex_result() -> HelpReindexResult:
         state=current.state,
         message_key=current.message_key,
         job_id=current.job_id,
+        done=current.done or None,
+        total=current.total or None,
     )
 
 

@@ -295,6 +295,7 @@
       "clearTitle": "Limpar histórico de ajuda?",
       "clearBody": "Todas as mensagens do chat de ajuda serão removidas. O perfil mantém-se.",
       "reindex": "Reconstruir índice",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Mostrar introdução outra vez"
     },
     "mcp": {

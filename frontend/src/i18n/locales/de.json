@@ -295,6 +295,7 @@
       "clearTitle": "Hilfe-Verlauf löschen?",
       "clearBody": "Alle Nachrichten im Hilfe-Chat werden entfernt. Das Profil bleibt erhalten.",
       "reindex": "Index neu aufbauen",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Onboarding erneut zeigen"
     },
     "mcp": {

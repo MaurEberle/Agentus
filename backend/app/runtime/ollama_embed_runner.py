@@ -82,6 +82,12 @@ def llama_server_exe() -> Path | None:
     return None
 
 
+def _runner_matches(signature: tuple[str, ...]) -> bool:
+    with _lock:
+        current = _runner
+        return current is not None and current.signature == signature and current.alive()
+
+
 def embed_with_forced_runner(req: EmbedRequest) -> EmbedResult:
     from app.runtime.embeddings import _embed_batched
 
@@ -90,8 +96,9 @@ def embed_with_forced_runner(req: EmbedRequest) -> EmbedResult:
     exe = llama_server_exe()
     if not files or exe is None:
         raise RuntimeApiError("runtime.embedUnsupported")
-    _unload(root, req.model)
     signature = tuple(str(path) for path in files)
+    if not _runner_matches(signature):
+        _unload(root, req.model)
     port = _acquire(exe, files, signature)
     try:
         local = req.model_copy(

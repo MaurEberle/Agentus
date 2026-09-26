@@ -295,6 +295,7 @@
       "clearTitle": "Yardım geçmişi silinsin mi?",
       "clearBody": "Yardım sohbetindeki tüm iletiler kaldırılır. Profil kalır.",
       "reindex": "Dizini yeniden oluştur",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Karşılama ekranını yeniden göster"
     },
     "mcp": {

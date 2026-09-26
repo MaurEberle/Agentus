@@ -100,7 +100,7 @@ def index_is_ready() -> bool:
 
 
 def reindex() -> tuple[Literal["ready", "error"], str | None]:
-    from app.runtime.embeddings import embed
+    from app.runtime.embeddings import embed, progress_hook
 
     settings = get_settings_merged()
     help_chat = settings.help_chat
@@ -119,16 +119,20 @@ def reindex() -> tuple[Literal["ready", "error"], str | None]:
     if not chunks:
         wipe_chunks()
         return "ready", None
+    from app.help.reindex_job import report_progress
+
+    report_progress(0, len(chunks))
     try:
-        result = embed(
-            EmbedRequest(
-                texts=[chunk.text for chunk in chunks],
-                model=model,
-                provider=provider,  # type: ignore[arg-type]
-                credential_id=credential_id,
-                timeout_sec=180,
+        with progress_hook(report_progress):
+            result = embed(
+                EmbedRequest(
+                    texts=[chunk.text for chunk in chunks],
+                    model=model,
+                    provider=provider,  # type: ignore[arg-type]
+                    credential_id=credential_id,
+                    timeout_sec=600,
+                )
             )
-        )
         if len(result.vectors) != len(chunks):
             return "error", "help.index.failed"
         dimension = result.dimension

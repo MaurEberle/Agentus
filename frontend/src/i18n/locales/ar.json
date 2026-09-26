@@ -295,6 +295,7 @@
       "clearTitle": "مسح سجل المساعدة؟",
       "clearBody": "ستُحذف كل رسائل دردشة المساعدة. يبقى الملف الشخصي.",
       "reindex": "إعادة بناء الفهرس",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "إظهار الترحيب مجددًا"
     },
     "mcp": {

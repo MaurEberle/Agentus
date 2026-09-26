@@ -295,6 +295,7 @@
       "clearTitle": "Effacer l’historique d’aide ?",
       "clearBody": "Tous les messages du chat d’aide seront supprimés. Le profil est conservé.",
       "reindex": "Reconstruire l’index",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Réafficher l’introduction"
     },
     "mcp": {

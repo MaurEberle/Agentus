@@ -295,6 +295,7 @@
       "clearTitle": "ヘルプ履歴を消去しますか？",
       "clearBody": "ヘルプチャットのすべてのメッセージが削除されます。設定は残ります。",
       "reindex": "インデックスを再構築",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "オンボーディングを再表示"
     },
     "mcp": {

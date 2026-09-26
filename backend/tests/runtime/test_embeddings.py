@@ -54,6 +54,23 @@ def test_embed_batches_keep_order(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.dimension == 2
 
 
+def test_embed_progress_hook_tracks_batches(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime.embeddings import progress_hook
+
+    monkeypatch.setattr("app.runtime.embeddings._BATCH", 2)
+    ticks: list[tuple[int, int]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        data = [{"index": index, "embedding": [1.0]} for index in range(len(body["input"]))]
+        return httpx.Response(200, json={"data": data})
+
+    install_transport(monkeypatch, handler)
+    with progress_hook(lambda done, total: ticks.append((done, total))):
+        embed(EmbedRequest(texts=["a", "b", "c"], model="m", provider="ollama"))
+    assert ticks == [(2, 3), (3, 3)]
+
+
 def test_embed_accepts_nested_values(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
