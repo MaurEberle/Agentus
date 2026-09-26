@@ -25,6 +25,7 @@ import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
   credentialMatchesProvider,
+  credentialMatchesToolKind,
   embeddingNeedsCredential,
   isCloudCatalogProvider,
   isEmbeddingModelName,
@@ -444,6 +445,19 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   const credentials = useEditorCredentialsQuery();
   const kind = String(node.data.kind ?? 'datetime');
   const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access'] as const;
+  const items = credentials.data?.items ?? [];
+  const matching = items.filter((item) => credentialMatchesToolKind(item.kind, kind));
+  const credentialId = String(node.data.credentialId ?? '');
+  const listedId = matching.some((item) => item.id === credentialId) ? credentialId : 'none';
+
+  useEffect(() => {
+    if (readOnly || kind !== 'web_search' || !credentials.data) return;
+    if (!credentialId) return;
+    const ok = (credentials.data.items ?? []).some(
+      (item) => item.id === credentialId && item.kind === 'web_search',
+    );
+    if (!ok) editorUpdateNodeData(node.id, { credentialId: undefined });
+  }, [kind, credentialId, credentials.data, readOnly, node.id]);
 
   return (
     <>
@@ -451,7 +465,14 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
         <Select
           value={kind}
           disabled={readOnly}
-          onValueChange={(value) => editorUpdateNodeData(node.id, { kind: value })}
+          onValueChange={(value) => {
+            const patch: Record<string, unknown> = { kind: value };
+            if (value === 'web_search') {
+              const current = items.find((item) => item.id === node.data.credentialId);
+              if (!current || current.kind !== 'web_search') patch.credentialId = undefined;
+            }
+            editorUpdateNodeData(node.id, patch);
+          }}
         >
           <SelectTrigger>
             <SelectValue />
@@ -486,7 +507,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
       {kind === 'http' || kind === 'web_search' ? (
         <Field label={t('network.inspector.tool.credential')}>
           <Select
-            value={String(node.data.credentialId ?? 'none')}
+            value={listedId}
             disabled={readOnly}
             onValueChange={(value) =>
               editorUpdateNodeData(node.id, { credentialId: value === 'none' ? undefined : value })
@@ -497,7 +518,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">{t('network.inspector.llm.credentialEmpty')}</SelectItem>
-              {(credentials.data?.items ?? []).map((item) => (
+              {matching.map((item) => (
                 <SelectItem key={item.id} value={item.id}>
                   {item.name}
                 </SelectItem>

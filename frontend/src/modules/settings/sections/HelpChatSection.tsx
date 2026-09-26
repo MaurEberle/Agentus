@@ -37,6 +37,7 @@ import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
   credentialMatchesProvider,
+  credentialMatchesToolKind,
   embeddingNeedsCredential,
   helpChatConfigured,
   helpChatWritePayload,
@@ -138,7 +139,9 @@ export function HelpChatSection() {
     credentialMatchesProvider(item.kind, help?.provider ?? ''),
   );
   const kindCredentials = (credentials?.items ?? []).filter((item) => item.kind === help?.provider);
-  const searchCredentials = (credentials?.items ?? []).filter((item) => item.kind === 'web_search');
+  const searchCredentials = (credentials?.items ?? []).filter((item) =>
+    credentialMatchesToolKind(item.kind, 'web_search'),
+  );
   const runtimeModels = models?.items ?? [];
   const hasRuntimeModels = runtimeModels.length > 0;
   const embedModels = runtimeModels.filter((model) => isEmbeddingModelName(model.name));

@@ -55,6 +55,11 @@ export function credentialMatchesProvider(kind: string, provider: string): boole
   return kind === provider || kind === 'token';
 }
 
+export function credentialMatchesToolKind(credentialKind: string, toolKind: string): boolean {
+  if (toolKind === 'web_search') return credentialKind === 'web_search';
+  return true;
+}
+
 export type CredentialListItem = {
   id: string;
   name: string;
