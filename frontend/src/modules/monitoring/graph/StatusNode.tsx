@@ -108,6 +108,7 @@ export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
           index={index}
           count={ins.length}
           side="left"
+          active={data.status === 'running' || data.status === 'waiting'}
         />
       ))}
       <div className="flex items-center gap-2">
@@ -136,6 +137,7 @@ export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
           index={index}
           count={outs.length}
           side="right"
+          active={data.status === 'running' || data.status === 'waiting'}
         />
       ))}
     </div>
@@ -148,12 +150,14 @@ function ViewHandle({
   index,
   count,
   side,
+  active,
 }: {
   graph: ReturnType<typeof asGraphNode>;
   port: PortDef;
   index: number;
   count: number;
   side: 'left' | 'right';
+  active: boolean;
 }) {
   const { t } = useTranslation();
   const name = port.label ?? (graph ? routerBranchName(graph, port.id) : undefined) ?? t(portI18nKey(port));
@@ -166,7 +170,10 @@ function ViewHandle({
       isConnectable={false}
       aria-label={name}
       title={name}
-      className="!size-3 !rounded-full !border-2 !border-background !bg-primary"
+      className={cn(
+        '!size-3 !rounded-full !border-2 !border-background',
+        active ? '!bg-primary' : '!bg-muted-foreground/40',
+      )}
     />
   );
 }

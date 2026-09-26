@@ -782,6 +782,9 @@ def _orchestrator_call(
     name = dict(names).get(agent_id, agent_id)
     record = memory.begin_call(agent_id, name, task, has_tools)
     memory.allow_own_tools = True
+    orch = compiled.orchestrator
+    if orch is not None:
+        _set_node(ctrl, orch.node_id, "waiting")
     delivered = memory.agent_message(agent_id, task, has_tools, source.text)
     attempt = 0
     continued = False
@@ -883,7 +886,7 @@ def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
 
 def _clear_human_wait(ctrl: RunController, compiled: CompiledGraph) -> None:
     if compiled.chat_input:
-        _set_node(ctrl, compiled.chat_input.id, "running")
+        _set_node(ctrl, compiled.chat_input.id, "idle")
 
 
 def _orchestrator_action(
