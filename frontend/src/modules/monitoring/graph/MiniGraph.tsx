@@ -3,7 +3,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
@@ -144,7 +143,6 @@ function GraphInner({
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable className="!h-20 !w-28" />
       </ReactFlow>
     </div>
   );
