@@ -128,18 +128,17 @@ class RunMemory:
 
     def agent_message(self, agent_id: str, task: str, has_tools: bool, source_text: str) -> str:
         parts = [(task or "").strip() or " "]
+        own = "" if has_tools else self._text_of(agent_id)
         if has_tools:
             files = self._files_of(agent_id)
             if files:
                 parts.append("Files already written in this run:\n" + _file_block(files))
-            if source_text:
-                parts.append(
-                    "Source text. Use this text. Do not replace it with a new one:\n" + source_text
-                )
-        else:
-            own = self._text_of(agent_id)
-            if own:
-                parts.append("Your earlier result:\n" + own)
+        elif own:
+            parts.append("Your earlier result:\n" + own)
+        if source_text and source_text != own:
+            parts.append(
+                "Source text. Use this text. Do not replace it with a new one:\n" + source_text
+            )
         return "\n\n".join(parts)
 
     def continuation_message(self, agent_id: str, task: str, has_tools: bool, source_text: str) -> str:
@@ -157,6 +156,9 @@ class RunMemory:
             messages.append(LlmMessage(role=role, content=turn.text))
         if self.records:
             messages.append(LlmMessage(role="user", content="\n".join(self._status(rec) for rec in self.records)))
+        last = self._last_result()
+        if last:
+            messages.append(LlmMessage(role="user", content=last))
         own = self._own_block()
         if own:
             messages.append(LlmMessage(role="user", content="Your tools:\n" + own))
@@ -281,6 +283,14 @@ class RunMemory:
                 continue
             lines.append(f"{event.name} {'ok' if event.ok else 'failed'}")
         return "\n".join(lines[-_FILES_SHOWN:])
+
+    def _last_result(self) -> str:
+        if not self.records:
+            return ""
+        rec = self.records[-1]
+        if not rec.finished or not rec.text:
+            return ""
+        return f"Result from {rec.name} ({rec.agent_id}):\n{rec.text}"
 
     def _status(self, rec: AgentRecord) -> str:
         state = "finished" if rec.finished and not rec.error else "not finished"

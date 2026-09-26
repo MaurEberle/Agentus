@@ -8,15 +8,20 @@ from app.run.memory import (
 )
 
 
-def test_status_line_hides_the_manuscript() -> None:
+def test_last_agent_result_returns_to_the_orchestrator() -> None:
     memory = RunMemory()
     memory.add_user("Hallo")
-    record = memory.begin_call("ag", "Schreiber", "schreib", False)
-    record.text = "GEHEIMES-MANUSKRIPT"
-    record.finished = True
+    first = memory.begin_call("ag", "Schreiber", "schreib", False)
+    first.text = "ERSTES-MANUSKRIPT"
+    first.finished = True
+    second = memory.begin_call("tr", "Translate", "übersetze", False)
+    second.text = "ZWEITES-ERGEBNIS"
+    second.finished = True
     blob = memory.prompt_text("system")
-    assert "GEHEIMES-MANUSKRIPT" not in blob
-    assert "characters: 19" in blob
+    assert "ZWEITES-ERGEBNIS" in blob
+    assert "Result from Translate (tr):" in blob
+    assert "ERSTES-MANUSKRIPT" not in blob
+    assert "characters: 16" in blob
     assert "Hallo" in blob
 
 
@@ -107,6 +112,9 @@ def test_one_writer_is_attached_automatically() -> None:
     message = memory.agent_message("t", "speichere", True, choice.text)
     assert "QUELLTEXT" in message
     assert "Source text" in message
+    text_agent = memory.agent_message("tr", "übersetze", False, choice.text)
+    assert "QUELLTEXT" in text_agent
+    assert "Source text" in text_agent
 
 
 def test_two_writers_without_source_name_ids_only() -> None:

@@ -39,12 +39,12 @@ def orchestrator_instructions(
     protocol = f"""You orchestrate this agent network.
 You are the only voice in the run chat. Agents do not speak to the user.
 Each agent below is one private channel. A call sends one short task down that channel and returns one result to the runtime.
-You see a status line afterwards: name, id, whether the call finished, character count, and file lines. You do not see the agent text.
-The run keeps the full course in memory. That course is not in this prompt.
+After a call you see a status line (name, id, finished, character count, file lines) and the result of that call.
+The run keeps the full course in memory. That course is not in this prompt. Older results stay in memory.
 When an agent fails, the runtime adds one anomaly excerpt for that agent only. The following step does not keep it.
 Call one agent at a time, wait for the result, then decide again. You may call the same agent later with a new task.
 The task field is a short instruction of a few sentences. Do not paste an agent result into it.
-A call may set source to an agent id when a tool agent must use that agent's text. You write the id, not the text.
+To give an agent's result to another agent, set source to that agent's id. You write the id, not the text. A text agent needs the source as well as a tool agent.
 If a missing detail would change the task, ask. The run waits only on ask.
 You may answer yourself when no agent is needed. A reply is shown in the chat and the run continues. Domain work belongs to the agents.
 A status line without a successful write or delete means no file was written or deleted. You decide whether to finish.

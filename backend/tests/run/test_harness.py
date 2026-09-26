@@ -351,7 +351,7 @@ def test_three_prose_calls_fail_without_asking(monkeypatch, api_env) -> None:
     assert all(item["reason"] == "unreadable" for item in rejected)
 
 
-def test_orchestrator_prompt_does_not_contain_the_manuscript(monkeypatch, api_env) -> None:
+def test_orchestrator_prompt_contains_the_last_agent_result(monkeypatch, api_env) -> None:
     manuscript = "EINMALIGES-MANUSKRIPT-9f3a"
     prompts: list[str] = []
 
@@ -374,8 +374,8 @@ def test_orchestrator_prompt_does_not_contain_the_manuscript(monkeypatch, api_en
 
     stored = _drive(monkeypatch, _complete)
     assert stored["outcome"] == "succeeded"
-    assert manuscript not in prompts[1]
-    assert "Previous agent result" not in prompts[1]
+    assert manuscript in prompts[1]
+    assert "Result from Schreiber" in prompts[1]
     assert f"characters: {len(manuscript)}" in prompts[1]
     assert stored["memory"]["calls"][0]["text"] == manuscript
     texts = [item["content"] for item in (stored["chat"] or [])]
@@ -384,6 +384,73 @@ def test_orchestrator_prompt_does_not_contain_the_manuscript(monkeypatch, api_en
     done = next(item for item in stored["chat"] if item["content"] == "Schreiber is done.")
     assert done["messageKey"] == "monitoring.chat.agentDone"
     assert done["messageParams"]["name"] == "Schreiber"
+
+
+def test_next_text_agent_receives_the_writer_result(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    manuscript = "TIGER-GESCHICHTE-9f3a"
+    agent_prompts: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            if "Result from Translate" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            if "Result from Schreiber" in blob:
+                return CompletionResult(
+                    content='{"action":"call","agent":"Translate","task":"übersetze"}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_prompts.append(blob)
+        if "Source text" in blob:
+            return CompletionResult(content="DE/EN/ES", model=req.model, finish_reason="stop")
+        return CompletionResult(content=manuscript, model=req.model, finish_reason="stop")
+
+    doc = _orchestrator_doc()
+    doc["nodes"].append(
+        {
+            "id": "tr",
+            "type": "agent",
+            "position": {"x": 0, "y": 0},
+            "data": {"displayName": "Translate", "systemPrompt": "trans"},
+        }
+    )
+    doc["edges"].extend(
+        [
+            {
+                "id": "e6",
+                "source": "llm",
+                "sourceHandle": "llm",
+                "target": "tr",
+                "targetHandle": "llm",
+            },
+            {
+                "id": "e7",
+                "source": "orch",
+                "sourceHandle": "channel:tr",
+                "target": "tr",
+                "targetHandle": "channel",
+            },
+        ]
+    )
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert any(manuscript in item and "Source text" in item for item in agent_prompts)
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert manuscript not in "\n".join(texts)
+    assert "Fertig." in texts
 
 
 def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypatch, api_env) -> None:
