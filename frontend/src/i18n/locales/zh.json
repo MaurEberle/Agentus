@@ -1262,7 +1262,8 @@
       },
       "agent": {
         "start": "智能体已启动",
-        "done": "智能体已完成"
+        "done": "智能体已完成",
+        "budget": "本轮已停止，上下文已满。"
       },
       "knowledge": "知识搜索（{{count}} 条结果）",
       "knowledgeIndex": {
@@ -1290,7 +1291,8 @@
       },
       "stepLimit": "已达到步骤上限",
       "orchestrator": {
-        "repair": "控制指令无法读取，正在重试。"
+        "repair": "控制指令无法读取，正在重试。",
+        "tools": "工具没有执行，正在再次调用。"
       }
     },
     "graph": {

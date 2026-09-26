@@ -1262,7 +1262,8 @@
       },
       "agent": {
         "start": "Agent gestartet",
-        "done": "Agent fertig"
+        "done": "Agent fertig",
+        "budget": "Auftrag gestoppt, der Kontext war voll."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {
@@ -1290,7 +1291,8 @@
       },
       "stepLimit": "Schrittlimit erreicht",
       "orchestrator": {
-        "repair": "Steuerbefehl war unlesbar, neuer Versuch."
+        "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
+        "tools": "Werkzeug wurde nicht ausgeführt, neuer Aufruf."
       }
     },
     "graph": {

@@ -1262,7 +1262,8 @@
       },
       "agent": {
         "start": "Agent démarré",
-        "done": "Agent terminé"
+        "done": "Agent terminé",
+        "budget": "Tour arrêté, le contexte était plein."
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
       "knowledgeIndex": {
@@ -1290,7 +1291,8 @@
       },
       "stepLimit": "Limite d’étapes atteinte",
       "orchestrator": {
-        "repair": "Commande illisible, nouvel essai."
+        "repair": "Commande illisible, nouvel essai.",
+        "tools": "L’outil n’a pas été exécuté, nouvel appel."
       }
     },
     "graph": {

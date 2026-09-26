@@ -64,6 +64,7 @@ class RunController:
         self._unloads: list[str] = []
         self._help_model: str | None = None
         self.last_error_node_id: str | None = None
+        self.briefing_text: str | None = None
         self.tokens_in = 0
         self.tokens_out = 0
         self._phase = None
@@ -85,6 +86,7 @@ class RunController:
         self._unloads = []
         self._help_model = None
         self.last_error_node_id = None
+        self.briefing_text = None
         self.tokens_in = 0
         self.tokens_out = 0
         self._phase = None
@@ -387,6 +389,8 @@ class RunController:
                     fields["error_node_id"] = error_node_id
                 if error_node_name:
                     fields["error_node_name"] = error_node_name
+                if self.briefing_text:
+                    fields["briefing"] = self.briefing_text
                 try:
                     complete_run(run_id, **fields)
                 except StoreUnavailable:

@@ -1262,7 +1262,8 @@
       },
       "agent": {
         "start": "Agent started",
-        "done": "Agent finished"
+        "done": "Agent finished",
+        "budget": "Turn stopped, the context was full."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {
@@ -1290,7 +1291,8 @@
       },
       "stepLimit": "Step limit reached",
       "orchestrator": {
-        "repair": "Control message was unreadable, trying again."
+        "repair": "Control message was unreadable, trying again.",
+        "tools": "Tool work did not run, calling the agent again."
       }
     },
     "graph": {

@@ -1262,7 +1262,8 @@
       },
       "agent": {
         "start": "Agente iniciado",
-        "done": "Agente finalizado"
+        "done": "Agente finalizado",
+        "budget": "Turno detenido, el contexto estaba lleno."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1290,7 +1291,8 @@
       },
       "stepLimit": "Límite de pasos alcanzado",
       "orchestrator": {
-        "repair": "La orden no se pudo leer, nuevo intento."
+        "repair": "La orden no se pudo leer, nuevo intento.",
+        "tools": "La herramienta no se ejecutó, nueva llamada."
       }
     },
     "graph": {

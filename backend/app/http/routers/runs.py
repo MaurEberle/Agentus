@@ -133,6 +133,7 @@ def _camel_run(row: dict[str, Any]) -> dict[str, Any]:
         "errorNodeName": row.get("error_node_name"),
         "graphSnapshot": row.get("graph_snapshot"),
         "chat": row.get("chat"),
+        "briefing": row.get("briefing"),
         "models": _camel_models(row.get("models") or []),
         "calls": [],
         "steps": [],

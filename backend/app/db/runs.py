@@ -22,6 +22,7 @@ _UPDATE_FIELDS = frozenset(
         "chat",
         "models",
         "updated_at",
+        "briefing",
     }
 )
 
@@ -54,6 +55,7 @@ def _run_dict(row: Any) -> dict[str, Any]:
         "graph_snapshot": graph,
         "chat": chat,
         "models": models,
+        "briefing": row["briefing"] if "briefing" in row.keys() else None,
     }
 
 

@@ -1,4 +1,4 @@
-from app.run.orchestrate import match_agent, orchestrator_instructions, parse_orchestrator_action
+from app.run.orchestrate import match_agent, needs_repair, orchestrator_instructions, parse_orchestrator_action
 
 
 def test_parse_actions() -> None:
@@ -50,7 +50,30 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "one agent at a time" in text
     assert "private channel" in text
     assert "id: ag" in text
+    assert "overview" in text
     assert "parallel" not in text
+
+
+def test_decision_inside_think_is_kept_when_nothing_else_is_visible() -> None:
+    raw = '<think>{"action":"call","agent":"Autor","task":"Titel neu schreiben"}</think>'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "Autor"
+    assert parsed["task"] == "Titel neu schreiben"
+
+
+def test_visible_reply_wins_over_a_call_hidden_in_think() -> None:
+    raw = '<think>{"action":"call","agent":"Autor","task":"neu"}</think>\nDie Geschichte ist fertig.'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+    assert parsed["text"] == "Die Geschichte ist fertig."
+
+
+def test_empty_turn_needs_repair() -> None:
+    assert needs_repair(parse_orchestrator_action("<think>nur nachgedacht</think>"))
+    assert needs_repair({"action": "ask", "text": ""})
+    assert needs_repair({"action": "reply", "text": "Call agent with the story"})
+    assert needs_repair({"action": "reply", "text": "Hallo"}) is False
 
 
 def test_match_agent_by_id_or_name() -> None:

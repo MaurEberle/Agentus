@@ -1262,7 +1262,8 @@
       },
       "agent": {
         "start": "Ajan başladı",
-        "done": "Ajan bitti"
+        "done": "Ajan bitti",
+        "budget": "Tur durdu, bağlam doluydu."
       },
       "knowledge": "Bilgi araması ({{count}} sonuç)",
       "knowledgeIndex": {
@@ -1290,7 +1291,8 @@
       },
       "stepLimit": "Adım sınırına ulaşıldı",
       "orchestrator": {
-        "repair": "Komut okunamadı, yeniden deneniyor."
+        "repair": "Komut okunamadı, yeniden deneniyor.",
+        "tools": "Araç çalışmadı, ajan yeniden çağrılıyor."
       }
     },
     "graph": {

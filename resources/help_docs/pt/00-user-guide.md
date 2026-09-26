@@ -45,7 +45,7 @@ Ligações (portos tipados, não setas arbitrárias):
 - LLM **LLM** → Agente **LLM**
 - Agente **Mensagem** → Fim
 
-**Orquestrador** opcional: o chat só para o orquestrador, um LLM para o orquestrador, um **Canal** do orquestrador para o canal de cada agente e **Mensagem** do orquestrador para o **Fim**. É a única voz do chat da execução, faz perguntas e chama os agentes um de cada vez. Os textos dos agentes e as ordens internas não aparecem como bolhas. A app junta o último resultado à tarefa seguinte; não precisas de o colar no chat. O chat fica aberto até ele terminar a execução. Sem orquestrador cada agente é a sua própria cadeia por mensagem e transferência. Um agente está no canal ou na cadeia, nunca nos dois.
+**Orquestrador** opcional: o chat só para o orquestrador, um LLM para o orquestrador, um **Canal** do orquestrador para o canal de cada agente e **Mensagem** do orquestrador para o **Fim**. É a única voz do chat da execução, faz perguntas e chama os agentes um de cada vez. Os textos dos agentes e as ordens internas não aparecem como bolhas. Cada agente guarda o seu próprio texto. Um agente com ferramenta recebe o texto do autor e a lista dos ficheiros que já escreveu. O orquestrador vê só um resumo curto. Se um agente tem uma ferramenta e não a chama, ou a chamada falha, a tarefa fica aberta. Esse trabalho não é anunciado como feito no chat. O chat fica aberto até ele terminar a execução. Sem orquestrador cada agente é a sua própria cadeia por mensagem e transferência. Um agente está no canal ou na cadeia, nunca nos dois.
 
 Opcional: **Ferramenta** para o porto **Ferramenta** do agente, **Conhecimento** para **Conhecimento**. Guardar. Na **Biblioteca**, «Definir como ativa» se a seleção rápida ainda não o for.
 

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-import json
 import traceback
 import time
 import uuid
 from collections import deque
+from typing import NamedTuple
 
 from app.common.secrets import mask_obj
 from app.db.engine import utc_now
 from app.db.runs import insert_call, upsert_step
 from app.db.vault import get as vault_get
-from app.run.compile import CompiledGraph
+from app.help.visible import strip_think
+from app.run.briefing import FileFact, RunBriefing, file_fact, turn_over_budget
+from app.run.compile import CompiledAgent, CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.knowledge import retrieve
 from app.run.limits import (
@@ -22,8 +24,8 @@ from app.run.limits import (
     STREAM_IDLE_TIMEOUT_SEC,
 )
 from app.run.orchestrate import (
-    looks_like_control,
     match_agent,
+    needs_repair,
     orchestrator_instructions,
     parse_orchestrator_action,
 )
@@ -34,14 +36,27 @@ from app.runtime.errors import RuntimeApiError
 from app.runtime.completions import estimate_token_count
 from app.runtime.models import ChatMessage as LlmMessage
 from app.runtime.models import CompletionRequest, CompletionResult
+from app.tools.catalog import openai_tools_for_kinds
+from app.tools import execute as tools_execute
 
 _ORCHESTRATOR_REPAIR = (
     "That message was not one valid JSON object. It was not shown to the user and no agent was called. "
     "Reply with one JSON object only. The task must be a short instruction. "
-    "Do not paste the previous agent result into the task. It is attached automatically."
+    "Do not paste an agent result into the task."
 )
-from app.tools.catalog import openai_tools_for_kinds
-from app.tools import execute as tools_execute
+_TOOL_REDIRECT = (
+    "Agent {agent} did not complete its tool work. "
+    "Call {agent} again with a short task. Do not tell the user the work succeeded."
+)
+
+
+class _AgentTurn(NamedTuple):
+    text: str | None
+    tools: tuple[FileFact, ...] = ()
+
+
+def _agent_has_tools(agent: CompiledAgent) -> bool:
+    return bool(agent.tool_kinds or agent.mcp)
 
 
 def _run_error_class(exc: BaseException) -> str:
@@ -182,7 +197,7 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
         if invocations > MAX_AGENT_INVOCATIONS:
             emit_log("error", "run.stepLimit", node_id=node_id)
             return "failed"
-        text = _agent_turn(ctrl, compiled, node_id, payload, conversation)
+        text = _agent_turn(ctrl, compiled, node_id, payload, conversation).text
         if text is None:
             if ctrl.stop_event.is_set():
                 break
@@ -204,7 +219,7 @@ def _agent_turn(
     conversation: list[LlmMessage],
     *,
     publish_chat: bool = True,
-) -> str | None:
+) -> _AgentTurn:
     agent = compiled.agents[agent_id]
     _set_node(ctrl, agent_id, "running", wait="llm")
     emit_log("info", "run.agent.start", node_id=agent_id)
@@ -262,8 +277,12 @@ def _agent_turn(
 
     rounds = 0
     content = ""
+    trace: list[FileFact] = []
     llm_node_id = agent.llm.node_id or agent_id
     while rounds <= MAX_TOOL_ROUNDS:
+        if rounds > 0 and turn_over_budget(messages):
+            emit_log("info", "run.agent.budget", node_id=agent_id)
+            break
         started = time.perf_counter()
         emit_log(
             "info",
@@ -305,7 +324,7 @@ def _agent_turn(
             if isinstance(exc, RuntimeApiError) and (
                 exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
             ):
-                return None
+                return _AgentTurn(None)
             ctrl.last_error_node_id = agent_id
             emit_log("error", str(exc), node_id=agent_id, stack=traceback.format_exc())
             _set_node(ctrl, agent_id, "error", error=str(exc))
@@ -370,15 +389,16 @@ def _agent_turn(
             messages.append(
                 LlmMessage(
                     role="assistant",
-                    content=result.content,
+                    content=None,
                     tool_calls=result.tool_calls,
                 )
             )
             for call in result.tool_calls:
                 tool_node_id = agent_id
+                args = _parse_args(call.arguments)
                 mapped = map_openai_tool_name(call.name)
                 if mapped and mcp:
-                    out = mcp.call(mapped[0], mapped[1], _parse_args(call.arguments))
+                    out = mcp.call(mapped[0], mapped[1], args)
                     tool_result = out.get("result") if out.get("ok") else out
                 elif call.name in agent.tool_kinds:
                     cred = None
@@ -393,7 +413,7 @@ def _agent_turn(
                                 out = tools_execute.execute_first_party(
                                     call.name,
                                     config=tool_node.data,
-                                    args=_parse_args(call.arguments),
+                                    args=args,
                                     secret=cred,
                                 )
                                 tool_result = out.model_dump(by_alias=True)
@@ -405,6 +425,7 @@ def _agent_turn(
                 ok_tool = True
                 if isinstance(tool_result, dict) and tool_result.get("ok") is False:
                     ok_tool = False
+                trace.append(file_fact(call.name, args, tool_result, ok=ok_tool))
                 emit_log(
                     "info" if ok_tool else "warn",
                     "run.tool.call",
@@ -419,10 +440,10 @@ def _agent_turn(
                     )
                 )
             continue
-        content = result.content or ""
+        content = strip_think(result.content or "").strip()
         break
     _set_node(ctrl, agent_id, "done")
-    emit_log("info", "run.agent.done", node_id=agent_id)
+    emit_log("info", "run.agent.done", node_id=agent_id, payload={"toolCalls": len(trace)})
     if publish_chat and compiled.chat_input and content:
         msg = ChatMessage(
             id=str(uuid.uuid4()),
@@ -433,7 +454,7 @@ def _agent_turn(
         )
         ctrl.remember_chat(msg, generating=False)
         conversation.append(LlmMessage(role="assistant", content=content))
-    return content
+    return _AgentTurn(content, tuple(trace))
 
 
 def _parse_args(raw: str) -> dict:
@@ -528,9 +549,24 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     orch = compiled.orchestrator
     if orch is None:
         return "failed"
-    history: list[LlmMessage] = []
+    briefing = RunBriefing()
+    try:
+        return _orchestrator_loop(ctrl, compiled, user_text, briefing)
+    finally:
+        ctrl.briefing_text = briefing.overview()
+
+
+def _orchestrator_loop(
+    ctrl: RunController,
+    compiled: CompiledGraph,
+    user_text: str,
+    briefing: RunBriefing,
+) -> str:
+    orch = compiled.orchestrator
+    if orch is None:
+        return "failed"
     if user_text:
-        history.append(LlmMessage(role="user", content=user_text))
+        briefing.add_user(user_text)
     roster: list[tuple[str, str, str]] = []
     for agent_id in orch.agents:
         node = compiled.by_id.get(agent_id)
@@ -542,91 +578,103 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         roster.append((agent_id, name, instructions))
     system = orchestrator_instructions(orch.system_prompt, roster)
     names = [(agent_id, name) for agent_id, name, _ in roster]
+    name_of = dict(names)
     steps = 0
     repairs = 0
-    previous = ""
+    tool_redirects = 0
     while not ctrl.stop_event.is_set():
         steps += 1
         if steps > MAX_ORCHESTRATOR_STEPS:
             emit_log("error", "run.stepLimit", node_id=orch.node_id)
             return "failed"
-        action = _orchestrator_action(ctrl, compiled, system, history)
+        action = _orchestrator_action(ctrl, compiled, briefing.orchestrator_messages(system))
         if action is None:
             return "cancelled" if ctrl.stop_event.is_set() else "failed"
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
-        if kind == "reply" and looks_like_control(text):
+        if needs_repair(action):
             repairs += 1
             emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
-            history.append(LlmMessage(role="assistant", content=text[:400]))
+            briefing.add_assistant((text or "(empty)")[:400])
             if repairs <= 2:
-                history.append(LlmMessage(role="user", content=_ORCHESTRATOR_REPAIR))
+                briefing.add_user(_ORCHESTRATOR_REPAIR)
                 continue
             _speak(
                 ctrl,
                 compiled,
                 "Ich konnte den nächsten Schritt nicht lesen. Sag kurz, wie es weitergehen soll.",
-                history,
+                briefing,
                 wait=True,
             )
             reply = _queue_get(ctrl)
             if not reply or ctrl.stop_event.is_set():
                 return "cancelled"
-            history.append(LlmMessage(role="user", content=reply))
+            briefing.add_user(reply)
             repairs = 0
             continue
         repairs = 0
+        if kind in {"reply", "finish"} and briefing.open_tool_agent and tool_redirects < 2:
+            tool_redirects += 1
+            emit_log("info", "run.orchestrator.tools", node_id=orch.node_id)
+            briefing.add_assistant((text or "(empty)")[:400])
+            briefing.add_user(_TOOL_REDIRECT.format(agent=briefing.open_tool_agent))
+            continue
         if kind == "ask":
-            _speak(ctrl, compiled, text or "…", history, wait=True)
+            _speak(ctrl, compiled, text, briefing, wait=True)
             reply = _queue_get(ctrl)
             if not reply or ctrl.stop_event.is_set():
                 return "cancelled"
-            history.append(LlmMessage(role="user", content=reply))
+            briefing.add_user(reply)
             continue
         if kind == "call":
             token = action.get("agent") or ""
             agent_id = match_agent(token, names)
             task = (action.get("task") or text or user_text).strip()
             if agent_id is None or agent_id not in compiled.agents:
-                history.append(LlmMessage(role="user", content=f"Unknown agent: {token}. Use an id from the roster."))
+                briefing.add_user(f"Unknown agent: {token}. Use an id from the roster.")
                 continue
-            delivered = task or user_text or " "
-            if previous and previous not in delivered:
-                delivered = f"{delivered}\n\nPrevious agent result:\n{previous}"
-            history.append(
-                LlmMessage(
-                    role="assistant",
-                    content=json.dumps(
-                        {"action": "call", "agent": agent_id, "task": task},
-                        ensure_ascii=False,
-                    ),
+            has_tools = _agent_has_tools(compiled.agents[agent_id])
+            delivered = briefing.agent_task(agent_id, task, has_tools=has_tools)
+            try:
+                turned = _agent_turn(
+                    ctrl,
+                    compiled,
+                    agent_id,
+                    task,
+                    [LlmMessage(role="user", content=delivered)],
+                    publish_chat=False,
                 )
-            )
-            result = _agent_turn(
-                ctrl,
-                compiled,
-                agent_id,
-                task,
-                [LlmMessage(role="user", content=delivered)],
-                publish_chat=False,
-            )
-            if result is None:
+            except RuntimeApiError as exc:
+                if exc.error_key != "runtime.timeout":
+                    raise
+                _set_node(ctrl, agent_id, "done")
+                briefing.record(
+                    agent_id=agent_id,
+                    name=name_of.get(agent_id, agent_id),
+                    has_tools=has_tools,
+                    text="",
+                    files=[],
+                )
+                briefing.add_user(f"Agent {name_of.get(agent_id, agent_id)} timed out.")
+                continue
+            if turned.text is None:
                 if ctrl.stop_event.is_set():
                     return "cancelled"
-                history.append(LlmMessage(role="user", content=f"Agent {agent_id} produced no result."))
+                briefing.add_user(f"Agent {name_of.get(agent_id, agent_id)} produced no result.")
                 continue
-            previous = result
-            preview = result.strip()
-            history.append(
-                LlmMessage(
-                    role="user",
-                    content=(
-                        f"Result from {agent_id} is stored ({len(preview)} characters) and will be attached "
-                        "to the next agent automatically. Do not paste it into the task.\n"
-                        f"Preview:\n{preview[:800]}"
-                    ),
-                )
+            visible = turned.text.strip()
+            if not visible and not turned.tools and not has_tools:
+                briefing.add_user(f"Agent {name_of.get(agent_id, agent_id)} produced no result.")
+                continue
+            briefing.record(
+                agent_id=agent_id,
+                name=name_of.get(agent_id, agent_id),
+                has_tools=has_tools,
+                text=visible,
+                files=list(turned.tools),
             )
+            if briefing.open_tool_agent == agent_id:
+                tool_redirects = 0
             continue
         if kind == "finish":
             if text.strip():
@@ -650,12 +698,12 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             return "succeeded"
         if text.strip():
             _publish_assistant(ctrl, text.strip())
-            history.append(LlmMessage(role="assistant", content=text.strip()))
+            briefing.add_assistant(text.strip())
         _wait_chat(ctrl, compiled)
         reply = _queue_get(ctrl)
         if not reply or ctrl.stop_event.is_set():
             return "cancelled"
-        history.append(LlmMessage(role="user", content=reply))
+        briefing.add_user(reply)
     return "cancelled"
 
 
@@ -663,12 +711,12 @@ def _speak(
     ctrl: RunController,
     compiled: CompiledGraph,
     text: str,
-    history: list[LlmMessage],
+    briefing: RunBriefing,
     *,
     wait: bool,
 ) -> None:
     _publish_assistant(ctrl, text)
-    history.append(LlmMessage(role="assistant", content=text))
+    briefing.add_assistant(text)
     if wait:
         _wait_chat(ctrl, compiled)
 
@@ -685,8 +733,7 @@ def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
 def _orchestrator_action(
     ctrl: RunController,
     compiled: CompiledGraph,
-    system: str,
-    history: list[LlmMessage],
+    messages: list[LlmMessage],
 ) -> dict[str, str] | None:
     orch = compiled.orchestrator
     if orch is None:
@@ -712,7 +759,7 @@ def _orchestrator_action(
             CompletionRequest(
                 provider=llm.provider,  # type: ignore[arg-type]
                 model=llm.model,
-                messages=[LlmMessage(role="system", content=system), *history],
+                messages=messages,
                 base_url=llm.base_url,
                 credential_id=llm.credential_id,
                 secret=secret,
