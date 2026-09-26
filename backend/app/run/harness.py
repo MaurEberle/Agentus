@@ -394,6 +394,7 @@ def _agent_turn(
                 "contextMax": context_max,
             },
         )
+        _set_llm(ctrl, compiled, llm_node_id, busy=True)
         try:
             result: CompletionResult = runtime_completions.complete_live(
                 CompletionRequest(
@@ -427,6 +428,7 @@ def _agent_turn(
             )
             ok = True
         except Exception as exc:
+            _set_llm(ctrl, compiled, llm_node_id, busy=False)
             if isinstance(exc, RuntimeApiError) and (
                 exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
             ):
@@ -460,6 +462,7 @@ def _agent_turn(
                 duration_ms=int((time.perf_counter() - started) * 1000),
             )
             raise
+        _set_llm(ctrl, compiled, llm_node_id, busy=False)
         duration_ms = int((time.perf_counter() - started) * 1000)
         usage = result.usage
         if usage:
@@ -681,6 +684,18 @@ def _set_node(
         error_message=error,
     )
     publish("run", ctrl.snapshot.model_dump(by_alias=True))
+
+
+def _set_llm(ctrl: RunController, compiled: CompiledGraph, llm_node_id: str, *, busy: bool) -> None:
+    if not llm_node_id:
+        return
+    node = compiled.by_id.get(llm_node_id)
+    if node is None or node.type != "llm":
+        return
+    if busy:
+        _set_node(ctrl, llm_node_id, "running", wait="llm")
+    else:
+        _set_node(ctrl, llm_node_id, "idle")
 
 
 def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:
@@ -932,6 +947,7 @@ def _orchestrator_action(
         )
         from app.runtime import completions as runtime_completions
 
+        _set_llm(ctrl, compiled, llm_node_id, busy=True)
         try:
             result = runtime_completions.complete_live(
                 CompletionRequest(
@@ -961,6 +977,7 @@ def _orchestrator_action(
                 ),
             )
         except Exception as exc:
+            _set_llm(ctrl, compiled, llm_node_id, busy=False)
             if isinstance(exc, RuntimeApiError) and (
                 exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
             ):
@@ -974,6 +991,7 @@ def _orchestrator_action(
             emit_log("error", str(exc), node_id=orch.node_id, stack=traceback.format_exc())
             _set_node(ctrl, orch.node_id, "error", error=str(exc))
             raise
+        _set_llm(ctrl, compiled, llm_node_id, busy=False)
         duration_ms = int((time.perf_counter() - started) * 1000)
         usage = result.usage
         out_final = usage.completion_tokens if usage else (

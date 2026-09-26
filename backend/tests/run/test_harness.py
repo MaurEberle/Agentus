@@ -622,3 +622,33 @@ def test_num_ctx_wish_is_sent_to_ollama(monkeypatch, api_env) -> None:
     assert options[0] == {"num_ctx": 8192}
     assert stored["memory"]["windows"][0]["contextMax"] == 8192
     assert stored["memory"]["raised"]["llama3.2:1b"] == 8192
+
+
+def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None:
+    from app.run.controller import get_controller
+    from tests.run.test_validate import _orchestrator_doc
+
+    seen: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        snap = get_controller().snapshot
+        assert snap is not None
+        for node in snap.graph.nodes:
+            if node.type != "llm":
+                continue
+            runtime = snap.nodes_runtime.get(node.id)
+            if runtime is not None and runtime.status == "running":
+                seen.append(node.id)
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_orchestrator_doc())
+    assert stored["outcome"] == "succeeded"
+    assert "llm" in seen
+    from app.db.runs import list_steps
+
+    steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
+    assert steps.get("llm") == "idle"
