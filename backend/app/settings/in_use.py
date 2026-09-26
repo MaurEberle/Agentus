@@ -60,7 +60,7 @@ def usage_labels(credential_id: str) -> list[str]:
 
     if _mcp_usage_provider is not None:
         labels.extend(_mcp_usage_provider(credential_id))
-    return labels
+    return list(dict.fromkeys(labels))
 
 
 def is_in_use(credential_id: str) -> bool:

@@ -186,7 +186,13 @@ def patch_server(server_id: str, body: McpServerPatch) -> McpServerListItem:
 
 
 def set_enabled(server_id: str, enabled: bool) -> McpServerListItem:
-    return patch_server(server_id, McpServerPatch(enabled=enabled))
+    row = dict(_require(server_id))
+    recipe = get_recipe(str(row.get("recipe_id") or "")) if row.get("recipe_id") else None
+    if enabled:
+        _check_root(recipe, row.get("root_path"), True)
+        _check_credentials(recipe, row.get("credential_ids"), True)
+    row["enabled"] = bool(enabled)
+    return _save(row)
 
 
 def delete_server(server_id: str) -> None:

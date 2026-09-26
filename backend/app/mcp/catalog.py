@@ -38,5 +38,5 @@ def mcp_usage_labels(credential_id: str) -> list[str]:
     for row in list_mcp_servers():
         ids = row.get("credential_ids") or []
         if credential_id in ids:
-            labels.append(f"mcp:{row.get('name') or row.get('id')}")
+            labels.append(f"mcp:{row.get('recipe_id') or row.get('name') or row.get('id')}")
     return labels

@@ -186,12 +186,16 @@ class RunController:
             if self.stop_event.is_set():
                 self.finish("cancelled")
                 return {"serviceStatus": "stopped", "runId": run_id}
-            server_ids = [sid for ag in compiled.agents.values() for sid, _ in ag.mcp if sid]
+            mcp_bindings = [item for ag in compiled.agents.values() for item in ag.mcp]
             if compiled.orchestrator:
-                server_ids.extend(sid for sid, _ in compiled.orchestrator.mcp if sid)
+                mcp_bindings.extend(compiled.orchestrator.mcp)
+            server_ids = [sid for sid, _names, _cred in mcp_bindings if sid]
+            cred_overrides = {
+                sid: cred for sid, _names, cred in mcp_bindings if sid and cred
+            }
             if server_ids and mcp is not None:
                 try:
-                    mcp.open_for(list(dict.fromkeys(server_ids)))
+                    mcp.open_for(list(dict.fromkeys(server_ids)), cred_overrides or None)
                 except AppError:
                     raise
                 except Exception as exc:

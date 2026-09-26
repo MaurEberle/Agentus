@@ -35,6 +35,7 @@ import { ApiError } from '@/api/client';
 import { pickFolderPath } from '@/lib/pickFolder';
 import { notify } from '@/lib/notifications';
 import {
+  createCredential,
   deleteMcpServer,
   pingMcpServer,
   setMcpEnabled,
@@ -46,6 +47,7 @@ import {
 import type { CredentialKind, McpRecipe, McpServerListItem, McpTransport } from '@/modules/settings/model';
 import { isForbiddenDataRoot } from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
+import { cn } from '@/lib/utils';
 
 type PresetForm = {
   recipe: McpRecipe;
@@ -53,6 +55,8 @@ type PresetForm = {
   name: string;
   credentialIds: string[];
   rootPath: string;
+  newSecret: string;
+  newSecretName: string;
 };
 
 type CustomForm = {
@@ -108,10 +112,15 @@ export function McpSection() {
   const serversByRecipe = useMemo(() => {
     const map = new Map<string, McpServerListItem>();
     for (const item of servers) {
-      if (item.recipeId && !map.has(item.recipeId)) map.set(item.recipeId, item);
+      if (item.recipeId && item.enabled && !map.has(item.recipeId)) map.set(item.recipeId, item);
     }
     return map;
   }, [servers]);
+
+  const listedServers = useMemo(
+    () => servers.filter((item) => item.enabled || !item.recipeId),
+    [servers],
+  );
 
   function openPreset(recipe: McpRecipe, existing?: McpServerListItem) {
     const kinds = recipe.credentialKinds ?? [];
@@ -122,30 +131,66 @@ export function McpSection() {
       name: existing?.name || recipeTitle(t, recipe),
       credentialIds: kinds.map((_, index) => ids[index] ?? ''),
       rootPath: existing?.rootPath ?? '',
+      newSecret: '',
+      newSecretName: '',
     });
+  }
+
+  async function resetServer(id: string) {
+    const server = servers.find((item) => item.id === id);
+    try {
+      if (!server || server.recipeId) await deleteMcpServer(id);
+      else await setMcpEnabled(id, false);
+      notify({ titleKey: 'settings.notify.mcpReset', variant: 'success' });
+    } catch (err) {
+      notify({ titleKey: notifyKey(err, 'settings.notify.saveError'), variant: 'error' });
+    }
+  }
+
+  async function activateRecipe(recipe: McpRecipe) {
+    const leftovers = servers.filter((item) => item.recipeId === recipe.id);
+    if (leftovers.length > 0) {
+      try {
+        await Promise.all(leftovers.map((item) => deleteMcpServer(item.id)));
+      } catch (err) {
+        notify({ titleKey: notifyKey(err, 'settings.notify.saveError'), variant: 'error' });
+        return;
+      }
+    }
+    openPreset(recipe);
   }
 
   async function savePreset() {
     if (!preset) return;
     const kinds = preset.recipe.credentialKinds ?? [];
-    if (kinds.some((_, index) => !preset.credentialIds[index])) {
-      notify({ titleKey: 'mcp.credential.required', variant: 'error' });
-      return;
-    }
     if (preset.recipe.needsRoot && isForbiddenDataRoot(preset.rootPath)) {
       notify({ titleKey: 'mcp.root.invalid', variant: 'error' });
       return;
     }
     setSavingPreset(true);
     try {
+      const creds = [...preset.credentialIds];
+      const firstKind = kinds[0] as CredentialKind | undefined;
+      if (firstKind && preset.newSecret.trim()) {
+        const created = await createCredential({
+          name: preset.newSecretName.trim() || recipeTitle(t, preset.recipe),
+          kind: firstKind,
+          secret: preset.newSecret.trim(),
+        });
+        creds[0] = created.id;
+      }
+      if (kinds.some((_, index) => !String(creds[index] ?? '').trim())) {
+        notify({ titleKey: 'mcp.credential.required', variant: 'error' });
+        return;
+      }
       await upsertMcpServer({
         id: preset.serverId,
         recipeId: preset.serverId ? undefined : preset.recipe.id,
         name: preset.name.trim() || recipeTitle(t, preset.recipe),
         transport: preset.recipe.transport,
-        credentialIds: preset.credentialIds.filter(Boolean),
+        credentialIds: creds.filter(Boolean),
         rootPath: preset.recipe.needsRoot ? preset.rootPath : undefined,
-        enabled: preset.serverId ? undefined : true,
+        enabled: true,
       });
       notify({ titleKey: 'settings.notify.mcpSaved', variant: 'success' });
       setPreset(null);
@@ -201,22 +246,41 @@ export function McpSection() {
         <h2 className="mb-2 text-sm font-medium">{t('settings.mcp.recipes')}</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {recipes.map((recipe) => {
-            const existing = serversByRecipe.get(recipe.id);
+            const active = serversByRecipe.get(recipe.id);
             return (
-              <div key={recipe.id} className="flex flex-col gap-2 rounded-md border p-3">
+              <div
+                key={recipe.id}
+                className={cn(
+                  'flex flex-col gap-2 rounded-md border p-3 transition-colors',
+                  active ? 'border-primary/50 bg-primary/5' : 'hover:bg-accent/60',
+                )}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{recipeTitle(t, recipe)}</p>
                     <p className="text-xs text-muted-foreground">{t(`settings.mcp.hint.${recipe.id}`)}</p>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={existing ? 'secondary' : 'outline'}
-                    onClick={() => openPreset(recipe, existing)}
-                  >
-                    {existing ? t('settings.common.edit') : t('settings.mcp.enable')}
-                  </Button>
+                  <div className="flex shrink-0 flex-col gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={active ? 'secondary' : 'outline'}
+                      onClick={() => (active ? openPreset(recipe, active) : void activateRecipe(recipe))}
+                    >
+                      {active ? t('settings.common.edit') : t('settings.mcp.enable')}
+                    </Button>
+                    {active ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/15 hover:text-destructive"
+                        onClick={() => void resetServer(active.id)}
+                      >
+                        {t('settings.mcp.reset')}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   <Badge variant="secondary">{recipe.transport}</Badge>
@@ -241,7 +305,7 @@ export function McpSection() {
       </div>
       <div>
         <h2 className="mb-2 text-sm font-medium">{t('settings.mcp.servers')}</h2>
-        {servers.length === 0 ? (
+        {listedServers.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('settings.mcp.empty')}</p>
         ) : (
           <Table>
@@ -255,7 +319,7 @@ export function McpSection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {servers.map((server) => {
+              {listedServers.map((server) => {
                 const recipe = recipes.find((item) => item.id === server.recipeId);
                 return (
                   <TableRow key={server.id}>
@@ -271,13 +335,17 @@ export function McpSection() {
                     <TableCell>
                       <Switch
                         checked={server.enabled}
-                        onCheckedChange={(checked) =>
-                          void setMcpEnabled(server.id, checked)
-                            .then(() => notify({ titleKey: 'settings.notify.mcpSaved', variant: 'success' }))
-                            .catch((err) =>
-                              notify({ titleKey: notifyKey(err, 'settings.notify.saveError'), variant: 'error' }),
-                            )
-                        }
+                        onCheckedChange={(checked) => {
+                          if (checked === true) {
+                            void setMcpEnabled(server.id, true)
+                              .then(() => notify({ titleKey: 'settings.notify.mcpSaved', variant: 'success' }))
+                              .catch((err) =>
+                                notify({ titleKey: notifyKey(err, 'settings.notify.saveError'), variant: 'error' }),
+                              );
+                            return;
+                          }
+                          void resetServer(server.id);
+                        }}
                       />
                     </TableCell>
                     <TableCell>
@@ -313,7 +381,13 @@ export function McpSection() {
                       >
                         {t('settings.mcp.probe')}
                       </Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteId(server.id)}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/15 hover:text-destructive"
+                        onClick={() => setDeleteId(server.id)}
+                      >
                         {t('settings.common.delete')}
                       </Button>
                     </TableCell>
@@ -382,6 +456,24 @@ export function McpSection() {
                 {matching.length === 0 ? (
                   <p className="text-xs text-destructive">{t('settings.mcp.noCredentialOfKind')}</p>
                 ) : null}
+                {index === 0 ? (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="mcp-secret">{t('settings.mcp.secretNew')}</Label>
+                    <Input
+                      id="mcp-secret"
+                      type="password"
+                      autoComplete="new-password"
+                      value={preset.newSecret}
+                      onChange={(event) => setPreset({ ...preset, newSecret: event.target.value })}
+                    />
+                    <Input
+                      value={preset.newSecretName}
+                      placeholder={t('settings.mcp.secretName')}
+                      onChange={(event) => setPreset({ ...preset, newSecretName: event.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">{t('settings.mcp.secretDefaultHint')}</p>
+                  </div>
+                ) : null}
               </div>
             );
           })}
@@ -406,8 +498,22 @@ export function McpSection() {
             <Button type="button" variant="outline" onClick={() => setPreset(null)}>
               {t('settings.common.cancel')}
             </Button>
+            {preset?.serverId && servers.find((item) => item.id === preset.serverId)?.enabled ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/15 hover:text-destructive"
+                onClick={() => {
+                  const id = preset.serverId;
+                  if (!id) return;
+                  void resetServer(id).then(() => setPreset(null));
+                }}
+              >
+                {t('settings.mcp.reset')}
+              </Button>
+            ) : null}
             <Button type="button" onClick={() => void savePreset()} loading={savingPreset}>
-              {t('settings.common.save')}
+              {t('settings.mcp.enable')}
             </Button>
           </DialogFooter>
         </DialogContent>

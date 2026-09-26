@@ -199,7 +199,7 @@
       "deleteTitle": "¿Eliminar credencial?",
       "deleteBody": "Se eliminará «{{name}}». El secreto dejará de estar disponible.",
       "inUseTitle": "Credencial en uso",
-      "inUseBody": "«{{name}}» sigue asignada a un perfil de ayuda, una red o un servidor MCP y no se puede eliminar.",
+      "inUseBody": "«{{name}}» sigue asignado y no se puede eliminar.",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -233,6 +233,14 @@
         "linear": "Clave API de Linear.",
         "postgres": "Cadena de conexión Postgres (no las bases de la app).",
         "token": "Clave API o token Bearer genérico (Context7, Sentry y similares)."
+      },
+      "inUseMcpHint": "Asigna otra credencial en Servidores MCP o elimina el servidor. Después podrás quitar esta credencial.",
+      "usedBy": {
+        "helpChatLlm": "Chat de ayuda (chat)",
+        "helpChatEmbed": "Chat de ayuda (embeddings)",
+        "helpChatSearch": "Chat de ayuda (búsqueda web)",
+        "mcp": "Servidor MCP {{name}}",
+        "network": "Red «{{name}}»"
       }
     },
     "runtime": {
@@ -294,7 +302,7 @@
       "recipes": "Recetas",
       "servers": "Servidores configurados",
       "empty": "Aún no hay servidores MCP.",
-      "enable": "Configurar",
+      "enable": "Activar",
       "added": "Añadido",
       "custom": "Personalizado",
       "customCreate": "Servidor propio",
@@ -368,7 +376,11 @@
         "powerpoint": "Sin credencial. Carpeta raíz para .pptx. uvx local.",
         "word": "Sin credencial. Carpeta raíz para .docx. uvx local.",
         "office": "Sin credencial. Un servidor para PDF y Office. Carpeta raíz. uvx local."
-      }
+      },
+      "reset": "Desactivar",
+      "secretNew": "Nuevo secreto (opcional)",
+      "secretName": "Nombre del nuevo acceso",
+      "secretDefaultHint": "El secreto creado o elegido aquí es el predeterminado del servidor. En la red puedes elegir otro si hay varios."
     },
     "data": {
       "lead": "Carpeta de datos y estado de los almacenes. Sin visor SQL ni secretos.",
@@ -425,7 +437,8 @@
       "onboardingReset": "La introducción se mostrará la próxima vez que abras la ayuda",
       "mcpSaved": "Servidor MCP guardado",
       "mcpDeleted": "Servidor MCP eliminado",
-      "dataDirOk": "Carpeta de datos actualizada"
+      "dataDirOk": "Carpeta de datos actualizada",
+      "mcpReset": "Servidor MCP desactivado"
     }
   },
   "helpChat": {
@@ -738,7 +751,10 @@
         "tools": "Herramientas de este servidor",
         "toolsHint": "Vacío = todas las herramientas tras la prueba.",
         "probeHint": "Una prueba en Ajustes lista las herramientas de este servidor.",
-        "settings": "Ir a ajustes MCP"
+        "settings": "Ir a ajustes MCP",
+        "credential": "Acceso",
+        "credentialDefault": "Predeterminado ({{name}})",
+        "credentialHint": "El predeterminado es el acceso de Ajustes MCP. Elige otro si hay varios del mismo tipo."
       }
     },
     "load": {

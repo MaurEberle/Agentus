@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +39,23 @@ import {
 } from '@/modules/settings/api';
 import { CREDENTIAL_KINDS, type CredentialKind, type CredentialListItem } from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
+
+function usageLabelText(label: string, t: TFunction): string {
+  if (label === 'helpChat.llm') return t('settings.credentials.usedBy.helpChatLlm');
+  if (label === 'helpChat.embedding') return t('settings.credentials.usedBy.helpChatEmbed');
+  if (label === 'helpChat.webSearch') return t('settings.credentials.usedBy.helpChatSearch');
+  if (label.startsWith('mcp:')) {
+    const id = label.slice(4);
+    const name = t(`mcp.recipe.${id}`, { defaultValue: id });
+    return t('settings.credentials.usedBy.mcp', { name });
+  }
+  if (label.startsWith('network:')) {
+    const parts = label.split(':');
+    const name = parts.slice(2).join(':') || parts[1] || label;
+    return t('settings.credentials.usedBy.network', { name });
+  }
+  return label;
+}
 
 type FormState = {
   id?: string;
@@ -236,6 +255,23 @@ export function CredentialsSection() {
                 : t('settings.credentials.deleteBody', { name: pendingDelete?.name ?? '' })}
             </DialogDescription>
           </DialogHeader>
+          {pendingDelete?.inUse ? (
+            <div className="space-y-2">
+              <ul className="list-disc space-y-1 pl-5 text-sm">
+                {(pendingDelete.usedBy ?? []).map((label) => (
+                  <li key={label}>{usageLabelText(label, t)}</li>
+                ))}
+              </ul>
+              {(pendingDelete.usedBy ?? []).some((label) => label.startsWith('mcp:')) ? (
+                <p className="text-sm text-muted-foreground">
+                  {t('settings.credentials.inUseMcpHint')}{' '}
+                  <Link to="/settings#mcp" className="underline" onClick={() => setPendingDelete(null)}>
+                    {t('settings.nav.mcp')}
+                  </Link>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setPendingDelete(null)}>
               {t('settings.common.cancel')}

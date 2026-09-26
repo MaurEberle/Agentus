@@ -27,7 +27,7 @@ class CompiledOrchestrator:
     agents: list[str]
     finals: list[str]
     tool_kinds: list[str] = field(default_factory=list)
-    mcp: list[tuple[str, list[str] | None]] = field(default_factory=list)
+    mcp: list[tuple[str, list[str] | None, str | None]] = field(default_factory=list)
 
 
 @dataclass
@@ -36,7 +36,7 @@ class CompiledAgent:
     system_prompt: str
     llm: CompiledLlm
     tool_kinds: list[str]
-    mcp: list[tuple[str, list[str] | None]]
+    mcp: list[tuple[str, list[str] | None, str | None]]
     knowledge_node_ids: list[str]
     outbound_message: list[str]
 
@@ -86,7 +86,7 @@ def _compile_tools(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str
 ) -> tuple[list[str], list[tuple[str, list[str] | None]]]:
     tool_kinds: list[str] = []
-    mcp: list[tuple[str, list[str] | None]] = []
+    mcp: list[tuple[str, list[str] | None, str | None]] = []
     for edge in doc.edges:
         if edge.target != node_id or edge.target_handle != "tool":
             continue
@@ -96,11 +96,13 @@ def _compile_tools(
         if is_mcp_node(tool):
             names = tool.data.get("mcpToolNames")
             server_id = str(tool.data.get("mcpServerId") or "").strip()
+            cred = str(tool.data.get("credentialId") or "").strip() or None
             if server_id:
                 mcp.append(
                     (
                         server_id,
                         list(names) if isinstance(names, list) else None,
+                        cred,
                     )
                 )
             continue

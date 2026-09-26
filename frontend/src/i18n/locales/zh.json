@@ -199,7 +199,7 @@
       "deleteTitle": "删除凭据？",
       "deleteBody": "将移除“{{name}}”。密钥将不再可用。",
       "inUseTitle": "凭据正在使用",
-      "inUseBody": "“{{name}}”仍被帮助配置、网络或 MCP 服务器使用，无法删除。",
+      "inUseBody": "“{{name}}”仍被占用，无法删除。",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -233,6 +233,14 @@
         "linear": "Linear API 密钥。",
         "postgres": "Postgres 连接字符串（不要指向应用数据库）。",
         "token": "通用 API 密钥或 Bearer 令牌（Context7、Sentry 等）。"
+      },
+      "inUseMcpHint": "在 MCP 服务器上改用其他凭据，或删除该服务器。然后即可移除此凭据。",
+      "usedBy": {
+        "helpChatLlm": "帮助聊天（对话）",
+        "helpChatEmbed": "帮助聊天（嵌入）",
+        "helpChatSearch": "帮助聊天（网页搜索）",
+        "mcp": "MCP 服务器 {{name}}",
+        "network": "网络“{{name}}”"
       }
     },
     "runtime": {
@@ -294,7 +302,7 @@
       "recipes": "配方",
       "servers": "已配置的服务器",
       "empty": "尚无 MCP 服务器。",
-      "enable": "设置",
+      "enable": "启用",
       "added": "已添加",
       "custom": "自定义",
       "customCreate": "自定义服务器",
@@ -368,7 +376,11 @@
         "powerpoint": "无需凭据。.pptx 根目录。本地 uvx。",
         "word": "无需凭据。.docx 根目录。本地 uvx。",
         "office": "无需凭据。一个服务器处理 PDF 和 Office。根目录。本地 uvx。"
-      }
+      },
+      "reset": "停用",
+      "secretNew": "新密钥（可选）",
+      "secretName": "新凭据名称",
+      "secretDefaultHint": "在此创建或选择的密钥是该服务器的默认凭据。若有多个，可在网络中另选。"
     },
     "data": {
       "lead": "数据文件夹和存储状态。无 SQL 浏览器，无密钥。",
@@ -425,7 +437,8 @@
       "onboardingReset": "下次打开帮助时将再次显示引导",
       "mcpSaved": "已保存 MCP 服务器",
       "mcpDeleted": "已删除 MCP 服务器",
-      "dataDirOk": "已更新数据文件夹"
+      "dataDirOk": "已更新数据文件夹",
+      "mcpReset": "MCP 服务器已停用"
     }
   },
   "helpChat": {
@@ -738,7 +751,10 @@
         "tools": "此服务器的工具",
         "toolsHint": "空 = 探测后使用全部工具。",
         "probeHint": "设置中的探测会列出此服务器的工具。",
-        "settings": "MCP 设置"
+        "settings": "MCP 设置",
+        "credential": "凭据",
+        "credentialDefault": "默认（{{name}}）",
+        "credentialHint": "默认使用 MCP 设置中的凭据。同一类型有多份时在此选择。"
       }
     },
     "load": {

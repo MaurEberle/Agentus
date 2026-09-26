@@ -199,7 +199,7 @@
       "deleteTitle": "Kimlik bilgisi silinsin mi?",
       "deleteBody": "“{{name}}” kaldırılacak. Gizli artık kullanılamaz.",
       "inUseTitle": "Kimlik bilgisi kullanılıyor",
-      "inUseBody": "“{{name}}” hâlâ bir yardım profiline, ağa veya MCP sunucusuna bağlı ve silinemez.",
+      "inUseBody": "«{{name}}» hâlâ atanmış ve silinemez.",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -233,6 +233,14 @@
         "linear": "Linear API anahtarı.",
         "postgres": "Postgres bağlantı dizesi (uygulama veritabanları değil).",
         "token": "Genel API anahtarı veya Bearer jetonu (Context7, Sentry vb.)."
+      },
+      "inUseMcpHint": "MCP sunucusunda başka bir kimlik ata veya sunucuyu sil. Sonra bu kimliği kaldırabilirsin.",
+      "usedBy": {
+        "helpChatLlm": "Yardım sohbeti (sohbet)",
+        "helpChatEmbed": "Yardım sohbeti (gömme)",
+        "helpChatSearch": "Yardım sohbeti (web araması)",
+        "mcp": "MCP sunucusu {{name}}",
+        "network": "Ağ «{{name}}»"
       }
     },
     "runtime": {
@@ -294,7 +302,7 @@
       "recipes": "Tarifler",
       "servers": "Yapılandırılmış sunucular",
       "empty": "Henüz MCP sunucusu yok.",
-      "enable": "Kur",
+      "enable": "Etkinleştir",
       "added": "Eklendi",
       "custom": "Özel",
       "customCreate": "Özel sunucu",
@@ -368,7 +376,11 @@
         "powerpoint": "Kimlik gerekmez. .pptx için kök klasör. Yerel uvx.",
         "word": "Kimlik gerekmez. .docx için kök klasör. Yerel uvx.",
         "office": "Kimlik gerekmez. PDF ve Office için tek sunucu. Kök klasör. Yerel uvx."
-      }
+      },
+      "reset": "Devre dışı bırak",
+      "secretNew": "Yeni sır (isteğe bağlı)",
+      "secretName": "Yeni kimliğin adı",
+      "secretDefaultHint": "Burada oluşturulan veya seçilen sır bu sunucunun varsayılanıdır. Ağda birden fazla varsa başka birini seçebilirsin."
     },
     "data": {
       "lead": "Veri klasörü ve depo durumu. SQL tarayıcısı yok, gizli yok.",
@@ -425,7 +437,8 @@
       "onboardingReset": "Yardım bir sonraki açılışta karşılama ekranını gösterir",
       "mcpSaved": "MCP sunucusu kaydedildi",
       "mcpDeleted": "MCP sunucusu silindi",
-      "dataDirOk": "Veri klasörü güncellendi"
+      "dataDirOk": "Veri klasörü güncellendi",
+      "mcpReset": "MCP sunucusu kapatıldı"
     }
   },
   "helpChat": {
@@ -738,7 +751,10 @@
         "tools": "Bu sunucunun araçları",
         "toolsHint": "Boş = yoklamadan sonra tüm araçlar.",
         "probeHint": "Ayarlar’daki yoklama bu sunucunun araçlarını listeler.",
-        "settings": "MCP ayarları"
+        "settings": "MCP ayarları",
+        "credential": "Kimlik",
+        "credentialDefault": "Varsayılan ({{name}})",
+        "credentialHint": "Varsayılan, MCP ayarlarındaki kimliktir. Aynı türden birkaç tane varsa burada seç."
       }
     },
     "load": {

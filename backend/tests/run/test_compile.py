@@ -20,7 +20,7 @@ def test_compile_mcp_node_on_agent() -> None:
             "id": "mcp1",
             "type": "mcp",
             "position": {"x": 0, "y": 0},
-            "data": {"mcpServerId": "srv-9", "mcpToolNames": ["search"]},
+            "data": {"mcpServerId": "srv-9", "mcpToolNames": ["search"], "credentialId": "cred-gh"},
         }
     )
     raw["edges"].append(
@@ -35,7 +35,7 @@ def test_compile_mcp_node_on_agent() -> None:
     compiled = compile_document(
         AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
     )
-    assert compiled.agents["ag"].mcp == [("srv-9", ["search"])]
+    assert compiled.agents["ag"].mcp == [("srv-9", ["search"], "cred-gh")]
     assert compiled.by_id["mcp1"].type == "mcp"
 
 
@@ -61,5 +61,5 @@ def test_compile_legacy_tool_kind_mcp() -> None:
     compiled = compile_document(
         AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
     )
-    assert compiled.agents["ag"].mcp == [("srv-9", None)]
+    assert compiled.agents["ag"].mcp == [("srv-9", None, None)]
     assert compiled.by_id["mcp1"].type == "mcp"

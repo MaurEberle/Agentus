@@ -61,6 +61,7 @@ export type CredentialListItem = {
   kind: CredentialKind;
   mask: string;
   inUse?: boolean;
+  usedBy?: string[];
 };
 
 export type HelpChatSettings = {

@@ -199,7 +199,7 @@
       "deleteTitle": "資格情報を削除しますか？",
       "deleteBody": "「{{name}}」を削除します。シークレットは利用できなくなります。",
       "inUseTitle": "資格情報は使用中です",
-      "inUseBody": "「{{name}}」はヘルプ設定、ネットワーク、またはMCPサーバーにまだ割り当てられており、削除できません。",
+      "inUseBody": "「{{name}}」はまだ割り当てられており、削除できません。",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -233,6 +233,14 @@
         "linear": "Linear API キー。",
         "postgres": "Postgres の接続文字列（アプリのデータベースは不可）。",
         "token": "汎用 API キーまたは Bearer トークン（Context7、Sentry など）。"
+      },
+      "inUseMcpHint": "MCPサーバーで別の認証情報に切り替えるか、サーバーを削除してください。その後この認証情報を外せます。",
+      "usedBy": {
+        "helpChatLlm": "ヘルプチャット（チャット）",
+        "helpChatEmbed": "ヘルプチャット（埋め込み）",
+        "helpChatSearch": "ヘルプチャット（ウェブ検索）",
+        "mcp": "MCPサーバー {{name}}",
+        "network": "ネット「{{name}}」"
       }
     },
     "runtime": {
@@ -294,7 +302,7 @@
       "recipes": "レシピ",
       "servers": "設定済みサーバー",
       "empty": "MCPサーバーはまだありません。",
-      "enable": "設定",
+      "enable": "有効化",
       "added": "追加済み",
       "custom": "カスタム",
       "customCreate": "独自サーバー",
@@ -368,7 +376,11 @@
         "powerpoint": "認証情報は不要。.pptx のルート。ローカル uvx。",
         "word": "認証情報は不要。.docx のルート。ローカル uvx。",
         "office": "認証情報は不要。PDF と Office 用の 1 サーバー。ルートフォルダー。ローカル uvx。"
-      }
+      },
+      "reset": "無効化",
+      "secretNew": "新しいシークレット（任意）",
+      "secretName": "新しい認証情報の名前",
+      "secretDefaultHint": "ここで作成または選んだシークレットがこのサーバーの既定です。複数ある場合はネットワークで別のものを選べます。"
     },
     "data": {
       "lead": "データフォルダーとストアの状態。SQLブラウザーもシークレットもありません。",
@@ -425,7 +437,8 @@
       "onboardingReset": "次回ヘルプを開くとオンボーディングを表示します",
       "mcpSaved": "MCPサーバーを保存しました",
       "mcpDeleted": "MCPサーバーを削除しました",
-      "dataDirOk": "データフォルダーを更新しました"
+      "dataDirOk": "データフォルダーを更新しました",
+      "mcpReset": "MCPサーバーを無効にしました"
     }
   },
   "helpChat": {
@@ -738,7 +751,10 @@
         "tools": "このサーバーのツール",
         "toolsHint": "空 = 確認後にすべてのツール。",
         "probeHint": "設定の確認でこのサーバーのツールが一覧になります。",
-        "settings": "MCP 設定"
+        "settings": "MCP 設定",
+        "credential": "認証情報",
+        "credentialDefault": "既定（{{name}}）",
+        "credentialHint": "既定は MCP 設定の認証情報です。同じ種類が複数あるときはここで選びます。"
       }
     },
     "load": {

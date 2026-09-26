@@ -80,6 +80,7 @@ export type McpNodeData = {
   displayName?: string;
   mcpServerId?: string;
   mcpToolNames?: string[];
+  credentialId?: string;
 };
 
 export type KnowledgeNodeData = {

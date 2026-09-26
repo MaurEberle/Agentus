@@ -515,6 +515,7 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const mcp = useMcpServersQuery();
   const recipes = useMcpRecipesQuery();
+  const credentials = useEditorCredentialsQuery();
   const enabledServers = (mcp.data?.items ?? []).filter((item) => item.enabled);
   const serverId = String(node.data.mcpServerId ?? '');
   const selected = enabledServers.find((item) => item.id === serverId);
@@ -527,7 +528,11 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   function selectServer(value: string) {
     const nextId = value === 'none' ? undefined : value;
     const next = enabledServers.find((item) => item.id === nextId);
-    const patch: Record<string, unknown> = { mcpServerId: nextId, mcpToolNames: undefined };
+    const patch: Record<string, unknown> = {
+      mcpServerId: nextId,
+      mcpToolNames: undefined,
+      credentialId: undefined,
+    };
     const currentName = String(node.data.displayName ?? '').trim();
     if (!currentName && next) {
       patch.displayName = next.recipeId
@@ -570,6 +575,41 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           {t(`settings.mcp.hint.${recipe.id}`, { defaultValue: t('network.inspector.mcp.hint') })}
         </p>
       ) : null}
+      {selected && (recipe?.credentialKinds?.length ?? 0) > 0
+        ? (() => {
+            const kinds = new Set(recipe?.credentialKinds ?? []);
+            const matching = (credentials.data?.items ?? []).filter((item) => kinds.has(item.kind));
+            const defaultId = selected.credentialIds?.[0];
+            const defaultName = matching.find((item) => item.id === defaultId)?.name;
+            if (matching.length === 0) return null;
+            return (
+              <Field label={t('network.inspector.mcp.credential')}>
+                <Select
+                  value={String(node.data.credentialId ?? 'default')}
+                  disabled={readOnly}
+                  onValueChange={(value) =>
+                    editorUpdateNodeData(node.id, { credentialId: value === 'default' ? undefined : value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      {t('network.inspector.mcp.credentialDefault', { name: defaultName || '—' })}
+                    </SelectItem>
+                    {matching.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('network.inspector.mcp.credentialHint')}</p>
+              </Field>
+            );
+          })()
+        : null}
       {enabledServers.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t('network.inspector.mcp.noneEnabled')}</p>
       ) : null}

@@ -7,7 +7,11 @@ from app.mcp.models import McpToolInfo
 
 
 class McpSessions(Protocol):
-    def open_for(self, server_ids: list[str]) -> None: ...
+    def open_for(
+        self,
+        server_ids: list[str],
+        credential_overrides: dict[str, str] | None = None,
+    ) -> None: ...
 
     def close_all(self) -> None: ...
 

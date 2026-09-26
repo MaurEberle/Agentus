@@ -199,7 +199,15 @@
       "deleteTitle": "Zugang löschen?",
       "deleteBody": "„{{name}}“ wird entfernt. Das Geheimnis ist danach nicht mehr verfügbar.",
       "inUseTitle": "Zugang wird verwendet",
-      "inUseBody": "„{{name}}“ ist noch einem Hilfe-Profil, Netz oder MCP-Server zugeordnet und kann nicht gelöscht werden.",
+      "inUseBody": "„{{name}}“ ist noch zugeordnet und kann nicht gelöscht werden.",
+      "inUseMcpHint": "Weise unter MCP-Server einen anderen Zugang zu oder lösche den Server. Danach lässt sich dieser Zugang entfernen.",
+      "usedBy": {
+        "helpChatLlm": "Hilfe-Chatbot (Chat)",
+        "helpChatEmbed": "Hilfe-Chatbot (Embeddings)",
+        "helpChatSearch": "Hilfe-Chatbot (Websuche)",
+        "mcp": "MCP-Server {{name}}",
+        "network": "Netz „{{name}}“"
+      },
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -295,7 +303,11 @@
       "recipes": "Rezepte",
       "servers": "Konfigurierte Server",
       "empty": "Noch keine MCP-Server.",
-      "enable": "Einrichten",
+      "enable": "Aktivieren",
+      "reset": "Deaktivieren",
+      "secretNew": "Neues Secret (optional)",
+      "secretName": "Name für den neuen Zugang",
+      "secretDefaultHint": "Ein hier angelegtes oder gewähltes Secret ist der Standard für diesen Server. Im Netz kannst du bei mehreren Zugängen einen anderen wählen.",
       "added": "Vorhanden",
       "custom": "Benutzerdefiniert",
       "customCreate": "Eigener Server",
@@ -424,6 +436,7 @@
       "reindexed": "Hilfe-Index neu aufgebaut",
       "onboardingReset": "Onboarding wird beim nächsten Öffnen wieder gezeigt",
       "mcpSaved": "MCP-Server gespeichert",
+      "mcpReset": "MCP-Server deaktiviert",
       "mcpDeleted": "MCP-Server gelöscht",
       "dataDirOk": "Datenordner aktualisiert"
     }
@@ -772,7 +785,10 @@
         "tools": "Tools dieses Servers",
         "toolsHint": "Leer = alle Tools nach der Probe.",
         "probeHint": "Probe in den Einstellungen listet die Tools dieses Servers.",
-        "settings": "Zu MCP-Einstellungen"
+        "settings": "Zu MCP-Einstellungen",
+        "credential": "Zugang",
+        "credentialDefault": "Standard ({{name}})",
+        "credentialHint": "Standard ist der Zugang aus den MCP-Einstellungen. Bei mehreren Zugängen derselben Art hier wählen."
       },
       "knowledge": {
         "path": "Quellenordner",

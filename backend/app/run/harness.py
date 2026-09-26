@@ -157,9 +157,11 @@ def _route(compiled: CompiledGraph, router_id: str, text: str) -> str | None:
     for handle, target in edges:
         if handle == line:
             return target
-    for handle, target in edges:
-        if handle == "default":
+        elif handle == "default":
             return target
+    # for handle, target in edges:
+    #     if handle == "default":
+    #         return target
     return edges[0][1] if edges else None
 
 
@@ -221,14 +223,14 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
 
 
 def _tool_schemas(
-    kinds: list[str], mcp_pairs: list[tuple[str, list[str] | None]]
+    kinds: list[str], mcp_pairs: list[tuple[str, list[str] | None, str | None]]
 ) -> list[dict]:
     tools = openai_tools_for_kinds(kinds)
     bridge = get_mcp()
     if bridge and mcp_pairs:
         from app.run.mcp_bridge import mcp_openai_tools
 
-        for server_id, allow in mcp_pairs:
+        for server_id, allow, _cred in mcp_pairs:
             infos = bridge.listed_tools(server_id)
             if allow:
                 infos = [info for info in infos if info.name in allow]

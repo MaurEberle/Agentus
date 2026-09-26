@@ -199,7 +199,7 @@
       "deleteTitle": "Eliminar credencial?",
       "deleteBody": "“{{name}}” será removida. O segredo deixa de estar disponível.",
       "inUseTitle": "Credencial em uso",
-      "inUseBody": "“{{name}}” ainda está associada a um perfil de ajuda, rede ou servidor MCP e não pode ser eliminada.",
+      "inUseBody": "«{{name}}» ainda está associado e não pode ser eliminado.",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -233,6 +233,14 @@
         "linear": "Chave API Linear.",
         "postgres": "Cadeia de ligação Postgres (não as bases da app).",
         "token": "Chave API ou token Bearer genérico (Context7, Sentry, etc.)."
+      },
+      "inUseMcpHint": "Atribui outra credencial no servidor MCP ou elimina o servidor. Depois podes remover esta credencial.",
+      "usedBy": {
+        "helpChatLlm": "Chat de ajuda (chat)",
+        "helpChatEmbed": "Chat de ajuda (embeddings)",
+        "helpChatSearch": "Chat de ajuda (pesquisa web)",
+        "mcp": "Servidor MCP {{name}}",
+        "network": "Rede «{{name}}»"
       }
     },
     "runtime": {
@@ -294,7 +302,7 @@
       "recipes": "Receitas",
       "servers": "Servidores configurados",
       "empty": "Ainda não há servidores MCP.",
-      "enable": "Configurar",
+      "enable": "Ativar",
       "added": "Adicionado",
       "custom": "Personalizado",
       "customCreate": "Servidor personalizado",
@@ -368,7 +376,11 @@
         "powerpoint": "Sem credencial. Pasta raiz para .pptx. uvx local.",
         "word": "Sem credencial. Pasta raiz para .docx. uvx local.",
         "office": "Sem credencial. Um servidor para PDF e Office. Pasta raiz. uvx local."
-      }
+      },
+      "reset": "Desativar",
+      "secretNew": "Novo segredo (opcional)",
+      "secretName": "Nome da nova credencial",
+      "secretDefaultHint": "O segredo criado ou escolhido aqui é o predefinido deste servidor. Na rede podes escolher outro se existirem vários."
     },
     "data": {
       "lead": "Pasta de dados e estado dos stores. Sem navegador SQL, sem segredos.",
@@ -425,7 +437,8 @@
       "onboardingReset": "A introdução aparece na próxima abertura da ajuda",
       "mcpSaved": "Servidor MCP guardado",
       "mcpDeleted": "Servidor MCP eliminado",
-      "dataDirOk": "Pasta de dados atualizada"
+      "dataDirOk": "Pasta de dados atualizada",
+      "mcpReset": "Servidor MCP desativado"
     }
   },
   "helpChat": {
@@ -738,7 +751,10 @@
         "tools": "Ferramentas deste servidor",
         "toolsHint": "Vazio = todas as ferramentas após a sonda.",
         "probeHint": "Uma sonda nas Definições lista as ferramentas deste servidor.",
-        "settings": "Definições MCP"
+        "settings": "Definições MCP",
+        "credential": "Credencial",
+        "credentialDefault": "Predefinição ({{name}})",
+        "credentialHint": "A predefinição é a credencial das definições MCP. Escolhe outra se houver várias do mesmo tipo."
       }
     },
     "load": {

@@ -39,6 +39,19 @@ def test_github_enable_without_credential(api_env) -> None:
     assert err.value.message_key == "mcp.credential.required"
 
 
+def test_github_disable_keeps_default_credential(api_env) -> None:
+    init()
+    item = create_server(
+        McpServerCreate(recipe_id="github", credential_ids=["cred-1"], enabled=True)
+    )
+    assert item.enabled is True
+    disabled = set_enabled(item.id, False)
+    assert disabled.enabled is False
+    assert disabled.credential_ids == ["cred-1"]
+    listed = list_servers()
+    assert listed[0].enabled is False
+
+
 def test_custom_without_command_or_url(api_env) -> None:
     init()
     with pytest.raises(AppError) as err:

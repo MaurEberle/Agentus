@@ -199,7 +199,15 @@
       "deleteTitle": "Delete credential?",
       "deleteBody": "“{{name}}” will be removed. The secret will no longer be available.",
       "inUseTitle": "Credential in use",
-      "inUseBody": "“{{name}}” is still used by a help profile, network, or MCP server and cannot be deleted.",
+      "inUseBody": "“{{name}}” is still assigned and cannot be deleted.",
+      "inUseMcpHint": "Assign a different credential on the MCP server, or delete that server. Then you can remove this credential.",
+      "usedBy": {
+        "helpChatLlm": "Help chatbot (chat)",
+        "helpChatEmbed": "Help chatbot (embeddings)",
+        "helpChatSearch": "Help chatbot (web search)",
+        "mcp": "MCP server {{name}}",
+        "network": "Network “{{name}}”"
+      },
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -295,7 +303,11 @@
       "recipes": "Recipes",
       "servers": "Configured servers",
       "empty": "No MCP servers yet.",
-      "enable": "Set up",
+      "enable": "Enable",
+      "reset": "Disable",
+      "secretNew": "New secret (optional)",
+      "secretName": "Name for the new credential",
+      "secretDefaultHint": "A secret created or chosen here is the default for this server. In the network you can pick another one when several exist.",
       "added": "Added",
       "custom": "Custom",
       "customCreate": "Custom server",
@@ -424,6 +436,7 @@
       "reindexed": "Help index rebuilt",
       "onboardingReset": "Onboarding will show the next time help opens",
       "mcpSaved": "MCP server saved",
+      "mcpReset": "MCP server disabled",
       "mcpDeleted": "MCP server deleted",
       "dataDirOk": "Data folder updated"
     }
@@ -772,7 +785,10 @@
         "tools": "Tools on this server",
         "toolsHint": "Empty = all tools after a probe.",
         "probeHint": "A probe in Settings lists this server’s tools.",
-        "settings": "MCP settings"
+        "settings": "MCP settings",
+        "credential": "Credential",
+        "credentialDefault": "Default ({{name}})",
+        "credentialHint": "Default uses the credential from MCP settings. Pick another when several of the same kind exist."
       },
       "knowledge": {
         "path": "Source folder",

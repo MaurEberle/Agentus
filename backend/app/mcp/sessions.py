@@ -246,29 +246,37 @@ class McpSessions:
         self._lock = threading.Lock()
         self._live: dict[str, _Live] = {}
 
-    def open_for(self, server_ids: list[str]) -> None:
+    def open_for(
+        self,
+        server_ids: list[str],
+        credential_overrides: dict[str, str] | None = None,
+    ) -> None:
         unique: list[str] = []
         for sid in server_ids:
             if sid not in unique:
                 unique.append(sid)
         if not unique:
             return
+        overrides = credential_overrides or {}
         try:
             for sid in unique:
-                self._open_one(sid)
+                self._open_one(sid, overrides.get(sid))
         except Exception:
             self.close_all()
             raise
 
-    def _open_one(self, server_id: str) -> None:
+    def _open_one(self, server_id: str, credential_id: str | None = None) -> None:
         with self._lock:
             if server_id in self._live:
                 return
-        row = get_mcp_server(server_id)
-        if row is None:
+        stored = get_mcp_server(server_id)
+        if stored is None:
             raise McpError("mcp.notFound")
+        row = dict(stored)
         if not row.get("enabled"):
             raise McpError("graph.mcp.disabled")
+        if credential_id:
+            row["credential_ids"] = [credential_id]
         recipe = get_recipe(str(row.get("recipe_id") or "")) if row.get("recipe_id") else None
         root = row.get("root_path")
         needs_root = bool(recipe.needs_root) if recipe else False
@@ -294,8 +302,8 @@ class McpSessions:
             headers=headers,
         )
         tools = session.list_tools()
-        row["status"] = "ok"
-        row["cached_tools"] = [
+        stored["status"] = "ok"
+        stored["cached_tools"] = [
             {
                 "name": item.name,
                 "description": item.description,
@@ -303,7 +311,7 @@ class McpSessions:
             }
             for item in tools
         ]
-        put_mcp_server(server_id, row)
+        put_mcp_server(server_id, stored)
         live = _Live(session, tools)
         with self._lock:
             self._live[server_id] = live
