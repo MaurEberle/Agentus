@@ -68,12 +68,8 @@ function Bubble({
   });
   const isUser = message.role === 'user';
   return (
-    <article className={cn('flex gap-2', isUser ? 'flex-row-reverse' : 'flex-row')}>
-      {!isUser ? (
-        <BrandMark spinning={spinning} className="mt-0.5 size-12" alt="" />
-      ) : (
-        <span className="size-12 shrink-0" />
-      )}
+    <article className={cn('flex gap-2', isUser ? 'justify-end' : 'flex-row')}>
+      {!isUser ? <BrandMark spinning={spinning} className="mt-0.5 size-12" alt="" /> : null}
       <div className={cn('flex min-w-0 flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
