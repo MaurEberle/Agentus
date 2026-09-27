@@ -717,6 +717,7 @@
       "knowledge": {
         "path": "Pasta de origem",
         "pick": "Pasta",
+        "filesHint": "Indexados: Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV e código (incluindo C#, TypeScript, Python). Imagens e .doc/.xls antigos são ignorados.",
         "embedProvider": "Fornecedor de embeddings",
         "embedModel": "Modelo de embeddings",
         "topK": "topK",

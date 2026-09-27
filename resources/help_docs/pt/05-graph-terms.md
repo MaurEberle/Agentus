@@ -36,11 +36,11 @@ First-party (HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros) ou 
 
 ## Conhecimento (rede)
 
-Nó de conhecimento: uma pasta de textos para a rede. Pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Modelo de embeddings próprio, índice, topK e pontuação. **Não** é o corpus de ajuda. Ao iniciar vês a indexação; um índice já atual é saltado.
+Nó de conhecimento: uma pasta de Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV e código para a rede. Imagens e .doc/.xls antigos são ignorados. Pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Modelo de embeddings próprio, índice, topK e pontuação. **Não** é o corpus de ajuda. Ao iniciar vês a indexação; um índice já atual é saltado.
 
 ## Ajuda-RAG
 
-Documentos na pasta de ajuda da pasta de dados (guias predefinidos mais os teus Markdown). Só o chatbot de ajuda. Após alterações, reconstrói o índice em Definições → Chat de ajuda.
+Documentos na pasta de ajuda da pasta de dados. Os mesmos tipos de ficheiro que o nó de conhecimento. Só o chatbot de ajuda. Após alterações, reconstrói o índice em Definições → Chat de ajuda.
 
 ## Credencial
 

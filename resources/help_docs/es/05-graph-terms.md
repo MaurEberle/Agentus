@@ -36,11 +36,11 @@ First-party (HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos) o 
 
 ## Conocimiento (red)
 
-Nodo de conocimiento: una carpeta de textos para la red. Puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Modelo de embeddings propio, índice, topK y puntuación. **No** es el corpus de ayuda. Al iniciar ves la indexación; un índice ya actual se omite.
+Nodo de conocimiento: una carpeta de Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV y código para la red. Las imágenes y los .doc/.xls antiguos se omiten. Puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Modelo de embeddings propio, índice, topK y puntuación. **No** es el corpus de ayuda. Al iniciar ves la indexación; un índice ya actual se omite.
 
 ## Ayuda-RAG
 
-Documentos en la carpeta de ayuda de la carpeta de datos (guías predeterminadas más tus Markdown). Solo el chatbot de ayuda. Tras cambios, reconstruye el índice en Ajustes → Chat de ayuda.
+Documentos en la carpeta de ayuda de la carpeta de datos. Los mismos tipos de archivo que el nodo de conocimiento. Solo el chatbot de ayuda. Tras cambios, reconstruye el índice en Ajustes → Chat de ayuda.
 
 ## Credencial
 

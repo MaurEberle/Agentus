@@ -784,6 +784,7 @@
       "knowledge": {
         "path": "Source folder",
         "pick": "Folder",
+        "filesHint": "Indexed types: Markdown, text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV, and source code (including C#, TypeScript, Python). Images and legacy .doc/.xls are skipped.",
         "embedProvider": "Embedding provider",
         "embedModel": "Embedding model",
         "topK": "topK",

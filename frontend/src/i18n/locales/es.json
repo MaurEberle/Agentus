@@ -717,6 +717,7 @@
       "knowledge": {
         "path": "Carpeta de origen",
         "pick": "Carpeta",
+        "filesHint": "Se indexan Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV y código (entre otros C#, TypeScript, Python). Las imágenes y los .doc/.xls antiguos se omiten.",
         "embedProvider": "Proveedor de embeddings",
         "embedModel": "Modelo de embeddings",
         "topK": "topK",

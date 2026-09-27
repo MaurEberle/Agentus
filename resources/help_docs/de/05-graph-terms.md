@@ -36,11 +36,11 @@ First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. Dateizugriff ble
 
 ## Wissen (Netz)
 
-Knowledge-Knoten: ein Ordner mit Texten für das Netz. Er darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Eigenes Embedding-Modell, eigener Index, topK und Score. Beim Start siehst du die Indizierung. Ein schon aktueller Index wird übersprungen.
+Knowledge-Knoten: ein Ordner mit Markdown, Text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV und Quellcode für das Netz. Bilder und alte .doc/.xls werden nicht gelesen. Er darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Eigenes Embedding-Modell, eigener Index, topK und Score. Beim Start siehst du die Indizierung. Ein schon aktueller Index wird übersprungen.
 
 ## Hilfe-RAG
 
-Dokumente im Hilfe-Ordner im Datenordner (Default-Anleitungen plus deine Markdown-Dateien). Nur der Hilfe-Chatbot. Nach Änderungen Index unter Einstellungen → Hilfe-Chatbot neu aufbauen.
+Dokumente im Hilfe-Ordner im Datenordner. Dieselben Dateitypen wie beim Knowledge-Knoten. Nur der Hilfe-Chatbot. Nach Änderungen Index unter Einstellungen → Hilfe-Chatbot neu aufbauen.
 
 ## Credential / Zugang
 

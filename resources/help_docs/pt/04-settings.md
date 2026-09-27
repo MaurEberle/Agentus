@@ -33,7 +33,7 @@ Se o endereço é local e o Ollama está instalado mas parado, a app inicia o se
 - pesquisa web sim/não mais credencial de pesquisa; sem credencial o chat continua configurado e a pesquisa desligada
 - verificar ligação, limpar histórico, **reconstruir índice**, voltar a mostrar o onboarding
 
-Depois de mudar o modelo de embeddings ou de novos ficheiros no corpus de ajuda: **reconstruir índice**. O trabalho continua se saíres das Definições. Um segundo clique não inicia outro índice. O corpus é a pasta de documentos de ajuda na pasta de dados, não o conhecimento da rede. Os guias novos que vêm com a app não substituem sozinhos os ficheiros que já lá estão.
+Depois de mudar o modelo de embeddings ou de novos ficheiros no corpus de ajuda: **reconstruir índice**. O trabalho continua se saíres das Definições. Um segundo clique não inicia outro índice. O corpus é a pasta de documentos de ajuda na pasta de dados, não o conhecimento da rede. Valem os mesmos tipos de ficheiro que no nó de conhecimento. Os guias novos que vêm com a app não substituem sozinhos os ficheiros que já lá estão.
 
 A ajuda responde na língua da interface. Se o modelo não puder usá-la, responde em inglês. Não cita títulos dos guias. Só uma pesquisa web mostra fontes, como título e endereço. Os blocos internos de raciocínio do modelo não aparecem. A ajuda **não** usa servidores MCP nem o knowledge dos grafos.
 

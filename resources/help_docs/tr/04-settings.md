@@ -33,7 +33,7 @@ Yardım widget’ının tek yeri. Sohbet sağlayıcısı ve modeli olmadan eksik
 - web araması aç/kapa artı arama kimlik bilgisi; kimlik bilgisi olmadan sohbet yapılandırılmış kalır, arama kapalıdır
 - bağlantıyı denetle, geçmişi sil, **dizini yeniden oluştur**, karşılama ekranını yeniden göster
 
-Gömme modelini değiştirdikten veya yardım derlemine yeni dosya ekledikten sonra: **dizini yeniden oluştur**. Ayarlardan çıksan da iş sürer. İkinci tıklama ikinci bir dizin başlatmaz. Derlem, veri klasöründeki yardım belgeleri klasörüdür, ağ bilgisi değildir. Uygulamayla gelen yeni kılavuzlar orada duran dosyaların üzerine yazmaz.
+Gömme modelini değiştirdikten veya yardım derlemine yeni dosya ekledikten sonra: **dizini yeniden oluştur**. Ayarlardan çıksan da iş sürer. İkinci tıklama ikinci bir dizin başlatmaz. Derlem, veri klasöründeki yardım belgeleri klasörüdür, ağ bilgisi değildir. Bilgi düğümüyle aynı dosya türleri geçerlidir. Uygulamayla gelen yeni kılavuzlar orada duran dosyaların üzerine yazmaz.
 
 Yardım arayüz dilinde yanıtlar. Model o dili kullanamazsa İngilizce yanıtlar. Kılavuzların belge başlıklarını söylemez. Yalnız web araması kaynak gösterir: başlık ve adres. Modelin iç düşünme blokları görünmez. Yardım **hiçbir** MCP sunucusu ve grafiklerin knowledge’ını kullanmaz.
 

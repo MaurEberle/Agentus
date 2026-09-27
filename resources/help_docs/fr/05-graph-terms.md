@@ -36,11 +36,11 @@ First-party (HTTP, recherche web, date/heure, calculatrice, accès aux fichiers)
 
 ## Connaissances (réseau)
 
-Nœud de connaissances : un dossier de textes pour le réseau. Il peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Modèle d’embeddings, index, topK et score propres. **Pas** le corpus d’aide. Au démarrage tu vois l’indexation ; un index déjà à jour est sauté.
+Nœud de connaissances : un dossier de Markdown, texte, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV et code source pour le réseau. Les images et les anciens .doc/.xls sont ignorés. Il peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Modèle d’embeddings, index, topK et score propres. **Pas** le corpus d’aide. Au démarrage tu vois l’indexation ; un index déjà à jour est sauté.
 
 ## Aide-RAG
 
-Documents dans le dossier d’aide du dossier de données (guides par défaut plus tes Markdown). Uniquement le chatbot d’aide. Après modifications, reconstruire l’index sous Paramètres → Chat d’aide.
+Documents dans le dossier d’aide du dossier de données. Mêmes types de fichiers que le nœud de connaissances. Uniquement le chatbot d’aide. Après modifications, reconstruire l’index sous Paramètres → Chat d’aide.
 
 ## Identifiant / credential
 

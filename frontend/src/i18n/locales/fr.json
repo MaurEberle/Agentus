@@ -717,6 +717,7 @@
       "knowledge": {
         "path": "Dossier source",
         "pick": "Dossier",
+        "filesHint": "Indexés : Markdown, texte, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV et code source (dont C#, TypeScript, Python). Les images et les anciens .doc/.xls sont ignorés.",
         "embedProvider": "Fournisseur d’embeddings",
         "embedModel": "Modèle d’embeddings",
         "topK": "topK",

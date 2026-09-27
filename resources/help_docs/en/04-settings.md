@@ -33,7 +33,7 @@ The only place that configures the help widget. Incomplete without chat provider
 - web search on/off plus a search credential; without a credential the chat stays configured and search stays off
 - ping, clear history, **rebuild index**, show onboarding again
 
-After changing the embedding model or adding files to the help corpus: **rebuild index**. The job keeps running if you leave Settings. A second click does not start a second index. The corpus is the help-documents folder in the data directory, not network knowledge. New bundled guides do not overwrite files that are already there.
+After changing the embedding model or adding files to the help corpus: **rebuild index**. The job keeps running if you leave Settings. A second click does not start a second index. The corpus is the help-documents folder in the data directory, not network knowledge. The same file types as the knowledge node apply. New bundled guides do not overwrite files that are already there.
 
 Help answers in the UI language. If the model cannot use that language, it answers in English. It does not name document titles from the guides. Only a web search shows sources, as title and address. Internal thinking blocks from the model are hidden. Help uses **no** MCP servers and **no** graph knowledge nodes.
 

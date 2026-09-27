@@ -195,3 +195,64 @@ def test_index_outside_data_dir(monkeypatch, api_env, tmp_path) -> None:
     assert index_node("net-out", node, data_dir=str(data_dir), force=True) == "ready"
     assert captured
     assert any("world" in text for text in captured[0].texts)
+
+
+def test_index_reads_office_html_json_csv_and_code(monkeypatch, api_env, tmp_path) -> None:
+    from docx import Document
+    from openpyxl import Workbook
+
+    from app.runtime.models import EmbedResult
+
+    init()
+
+    def _embed(req):
+        return EmbedResult(vectors=[[0.1, 0.2] for _ in req.texts], dimension=2, model=req.model)
+
+    monkeypatch.setattr("app.runtime.embeddings.embed", _embed)
+    upsert_network(
+        NetworkRow(
+            id="net-files",
+            name="kb",
+            description=None,
+            tags=[],
+            document={"schemaVersion": 1, "name": "kb", "nodes": [], "edges": []},
+            updated_at=utc_now(),
+            last_used_at=None,
+            last_run_id=None,
+        )
+    )
+    folder = tmp_path / "kb"
+    folder.mkdir()
+    (folder / "skip.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (folder / "hello.ts").write_text("export const city = 'Dortmund';", encoding="utf-8")
+    (folder / "page.html").write_text("<h1>Intro</h1><p>Web text</p>", encoding="utf-8")
+    (folder / "meta.json").write_text('{"role":"author"}', encoding="utf-8")
+    (folder / "rows.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+    doc = Document()
+    doc.add_paragraph("Word body")
+    doc.save(folder / "brief.docx")
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None
+    ws["A1"] = "excel-cell"
+    wb.save(folder / "sheet.xlsx")
+    node = GraphNode(
+        id="k-files",
+        type="knowledge",
+        position={"x": 0, "y": 0},
+        data={
+            "sourcePath": str(folder),
+            "embeddingProvider": "ollama",
+            "embeddingModel": "nomic-embed-text",
+        },
+    )
+    assert index_node("net-files", node, data_dir=str(tmp_path), force=True) == "ready"
+    from app.db.network_rag import list_chunks
+
+    texts = " ".join(chunk.text for chunk in list_chunks("net-files", "k-files"))
+    assert "Dortmund" in texts
+    assert "Web text" in texts
+    assert "author" in texts
+    assert "Word body" in texts
+    assert "excel-cell" in texts
+    assert "PNG" not in texts

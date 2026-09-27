@@ -33,7 +33,7 @@ Einzige Stelle für das Hilfe-Widget. Unvollständig ohne Chat-Provider und Chat
 - Websuche an/aus plus Such-Zugang; ohne Zugang bleibt der Chat konfiguriert, die Suche ist aus
 - Verbindung prüfen, Verlauf löschen, **Index neu aufbauen**, Onboarding erneut zeigen
 
-Nach Wechsel des Embedding-Modells oder nach neuen Dateien im Hilfe-Korpus: **Index neu aufbauen**. Der Lauf geht weiter, auch wenn du die Einstellungen verlässt. Ein zweiter Klick startet keinen zweiten Index. Der Korpus ist der Ordner für Hilfe-Dokumente im Datenordner, nicht das Netz-Wissen. Neue mitgelieferte Anleitungen überschreiben Dateien, die schon dort liegen, nicht von selbst.
+Nach Wechsel des Embedding-Modells oder nach neuen Dateien im Hilfe-Korpus: **Index neu aufbauen**. Der Lauf geht weiter, auch wenn du die Einstellungen verlässt. Ein zweiter Klick startet keinen zweiten Index. Der Korpus ist der Ordner für Hilfe-Dokumente im Datenordner, nicht das Netz-Wissen. Es gelten dieselben Dateitypen wie beim Knowledge-Knoten. Neue mitgelieferte Anleitungen überschreiben Dateien, die schon dort liegen, nicht von selbst.
 
 Die Hilfe antwortet in der Oberflächensprache. Kann das Modell die Sprache nicht, antwortet es auf Englisch. Sie nennt keine Dokumenttitel aus den Anleitungen. Nur eine Websuche zeigt Quellen, und zwar Titel und Adresse. Interne Denkblöcke des Modells erscheinen nicht. Die Hilfe nutzt **keine** MCP-Server und **kein** Knowledge der Graphen.
 

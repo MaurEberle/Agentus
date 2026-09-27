@@ -784,6 +784,7 @@
       "knowledge": {
         "path": "Quellenordner",
         "pick": "Ordner",
+        "filesHint": "Indexiert werden Markdown, Text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV und Quellcode (unter anderem C#, TypeScript, Python). Bilder und alte .doc/.xls bleiben außen vor.",
         "embedProvider": "Embedding-Provider",
         "embedModel": "Embedding-Modell",
         "topK": "topK",

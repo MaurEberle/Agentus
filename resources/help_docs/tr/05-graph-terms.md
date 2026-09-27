@@ -36,11 +36,11 @@ First-party (HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi) vey
 
 ## Bilgi (ağ)
 
-Bilgi düğümü: ağ için metin klasörü. Sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Kendi gömme modeli, dizini, topK ve puanı. **Yardım derlemi değil.** Başlangıçta dizin oluşumunu görürsün; güncel bir dizin atlanır.
+Bilgi düğümü: ağ için Markdown, metin, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV ve kaynak kodu klasörü. Görseller ve eski .doc/.xls atlanır. Sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Kendi gömme modeli, dizini, topK ve puanı. **Yardım derlemi değil.** Başlangıçta dizin oluşumunu görürsün; güncel bir dizin atlanır.
 
 ## Yardım-RAG
 
-Veri klasöründeki yardım klasöründeki belgeler (varsayılan kılavuzlar artı Markdown’ların). Yalnızca yardım sohbet botu. Değişiklikten sonra Ayarlar → Yardım sohbeti altında dizini yeniden oluştur.
+Veri klasöründeki yardım klasöründeki belgeler. Bilgi düğümüyle aynı dosya türleri. Yalnızca yardım sohbet botu. Değişiklikten sonra Ayarlar → Yardım sohbeti altında dizini yeniden oluştur.
 
 ## Kimlik bilgisi / credential
 

@@ -906,6 +906,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
             {t('network.inspector.knowledge.pick')}
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.filesHint')}</p>
       </Field>
       <Field label={t('network.inspector.knowledge.topK')}>
         <Input

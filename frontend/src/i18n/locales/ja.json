@@ -717,6 +717,7 @@
       "knowledge": {
         "path": "ソースフォルダー",
         "pick": "フォルダー",
+        "filesHint": "Markdown、テキスト、PDF、Word（.docx）、Excel（.xlsx）、HTML、JSON、CSV、ソースコード（C#、TypeScript、Python など）を索引します。画像と古い .doc/.xls は対象外です。",
         "embedProvider": "埋め込みプロバイダー",
         "embedModel": "埋め込みモデル",
         "topK": "topK",

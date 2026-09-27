@@ -717,6 +717,7 @@
       "knowledge": {
         "path": "Kaynak klasör",
         "pick": "Klasör",
+        "filesHint": "Dizine alınanlar: Markdown, metin, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV ve kaynak kodu (C#, TypeScript, Python dahil). Görseller ve eski .doc/.xls atlanır.",
         "embedProvider": "Gömme sağlayıcısı",
         "embedModel": "Gömme modeli",
         "topK": "topK",

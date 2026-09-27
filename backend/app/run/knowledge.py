@@ -8,6 +8,7 @@ from pathlib import Path
 from collections.abc import Callable
 from typing import Any, Literal
 
+from app.common.extract import extract_text, is_indexable
 from app.db.engine import utc_now
 from app.db.paths import RAG_DIR_NAME
 from app.db.network_rag import (
@@ -83,27 +84,13 @@ def _safe_files(root: Path, data_dir: str) -> list[Path]:
             resolved.relative_to(source_root)
         except (OSError, ValueError):
             continue
-        suffix = path.suffix.lower()
-        if suffix in {".md", ".txt"}:
-            out.append(path)
-        elif suffix == ".pdf":
-            try:
-                import pypdf  # noqa: F401
-            except ImportError:
-                continue
+        if is_indexable(path):
             out.append(path)
     return out
 
 
 def _read(path: Path) -> str:
-    if path.suffix.lower() == ".pdf":
-        try:
-            from pypdf import PdfReader
-
-            return "\n".join(page.extract_text() or "" for page in PdfReader(str(path)).pages)
-        except Exception:
-            return ""
-    return path.read_text(encoding="utf-8", errors="replace")
+    return extract_text(path)
 
 
 def index_node(

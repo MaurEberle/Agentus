@@ -36,11 +36,11 @@ First-party: HTTP, web search, date/time, calculator, file access. File access s
 
 ## Knowledge (network)
 
-Knowledge node: a folder of text for the network. It may sit anywhere except a drive or system root and the help corpus. Its own embedding model, index, topK, and score. **Not** the help corpus. At start you see the indexing; an index that is already current is skipped.
+Knowledge node: a folder of Markdown, text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV, and source code for the network. Images and legacy .doc/.xls are skipped. It may sit anywhere except a drive or system root and the help corpus. Its own embedding model, index, topK, and score. **Not** the help corpus. At start you see the indexing; an index that is already current is skipped.
 
 ## Help RAG
 
-Documents in the help folder inside the data directory (default guides plus your markdown). Help chatbot only. After changes, rebuild the index under Settings → Help chatbot.
+Documents in the help folder inside the data directory. Same file types as the knowledge node. Help chatbot only. After changes, rebuild the index under Settings → Help chatbot.
 
 ## Credential
 

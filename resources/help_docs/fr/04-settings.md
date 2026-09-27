@@ -33,7 +33,7 @@ Seul endroit pour le widget d’aide. Incomplet sans fournisseur et modèle de c
 - recherche web on/off plus identifiant de recherche ; sans identifiant le chat reste configuré, la recherche est off
 - vérifier la connexion, effacer l’historique, **reconstruire l’index**, réafficher l’onboarding
 
-Après changement du modèle d’embeddings ou de nouveaux fichiers dans le corpus d’aide : **reconstruire l’index**. Le travail continue si tu quittes Paramètres. Un second clic n’en lance pas un autre. Le corpus est le dossier des documents d’aide dans le dossier de données, pas le savoir du réseau. Les nouveaux guides livrés n’écrasent pas les fichiers déjà présents.
+Après changement du modèle d’embeddings ou de nouveaux fichiers dans le corpus d’aide : **reconstruire l’index**. Le travail continue si tu quittes Paramètres. Un second clic n’en lance pas un autre. Le corpus est le dossier des documents d’aide dans le dossier de données, pas le savoir du réseau. Ce sont les mêmes types de fichiers que pour le nœud de connaissances. Les nouveaux guides livrés n’écrasent pas les fichiers déjà présents.
 
 L’aide répond dans la langue de l’interface. Si le modèle ne peut pas l’utiliser, il répond en anglais. Elle ne cite pas les titres des guides. Seule une recherche web montre des sources, titre et adresse. Les blocs de réflexion internes du modèle restent cachés. L’aide n’utilise **aucun** serveur MCP ni le knowledge des graphes.
 

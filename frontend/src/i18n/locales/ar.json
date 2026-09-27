@@ -717,6 +717,7 @@
       "knowledge": {
         "path": "مجلد المصدر",
         "pick": "مجلد",
+        "filesHint": "يُفهرس Markdown والنص وPDF وWord (.docx) وExcel (.xlsx) وHTML وJSON وCSV والشيفرة (منها C# وTypeScript وPython). تُتخطى الصور وملفات .doc/.xls القديمة.",
         "embedProvider": "مزوّد التضمين",
         "embedModel": "نموذج التضمين",
         "topK": "topK",

@@ -717,6 +717,7 @@
       "knowledge": {
         "path": "源文件夹",
         "pick": "文件夹",
+        "filesHint": "会索引 Markdown、文本、PDF、Word（.docx）、Excel（.xlsx）、HTML、JSON、CSV 以及源代码（含 C#、TypeScript、Python）。图片和旧版 .doc/.xls 会被跳过。",
         "embedProvider": "嵌入提供方",
         "embedModel": "嵌入模型",
         "topK": "topK",
