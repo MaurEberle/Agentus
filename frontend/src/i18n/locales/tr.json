@@ -314,7 +314,6 @@
       "status": "Durum",
       "probe": "Sonda",
       "presetHint": "Tarife göre kimlik bilgileri ve isteğe bağlı kök yolu. Kaydetmek sunucuyu hemen oluşturur.",
-      "officeHint": "Office, PDF ve Office biçimlerini bir araya getirir. Tekil hazır ayarları yalnızca gerekirse birlikte açın.",
       "rootPath": "Kök yolu",
       "untrusted": "Bilinmeyen bir süreç verilen yetkilerle başlatılır. Yalnızca güvenilir komutlar kullanın.",
       "command": "Komut",
@@ -346,11 +345,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       },
       "credentialsLead": "PAT, jeton ve bağlantı dizelerini Kimlik bilgilerinde oluşturup burada atayın. Uygun kimlik olmadan sunucu geçersiz kalır.",
       "pickRoot": "Klasör",
@@ -364,7 +359,7 @@
         "azure": "Azure/Entra jetonu veya PAT (tür Azure). Yerel npx.",
         "gitlab": "GitLab kişisel erişim jetonu (tür GitLab). Yerel npx.",
         "filesystem": "Kimlik gerekmez. Kök klasör seçin — C:\\\\ değil. Yerel npx.",
-        "git": "Kimlik gerekmez. Çalışma dizini kök olsun. Yerel npx.",
+        "git": "Kimlik yok. Çalışma klasörü kök. Yerel uvx.",
         "playwright": "Kimlik gerekmez. Node/npx ve tarayıcı çalışma zamanı.",
         "postgres": "Bağlantı dizesi (tür Postgres), uygulamanın SQLite dosyaları değil. Yerel npx.",
         "context7": "Token türünde API anahtarı. Uzak HTTP, npx yok.",
@@ -372,13 +367,9 @@
         "notion": "Notion entegrasyon jetonu (tür Notion). Yerel npx.",
         "atlassian": "Atlassian Cloud API jetonu (tür Atlassian). mcp-remote ile uzak.",
         "linear": "Linear API anahtarı (tür Linear). Uzak HTTP.",
-        "fetch": "Kimlik gerekmez. Genel URL’ler metin olarak. Yerel npx.",
+        "fetch": "Kimlik yok. Genel URL metin olarak. Yerel uvx.",
         "sentry": "Sentry kimlik jetonu (tür Token). Yerel npx.",
-        "pdf": "Kimlik gerekmez. Dosyalar için kök klasör. Yerel uvx.",
-        "excel": "Kimlik gerekmez. .xlsx için kök klasör. Yerel uvx.",
-        "powerpoint": "Kimlik gerekmez. .pptx için kök klasör. Yerel uvx.",
-        "word": "Kimlik gerekmez. .docx için kök klasör. Yerel uvx.",
-        "office": "Kimlik gerekmez. PDF ve Office için tek sunucu. Kök klasör. Yerel uvx."
+        "excel": "Kimlik gerekmez. .xlsx için kök klasör. Yerel uvx."
       },
       "reset": "Devre dışı bırak",
       "secretNew": "Yeni sır (isteğe bağlı)",
@@ -1434,11 +1425,7 @@
       "linear": "Linear",
       "fetch": "Fetch",
       "sentry": "Sentry",
-      "pdf": "PDF",
-      "excel": "Excel",
-      "powerpoint": "PowerPoint",
-      "word": "Word",
-      "office": "Office"
+      "excel": "Excel"
     },
     "runtime": {
       "missing": "Çalışma zamanı yok (Node, npx, Docker veya uvx)."

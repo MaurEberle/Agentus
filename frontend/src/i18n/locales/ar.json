@@ -314,7 +314,6 @@
       "status": "الحالة",
       "probe": "فحص",
       "presetHint": "بيانات اعتماد ومسار جذر اختياري حسب الوصفة. الحفظ ينشئ الخادم فورًا.",
-      "officeHint": "Office يجمع PDF وتنسيقات Office. فعّل الإعدادات الفردية بالتوازي عند الحاجة فقط.",
       "rootPath": "مسار الجذر",
       "untrusted": "ستُشغَّل عملية غير معروفة بالصلاحيات المحددة. استخدم أوامر موثوقة فقط.",
       "command": "الأمر",
@@ -346,11 +345,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       },
       "credentialsLead": "أنشئ PAT والرموز وسلاسل الاتصال في بيانات الاعتماد ثم عيّنها هنا. بلا اعتماد مناسب يبقى الخادم غير صالح.",
       "pickRoot": "مجلد",
@@ -364,7 +359,7 @@
         "azure": "رمز Azure/Entra أو PAT (النوع Azure). npx محلي.",
         "gitlab": "رمز وصول شخصي من GitLab (النوع GitLab). npx محلي.",
         "filesystem": "بلا اعتماد. اختر مجلدًا جذرًا — ليس C:\\\\. npx محلي.",
-        "git": "بلا اعتماد. دليل العمل كجذر. npx محلي.",
+        "git": "بدون اعتماد. مجلد العمل كجذر. uvx محلي.",
         "playwright": "بلا اعتماد. Node/npx مع تشغيل المتصفح.",
         "postgres": "سلسلة اتصال (النوع Postgres)، وليست قواعد SQLite للتطبيق. npx محلي.",
         "context7": "مفتاح API كاعتماد Token. HTTP بعيد، بلا npx.",
@@ -372,13 +367,9 @@
         "notion": "رمز تكامل Notion (النوع Notion). npx محلي.",
         "atlassian": "رمز Atlassian Cloud API (النوع Atlassian). بعيد عبر mcp-remote.",
         "linear": "مفتاح Linear API (النوع Linear). HTTP بعيد.",
-        "fetch": "بلا اعتماد. عناوين عامة كنص. npx محلي.",
+        "fetch": "بدون اعتماد. عناوين عامة كنص. uvx محلي.",
         "sentry": "رمز Sentry (النوع Token). npx محلي.",
-        "pdf": "بلا اعتماد. مجلد جذر للملفات. uvx محلي.",
-        "excel": "بلا اعتماد. مجلد جذر لـ .xlsx. uvx محلي.",
-        "powerpoint": "بلا اعتماد. مجلد جذر لـ .pptx. uvx محلي.",
-        "word": "بلا اعتماد. مجلد جذر لـ .docx. uvx محلي.",
-        "office": "بلا اعتماد. خادم واحد لـ PDF وOffice. مجلد جذر. uvx محلي."
+        "excel": "بلا اعتماد. مجلد جذر لـ .xlsx. uvx محلي."
       },
       "reset": "تعطيل",
       "secretNew": "سر جديد (اختياري)",
@@ -1434,11 +1425,7 @@
       "linear": "Linear",
       "fetch": "Fetch",
       "sentry": "Sentry",
-      "pdf": "PDF",
-      "excel": "Excel",
-      "powerpoint": "PowerPoint",
-      "word": "Word",
-      "office": "Office"
+      "excel": "Excel"
     },
     "runtime": {
       "missing": "التشغيل مفقود (Node أو npx أو Docker أو uvx)."

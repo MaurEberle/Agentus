@@ -39,13 +39,11 @@ A ajuda responde na língua da interface. Se o modelo não puder usá-la, respon
 
 ## Servidores MCP
 
-Modelos (**receitas**) para ferramentas externas: GitHub, sistema de ficheiros, Git, Playwright, Postgres, Slack, Notion, formatos Office e outras. As receitas não são programas incluídos. Muitas precisam de Node/`npx`, Docker ou `uvx` no PC mais uma credencial.
+Modelos (**receitas**) para ferramentas externas: GitHub, sistema de ficheiros, Git, Playwright, Postgres, Slack, Notion, Excel e outras. As receitas não são programas incluídos. Muitas precisam de Node/`npx`, Docker ou `uvx` no PC mais uma credencial.
 
 Predefinição: servidor **inativo**. A app não arranca processos MCP ao abrir, mas quando uma execução precisa de um **nó MCP** ligado. Primeiro **Definições → Credenciais** (PAT, token ou cadeia), depois a receita. No grafo, o nó da paleta **MCP**.
 
 Criar a partir de uma receita (credencial, caminho raiz opcional) ou como **servidor próprio** (comando, argumentos ou URL). Usa comandos desconhecidos só se confiares neles. A sonda verifica se responde; «Falta o runtime» se não houver Node/Docker/`uvx`.
-
-O Office agrupa PDF e formatos Office; ativa os presets soltos só se realmente precisares.
 
 Apagar remove a configuração do servidor, não o Ollama nem as credenciais.
 

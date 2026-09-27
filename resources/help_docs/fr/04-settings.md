@@ -39,13 +39,11 @@ L’aide répond dans la langue de l’interface. Si le modèle ne peut pas l’
 
 ## Serveurs MCP
 
-Modèles (**recettes**) pour outils externes : GitHub, système de fichiers, Git, Playwright, Postgres, Slack, Notion, formats Office et autres. Les recettes ne sont pas des programmes livrés. Beaucoup ont besoin de Node/`npx`, Docker ou `uvx` sur le PC plus un identifiant.
+Modèles (**recettes**) pour outils externes : GitHub, système de fichiers, Git, Playwright, Postgres, Slack, Notion, Excel et autres. Les recettes ne sont pas des programmes livrés. Beaucoup ont besoin de Node/`npx`, Docker ou `uvx` sur le PC plus un identifiant.
 
 Défaut : serveur **inactif**. L’app ne démarre pas les processus MCP à l’ouverture, mais quand une exécution a besoin d’un **nœud MCP** connecté. D’abord **Paramètres → Identifiants** (PAT, jeton ou chaîne), puis la recette. Dans le graphe, le nœud palette **MCP**.
 
 Créer depuis une recette (identifiant, chemin racine optionnel) ou comme **serveur personnalisé** (commande, arguments ou URL). N’utilise des commandes inconnues que si tu leur fais confiance. La sonde vérifie la joignabilité ; « Runtime manquant » si Node/Docker/`uvx` n’est pas là.
-
-Office regroupe PDF et formats Office ; n’active les presets individuels que si tu en as vraiment besoin.
 
 Supprimer retire la configuration du serveur, pas Ollama ni les identifiants.
 

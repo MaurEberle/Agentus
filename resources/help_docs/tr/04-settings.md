@@ -39,13 +39,11 @@ Yardım arayüz dilinde yanıtlar. Model o dili kullanamazsa İngilizce yanıtla
 
 ## MCP sunucuları
 
-Dış araçlar için şablonlar (**tarifler**): GitHub, dosya sistemi, Git, Playwright, Postgres, Slack, Notion, Office biçimleri ve diğerleri. Tarifler birlikte gelen programlar değildir. Birçoğu PC’de Node/`npx`, Docker veya `uvx` artı bir kimlik bilgisi ister.
+Dış araçlar için şablonlar (**tarifler**): GitHub, dosya sistemi, Git, Playwright, Postgres, Slack, Notion, Excel ve diğerleri. Tarifler birlikte gelen programlar değildir. Birçoğu PC’de Node/`npx`, Docker veya `uvx` artı bir kimlik bilgisi ister.
 
 Varsayılan: sunucu **etkin değil**. Uygulama açılışta MCP süreçlerini başlatmaz; bir çalıştırma bağlı bir **MCP düğümüne** ihtiyaç duyunca başlatır. Önce **Ayarlar → Kimlik bilgileri** (PAT, jeton veya bağlantı), sonra tarif. Grafikte palet düğümü **MCP**.
 
 Bir tariften (kimlik bilgisi, isteğe bağlı kök yolu) veya **özel sunucu** olarak (komut, argümanlar veya URL) oluştur. Bilinmeyen komutları yalnızca güveniyorsan kullan. Sonda erişilebilirliği denetler; Node/Docker/`uvx` yoksa «Çalışma zamanı yok».
-
-Office PDF ve Office biçimlerini birleştirir; tekil hazır ayarları gerçekten gerekirse aç.
 
 Silme sunucu yapılandırmasını kaldırır, Ollama’yı ve kimlik bilgilerini değil.
 

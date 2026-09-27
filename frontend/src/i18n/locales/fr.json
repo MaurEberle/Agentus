@@ -314,7 +314,6 @@
       "status": "Statut",
       "probe": "Sonde",
       "presetHint": "Identifiants et chemin racine facultatif selon la recette. L’enregistrement crée le serveur immédiatement.",
-      "officeHint": "Office regroupe PDF et formats Office. N’activez les préréglages individuels en parallèle qu’en cas de besoin.",
       "rootPath": "Chemin racine",
       "untrusted": "Un processus inconnu sera lancé avec les droits indiqués. N’utilisez que des commandes de confiance.",
       "command": "Commande",
@@ -346,11 +345,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       },
       "credentialsLead": "Créez PAT, jetons et chaînes de connexion dans Identifiants, puis assignez-les ici. Sans identifiant adapté, le serveur reste invalide.",
       "pickRoot": "Dossier",
@@ -364,7 +359,7 @@
         "azure": "Jeton Azure/Entra ou PAT (type Azure). npx local.",
         "gitlab": "Jeton d’accès personnel GitLab (type GitLab). npx local.",
         "filesystem": "Aucun identifiant. Choisissez un dossier racine — pas C:\\\\. npx local.",
-        "git": "Aucun identifiant. Répertoire de travail comme racine. npx local.",
+        "git": "Aucun identifiant. Répertoire de travail comme racine. uvx local.",
         "playwright": "Aucun identifiant. Node/npx plus un runtime de navigateur.",
         "postgres": "Chaîne de connexion (type Postgres), pas les SQLite de l’app. npx local.",
         "context7": "Clé API en identifiant Token. HTTP distant, pas de npx.",
@@ -372,13 +367,9 @@
         "notion": "Jeton d’intégration Notion (type Notion). npx local.",
         "atlassian": "Jeton API Atlassian Cloud (type Atlassian). Distant via mcp-remote.",
         "linear": "Clé API Linear (type Linear). HTTP distant.",
-        "fetch": "Aucun identifiant. URL publiques en texte. npx local.",
+        "fetch": "Aucun identifiant. URLs publiques en texte. uvx local.",
         "sentry": "Jeton Sentry (type Token). npx local.",
-        "pdf": "Aucun identifiant. Dossier racine pour les fichiers. uvx local.",
-        "excel": "Aucun identifiant. Dossier racine pour .xlsx. uvx local.",
-        "powerpoint": "Aucun identifiant. Dossier racine pour .pptx. uvx local.",
-        "word": "Aucun identifiant. Dossier racine pour .docx. uvx local.",
-        "office": "Aucun identifiant. Un serveur pour PDF et Office. Dossier racine. uvx local."
+        "excel": "Aucun identifiant. Dossier racine pour .xlsx. uvx local."
       },
       "reset": "Désactiver",
       "secretNew": "Nouveau secret (facultatif)",
@@ -1434,11 +1425,7 @@
       "linear": "Linear",
       "fetch": "Fetch",
       "sentry": "Sentry",
-      "pdf": "PDF",
-      "excel": "Excel",
-      "powerpoint": "PowerPoint",
-      "word": "Word",
-      "office": "Office"
+      "excel": "Excel"
     },
     "runtime": {
       "missing": "Runtime manquant (Node, npx, Docker ou uvx)."

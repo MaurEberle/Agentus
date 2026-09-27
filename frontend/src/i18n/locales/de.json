@@ -319,7 +319,6 @@
       "status": "Status",
       "probe": "Probe",
       "presetHint": "Zugänge und optionaler Wurzelpfad laut Rezept. Speichern legt den Server an und aktiviert ihn.",
-      "officeHint": "Office bündelt PDF und Office-Formate. Einzel-Presets parallel nur bei Bedarf aktivieren.",
       "rootPath": "Wurzelpfad",
       "pickRoot": "Ordner",
       "needsNone": "Kein Zugang nötig",
@@ -341,7 +340,7 @@
         "azure": "Azure-/Entra-Token oder PAT (Art Azure). Lokal npx.",
         "gitlab": "GitLab Personal Access Token (Art GitLab). Lokal npx.",
         "filesystem": "Kein Zugang. Wurzelordner wählen — nicht C:\\. Lokal npx.",
-        "git": "Kein Zugang. Arbeitsverzeichnis als Wurzel. Lokal npx.",
+        "git": "Kein Zugang. Arbeitsverzeichnis als Wurzel. Lokal uvx.",
         "playwright": "Kein Zugang. Node/npx plus Browser-Runtime.",
         "postgres": "Verbindungszeichenfolge (Art Postgres), nicht die App-SQLite. Lokal npx.",
         "context7": "API-Key als Zugang der Art Token. Remote-HTTP, kein npx.",
@@ -349,13 +348,9 @@
         "notion": "Notion Integration Token (Art Notion). Lokal npx.",
         "atlassian": "Atlassian Cloud API-Token (Art Atlassian). Remote über mcp-remote.",
         "linear": "Linear API-Key (Art Linear). Remote-HTTP.",
-        "fetch": "Kein Zugang. Öffentliche URLs als Text. Lokal npx.",
+        "fetch": "Kein Zugang. Öffentliche URLs als Text. Lokal uvx.",
         "sentry": "Sentry Auth-Token (Art Token). Lokal npx.",
-        "pdf": "Kein Zugang. Wurzelordner für Dateien. Lokal uvx.",
-        "excel": "Kein Zugang. Wurzelordner für .xlsx. Lokal uvx.",
-        "powerpoint": "Kein Zugang. Wurzelordner für .pptx. Lokal uvx.",
-        "word": "Kein Zugang. Wurzelordner für .docx. Lokal uvx.",
-        "office": "Kein Zugang. Ein Server für PDF und Office-Formate. Wurzelordner. Lokal uvx."
+        "excel": "Kein Zugang. Wurzelordner für .xlsx. Lokal uvx."
       },
       "statusName": {
         "unknown": "Unbekannt",
@@ -378,11 +373,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       }
     },
     "data": {
@@ -460,11 +451,7 @@
       "linear": "Linear",
       "fetch": "Fetch",
       "sentry": "Sentry",
-      "pdf": "PDF",
-      "excel": "Excel",
-      "powerpoint": "PowerPoint",
-      "word": "Word",
-      "office": "Office"
+      "excel": "Excel"
     },
     "runtime": {
       "missing": "Runtime fehlt (Node, npx, Docker oder uvx)."

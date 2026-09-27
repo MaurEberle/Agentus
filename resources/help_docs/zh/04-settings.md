@@ -39,13 +39,11 @@
 
 ## MCP 服务器
 
-外部工具的模板（**配方**）：GitHub、文件系统、Git、Playwright、Postgres、Slack、Notion、Office 格式等。配方不是随附程序。很多需要本机上的 Node/`npx`、Docker 或 `uvx`，外加凭据。
+外部工具的模板（**配方**）：GitHub、文件系统、Git、Playwright、Postgres、Slack、Notion、Excel 等。配方不是随附程序。很多需要本机上的 Node/`npx`、Docker 或 `uvx`，外加凭据。
 
 默认：服务器**未启用**。应用不会在打开时启动 MCP 进程，而是在运行需要已连接的 **MCP 节点**时启动。先在**设置 → 凭据**中创建 PAT、令牌或连接串，再启用配方。图中使用调色板节点 **MCP**。
 
 从配方创建（凭据、可选根路径）或作为**自定义服务器**（命令、参数或 URL）。只使用你信任的未知命令。探测检查是否可达；没有 Node/Docker/`uvx` 时显示「缺少运行时」。
-
-Office 捆绑 PDF 和 Office 格式；仅在确实需要时再启用单项预设。
 
 删除会移除服务器配置，不会移除 Ollama 或凭据。
 

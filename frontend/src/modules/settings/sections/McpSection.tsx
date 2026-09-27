@@ -407,11 +407,6 @@ export function McpSection() {
               {preset ? t(`settings.mcp.hint.${preset.recipe.id}`) : t('settings.mcp.presetHint')}
             </DialogDescription>
           </DialogHeader>
-          {preset?.recipe.id === 'office' ? (
-            <Alert>
-              <AlertDescription>{t('settings.mcp.officeHint')}</AlertDescription>
-            </Alert>
-          ) : null}
           {preset && (preset.recipe.runtime ?? 'none') !== 'none' ? (
             <p className="text-xs text-muted-foreground">
               {t('settings.mcp.runtimeNeed', { runtime: preset.recipe.runtime })}

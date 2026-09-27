@@ -11,7 +11,10 @@ def test_recipes_endpoint(client: TestClient) -> None:
     ids = {item["id"] for item in response.json()["items"]}
     assert "github" in ids
     assert "filesystem" in ids
-    assert len(ids) == 19
+    assert len(ids) == 15
+    assert "excel" in ids
+    assert "office" not in ids
+    assert "pdf" not in ids
 
 
 def test_create_list_delete(client: TestClient) -> None:

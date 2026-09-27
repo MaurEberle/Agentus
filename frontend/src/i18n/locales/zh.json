@@ -314,7 +314,6 @@
       "status": "状态",
       "probe": "探测",
       "presetHint": "按配方填写凭据和可选根路径。保存会立即创建服务器。",
-      "officeHint": "Office 捆绑 PDF 和 Office 格式。仅在需要时并行启用单项预设。",
       "rootPath": "根路径",
       "untrusted": "将以给定权限启动未知进程。请仅使用可信命令。",
       "command": "命令",
@@ -346,11 +345,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       },
       "credentialsLead": "在凭据中创建 PAT、令牌和连接字符串，再在此分配。没有匹配凭据时服务器无效。",
       "pickRoot": "文件夹",
@@ -364,7 +359,7 @@
         "azure": "Azure/Entra 令牌或 PAT（类型 Azure）。本地 npx。",
         "gitlab": "GitLab 个人访问令牌（类型 GitLab）。本地 npx。",
         "filesystem": "无需凭据。选择根文件夹，不要用 C:\\\\。本地 npx。",
-        "git": "无需凭据。以工作目录为根。本地 npx。",
+        "git": "无需凭据。工作目录作为根。本地 uvx。",
         "playwright": "无需凭据。需要 Node/npx 和浏览器运行时。",
         "postgres": "连接字符串（类型 Postgres），不要指向应用的 SQLite。本地 npx。",
         "context7": "用 Token 类型的 API 密钥。远程 HTTP，无需 npx。",
@@ -372,13 +367,9 @@
         "notion": "Notion 集成令牌（类型 Notion）。本地 npx。",
         "atlassian": "Atlassian Cloud API 令牌（类型 Atlassian）。通过 mcp-remote 远程连接。",
         "linear": "Linear API 密钥（类型 Linear）。远程 HTTP。",
-        "fetch": "无需凭据。把公开 URL 读成文本。本地 npx。",
+        "fetch": "无需凭据。公开 URL 作为文本。本地 uvx。",
         "sentry": "Sentry 授权令牌（类型 Token）。本地 npx。",
-        "pdf": "无需凭据。文件根目录。本地 uvx。",
-        "excel": "无需凭据。.xlsx 根目录。本地 uvx。",
-        "powerpoint": "无需凭据。.pptx 根目录。本地 uvx。",
-        "word": "无需凭据。.docx 根目录。本地 uvx。",
-        "office": "无需凭据。一个服务器处理 PDF 和 Office。根目录。本地 uvx。"
+        "excel": "无需凭据。.xlsx 根目录。本地 uvx。"
       },
       "reset": "停用",
       "secretNew": "新密钥（可选）",
@@ -1434,11 +1425,7 @@
       "linear": "Linear",
       "fetch": "Fetch",
       "sentry": "Sentry",
-      "pdf": "PDF",
-      "excel": "Excel",
-      "powerpoint": "PowerPoint",
-      "word": "Word",
-      "office": "Office"
+      "excel": "Excel"
     },
     "runtime": {
       "missing": "缺少运行时（Node、npx、Docker 或 uvx）。"

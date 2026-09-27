@@ -314,7 +314,6 @@
       "status": "Estado",
       "probe": "Probar",
       "presetHint": "Credenciales y ruta raíz opcional según la receta. Guardar crea el servidor al momento.",
-      "officeHint": "Office agrupa PDF y formatos de Office. Activa los presets sueltos solo si los necesitas.",
       "rootPath": "Ruta raíz",
       "untrusted": "Se iniciará un proceso desconocido con los privilegios indicados. Usa solo comandos de confianza.",
       "command": "Comando",
@@ -346,11 +345,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       },
       "credentialsLead": "Crea PAT, tokens y cadenas de conexión en Credenciales y asígnalos aquí. Sin credencial adecuada el servidor sigue inválido.",
       "pickRoot": "Carpeta",
@@ -364,7 +359,7 @@
         "azure": "Token Azure/Entra o PAT (tipo Azure). npx local.",
         "gitlab": "Token personal de GitLab (tipo GitLab). npx local.",
         "filesystem": "Sin credencial. Elige una carpeta raíz, no C:\\\\. npx local.",
-        "git": "Sin credencial. Directorio de trabajo como raíz. npx local.",
+        "git": "Sin credencial. Directorio de trabajo como raíz. uvx local.",
         "playwright": "Sin credencial. Node/npx y un runtime de navegador.",
         "postgres": "Cadena de conexión (tipo Postgres), no las SQLite de la app. npx local.",
         "context7": "Clave API como credencial Token. HTTP remoto, sin npx.",
@@ -372,13 +367,9 @@
         "notion": "Token de integración Notion (tipo Notion). npx local.",
         "atlassian": "Token API de Atlassian Cloud (tipo Atlassian). Remoto vía mcp-remote.",
         "linear": "Clave API de Linear (tipo Linear). HTTP remoto.",
-        "fetch": "Sin credencial. URLs públicas como texto. npx local.",
+        "fetch": "Sin credencial. URLs publicas como texto. uvx local.",
         "sentry": "Token de Sentry (tipo Token). npx local.",
-        "pdf": "Sin credencial. Carpeta raíz para archivos. uvx local.",
-        "excel": "Sin credencial. Carpeta raíz para .xlsx. uvx local.",
-        "powerpoint": "Sin credencial. Carpeta raíz para .pptx. uvx local.",
-        "word": "Sin credencial. Carpeta raíz para .docx. uvx local.",
-        "office": "Sin credencial. Un servidor para PDF y Office. Carpeta raíz. uvx local."
+        "excel": "Sin credencial. Carpeta raíz para .xlsx. uvx local."
       },
       "reset": "Desactivar",
       "secretNew": "Nuevo secreto (opcional)",
@@ -1434,11 +1425,7 @@
       "linear": "Linear",
       "fetch": "Fetch",
       "sentry": "Sentry",
-      "pdf": "PDF",
-      "excel": "Excel",
-      "powerpoint": "PowerPoint",
-      "word": "Word",
-      "office": "Office"
+      "excel": "Excel"
     },
     "runtime": {
       "missing": "Falta el runtime (Node, npx, Docker o uvx)."

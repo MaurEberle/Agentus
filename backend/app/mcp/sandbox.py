@@ -5,9 +5,7 @@ from pathlib import Path
 from app.db.paths import RAG_DIR_NAME, is_invalid_data_dir
 from app.http.errors import AppError
 
-ROOT_RECIPE_IDS = frozenset(
-    {"filesystem", "git", "pdf", "excel", "powerpoint", "word", "office"}
-)
+ROOT_RECIPE_IDS = frozenset({"filesystem", "git", "excel"})
 _STORE_FILES = frozenset(
     {"settings.sqlite", "help.sqlite", "workspace.sqlite", "history.sqlite"}
 )

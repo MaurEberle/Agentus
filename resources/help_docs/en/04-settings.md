@@ -59,14 +59,13 @@ What each recipe needs:
 | Context7 | API key, kind **Token** | remote HTTP |
 | Sentry | auth token, kind **Token** | local `npx` |
 | Postgres | connection string, kind **Postgres** (not the app SQLite) | local `npx` |
-| Filesystem, Git, PDF, Excel, PowerPoint, Word, Office | none | **root folder** required; `npx` or `uvx` |
-| Fetch, Playwright | none | local `npx`; Playwright also needs a browser |
+| Filesystem, Git, Excel | none | **root folder** required; `npx` or `uvx` |
+| Fetch | none | local `uvx` |
+| Playwright | none | local `npx`; Playwright also needs a browser |
 
 Create credentials under **Credentials**, not in the recipe dialog. Without a matching credential the server stays invalid.
 
 Or a **custom server** (command, args, or URL). Use unknown commands only if you trust them.
-
-Office bundles PDF and Office formats; enable single presets only if you really need them.
 
 Delete removes the server config, not Ollama and not credentials. In the network you attach the server with the palette node **MCP**, not a tool kind.
 
