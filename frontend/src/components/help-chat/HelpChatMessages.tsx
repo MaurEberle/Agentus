@@ -37,9 +37,9 @@ function Sources({ sources }: { sources: HelpSource[] }) {
 function TypingIndicator() {
   const { t } = useTranslation();
   return (
-    <div className="flex gap-2" role="status" aria-live="polite" aria-label={t('helpChat.status.generating')}>
-      <BrandMark spinning className="mt-0.5 size-12" alt="" />
-      <div className="relative flex h-7 items-center gap-1 overflow-hidden rounded-lg bg-muted px-2.5">
+    <div className="flex items-end gap-2" role="status" aria-live="polite" aria-label={t('helpChat.status.generating')}>
+      <BrandMark spinning className="size-12" alt="" />
+      <div className="relative mb-1.5 flex h-7 items-center gap-1 overflow-hidden rounded-lg bg-muted px-2.5">
         {[0, 150, 300].map((delay) => (
           <span
             key={delay}
