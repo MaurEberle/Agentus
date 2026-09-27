@@ -274,6 +274,8 @@
       "providerEmpty": "未設定",
       "openaiCompat": "OpenAI互換",
       "model": "チャットモデル",
+      "missingModel": "チャットモデルが選ばれていません。選ぶまでヘルプチャットはオフのままです。",
+      "missingModelFallback": "チャットモデルが選ばれていません。節約モデル（{{name}}）を使います。",
       "credential": "資格情報",
       "credentialEmpty": "資格情報なし",
       "credentialHint": "先に有効なAPIキーを選んでください。その後モデルが読み込まれます。",
@@ -475,6 +477,7 @@
       "body": "ヘルプはまだ設定されていません。設定でプロバイダーとモデルを指定してください。",
       "cta": "設定へ"
     },
+    "usingFallback": "チャットモデルが未設定です。節約モデルが応答します。",
     "sources": {
       "rag": "文書",
       "web": "ウェブ"

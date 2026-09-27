@@ -274,6 +274,8 @@
       "providerEmpty": "Non défini",
       "openaiCompat": "Compatible OpenAI",
       "model": "Modèle de chat",
+      "missingModel": "Aucun modèle de chat sélectionné. Le chat d’aide reste inactif jusqu’à ce que vous en choisissiez un.",
+      "missingModelFallback": "Aucun modèle de chat sélectionné. Le modèle économique ({{name}}) est utilisé.",
       "credential": "Identifiant",
       "credentialEmpty": "Aucun identifiant",
       "credentialHint": "Choisissez d’abord une clé API valide. Les modèles sont ensuite chargés.",
@@ -475,6 +477,7 @@
       "body": "L’aide n’est pas encore configurée. Définissez le fournisseur et le modèle dans Paramètres.",
       "cta": "Aller aux paramètres"
     },
+    "usingFallback": "Aucun modèle de chat défini. Les réponses utilisent le modèle économique.",
     "sources": {
       "rag": "Document",
       "web": "Web"

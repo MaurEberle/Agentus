@@ -274,6 +274,8 @@
       "providerEmpty": "Ayarlanmadı",
       "openaiCompat": "OpenAI uyumlu",
       "model": "Sohbet modeli",
+      "missingModel": "Sohbet modeli seçilmedi. Bir tane seçene kadar yardım sohbeti kapalı kalır.",
+      "missingModelFallback": "Sohbet modeli seçilmedi. Tasarruf modeli ({{name}}) kullanılır.",
       "credential": "Kimlik bilgisi",
       "credentialEmpty": "Kimlik bilgisi yok",
       "credentialHint": "Önce geçerli bir API anahtarı seçin. Modeller ardından yüklenir.",
@@ -475,6 +477,7 @@
       "body": "Yardım henüz yapılandırılmadı. Sağlayıcı ve modeli Ayarlar altında belirleyin.",
       "cta": "Ayarlara git"
     },
+    "usingFallback": "Sohbet modeli yok. Yanıtlar tasarruf modelinden gelir.",
     "sources": {
       "rag": "Belge",
       "web": "Web"

@@ -274,6 +274,8 @@
       "providerEmpty": "Nicht gesetzt",
       "openaiCompat": "OpenAI-kompatibel",
       "model": "Chat-Modell",
+      "missingModel": "Kein Chat-Modell gewählt. Der Hilfe-Chat bleibt aus, bis du eines setzt.",
+      "missingModelFallback": "Kein Chat-Modell gewählt. Es gilt das Spar-Modell ({{name}}).",
       "credential": "Zugang",
       "credentialEmpty": "Keinen Zugang wählen",
       "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die Modelle geladen.",
@@ -533,6 +535,7 @@
       "body": "Die Hilfe ist noch nicht konfiguriert. Provider und Modell setzt du unter Einstellungen.",
       "cta": "Zu den Einstellungen"
     },
+    "usingFallback": "Kein Chat-Modell gesetzt. Antworten kommen vom Spar-Modell.",
     "sources": {
       "rag": "Dokument",
       "web": "Web"

@@ -194,7 +194,8 @@ export function isForbiddenDataRoot(path: string): boolean {
 }
 
 export function helpChatConfigured(help: HelpChatSettings): boolean {
-  if (!help.provider || !help.model.trim()) return false;
+  const model = (help.model || '').trim() || (help.fallbackModel || '').trim();
+  if (!help.provider || !model) return false;
   if (providerNeedsCredential(help.provider) && !help.credentialId) {
     return false;
   }

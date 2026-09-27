@@ -33,12 +33,15 @@ def get_settings_merged():
 def get_status() -> HelpChatStatus:
     settings = get_settings_merged()
     help_chat = settings.help_chat
-    configured = bool(help_chat.provider and help_chat.model.strip())
+    primary = (help_chat.model or "").strip()
+    fallback = (help_chat.fallback_model or "").strip()
+    configured = bool(help_chat.provider and (primary or fallback))
     return HelpChatStatus(
         configured=configured,
         onboarding_seen=settings.chat_onboarding_seen,
         web_search_enabled=help_chat.web_search_enabled,
         degraded=get_degraded(),
+        using_fallback=bool(help_chat.provider and not primary and fallback),
     )
 
 
@@ -78,9 +81,15 @@ def ping_help_llm():
     )
 
 
+def _chat_model(help_chat) -> str:
+    primary = (help_chat.model or "").strip()
+    fallback = (help_chat.fallback_model or "").strip()
+    return primary or fallback
+
+
 def effective_help_model() -> str:
     settings = get_settings_merged()
     help_chat = settings.help_chat
     if get_degraded() and help_chat.provider == "ollama":
-        return (help_chat.fallback_model or "llama3.2:1b").strip() or "llama3.2:1b"
-    return help_chat.model.strip()
+        return (help_chat.fallback_model or "").strip() or "llama3.2:1b"
+    return _chat_model(help_chat)

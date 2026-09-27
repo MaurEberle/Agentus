@@ -274,6 +274,8 @@
       "providerEmpty": "未设置",
       "openaiCompat": "OpenAI 兼容",
       "model": "聊天模型",
+      "missingModel": "尚未选择聊天模型。在选择之前，帮助聊天保持关闭。",
+      "missingModelFallback": "尚未选择聊天模型。将使用节能模型（{{name}}）。",
       "credential": "凭据",
       "credentialEmpty": "不选择凭据",
       "credentialHint": "请先选择有效的 API 密钥。随后加载模型。",
@@ -475,6 +477,7 @@
       "body": "帮助尚未配置。请在设置中指定提供方和模型。",
       "cta": "前往设置"
     },
+    "usingFallback": "未设置聊天模型。回复使用节能模型。",
     "sources": {
       "rag": "文档",
       "web": "网页"

@@ -304,6 +304,15 @@ export function HelpChatSection() {
             placeholder={catalogLocked ? t('settings.helpChat.pickCredentialFirst') : undefined}
             onChange={(value) => setHelpChat({ model: value })}
           />
+          {help.provider && !(help.model || '').trim() ? (
+            <Alert>
+              <AlertDescription>
+                {(help.fallbackModel || '').trim()
+                  ? t('settings.helpChat.missingModelFallback', { name: (help.fallbackModel || '').trim() })
+                  : t('settings.helpChat.missingModel')}
+              </AlertDescription>
+            </Alert>
+          ) : null}
           {catalogFailed ? (
             <p className="text-xs text-destructive">{t('settings.helpChat.modelsLoadError')}</p>
           ) : null}

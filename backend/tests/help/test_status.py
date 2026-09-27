@@ -13,6 +13,22 @@ def test_status_unconfigured(api_env) -> None:
     assert status.configured is False
 
 
+def test_status_configured_with_fallback_only(api_env) -> None:
+    init()
+    patch_settings(
+        AppSettingsPatch(
+            help_chat={
+                "provider": "ollama",
+                "model": "",
+                "fallbackModel": "hf.co/empero-ai/Qwen3.8-4B-Distill-GGUF:Q4_K_M",
+            }
+        )
+    )
+    status = get_status()
+    assert status.configured is True
+    assert status.using_fallback is True
+
+
 def test_set_degraded(api_env) -> None:
     init()
     set_degraded(True)

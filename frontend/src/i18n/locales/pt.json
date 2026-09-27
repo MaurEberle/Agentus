@@ -274,6 +274,8 @@
       "providerEmpty": "Não definido",
       "openaiCompat": "Compatível com OpenAI",
       "model": "Modelo de chat",
+      "missingModel": "Nenhum modelo de chat selecionado. O chat de ajuda fica desligado até escolheres um.",
+      "missingModelFallback": "Nenhum modelo de chat selecionado. Usa-se o modelo económico ({{name}}).",
       "credential": "Credencial",
       "credentialEmpty": "Nenhuma credencial",
       "credentialHint": "Escolha primeiro uma chave API válida. Os modelos são carregados a seguir.",
@@ -475,6 +477,7 @@
       "body": "A ajuda ainda não está configurada. Defina o fornecedor e o modelo em Definições.",
       "cta": "Ir para definições"
     },
+    "usingFallback": "Nenhum modelo de chat definido. As respostas usam o modelo económico.",
     "sources": {
       "rag": "Documento",
       "web": "Web"

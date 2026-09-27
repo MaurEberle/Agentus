@@ -29,10 +29,7 @@ export function HelpChatFab({
       variant="ghost"
       size="icon"
       style={{ width: size, height: size, minWidth: size, minHeight: size }}
-      className={cn(
-        'app-no-drag relative rounded-full border border-border bg-white shadow-md hover:bg-white hover:shadow-lg',
-        status === 'generating' ? 'p-1' : 'p-2.5',
-      )}
+      className="app-no-drag relative rounded-full border border-border bg-white p-1 shadow-md hover:bg-white hover:shadow-lg"
       aria-label={open ? t('helpChat.fab.close') : t('helpChat.fab.open')}
       aria-expanded={open}
       onClick={onClick}

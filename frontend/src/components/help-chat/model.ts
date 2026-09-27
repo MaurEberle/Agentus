@@ -5,6 +5,7 @@ export type HelpChatStatus = {
   onboardingSeen: boolean;
   webSearchEnabled?: boolean;
   degraded?: boolean;
+  usingFallback?: boolean;
 };
 
 export type HelpSource = {

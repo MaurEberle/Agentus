@@ -12,6 +12,7 @@ class HelpChatStatus(ApiModel):
     onboarding_seen: bool = Field(alias="onboardingSeen")
     web_search_enabled: bool = Field(alias="webSearchEnabled")
     degraded: bool = False
+    using_fallback: bool = Field(default=False, alias="usingFallback")
 
 
 class HelpSource(ApiModel):

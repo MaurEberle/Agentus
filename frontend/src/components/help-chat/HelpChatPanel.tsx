@@ -198,6 +198,14 @@ export function HelpChatPanel({
           <X className="size-4" />
         </Button>
       </header>
+      {configured && status?.usingFallback ? (
+        <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+          {t('helpChat.usingFallback')}{' '}
+          <Link to="/settings#help-chat" className="underline underline-offset-2">
+            {t('helpChat.unconfigured.cta')}
+          </Link>
+        </p>
+      ) : null}
       {!configured ? (
         <div className="flex flex-1 flex-col items-start justify-center gap-3 p-4">
           <p className="text-sm text-muted-foreground">{t('helpChat.unconfigured.body')}</p>

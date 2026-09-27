@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { queryClient } from '@/api/client';
 import i18n from '@/i18n';
 import { notify } from '@/lib/notifications';
 import {
@@ -50,6 +51,7 @@ function report(result: HelpReindexResult) {
           : 'help.index.failed',
     variant: failed ? 'error' : 'success',
   });
+  void queryClient.invalidateQueries({ queryKey: ['help-chat'] });
 }
 
 async function poll(jobId: string | undefined) {
