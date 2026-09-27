@@ -70,6 +70,32 @@ def test_patch_help_chat_clears_optional_ids(client: TestClient) -> None:
     assert help_chat["credentialId"] is None
 
 
+def test_patch_web_search_off_keeps_credential(client: TestClient) -> None:
+    created = client.post(
+        "/api/credentials",
+        json={"name": "search", "kind": "web_search", "secret": "secret-value"},
+    ).json()
+    client.patch(
+        "/api/settings",
+        json={
+            "helpChat": {
+                "webSearchEnabled": True,
+                "webSearchCredentialId": created["id"],
+            }
+        },
+    )
+    response = client.patch(
+        "/api/settings",
+        json={"helpChat": {"webSearchEnabled": False}},
+    )
+    assert response.status_code == 200
+    help_chat = response.json()["helpChat"]
+    assert help_chat["webSearchEnabled"] is False
+    assert help_chat["webSearchCredentialId"] == created["id"]
+    status = client.get("/api/help-chat/status").json()
+    assert status["webSearchEnabled"] is False
+
+
 def test_patch_onboarding_seen(client: TestClient) -> None:
     response = client.patch("/api/settings", json={"chatOnboardingSeen": True})
     assert response.status_code == 200

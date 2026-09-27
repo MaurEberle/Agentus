@@ -190,6 +190,17 @@ export function HelpChatSection() {
     }
   }
 
+  function persistWebSearch(patch: { webSearchEnabled?: boolean; webSearchCredentialId?: string | null }) {
+    return patchSettings({ helpChat: patch as HelpChatSettings })
+      .then(() => {
+        notify({ titleKey: 'settings.notify.saved', variant: 'success' });
+      })
+      .catch(() => {
+        notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+        return Promise.reject();
+      });
+  }
+
   async function runPing() {
     setPinging(true);
     try {
@@ -429,8 +440,15 @@ export function HelpChatSection() {
               <p className="text-xs text-muted-foreground">{t('settings.helpChat.webSearchHint')}</p>
             </div>
             <Switch
+              id="help-web-search"
               checked={help.webSearchEnabled}
-              onCheckedChange={(checked) => setHelpChat({ webSearchEnabled: checked })}
+              onCheckedChange={(checked) => {
+                const previous = help.webSearchEnabled;
+                setHelpChat({ webSearchEnabled: checked });
+                void persistWebSearch({ webSearchEnabled: checked }).catch(() => {
+                  setHelpChat({ webSearchEnabled: previous });
+                });
+              }}
             />
           </div>
           {help.webSearchEnabled ? (
@@ -441,9 +459,14 @@ export function HelpChatSection() {
               ) : (
                 <Select
                   value={help.webSearchCredentialId ?? 'none'}
-                  onValueChange={(value) =>
-                    setHelpChat({ webSearchCredentialId: value === 'none' ? undefined : value })
-                  }
+                  onValueChange={(value) => {
+                    const id = value === 'none' ? undefined : value;
+                    const previous = help.webSearchCredentialId;
+                    setHelpChat({ webSearchCredentialId: id });
+                    void persistWebSearch({ webSearchCredentialId: id ?? null }).catch(() => {
+                      setHelpChat({ webSearchCredentialId: previous });
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />

@@ -217,7 +217,7 @@ export function helpChatSnapshot(help: HelpChatSettings): string {
       ? optionalText(help.embeddingCredentialId)
       : '',
     webSearchEnabled: Boolean(help.webSearchEnabled),
-    webSearchCredentialId: help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '',
+    webSearchCredentialId: optionalText(help.webSearchCredentialId),
     fallbackModel: optionalText(help.fallbackModel),
   });
 }
@@ -227,7 +227,7 @@ export function helpChatWritePayload(help: HelpChatSettings) {
   const embeddingCredentialId = embeddingNeedsCredential(help.embeddingProvider || '')
     ? optionalText(help.embeddingCredentialId)
     : '';
-  const webSearchCredentialId = help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '';
+  const webSearchCredentialId = optionalText(help.webSearchCredentialId);
   return {
     provider: help.provider,
     model: help.model,

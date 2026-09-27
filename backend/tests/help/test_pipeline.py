@@ -45,6 +45,42 @@ def _parse(events: list[bytes]) -> list[tuple[str, str]]:
     return out
 
 
+def test_no_web_when_disabled_keeps_credential(api_env, monkeypatch) -> None:
+    init()
+    _ready_index()
+    put("web-1", "brave-secret")
+    patch_settings(
+        AppSettingsPatch(
+            help_chat={"webSearchEnabled": False, "webSearchCredentialId": "web-1"}
+        )
+    )
+    called = {"web": 0}
+
+    def _web(*args, **kwargs):
+        called["web"] += 1
+        return ExecuteResult(ok=True, result={"results": [{"title": "Hit", "url": "https://example.com"}]})
+
+    monkeypatch.setattr("app.tools.execute.execute_first_party", _web)
+    from app.runtime.models import EmbedResult
+
+    monkeypatch.setattr(
+        "app.runtime.embeddings.embed",
+        lambda req: EmbedResult(vectors=[[1.0, 0.0]], dimension=2, model="nomic-embed-text"),
+    )
+    captured: list[CompletionRequest] = []
+
+    def _stream(req: CompletionRequest):
+        captured.append(req)
+        yield StreamEvent(kind="delta", text="ok")
+        yield StreamEvent(kind="done")
+
+    monkeypatch.setattr("app.runtime.completions.complete_stream", _stream)
+    parsed = _parse(list(send_stream("wetter dortmund", locale="de")))
+    assert "sources" not in [name for name, _ in parsed]
+    assert called["web"] == 0
+    assert "WEB SEARCH is off" in captured[0].messages[0].content
+
+
 def test_no_web_when_disabled(api_env, monkeypatch) -> None:
     init()
     _ready_index()
@@ -75,6 +111,7 @@ def test_no_web_when_disabled(api_env, monkeypatch) -> None:
     assert "sources" not in kinds
     assert called["web"] == 0
     assert "APP LANGUAGE: German" in captured[0].messages[0].content
+    assert "WEB SEARCH is off" in captured[0].messages[0].content
     assert "[1]\nhello" in captured[0].messages[1].content
     assert "guide" not in captured[0].messages[1].content
 
@@ -116,6 +153,86 @@ def test_web_after_weak_rag(api_env, monkeypatch) -> None:
     assert order == ["rag", "web"]
     assert '"kind": "web"' in parsed[0][1]
     assert parsed[0][0] == "sources"
+    assert "WEB SEARCH is on" in captured[0].messages[0].content
+    assert "WEB RESULTS:" in captured[0].messages[1].content
+    assert "https://example.com — s" in captured[0].messages[1].content
+
+
+def test_web_when_rag_score_is_below_web_skip(api_env, monkeypatch) -> None:
+    init()
+    _ready_index()
+    put("web-1", "brave-secret")
+    patch_settings(
+        AppSettingsPatch(
+            help_chat={"webSearchEnabled": True, "webSearchCredentialId": "web-1"}
+        )
+    )
+    called = {"web": 0}
+
+    def _retrieve(query: str, locale: str | None = None):
+        return [
+            (
+                0.30,
+                HelpSource(kind="rag", title="g", section="s"),
+                "nur schwach passend",
+            )
+        ]
+
+    def _web(kind, **kwargs):
+        called["web"] += 1
+        assert kind == "web_search"
+        return ExecuteResult(
+            ok=True,
+            result={"results": [{"title": "Hit", "url": "https://example.com", "snippet": "s"}]},
+        )
+
+    monkeypatch.setattr("app.help.pipeline.retrieve_scored", _retrieve)
+    monkeypatch.setattr("app.tools.execute.execute_first_party", _web)
+    monkeypatch.setattr(
+        "app.runtime.completions.complete_stream",
+        lambda req: iter([StreamEvent(kind="delta", text="ok"), StreamEvent(kind="done")]),
+    )
+    parsed = _parse(list(send_stream("frage")))
+    assert called["web"] == 1
+    assert parsed[0][0] == "sources"
+
+
+def test_web_even_when_rag_is_confident(api_env, monkeypatch) -> None:
+    init()
+    _ready_index()
+    put("web-1", "brave-secret")
+    patch_settings(
+        AppSettingsPatch(
+            help_chat={"webSearchEnabled": True, "webSearchCredentialId": "web-1"}
+        )
+    )
+    called = {"web": 0}
+
+    def _retrieve(query: str, locale: str | None = None):
+        return [(0.91, HelpSource(kind="rag", title="g", section="s"), "treffer")]
+
+    def _web(kind, **kwargs):
+        called["web"] += 1
+        return ExecuteResult(
+            ok=True,
+            result={"results": [{"title": "Hit", "url": "https://example.com", "snippet": "s"}]},
+        )
+
+    monkeypatch.setattr("app.help.pipeline.retrieve_scored", _retrieve)
+    monkeypatch.setattr("app.tools.execute.execute_first_party", _web)
+    captured: list[CompletionRequest] = []
+
+    def _stream(req: CompletionRequest):
+        captured.append(req)
+        yield StreamEvent(kind="delta", text="ok")
+        yield StreamEvent(kind="done")
+
+    monkeypatch.setattr("app.runtime.completions.complete_stream", _stream)
+    parsed = _parse(list(send_stream("frage")))
+    assert called["web"] == 1
+    assert parsed[0][0] == "sources"
+    assert "WEB SEARCH is on" in captured[0].messages[0].content
+    assert "WEB RESULTS:" in captured[0].messages[1].content
 
 
 def test_abort_done_partial(api_env, monkeypatch) -> None:
