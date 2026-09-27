@@ -193,9 +193,23 @@ class RunController:
             cred_overrides = {
                 sid: cred for sid, _names, cred in mcp_bindings if sid and cred
             }
+            from app.run.graph_models import is_mcp_node
+
+            root_overrides: dict[str, str] = {}
+            for node in compiled.by_id.values():
+                if not is_mcp_node(node):
+                    continue
+                sid = str(node.data.get("mcpServerId") or "").strip()
+                root = str(node.data.get("rootPath") or "").strip()
+                if sid and root:
+                    root_overrides[sid] = root
             if server_ids and mcp is not None:
                 try:
-                    mcp.open_for(list(dict.fromkeys(server_ids)), cred_overrides or None)
+                    mcp.open_for(
+                        list(dict.fromkeys(server_ids)),
+                        cred_overrides or None,
+                        root_overrides or None,
+                    )
                 except AppError:
                     raise
                 except Exception as exc:

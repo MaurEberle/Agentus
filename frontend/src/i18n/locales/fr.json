@@ -313,7 +313,7 @@
       "enabled": "Actif",
       "status": "Statut",
       "probe": "Sonde",
-      "presetHint": "Identifiants et chemin racine facultatif selon la recette. L’enregistrement crée le serveur immédiatement.",
+      "presetHint": "Identifiants selon la recette. Fichiers et Excel prennent le dossier sur le nœud MCP de l’éditeur. L’enregistrement crée le serveur immédiatement.",
       "rootPath": "Chemin racine",
       "untrusted": "Un processus inconnu sera lancé avec les droits indiqués. N’utilisez que des commandes de confiance.",
       "command": "Commande",
@@ -351,6 +351,7 @@
       "pickRoot": "Dossier",
       "needsNone": "Aucun identifiant requis",
       "needsRoot": "Dossier racine",
+      "needsRootNode": "Dossier racine sur le nœud",
       "runtimeNeed": "Runtime local : {{runtime}} (dans le PATH).",
       "credentialHelp": "Créez d’abord un identifiant du type adapté.",
       "noCredentialOfKind": "Aucun identifiant de ce type — créez-en un dans Identifiants.",
@@ -358,7 +359,7 @@
         "github": "PAT GitHub dans Identifiants (type GitHub). npx local. Pas de dossier racine.",
         "azure": "Jeton Azure/Entra ou PAT (type Azure). npx local.",
         "gitlab": "Jeton d’accès personnel GitLab (type GitLab). npx local.",
-        "filesystem": "Aucun identifiant. Choisissez un dossier racine — pas C:\\\\. npx local.",
+        "filesystem": "Aucun identifiant. Le dossier racine se règle sur le nœud MCP dans l’éditeur, pas dans Paramètres. npx local.",
         "git": "Aucun identifiant. Répertoire de travail comme racine. uvx local.",
         "playwright": "Aucun identifiant. Node/npx plus un runtime de navigateur.",
         "postgres": "Chaîne de connexion (type Postgres), pas les SQLite de l’app. npx local.",
@@ -369,7 +370,7 @@
         "linear": "Clé API Linear (type Linear). HTTP distant.",
         "fetch": "Aucun identifiant. URLs publiques en texte. uvx local.",
         "sentry": "Jeton Sentry (type Token). npx local.",
-        "excel": "Aucun identifiant. Dossier racine pour .xlsx. uvx local."
+        "excel": "Aucun identifiant. Dossier pour .xlsx sur le nœud MCP dans l’éditeur. npx local."
       },
       "reset": "Désactiver",
       "secretNew": "Nouveau secret (facultatif)",
@@ -750,7 +751,8 @@
         "settings": "Paramètres MCP",
         "credential": "Identifiant",
         "credentialDefault": "Par défaut ({{name}})",
-        "credentialHint": "Par défaut : l’identifiant des paramètres MCP. Choisissez-en un autre s’il en existe plusieurs du même type."
+        "credentialHint": "Par défaut : l’identifiant des paramètres MCP. Choisissez-en un autre s’il en existe plusieurs du même type.",
+        "rootHint": "Dossier dans lequel ce serveur peut lire et écrire. Pas la racine d’un lecteur."
       }
     },
     "load": {
@@ -808,7 +810,7 @@
       "credentialRequired": "Un fournisseur cloud a besoin d’un identifiant.",
       "toolKind": "Le type d’outil manque.",
       "mcpServer": "Choisissez un serveur MCP actif. Créez-le et activez-le dans Paramètres.",
-      "mcpRoot": "Ce serveur MCP a besoin d’un chemin racine dans Paramètres.",
+      "mcpRoot": "Ce serveur MCP a besoin d’un dossier racine.",
       "fileAccessRoot": "L’accès aux fichiers nécessite un dossier qui n’est pas la racine d’un lecteur.",
       "knowledgePath": "Le dossier source est obligatoire.",
       "knowledgeRoot": "La racine d’un lecteur ou du système n’est pas autorisée.",

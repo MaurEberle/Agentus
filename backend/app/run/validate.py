@@ -225,15 +225,36 @@ def validate_document(
                 errors.append(_err("graph.mcp.server", node.id))
             elif mcp_enabled is not None and not mcp_enabled(server_id):
                 errors.append(_err("graph.mcp.disabled", node.id))
-            elif mcp_root is not None:
+            else:
+                from app.db.errors import StoreUnavailable
+                from app.db.paths import local_app_data
                 from app.db.settings import get_mcp_server
+                from app.http.errors import AppError
                 from app.mcp.recipe_loader import get_recipe
+                from app.mcp.sandbox import validate_root_path
 
-                row = get_mcp_server(server_id) or {}
+                try:
+                    row = get_mcp_server(server_id) or {}
+                except StoreUnavailable:
+                    row = {}
                 recipe_id = str(row.get("recipe_id") or "")
                 recipe = get_recipe(recipe_id) if recipe_id else None
-                if recipe and recipe.needs_root and mcp_root(server_id) is None:
-                    errors.append(_err("graph.mcp.root", node.id))
+                if recipe and recipe.needs_root:
+                    if recipe.root_on_node:
+                        node_root = str(node.data.get("rootPath") or "").strip()
+                        if not node_root:
+                            errors.append(_err("graph.mcp.root", node.id))
+                        else:
+                            try:
+                                validate_root_path(
+                                    node_root,
+                                    data_dir=Path(data_dir),
+                                    app_home=local_app_data(),
+                                )
+                            except AppError:
+                                errors.append(_err("graph.mcp.root", node.id))
+                    elif mcp_root is not None and mcp_root(server_id) is None:
+                        errors.append(_err("graph.mcp.root", node.id))
         if node.type == "tool":
             kind = str(node.data.get("kind") or "")
             if kind == "mcp":

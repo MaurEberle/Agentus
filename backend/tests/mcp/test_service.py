@@ -26,6 +26,23 @@ def test_create_github_disabled(api_env) -> None:
 def test_filesystem_enable_without_root(api_env) -> None:
     init()
     item = create_server(McpServerCreate(recipe_id="filesystem"))
+    enabled = set_enabled(item.id, True)
+    assert enabled.enabled is True
+    assert enabled.tool_names
+    assert "read_file" in enabled.tool_names
+
+
+def test_excel_enable_without_root(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="excel", enabled=True))
+    assert item.enabled is True
+    assert item.tool_names
+    assert "excel_read_sheet" in item.tool_names
+
+
+def test_git_enable_without_root(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="git"))
     with pytest.raises(AppError) as err:
         set_enabled(item.id, True)
     assert err.value.message_key == "mcp.root.required"

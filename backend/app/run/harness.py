@@ -326,14 +326,14 @@ def _dispatch_tool(
         tool_result = {"ok": False, "error": f"unknown tool {call_name}"}
     ok_tool = not (isinstance(tool_result, dict) and tool_result.get("ok") is False)
     payload: dict = {"name": call_name, "waitReason": "tool", "ok": ok_tool}
-    if args:
+    if isinstance(args, dict):
         import json as _json
 
         payload["arguments"] = _json.dumps(mask_obj(args), ensure_ascii=False)[:400]
     if isinstance(tool_result, dict) and not ok_tool:
         if tool_result.get("errorKey"):
             payload["errorKey"] = tool_result["errorKey"]
-        err = tool_result.get("error")
+        err = tool_result.get("error") or tool_result.get("result")
         if err:
             payload["error"] = str(err)[:240]
     emit_log(

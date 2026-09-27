@@ -14,9 +14,11 @@ from app.db.settings import get_mcp_server, put_mcp_server
 from app.db.vault import get as vault_get
 from app.mcp.models import McpToolInfo
 from app.mcp.recipe_loader import get_recipe
-from app.mcp.runtime_check import runtime_available
+
 from app.mcp.payload import coerce_tool_arguments, compact_tool_result
-from app.mcp.sandbox import reject_app_db_dsn, resolve_args
+from app.http.errors import AppError
+from app.mcp.runtime_check import resolve_stdio_command, runtime_available
+from app.mcp.sandbox import confine_tool_arguments, reject_app_db_dsn, resolve_args
 
 IDLE_SEC = 300.0
 
@@ -422,11 +424,41 @@ def _content(raw: Any) -> Any:
     return None
 
 
+_FS_PATH_TOOLS = frozenset(
+    {
+        "read_file",
+        "read_text_file",
+        "read_media_file",
+        "write_file",
+        "edit_file",
+        "create_directory",
+        "list_directory",
+        "list_directory_with_sizes",
+        "directory_tree",
+        "search_files",
+        "get_file_info",
+    }
+)
+
+
+def default_filesystem_arguments(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
+    args = dict(arguments or {})
+    if name in _FS_PATH_TOOLS and not str(args.get("path") or "").strip():
+        args["path"] = "."
+    return args
+
+
 class _Live:
     def __init__(
-        self, session: TransportSession, tools: list[McpToolInfo] | None = None
+        self,
+        session: TransportSession,
+        tools: list[McpToolInfo] | None = None,
+        root: str | None = None,
+        recipe_id: str | None = None,
     ) -> None:
         self.session = session
+        self.root = root
+        self.recipe_id = recipe_id
         self.tools = list(tools or [])
         self.last_used = time.monotonic()
         self.timer: threading.Timer | None = None
@@ -441,6 +473,7 @@ class McpSessions:
         self,
         server_ids: list[str],
         credential_overrides: dict[str, str] | None = None,
+        root_overrides: dict[str, str] | None = None,
     ) -> None:
         unique: list[str] = []
         for sid in server_ids:
@@ -449,14 +482,20 @@ class McpSessions:
         if not unique:
             return
         overrides = credential_overrides or {}
+        roots = root_overrides or {}
         try:
             for sid in unique:
-                self._open_one(sid, overrides.get(sid))
+                self._open_one(sid, overrides.get(sid), roots.get(sid))
         except Exception:
             self.close_all()
             raise
 
-    def _open_one(self, server_id: str, credential_id: str | None = None) -> None:
+    def _open_one(
+        self,
+        server_id: str,
+        credential_id: str | None = None,
+        root_override: str | None = None,
+    ) -> None:
         with self._lock:
             if server_id in self._live:
                 return
@@ -469,18 +508,33 @@ class McpSessions:
         if credential_id:
             row["credential_ids"] = [credential_id]
         recipe = get_recipe(str(row.get("recipe_id") or "")) if row.get("recipe_id") else None
-        root = row.get("root_path")
+        root = str(root_override or row.get("root_path") or "").strip() or None
         needs_root = bool(recipe.needs_root) if recipe else False
         if needs_root and not root:
             raise McpError("graph.mcp.root")
+        if root:
+            from pathlib import Path
+
+            try:
+                if not Path(root).expanduser().resolve().is_dir():
+                    raise McpError("mcp.root.invalid")
+            except (OSError, RuntimeError) as exc:
+                raise McpError("mcp.root.invalid") from exc
         runtime = recipe.runtime if recipe else "none"
         if not runtime_available(runtime):
             raise McpError("mcp.runtime.missing")
         env, headers = _spawn_env(row, recipe)
-        args = list(row.get("args") or (recipe.args if recipe else []))
+        if recipe and recipe.id == "excel":
+            env.setdefault("EXCEL_MCP_PAGING_CELLS_LIMIT", "4000")
+        if recipe:
+            args = list(recipe.args)
+            command = recipe.command
+        else:
+            args = list(row.get("args") or [])
+            command = row.get("command")
         append = recipe.append_root if recipe else False
         args = resolve_args(args, root, append_root=append)
-        command = row.get("command") or (recipe.command if recipe else None)
+        command, args = resolve_stdio_command(command, args, runtime)
         url = row.get("url") or (recipe.url if recipe else None)
         cwd = root if root else None
         session = connect_transport(
@@ -505,7 +559,7 @@ class McpSessions:
             for item in tools
         ]
         put_mcp_server(server_id, stored)
-        live = _Live(session, tools)
+        live = _Live(session, tools, root=root, recipe_id=recipe.id if recipe else None)
         with self._lock:
             self._live[server_id] = live
         self._arm_idle(server_id)
@@ -552,6 +606,15 @@ class McpSessions:
         live.last_used = time.monotonic()
         self._arm_idle(server_id)
         args = coerce_tool_arguments(arguments) if isinstance(arguments, dict) else arguments
+        if not isinstance(args, dict):
+            args = {}
+        if live.recipe_id == "filesystem":
+            args = default_filesystem_arguments(tool_name, args)
+        if live.root:
+            try:
+                args = confine_tool_arguments(args, live.root)
+            except AppError as exc:
+                return {"ok": False, "errorKey": exc.message_key}
         try:
             raw = live.session.call_tool(tool_name, args)
         except Exception as exc:

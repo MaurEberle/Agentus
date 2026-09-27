@@ -43,7 +43,7 @@ Vorlagen (**Rezepte**) für externe Tools. Rezepte sind keine mitgelieferten Pro
 
 Standard: Server **inaktiv**. Die App startet MCP-Prozesse nicht beim Öffnen, sondern wenn ein Lauf einen verbundenen **MCP-Knoten** braucht.
 
-**Einrichten:** Rezept wählen, Zugänge der passenden Art zuordnen, bei Datei-Rezepten einen Wurzelordner (nicht `C:\`). Speichern legt den Server an und aktiviert ihn. **Probe** spricht `tools/list`. „Runtime fehlt“, wenn Node/Docker/`uvx` nicht da ist.
+**Einrichten:** Rezept wählen, Zugänge der passenden Art zuordnen. Dateisystem und Excel aktivierst du ohne Ordner; den Ordner setzt du am MCP-Knoten im Editor. Git braucht den Wurzelordner hier. Speichern legt den Server an und aktiviert ihn. **Probe** spricht `tools/list`. „Runtime fehlt“, wenn Node/Docker/`uvx` nicht da ist.
 
 Was welches Rezept braucht:
 
@@ -59,7 +59,8 @@ Was welches Rezept braucht:
 | Context7 | API-Key, Art **Token** | remote HTTP |
 | Sentry | Auth-Token, Art **Token** | lokal `npx` |
 | Postgres | Verbindungszeichenfolge, Art **Postgres** (nicht die App-SQLite) | lokal `npx` |
-| Dateisystem, Git, Excel | keiner | **Wurzelordner** Pflicht; `npx` oder `uvx` |
+| Dateisystem, Excel | keiner | Wurzelordner **am MCP-Knoten** im Editor; lokal `npx` |
+| Git | keiner | **Wurzelordner** in den Einstellungen; lokal `uvx` |
 | Fetch | keiner | lokal `uvx` |
 | Playwright | keiner | lokal `npx` plus Browser |
 

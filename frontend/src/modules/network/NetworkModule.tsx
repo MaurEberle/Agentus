@@ -36,7 +36,7 @@ import { Palette } from '@/modules/network/palette/Palette';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { Ribbon } from '@/modules/network/ribbon/Ribbon';
 import { validateDocument } from '@/modules/network/validation/validate';
-import { useMcpServersQuery } from '@/modules/settings/api';
+import { useMcpRecipesQuery, useMcpServersQuery } from '@/modules/settings/api';
 import {
   editorDeleteSelection,
   editorDuplicateSelection,
@@ -111,13 +111,15 @@ function NetworkEditor() {
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
   const mcp = useMcpServersQuery();
+  const mcpRecipes = useMcpRecipesQuery();
   const issues = useMemo(
     () =>
       validateDocument(document, {
         mcpServers: mcp.data?.items,
+        mcpRecipes: mcpRecipes.data?.items,
         mcpReady: !mcp.isLoading,
       }),
-    [document, mcp.data, mcp.isLoading],
+    [document, mcp.data, mcp.isLoading, mcpRecipes.data],
   );
   const readOnly = Boolean(
     (serviceStatus === 'running' || serviceStatus === 'starting') && document.id && document.id === activeNetworkId,

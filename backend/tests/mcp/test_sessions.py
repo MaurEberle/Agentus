@@ -39,6 +39,40 @@ def test_empty_github_schema_gets_recipe_overlay() -> None:
     assert overlaid[0].input_schema.get("required") == ["query"]
 
 
+def test_empty_filesystem_schema_gets_recipe_overlay() -> None:
+    from app.mcp.recipe_loader import get_recipe
+    from app.mcp.sessions import apply_recipe_tool_schemas, tools_from_list_payload
+
+    tools = tools_from_list_payload(
+        {
+            "tools": [
+                {
+                    "name": "list_directory",
+                    "description": "list",
+                    "inputSchema": {
+                        "$schema": "http://json-schema.org/draft-07/schema#",
+                        "type": "object",
+                        "properties": {},
+                    },
+                }
+            ]
+        }
+    )
+    recipe = get_recipe("filesystem")
+    overlaid = apply_recipe_tool_schemas(tools, recipe)
+    assert overlaid[0].input_schema["properties"]["path"]["type"] == "string"
+    assert overlaid[0].input_schema.get("required") == ["path"]
+
+
+def test_default_filesystem_arguments_fills_path() -> None:
+    from app.mcp.sessions import default_filesystem_arguments
+
+    filled = default_filesystem_arguments("list_directory", {})
+    assert filled["path"] == "."
+    kept = default_filesystem_arguments("list_directory", {"path": "sub"})
+    assert kept["path"] == "sub"
+
+
 def test_annotate_github_login_mentions_user(monkeypatch) -> None:
     from app.mcp.models import McpToolInfo
     from app.mcp.sessions import annotate_github_login
@@ -111,6 +145,50 @@ def test_github_style_schema_without_type_is_repaired() -> None:
     assert tools[0].name == "create_or_update_file"
     assert tools[0].input_schema["type"] == "object"
     assert "path" in tools[0].input_schema["properties"]
+
+
+def test_recipe_command_not_stale_row(api_env, monkeypatch, tmp_path) -> None:
+    init()
+    captured: dict = {}
+
+    def _connect(**kwargs: object):
+        captured.update(kwargs)
+        return FakeSession()
+
+    monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
+    monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
+    folder = tmp_path / "xlsx"
+    folder.mkdir()
+    item = create_server(McpServerCreate(recipe_id="excel", enabled=True))
+    from app.db.settings import get_mcp_server, put_mcp_server
+
+    row = dict(get_mcp_server(item.id))
+    row["command"] = "uvx"
+    row["args"] = ["excel-mcp-server", "stdio"]
+    put_mcp_server(item.id, row)
+    SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
+    assert captured.get("command")
+    assert "uvx" not in str(captured.get("command"))
+    assert "@negokaz/excel-mcp-server" in captured.get("args", [])
+    SESSIONS.close_all()
+
+
+def test_open_for_uses_root_override(api_env, monkeypatch, tmp_path) -> None:
+    init()
+    captured: dict = {}
+
+    def _connect(**kwargs: object):
+        captured.update(kwargs)
+        return FakeSession()
+
+    monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
+    monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
+    folder = tmp_path / "kb"
+    folder.mkdir()
+    item = create_server(McpServerCreate(recipe_id="filesystem", enabled=True))
+    SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
+    assert any(str(folder) in str(arg) for arg in captured.get("args", []))
+    SESSIONS.close_all()
 
 
 def test_call_without_open(api_env) -> None:

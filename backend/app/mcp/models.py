@@ -22,6 +22,7 @@ class McpRecipe(ApiModel):
     transport: McpTransport
     credential_kinds: list[str] = Field(default_factory=list, alias="credentialKinds")
     needs_root: bool = Field(alias="needsRoot")
+    root_on_node: bool = Field(default=False, alias="rootOnNode")
     runtime: str = "none"
     notes: str | None = None
 

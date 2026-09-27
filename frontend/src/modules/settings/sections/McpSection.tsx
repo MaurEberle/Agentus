@@ -163,7 +163,11 @@ export function McpSection() {
   async function savePreset() {
     if (!preset) return;
     const kinds = preset.recipe.credentialKinds ?? [];
-    if (preset.recipe.needsRoot && isForbiddenDataRoot(preset.rootPath)) {
+    if (
+      preset.recipe.needsRoot &&
+      !preset.recipe.rootOnNode &&
+      isForbiddenDataRoot(preset.rootPath)
+    ) {
       notify({ titleKey: 'mcp.root.invalid', variant: 'error' });
       return;
     }
@@ -189,7 +193,7 @@ export function McpSection() {
         name: preset.name.trim() || recipeTitle(t, preset.recipe),
         transport: preset.recipe.transport,
         credentialIds: creds.filter(Boolean),
-        rootPath: preset.recipe.needsRoot ? preset.rootPath : undefined,
+        rootPath: preset.recipe.needsRoot && !preset.recipe.rootOnNode ? preset.rootPath : undefined,
         enabled: true,
       });
       notify({ titleKey: 'settings.notify.mcpSaved', variant: 'success' });
@@ -296,7 +300,11 @@ export function McpSection() {
                       </Badge>
                     ))
                   )}
-                  {recipe.needsRoot ? <Badge variant="outline">{t('settings.mcp.needsRoot')}</Badge> : null}
+                  {recipe.rootOnNode ? (
+                    <Badge variant="outline">{t('settings.mcp.needsRootNode')}</Badge>
+                  ) : recipe.needsRoot ? (
+                    <Badge variant="outline">{t('settings.mcp.needsRoot')}</Badge>
+                  ) : null}
                 </div>
               </div>
             );
@@ -472,7 +480,7 @@ export function McpSection() {
               </div>
             );
           })}
-          {preset?.recipe.needsRoot ? (
+          {preset?.recipe.needsRoot && !preset.recipe.rootOnNode ? (
             <div className="grid gap-1.5">
               <Label htmlFor="mcp-root">{t('settings.mcp.rootPath')}</Label>
               <div className="flex gap-2">

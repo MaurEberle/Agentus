@@ -48,8 +48,9 @@ def test_enable_filesystem_without_root(client: TestClient) -> None:
     response = client.post(
         f"/api/mcp/servers/{server_id}/enabled", json={"enabled": True}
     )
-    assert response.status_code == 400
-    assert response.json()["messageKey"] == "mcp.root.required"
+    assert response.status_code == 200
+    assert response.json()["enabled"] is True
+    assert "read_file" in (response.json().get("toolNames") or [])
 
 
 def test_ping_ok_with_fake(client: TestClient, monkeypatch) -> None:

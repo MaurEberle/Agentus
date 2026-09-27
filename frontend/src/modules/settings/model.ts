@@ -119,6 +119,7 @@ export type McpRecipe = {
   transport: McpTransport;
   credentialKinds: CredentialKind[];
   needsRoot?: boolean;
+  rootOnNode?: boolean;
   runtime?: string;
   notes?: string;
 };

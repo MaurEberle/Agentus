@@ -11,6 +11,7 @@ class McpSessions(Protocol):
         self,
         server_ids: list[str],
         credential_overrides: dict[str, str] | None = None,
+        root_overrides: dict[str, str] | None = None,
     ) -> None: ...
 
     def close_all(self) -> None: ...

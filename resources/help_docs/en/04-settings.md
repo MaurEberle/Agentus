@@ -43,7 +43,7 @@ Help answers in the UI language. If the model cannot use that language, it answe
 
 Default: servers **off**. The app does not start MCP processes when you open Settings — only when a run needs a connected **MCP node**.
 
-**Set up:** pick a recipe, assign credentials of the matching kind, and for file recipes a root folder (not `C:\`). Saving creates and enables the server. **Probe** calls `tools/list`. “Runtime missing” if Node/Docker/`uvx` is absent.
+**Set up:** pick a recipe and assign credentials of the matching kind. Filesystem and Excel enable without a folder; you set the folder on the MCP node in the editor. Git still needs the root folder here. Saving creates and enables the server. **Probe** calls `tools/list`. “Runtime missing” if Node/Docker/`uvx` is absent.
 
 What each recipe needs:
 
@@ -59,7 +59,8 @@ What each recipe needs:
 | Context7 | API key, kind **Token** | remote HTTP |
 | Sentry | auth token, kind **Token** | local `npx` |
 | Postgres | connection string, kind **Postgres** (not the app SQLite) | local `npx` |
-| Filesystem, Git, Excel | none | **root folder** required; `npx` or `uvx` |
+| Filesystem, Excel | none | root folder **on the MCP node** in the editor; local `npx` |
+| Git | none | **root folder** in Settings; local `uvx` |
 | Fetch | none | local `uvx` |
 | Playwright | none | local `npx`; Playwright also needs a browser |
 

@@ -313,7 +313,7 @@
       "enabled": "Etkin",
       "status": "Durum",
       "probe": "Sonda",
-      "presetHint": "Tarife göre kimlik bilgileri ve isteğe bağlı kök yolu. Kaydetmek sunucuyu hemen oluşturur.",
+      "presetHint": "Tarife göre kimlik bilgileri. Dosya sistemi ve Excel klasörü düzenleyicideki MCP düğümünde. Kaydetmek sunucuyu hemen oluşturur.",
       "rootPath": "Kök yolu",
       "untrusted": "Bilinmeyen bir süreç verilen yetkilerle başlatılır. Yalnızca güvenilir komutlar kullanın.",
       "command": "Komut",
@@ -351,6 +351,7 @@
       "pickRoot": "Klasör",
       "needsNone": "Kimlik gerekmez",
       "needsRoot": "Kök klasör",
+      "needsRootNode": "Kök klasör düğümde",
       "runtimeNeed": "Yerel çalışma zamanı: {{runtime}} (PATH’te).",
       "credentialHelp": "Önce uygun türde bir kimlik oluşturun.",
       "noCredentialOfKind": "Bu türde kimlik yok — önce Kimlik bilgilerinde ekleyin.",
@@ -358,7 +359,7 @@
         "github": "Kimlik bilgilerinde GitHub PAT (tür GitHub). Yerel npx. Kök klasör yok.",
         "azure": "Azure/Entra jetonu veya PAT (tür Azure). Yerel npx.",
         "gitlab": "GitLab kişisel erişim jetonu (tür GitLab). Yerel npx.",
-        "filesystem": "Kimlik gerekmez. Kök klasör seçin — C:\\\\ değil. Yerel npx.",
+        "filesystem": "Kimlik gerekmez. Kök klasör düzenleyicideki MCP düğümünde, Ayarlar’da değil. Yerel npx.",
         "git": "Kimlik yok. Çalışma klasörü kök. Yerel uvx.",
         "playwright": "Kimlik gerekmez. Node/npx ve tarayıcı çalışma zamanı.",
         "postgres": "Bağlantı dizesi (tür Postgres), uygulamanın SQLite dosyaları değil. Yerel npx.",
@@ -369,7 +370,7 @@
         "linear": "Linear API anahtarı (tür Linear). Uzak HTTP.",
         "fetch": "Kimlik yok. Genel URL metin olarak. Yerel uvx.",
         "sentry": "Sentry kimlik jetonu (tür Token). Yerel npx.",
-        "excel": "Kimlik gerekmez. .xlsx için kök klasör. Yerel uvx."
+        "excel": "Kimlik gerekmez. .xlsx klasörü düzenleyicideki MCP düğümünde. Yerel npx."
       },
       "reset": "Devre dışı bırak",
       "secretNew": "Yeni sır (isteğe bağlı)",
@@ -750,7 +751,8 @@
         "settings": "MCP ayarları",
         "credential": "Kimlik",
         "credentialDefault": "Varsayılan ({{name}})",
-        "credentialHint": "Varsayılan, MCP ayarlarındaki kimliktir. Aynı türden birkaç tane varsa burada seç."
+        "credentialHint": "Varsayılan, MCP ayarlarındaki kimliktir. Aynı türden birkaç tane varsa burada seç.",
+        "rootHint": "Bu sunucunun okuyup yazabileceği klasör. Sürücü kökü değil."
       }
     },
     "load": {
@@ -808,7 +810,7 @@
       "credentialRequired": "Bulut sağlayıcısı bir kimlik bilgisi ister.",
       "toolKind": "Araç türü eksik.",
       "mcpServer": "Etkin bir MCP sunucusu seçin. Ayarlar’da oluşturup açın.",
-      "mcpRoot": "Bu MCP sunucusunun Ayarlar’da bir kök yoluna ihtiyacı var.",
+      "mcpRoot": "Bu MCP sunucusunun bir kök klasöre ihtiyacı var.",
       "fileAccessRoot": "Dosya erişimi, sürücü kökü olmayan bir klasör ister.",
       "knowledgePath": "Kaynak klasör zorunludur.",
       "knowledgeRoot": "Sürücü veya sistem kökü izinli değil.",

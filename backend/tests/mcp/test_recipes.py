@@ -35,7 +35,9 @@ def test_load_recipes_has_known_ids() -> None:
 def test_filesystem_needs_root_placeholder() -> None:
     recipe = next(r for r in load_recipes() if r.id == "filesystem")
     assert recipe.needs_root is True
+    assert recipe.root_on_node is True
     assert any("{{rootPath}}" in arg for arg in recipe.args)
+    assert recipe.tool_schemas["list_directory"]["required"] == ["path"]
 
 
 def test_github_needs_pat_and_no_root() -> None:
@@ -65,8 +67,10 @@ def test_git_uses_uvx_repository() -> None:
 
 def test_excel_stdio_transport() -> None:
     recipe = next(r for r in load_recipes() if r.id == "excel")
-    assert recipe.runtime == "uvx"
-    assert recipe.args == ["excel-mcp-server", "stdio"]
+    assert recipe.runtime == "npx"
+    assert recipe.args == ["-y", "@negokaz/excel-mcp-server"]
+    assert recipe.root_on_node is True
+    assert recipe.append_root is False
 
 
 def test_azure_starts_server() -> None:

@@ -313,7 +313,7 @@
       "enabled": "已启用",
       "status": "状态",
       "probe": "探测",
-      "presetHint": "按配方填写凭据和可选根路径。保存会立即创建服务器。",
+      "presetHint": "按配方填写凭据。文件系统和 Excel 的文件夹在编辑器的 MCP 节点上。保存会立即创建服务器。",
       "rootPath": "根路径",
       "untrusted": "将以给定权限启动未知进程。请仅使用可信命令。",
       "command": "命令",
@@ -351,6 +351,7 @@
       "pickRoot": "文件夹",
       "needsNone": "无需凭据",
       "needsRoot": "根文件夹",
+      "needsRootNode": "根文件夹在节点上",
       "runtimeNeed": "需要本地运行时：{{runtime}}（在 PATH 中）。",
       "credentialHelp": "请先创建匹配类型的凭据。",
       "noCredentialOfKind": "没有此类型的凭据 — 先在凭据中添加。",
@@ -358,7 +359,7 @@
         "github": "在凭据中使用 GitHub PAT（类型 GitHub）。本地 npx。无需根目录。",
         "azure": "Azure/Entra 令牌或 PAT（类型 Azure）。本地 npx。",
         "gitlab": "GitLab 个人访问令牌（类型 GitLab）。本地 npx。",
-        "filesystem": "无需凭据。选择根文件夹，不要用 C:\\\\。本地 npx。",
+        "filesystem": "无需凭据。根文件夹在编辑器的 MCP 节点上，不在设置里。本地 npx。",
         "git": "无需凭据。工作目录作为根。本地 uvx。",
         "playwright": "无需凭据。需要 Node/npx 和浏览器运行时。",
         "postgres": "连接字符串（类型 Postgres），不要指向应用的 SQLite。本地 npx。",
@@ -369,7 +370,7 @@
         "linear": "Linear API 密钥（类型 Linear）。远程 HTTP。",
         "fetch": "无需凭据。公开 URL 作为文本。本地 uvx。",
         "sentry": "Sentry 授权令牌（类型 Token）。本地 npx。",
-        "excel": "无需凭据。.xlsx 根目录。本地 uvx。"
+        "excel": "无需凭据。.xlsx 文件夹在编辑器的 MCP 节点上。本地 npx。"
       },
       "reset": "停用",
       "secretNew": "新密钥（可选）",
@@ -750,7 +751,8 @@
         "settings": "MCP 设置",
         "credential": "凭据",
         "credentialDefault": "默认（{{name}}）",
-        "credentialHint": "默认使用 MCP 设置中的凭据。同一类型有多份时在此选择。"
+        "credentialHint": "默认使用 MCP 设置中的凭据。同一类型有多份时在此选择。",
+        "rootHint": "此服务器可读写的文件夹。不能是驱动器根。"
       }
     },
     "load": {
@@ -808,7 +810,7 @@
       "credentialRequired": "云提供方需要凭据。",
       "toolKind": "缺少工具类型。",
       "mcpServer": "请选择已启用的 MCP 服务器。在设置中创建并启用。",
-      "mcpRoot": "此 MCP 服务器需要在设置中指定根路径。",
+      "mcpRoot": "此 MCP 服务器需要一个根文件夹。",
       "fileAccessRoot": "文件访问需要不是驱动器根目录的文件夹。",
       "knowledgePath": "源文件夹为必填。",
       "knowledgeRoot": "不允许使用驱动器或系统根目录。",

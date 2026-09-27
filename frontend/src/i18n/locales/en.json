@@ -318,11 +318,12 @@
       "enabled": "Enabled",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Credentials and optional root path from the recipe. Saving creates and enables the server.",
+      "presetHint": "Credentials from the recipe. Filesystem and Excel take their folder on the MCP node in the editor. Saving creates and enables the server.",
       "rootPath": "Root path",
       "pickRoot": "Folder",
       "needsNone": "No credential needed",
       "needsRoot": "Root folder",
+      "needsRootNode": "Root folder on the node",
       "runtimeNeed": "Local runtime required: {{runtime}} (on PATH).",
       "credentialHelp": "Create a credential of the matching kind first.",
       "noCredentialOfKind": "No credential of this kind — add one under Credentials first.",
@@ -339,7 +340,7 @@
         "github": "GitHub PAT under Credentials (kind GitHub). Local npx. No root folder.",
         "azure": "Azure/Entra token or PAT (kind Azure). Local npx.",
         "gitlab": "GitLab personal access token (kind GitLab). Local npx.",
-        "filesystem": "No credential. Choose a root folder — not C:\\. Local npx.",
+        "filesystem": "No credential. Set the root folder on the MCP node in the editor, not in Settings. Local npx.",
         "git": "No credential. Working directory as root. Local uvx.",
         "playwright": "No credential. Node/npx plus a browser runtime.",
         "postgres": "Connection string (kind Postgres), not the app SQLite files. Local npx.",
@@ -350,7 +351,7 @@
         "linear": "Linear API key (kind Linear). Remote HTTP.",
         "fetch": "No credential. Public URLs as text. Local uvx.",
         "sentry": "Sentry auth token (kind Token). Local npx.",
-        "excel": "No credential. Root folder for .xlsx. Local uvx."
+        "excel": "No credential. Folder for .xlsx on the MCP node in the editor. Local npx."
       },
       "statusName": {
         "unknown": "Unknown",
@@ -779,7 +780,8 @@
         "settings": "MCP settings",
         "credential": "Credential",
         "credentialDefault": "Default ({{name}})",
-        "credentialHint": "Default uses the credential from MCP settings. Pick another when several of the same kind exist."
+        "credentialHint": "Default uses the credential from MCP settings. Pick another when several of the same kind exist.",
+        "rootHint": "Folder this server may read and write. Not a drive root."
       },
       "knowledge": {
         "path": "Source folder",
@@ -862,7 +864,7 @@
       "credentialRequired": "Cloud provider needs a credential.",
       "toolKind": "Tool kind is missing.",
       "mcpServer": "Choose an enabled MCP server. Create and enable it in Settings.",
-      "mcpRoot": "This MCP server needs a root path in Settings.",
+      "mcpRoot": "This MCP server needs a root folder.",
       "mcpDisabled": "This MCP server is disabled in Settings.",
       "fileAccessRoot": "File access needs a folder that is not a drive root.",
       "knowledgePath": "Source folder is required.",

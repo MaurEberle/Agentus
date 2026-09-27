@@ -81,6 +81,7 @@ export type McpNodeData = {
   mcpServerId?: string;
   mcpToolNames?: string[];
   credentialId?: string;
+  rootPath?: string;
 };
 
 export type KnowledgeNodeData = {

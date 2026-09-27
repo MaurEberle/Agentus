@@ -313,7 +313,7 @@
       "enabled": "Ativo",
       "status": "Estado",
       "probe": "Sonda",
-      "presetHint": "Credenciais e caminho raiz opcional da receita. Guardar cria o servidor de imediato.",
+      "presetHint": "Credenciais da receita. Sistema de ficheiros e Excel recebem a pasta no nó MCP do editor. Guardar cria o servidor de imediato.",
       "rootPath": "Caminho raiz",
       "untrusted": "Um processo desconhecido será iniciado com os privilégios indicados. Use apenas comandos de confiança.",
       "command": "Comando",
@@ -351,6 +351,7 @@
       "pickRoot": "Pasta",
       "needsNone": "Não precisa de credencial",
       "needsRoot": "Pasta raiz",
+      "needsRootNode": "Pasta raiz no nó",
       "runtimeNeed": "Runtime local: {{runtime}} (no PATH).",
       "credentialHelp": "Crie primeiro uma credencial do tipo certo.",
       "noCredentialOfKind": "Não há credencial deste tipo — crie-a em Credenciais.",
@@ -358,7 +359,7 @@
         "github": "PAT do GitHub em Credenciais (tipo GitHub). npx local. Sem pasta raiz.",
         "azure": "Token Azure/Entra ou PAT (tipo Azure). npx local.",
         "gitlab": "Token de acesso pessoal do GitLab (tipo GitLab). npx local.",
-        "filesystem": "Sem credencial. Escolha uma pasta raiz — não C:\\\\. npx local.",
+        "filesystem": "Sem credencial. A pasta raiz fica no nó MCP do editor, não nas Definições. npx local.",
         "git": "Sem credencial. Pasta de trabalho como raiz. uvx local.",
         "playwright": "Sem credencial. Node/npx e um runtime de browser.",
         "postgres": "Cadeia de ligação (tipo Postgres), não os SQLite da app. npx local.",
@@ -369,7 +370,7 @@
         "linear": "Chave API Linear (tipo Linear). HTTP remoto.",
         "fetch": "Sem credencial. URLs publicas como texto. uvx local.",
         "sentry": "Token Sentry (tipo Token). npx local.",
-        "excel": "Sem credencial. Pasta raiz para .xlsx. uvx local."
+        "excel": "Sem credencial. Pasta para .xlsx no nó MCP do editor. npx local."
       },
       "reset": "Desativar",
       "secretNew": "Novo segredo (opcional)",
@@ -750,7 +751,8 @@
         "settings": "Definições MCP",
         "credential": "Credencial",
         "credentialDefault": "Predefinição ({{name}})",
-        "credentialHint": "A predefinição é a credencial das definições MCP. Escolhe outra se houver várias do mesmo tipo."
+        "credentialHint": "A predefinição é a credencial das definições MCP. Escolhe outra se houver várias do mesmo tipo.",
+        "rootHint": "Pasta em que este servidor pode ler e escrever. Não a raiz da unidade."
       }
     },
     "load": {
@@ -808,7 +810,7 @@
       "credentialRequired": "Um fornecedor na nuvem precisa de uma credencial.",
       "toolKind": "Falta o tipo de ferramenta.",
       "mcpServer": "Escolha um servidor MCP ativo. Crie-o e ative-o nas Definições.",
-      "mcpRoot": "Este servidor MCP precisa de um caminho raiz nas Definições.",
+      "mcpRoot": "Este servidor MCP precisa de uma pasta raiz.",
       "fileAccessRoot": "O acesso a ficheiros precisa de uma pasta que não seja a raiz da unidade.",
       "knowledgePath": "A pasta de origem é obrigatória.",
       "knowledgeRoot": "A raiz de uma unidade ou do sistema não é permitida.",

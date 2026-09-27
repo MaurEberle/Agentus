@@ -915,7 +915,7 @@ def test_mcp_answer_after_success_is_published(monkeypatch, api_env) -> None:
     )
 
     class FakeMcp:
-        def open_for(self, ids, credential_overrides=None):
+        def open_for(self, ids, credential_overrides=None, root_overrides=None):
             return None
 
         def close_all(self):

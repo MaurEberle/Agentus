@@ -57,7 +57,7 @@ Düğüm seçili:
 - **LLM:** sağlayıcı, model (çalışma zamanı listesi), bulut kimlik bilgisi, ping, gelişmiş sıcaklık / en fazla belirteç. Kimlik bilgisi olmadan bulut geçersizdir.
 - **Ajan:** sistem istemi ve görünen ad. Ajan bir kanaldaysa denetçi görevlerin orkestratörden geldiğini açıklar.
 - **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. Dosya erişimi: kök klasör, sürücü kökü değil; ajan yalnız onun altında çalışır, yazma ve silme anahtardır.
-- **MCP:** **Ayarlar → MCP sunucuları**ndaki etkin sunucu. Varsayılan tüm araçlar; yoklamadan sonra alt küme seçebilirsiniz. Kimlik ve kök yolu Ayarlar’dadır, denetçide değil.
+- **MCP:** **Ayarlar → MCP sunucuları**ndaki etkin sunucu. Varsayılan tüm araçlar; yoklamadan sonra alt küme seçebilirsiniz. Kimlik Ayarlar’dadır. Dosya sistemi ve Excel kök klasörü düğümdedir; Git klasörü Ayarlar’da kalır.
 - **Bilgi:** kaynak klasör (klasör seçimi), gömme sağlayıcısı (Ollama, OpenAI veya Gemini) ve gömme modeli, topK, puan eşiği, **Dizini yenile**. Klasör sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Dizine alınanlar: Markdown, metin, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV ve kaynak kodu. Görseller ve eski .doc/.xls atlanır. Bulut gömmeleri kimlik bilgisi ister. Dizin bu ağa aittir, yardıma değil.
 - **Sohbet:** yer tutucu, başlangıç metni, «Giriş gerekli» anahtarı.
 - **Orkestratör:** sistem istemi. Model bir soru, bir ajanın kanalından tek görev, bir yanıt veya bitiş seçer. Ajanlar kanallardır, ikinci bir liste değil. Bağlı araçları kendisi çağırır. Yalnız soru kullanıcıyı bekler.

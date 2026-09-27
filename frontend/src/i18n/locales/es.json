@@ -313,7 +313,7 @@
       "enabled": "Activo",
       "status": "Estado",
       "probe": "Probar",
-      "presetHint": "Credenciales y ruta raíz opcional según la receta. Guardar crea el servidor al momento.",
+      "presetHint": "Credenciales según la receta. Sistema de archivos y Excel toman la carpeta en el nodo MCP del editor. Guardar crea el servidor al momento.",
       "rootPath": "Ruta raíz",
       "untrusted": "Se iniciará un proceso desconocido con los privilegios indicados. Usa solo comandos de confianza.",
       "command": "Comando",
@@ -351,6 +351,7 @@
       "pickRoot": "Carpeta",
       "needsNone": "No hace falta credencial",
       "needsRoot": "Carpeta raíz",
+      "needsRootNode": "Carpeta raíz en el nodo",
       "runtimeNeed": "Runtime local: {{runtime}} (en el PATH).",
       "credentialHelp": "Crea primero una credencial del tipo adecuado.",
       "noCredentialOfKind": "No hay credencial de este tipo: créala primero en Credenciales.",
@@ -358,7 +359,7 @@
         "github": "PAT de GitHub en Credenciales (tipo GitHub). npx local. Sin carpeta raíz.",
         "azure": "Token Azure/Entra o PAT (tipo Azure). npx local.",
         "gitlab": "Token personal de GitLab (tipo GitLab). npx local.",
-        "filesystem": "Sin credencial. Elige una carpeta raíz, no C:\\\\. npx local.",
+        "filesystem": "Sin credencial. La carpeta raíz va en el nodo MCP del editor, no en Ajustes. npx local.",
         "git": "Sin credencial. Directorio de trabajo como raíz. uvx local.",
         "playwright": "Sin credencial. Node/npx y un runtime de navegador.",
         "postgres": "Cadena de conexión (tipo Postgres), no las SQLite de la app. npx local.",
@@ -369,7 +370,7 @@
         "linear": "Clave API de Linear (tipo Linear). HTTP remoto.",
         "fetch": "Sin credencial. URLs publicas como texto. uvx local.",
         "sentry": "Token de Sentry (tipo Token). npx local.",
-        "excel": "Sin credencial. Carpeta raíz para .xlsx. uvx local."
+        "excel": "Sin credencial. Carpeta para .xlsx en el nodo MCP del editor. npx local."
       },
       "reset": "Desactivar",
       "secretNew": "Nuevo secreto (opcional)",
@@ -750,7 +751,8 @@
         "settings": "Ir a ajustes MCP",
         "credential": "Acceso",
         "credentialDefault": "Predeterminado ({{name}})",
-        "credentialHint": "El predeterminado es el acceso de Ajustes MCP. Elige otro si hay varios del mismo tipo."
+        "credentialHint": "El predeterminado es el acceso de Ajustes MCP. Elige otro si hay varios del mismo tipo.",
+        "rootHint": "Carpeta en la que este servidor puede leer y escribir. No la raíz de la unidad."
       }
     },
     "load": {
@@ -808,7 +810,7 @@
       "credentialRequired": "El proveedor en la nube necesita una credencial.",
       "toolKind": "Falta el tipo de herramienta.",
       "mcpServer": "Elige un servidor MCP activo. Créalo y actívalo en Ajustes.",
-      "mcpRoot": "Este servidor MCP necesita una ruta raíz en Ajustes.",
+      "mcpRoot": "Este servidor MCP necesita una carpeta raíz.",
       "fileAccessRoot": "El acceso a archivos necesita una carpeta que no sea la raíz de una unidad.",
       "knowledgePath": "La carpeta de origen es obligatoria.",
       "knowledgeRoot": "No se permite la raíz de una unidad o del sistema.",

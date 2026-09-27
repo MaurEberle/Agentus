@@ -541,6 +541,7 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const serverId = String(node.data.mcpServerId ?? '');
   const selected = enabledServers.find((item) => item.id === serverId);
   const recipe = recipes.data?.items.find((item) => item.id === selected?.recipeId);
+  const [pickingRoot, setPickingRoot] = useState(false);
   const selectedNames = Array.isArray(node.data.mcpToolNames)
     ? (node.data.mcpToolNames as string[])
     : undefined;
@@ -549,11 +550,15 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   function selectServer(value: string) {
     const nextId = value === 'none' ? undefined : value;
     const next = enabledServers.find((item) => item.id === nextId);
+    const nextRecipe = recipes.data?.items.find((item) => item.id === next?.recipeId);
     const patch: Record<string, unknown> = {
       mcpServerId: nextId,
       mcpToolNames: undefined,
       credentialId: undefined,
     };
+    if (!nextRecipe?.rootOnNode) {
+      patch.rootPath = undefined;
+    }
     const currentName = String(node.data.displayName ?? '').trim();
     if (!currentName && next) {
       patch.displayName = next.recipeId
@@ -569,6 +574,25 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     editorUpdateNodeData(node.id, {
       mcpToolNames: next.length === 0 || next.length === toolNames.length ? undefined : next,
     });
+  }
+
+  function applyMcpRoot(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed) return;
+    editorUpdateNodeData(node.id, { rootPath: trimmed });
+    if (isForbiddenDataRoot(trimmed)) {
+      notify({ titleKey: 'network.validation.mcpRoot', variant: 'error' });
+    }
+  }
+
+  async function pickMcpRoot() {
+    setPickingRoot(true);
+    try {
+      const path = await pickFolderPath();
+      if (path) applyMcpRoot(path);
+    } finally {
+      setPickingRoot(false);
+    }
   }
 
   return (
@@ -595,6 +619,32 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         <p className="text-xs text-muted-foreground">
           {t(`settings.mcp.hint.${recipe.id}`, { defaultValue: t('network.inspector.mcp.hint') })}
         </p>
+      ) : null}
+      {recipe?.rootOnNode ? (
+        <Field label={t('network.inspector.tool.rootPath')}>
+          <div className="flex gap-2">
+            <Input
+              value={String(node.data.rootPath ?? '')}
+              disabled={readOnly}
+              spellCheck={false}
+              autoComplete="off"
+              title={String(node.data.rootPath ?? '')}
+              className="min-w-0 font-mono text-xs"
+              onChange={(event) => editorUpdateNodeData(node.id, { rootPath: event.target.value })}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={readOnly || pickingRoot}
+              loading={pickingRoot}
+              onClick={() => void pickMcpRoot()}
+            >
+              {t('network.inspector.tool.pickRoot')}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">{t('network.inspector.mcp.rootHint')}</p>
+        </Field>
       ) : null}
       {selected && (recipe?.credentialKinds?.length ?? 0) > 0
         ? (() => {

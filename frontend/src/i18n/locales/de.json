@@ -318,11 +318,12 @@
       "enabled": "Aktiv",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Zugänge und optionaler Wurzelpfad laut Rezept. Speichern legt den Server an und aktiviert ihn.",
+      "presetHint": "Zugänge laut Rezept. Dateisystem und Excel bekommen den Ordner am MCP-Knoten im Editor. Speichern legt den Server an und aktiviert ihn.",
       "rootPath": "Wurzelpfad",
       "pickRoot": "Ordner",
       "needsNone": "Kein Zugang nötig",
       "needsRoot": "Wurzelordner",
+      "needsRootNode": "Wurzelordner im Editor",
       "runtimeNeed": "Lokal nötig: {{runtime}} (im PATH).",
       "credentialHelp": "Lege zuerst einen Zugang der passenden Art an.",
       "noCredentialOfKind": "Kein Zugang dieser Art — zuerst unter Zugänge anlegen.",
@@ -339,7 +340,7 @@
         "github": "GitHub PAT unter Zugänge (Art GitHub). Lokal npx. Kein Wurzelordner.",
         "azure": "Azure-/Entra-Token oder PAT (Art Azure). Lokal npx.",
         "gitlab": "GitLab Personal Access Token (Art GitLab). Lokal npx.",
-        "filesystem": "Kein Zugang. Wurzelordner wählen — nicht C:\\. Lokal npx.",
+        "filesystem": "Kein Zugang. Wurzelordner am MCP-Knoten im Editor, nicht in den Einstellungen. Lokal npx.",
         "git": "Kein Zugang. Arbeitsverzeichnis als Wurzel. Lokal uvx.",
         "playwright": "Kein Zugang. Node/npx plus Browser-Runtime.",
         "postgres": "Verbindungszeichenfolge (Art Postgres), nicht die App-SQLite. Lokal npx.",
@@ -350,7 +351,7 @@
         "linear": "Linear API-Key (Art Linear). Remote-HTTP.",
         "fetch": "Kein Zugang. Öffentliche URLs als Text. Lokal uvx.",
         "sentry": "Sentry Auth-Token (Art Token). Lokal npx.",
-        "excel": "Kein Zugang. Wurzelordner für .xlsx. Lokal uvx."
+        "excel": "Kein Zugang. Ordner für .xlsx am MCP-Knoten im Editor. Lokal npx."
       },
       "statusName": {
         "unknown": "Unbekannt",
@@ -779,7 +780,8 @@
         "settings": "Zu MCP-Einstellungen",
         "credential": "Zugang",
         "credentialDefault": "Standard ({{name}})",
-        "credentialHint": "Standard ist der Zugang aus den MCP-Einstellungen. Bei mehreren Zugängen derselben Art hier wählen."
+        "credentialHint": "Standard ist der Zugang aus den MCP-Einstellungen. Bei mehreren Zugängen derselben Art hier wählen.",
+        "rootHint": "Ordner, in dem dieser Server Dateien lesen und schreiben darf. Nicht die Laufwerkswurzel."
       },
       "knowledge": {
         "path": "Quellenordner",
@@ -862,7 +864,7 @@
       "credentialRequired": "Cloud-Provider braucht einen Zugang.",
       "toolKind": "Werkzeug-Art fehlt.",
       "mcpServer": "Aktiven MCP-Server wählen. Server unter Einstellungen anlegen und aktivieren.",
-      "mcpRoot": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "mcpRoot": "Dieser MCP-Server braucht einen Wurzelordner.",
       "mcpDisabled": "Dieser MCP-Server ist in den Einstellungen deaktiviert.",
       "fileAccessRoot": "Dateizugriff braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "knowledgePath": "Quellenordner ist Pflicht.",

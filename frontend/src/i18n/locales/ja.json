@@ -313,7 +313,7 @@
       "enabled": "有効",
       "status": "状態",
       "probe": "プローブ",
-      "presetHint": "レシピに従う資格情報と任意のルートパス。保存するとサーバーがすぐに作成されます。",
+      "presetHint": "レシピに従う資格情報。ファイルシステムと Excel のフォルダーはエディターの MCP ノードで指定します。保存するとサーバーがすぐに作成されます。",
       "rootPath": "ルートパス",
       "untrusted": "指定した権限で未知のプロセスが起動します。信頼できるコマンドだけを使ってください。",
       "command": "コマンド",
@@ -351,6 +351,7 @@
       "pickRoot": "フォルダー",
       "needsNone": "認証情報は不要",
       "needsRoot": "ルートフォルダー",
+      "needsRootNode": "ノード上のルートフォルダー",
       "runtimeNeed": "ローカル実行環境が必要: {{runtime}}（PATH 上）。",
       "credentialHelp": "先に合う種類の認証情報を作成してください。",
       "noCredentialOfKind": "この種類の認証情報がありません。先に認証情報で追加します。",
@@ -358,7 +359,7 @@
         "github": "認証情報で GitHub PAT（種類 GitHub）。ローカル npx。ルートフォルダー不要。",
         "azure": "Azure/Entra トークンまたは PAT（種類 Azure）。ローカル npx。",
         "gitlab": "GitLab 個人アクセストークン（種類 GitLab）。ローカル npx。",
-        "filesystem": "認証情報は不要。ルートフォルダーを選ぶ（C:\\\\ は不可）。ローカル npx。",
+        "filesystem": "認証情報は不要。ルートフォルダーはエディターの MCP ノードで、設定ではありません。ローカル npx。",
         "git": "資格情報なし。作業ディレクトリをルートに。ローカル uvx。",
         "playwright": "認証情報は不要。Node/npx とブラウザランタイム。",
         "postgres": "接続文字列（種類 Postgres）。アプリの SQLite は不可。ローカル npx。",
@@ -369,7 +370,7 @@
         "linear": "Linear API キー（種類 Linear）。リモート HTTP。",
         "fetch": "資格情報なし。公開 URL をテキストで。ローカル uvx。",
         "sentry": "Sentry 認証トークン（種類 Token）。ローカル npx。",
-        "excel": "認証情報は不要。.xlsx のルート。ローカル uvx。"
+        "excel": "認証情報は不要。.xlsx のフォルダーはエディターの MCP ノード。ローカル npx。"
       },
       "reset": "無効化",
       "secretNew": "新しいシークレット（任意）",
@@ -750,7 +751,8 @@
         "settings": "MCP 設定",
         "credential": "認証情報",
         "credentialDefault": "既定（{{name}}）",
-        "credentialHint": "既定は MCP 設定の認証情報です。同じ種類が複数あるときはここで選びます。"
+        "credentialHint": "既定は MCP 設定の認証情報です。同じ種類が複数あるときはここで選びます。",
+        "rootHint": "このサーバーが読み書きできるフォルダー。ドライブルートは不可。"
       }
     },
     "load": {
@@ -808,7 +810,7 @@
       "credentialRequired": "クラウドプロバイダーには資格情報が必要です。",
       "toolKind": "ツールの種類がありません。",
       "mcpServer": "有効な MCP サーバーを選んでください。設定で作成して有効化します。",
-      "mcpRoot": "このMCPサーバーには設定でルートパスが必要です。",
+      "mcpRoot": "このMCPサーバーにはルートフォルダーが必要です。",
       "fileAccessRoot": "ファイルアクセスにはドライブルートではないフォルダーが必要です。",
       "knowledgePath": "ソースフォルダーは必須です。",
       "knowledgeRoot": "ドライブまたはシステムのルートは許可されません。",
