@@ -18,6 +18,7 @@ from app.mcp.recipe_loader import get_recipe
 from app.mcp.payload import coerce_tool_arguments, compact_tool_result
 from app.http.errors import AppError
 from app.mcp.runtime_check import resolve_stdio_command, runtime_available
+from app.mcp.excel_files import annotate_excel_tools, folder_tool_result, workbook_hint
 from app.mcp.sandbox import confine_tool_arguments, reject_app_db_dsn, resolve_args
 
 IDLE_SEC = 300.0
@@ -549,6 +550,8 @@ class McpSessions:
         tools = apply_recipe_tool_schemas(session.list_tools(), recipe)
         if recipe and recipe.id == "github":
             tools = annotate_github_login(tools, env.get("GITHUB_PERSONAL_ACCESS_TOKEN"))
+        if recipe and recipe.id == "excel":
+            tools = annotate_excel_tools(tools, root)
         stored["status"] = "ok"
         stored["cached_tools"] = [
             {
@@ -615,6 +618,10 @@ class McpSessions:
                 args = confine_tool_arguments(args, live.root)
             except AppError as exc:
                 return {"ok": False, "errorKey": exc.message_key}
+        if live.recipe_id == "excel":
+            listing = folder_tool_result(args, live.root)
+            if listing:
+                return {"ok": True, "result": listing}
         try:
             raw = live.session.call_tool(tool_name, args)
         except Exception as exc:
@@ -624,11 +631,14 @@ class McpSessions:
                 "error": mask_text(str(exc)[:400]),
             }
         if raw.get("isError"):
-            return {
+            payload = {
                 "ok": False,
                 "errorKey": "mcp.call.failed",
                 "result": mask_obj(raw.get("result")),
             }
+            if live.recipe_id == "excel" and live.root:
+                payload["error"] = workbook_hint(live.root)
+            return payload
         return {"ok": True, "result": mask_obj(compact_tool_result(raw.get("result")))}
 
     def is_enabled(self, server_id: str) -> bool:
