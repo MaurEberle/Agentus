@@ -57,10 +57,12 @@ function Bubble({
   message,
   locale,
   spinning = false,
+  chill = false,
 }: {
   message: HelpMessage;
   locale: string;
   spinning?: boolean;
+  chill?: boolean;
 }) {
   const time = new Date(message.createdAt).toLocaleTimeString(locale, {
     hour: '2-digit',
@@ -69,7 +71,7 @@ function Bubble({
   const isUser = message.role === 'user';
   return (
     <article className={cn('flex gap-2', isUser ? 'justify-end' : 'flex-row')}>
-      {!isUser ? <BrandMark spinning={spinning} className="mt-0.5 size-12" alt="" /> : null}
+      {!isUser ? <BrandMark spinning={spinning} chill={chill} className="mt-0.5 size-12" alt="" /> : null}
       <div className={cn('flex min-w-0 flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
@@ -104,6 +106,8 @@ export function HelpChatMessages({
   const { t, i18n } = useTranslation();
   const endRef = useRef<HTMLDivElement>(null);
   const items = streaming ? [...messages, streaming] : messages;
+  const lastAssistantId = [...items].reverse().find((message) => message.role === 'assistant')?.id;
+  const chillLast = Boolean(lastAssistantId) && !waiting && !streaming;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
@@ -126,6 +130,7 @@ export function HelpChatMessages({
             message={message}
             locale={i18n.language}
             spinning={message.id === 'streaming'}
+            chill={chillLast && message.id === lastAssistantId}
           />
         ))}
         {waiting ? <TypingIndicator /> : null}
