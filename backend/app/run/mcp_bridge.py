@@ -7,7 +7,12 @@ from app.mcp.models import McpToolInfo
 
 
 class McpSessions(Protocol):
-    def open_for(self, server_ids: list[str]) -> None: ...
+    def open_for(
+        self,
+        server_ids: list[str],
+        credential_overrides: dict[str, str] | None = None,
+        root_overrides: dict[str, str] | None = None,
+    ) -> None: ...
 
     def close_all(self) -> None: ...
 
@@ -16,6 +21,17 @@ class McpSessions(Protocol):
     def is_enabled(self, server_id: str) -> bool: ...
 
     def root_path(self, server_id: str) -> str | None: ...
+
+    def listed_tools(self, server_id: str) -> list[McpToolInfo]: ...
+
+
+def validation_kwargs() -> dict[str, Any]:
+    mcp = get_mcp()
+    return {
+        "mcp_available": mcp is not None,
+        "mcp_enabled": mcp.is_enabled if mcp else None,
+        "mcp_root": mcp.root_path if mcp else None,
+    }
 
 
 def get_mcp() -> McpSessions | None:

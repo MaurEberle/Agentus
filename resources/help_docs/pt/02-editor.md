@@ -26,10 +26,11 @@ Enquanto corre **exactamente esta** rede: faixa **Só de leitura** — primeiro 
 | Nome | Tipo | Tarefa |
 |-------------|-----|---------|
 | Chat | `chat_input` | Conversa da execução. **No máximo um.** Saída **Mensagem**. Com orquestrador o chat fica aberto para perguntas. |
-| Orquestrador | `orchestrator` | Voz do chat da execução. Entradas **Mensagem** e **LLM**. Uma saída **Canal** por agente. **Mensagem** só para o **Fim** (ou router). **No máximo um.** |
+| Orquestrador | `orchestrator` | Voz do chat da execução. Entradas **Mensagem**, **LLM** e **Ferramenta**. Uma saída **Canal** por agente. **Mensagem** só para o **Fim** (ou router). **No máximo um.** |
 | LLM | `llm` | Fornecedor (Ollama, xAI, OpenAI, Claude, Gemini), modelo, credencial na nuvem, temperatura, limite de tokens. Saída **LLM**. |
 | Agente | `agent` | Prompt de sistema. Entradas Mensagem, LLM, Ferramenta, Conhecimento e **Canal** opcional. Saídas Mensagem e transferência. O canal vem só do orquestrador. Sem canal o agente corre uma vez pela mensagem. |
-| Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros — ou **MCP**. Saída **Ferramenta**. |
+| Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros. Saída **Ferramenta**. |
+| MCP | `mcp` | Um servidor criado e **ativado** nas **Definições**. Saída **Ferramenta**, como um nó de ferramenta. |
 | Conhecimento | `knowledge` | Pasta com ficheiros para a rede. Saída **Conhecimento**, só para o porto Conhecimento do agente. |
 | Router | `router` | Bifurca a mensagem segundo condições (primeira linha / ramos com nome) mais saída predefinida. |
 | Fim | `end` | Encerramento. **Pelo menos um.** |
@@ -41,7 +42,7 @@ Só portos compatíveis:
 - Mensagem para Mensagem (Chat → Agente ou Chat → Orquestrador, Agente → Fim, Agente → Router, ramos do router → …). O orquestrador envia Mensagem só para o Fim ou para um router.
 - Canal para Canal (Orquestrador → Agente). Um porto por agente. A resposta volta dentro da execução, sem segunda aresta.
 - Saída LLM para **LLM** do agente ou do orquestrador — cada agente e o orquestrador precisam de **exactamente uma** aresta destas
-- Saída de ferramenta para **Ferramenta** do agente (várias permitidas)
+- Saída de ferramenta para **Ferramenta** do agente ou do orquestrador (várias permitidas). Uma ferramenta pode ligar-se a ambos.
 - Saída de conhecimento só para **Conhecimento** do agente
 - Ciclos são proibidos (grafo dirigido sem ciclo)
 
@@ -55,10 +56,11 @@ Nó escolhido:
 
 - **LLM:** fornecedor, modelo (lista do runtime), credencial na nuvem, ping, avançado temperatura / máx. tokens. Nuvem sem credencial é inválida.
 - **Agente:** prompt de sistema e nome visível. Se o agente está num canal, o inspetor explica que as tarefas vêm do orquestrador.
-- **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. Acesso a ficheiros: pasta raiz, não a raiz da unidade; o agente só trabalha por baixo, e escrever e apagar são interruptores. MCP: servidor ativado nas Definições; predefinição todas as ferramentas desse servidor.
-- **Conhecimento:** pasta de origem (escolha de pasta), fornecedor de embeddings (Ollama, OpenAI ou Gemini) e modelo de embeddings, topK, limiar de pontuação, **Reconstruir índice**. A pasta pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Embeddings na nuvem precisam de credencial. O índice pertence a esta rede, não à ajuda.
+- **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. Acesso a ficheiros: pasta raiz, não a raiz da unidade; o agente só trabalha por baixo, e escrever e apagar são interruptores.
+- **MCP:** servidor ativo em **Definições → Servidores MCP**. Predefinição todas as ferramentas; após uma sonda podes escolher um subconjunto. As credenciais ficam nas Definições. A pasta raiz de sistema de ficheiros e Excel está no nó; o Git mantém a pasta nas Definições.
+- **Conhecimento:** pasta de origem (escolha de pasta), fornecedor de embeddings (Ollama, OpenAI ou Gemini) e modelo de embeddings, topK, limiar de pontuação, **Reconstruir índice**. A pasta pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Indexados: Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV e código. Imagens e .doc/.xls antigos são ignorados. Embeddings na nuvem precisam de credencial. O índice pertence a esta rede, não à ajuda.
 - **Chat:** marcador, texto inicial, interruptor «Entrada necessária».
-- **Orquestrador:** prompt de sistema. O modelo escolhe uma pergunta, uma tarefa para um agente pelo canal dele, uma resposta ou o fim. Os agentes são os canais, não uma segunda lista.
+- **Orquestrador:** prompt de sistema. O modelo escolhe uma pergunta, uma tarefa para um agente pelo canal dele, uma resposta ou o fim. Os agentes são os canais, não uma segunda lista. Chama ele próprio as ferramentas ligadas. Só uma pergunta espera pelo utilizador.
 - **Router:** ramos com nome (nome + condição) e predefinição.
 
 Os segredos **não** vão para o texto do inspetor nem para a exportação do grafo — só a escolha de uma credencial.

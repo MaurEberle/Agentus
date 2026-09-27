@@ -1,5 +1,5 @@
 import type { AgentNetworkDocument, GraphEdge, GraphNode } from '@/modules/network/model/document';
-import { cloneDocument, newId } from '@/modules/network/model/document';
+import { cloneDocument, migrateMcpNodes, newId } from '@/modules/network/model/document';
 import { agentIdFromChannel, channelHandle, normalizeChannelEdges } from '@/modules/network/schema/channels';
 
 const SECRET_KEYS = /^(secret|password|token|apiKey|authorization|bearer)$/i;
@@ -13,14 +13,16 @@ export function stripSecrets<T extends Record<string, unknown>>(data: T): T {
 }
 
 export function sanitizeDocument(doc: AgentNetworkDocument): AgentNetworkDocument {
-  return normalizeChannelEdges({
-    ...cloneDocument(doc),
-    schemaVersion: 1,
-    nodes: doc.nodes.map((node) => ({
-      ...node,
-      data: stripSecrets({ ...node.data }),
-    })),
-  });
+  return migrateMcpNodes(
+    normalizeChannelEdges({
+      ...cloneDocument(doc),
+      schemaVersion: 1,
+      nodes: doc.nodes.map((node) => ({
+        ...node,
+        data: stripSecrets({ ...node.data }),
+      })),
+    }),
+  );
 }
 
 export function exportDocument(doc: AgentNetworkDocument): AgentNetworkDocument & { exportedAt: string } {

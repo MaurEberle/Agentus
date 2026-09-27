@@ -9,6 +9,7 @@ import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 import { setDevScenario, useLiveMonitoring } from '@/modules/monitoring/live/adapter';
 import { hasChatInput } from '@/modules/monitoring/model/graph';
+import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { MOCK_SCENARIOS } from '@/modules/monitoring/model/types';
 import { ActivityPanel } from '@/modules/monitoring/activity/ActivityPanel';
 import { NetworkChat } from '@/modules/monitoring/chat/NetworkChat';
@@ -211,7 +212,7 @@ function StatusBanner({
   return (
     <Alert variant="destructive">
       <AlertTitle>{t('monitoring.empty.errorTitle')}</AlertTitle>
-      {errorMessage ? <AlertDescription>{errorMessage}</AlertDescription> : null}
+      {errorMessage ? <AlertDescription>{formatRunLogMessage(errorMessage, t)}</AlertDescription> : null}
     </Alert>
   );
 }

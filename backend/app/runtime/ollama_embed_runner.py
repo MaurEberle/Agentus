@@ -68,6 +68,94 @@ def gguf_paths_from_modelfile(text: str) -> list[Path]:
     return paths
 
 
+def _cuda_dir_version(name: str) -> tuple[int, ...]:
+    rest = name.lower().removeprefix("cuda_v")
+    parts: list[int] = []
+    for bit in rest.replace(".", "_").split("_"):
+        try:
+            parts.append(int(bit))
+        except ValueError:
+            parts.append(0)
+    return tuple(parts) or (0,)
+
+
+def _system32() -> Path:
+    return Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32"
+
+
+def gpu_vendor() -> str:
+    """Best local GPU stack: cuda, hip, vulkan, or cpu."""
+    sys32 = _system32()
+    if (sys32 / "nvcuda.dll").is_file():
+        return "cuda"
+    if list(sys32.glob("amdhip64*.dll")):
+        return "hip"
+    if (sys32 / "vulkan-1.dll").is_file():
+        return "vulkan"
+    return "cpu"
+
+
+def _scan_gpu_dirs(root: Path) -> tuple[Path | None, Path | None, Path | None]:
+    cuda: list[Path] = []
+    hip: list[Path] = []
+    vulkan: Path | None = None
+    if not root.is_dir():
+        return None, None, None
+    for child in root.iterdir():
+        if not child.is_dir():
+            continue
+        name = child.name.lower()
+        if name.startswith("cuda_v") and (child / "ggml-cuda.dll").is_file():
+            cuda.append(child)
+        elif name.startswith("rocm") and (child / "ggml-hip.dll").is_file():
+            hip.append(child)
+        elif name == "vulkan" and (child / "ggml-vulkan.dll").is_file():
+            vulkan = child
+    cuda_best = (
+        sorted(cuda, key=lambda path: _cuda_dir_version(path.name), reverse=True)[0] if cuda else None
+    )
+    hip_best = sorted(hip, key=lambda path: path.name, reverse=True)[0] if hip else None
+    return cuda_best, hip_best, vulkan
+
+
+def preferred_gpu_dir(root: Path, vendor: str | None = None) -> Path | None:
+    """Pick Ollama's GPU backend folder for the installed GPU."""
+    cuda_best, hip_best, vulkan = _scan_gpu_dirs(root)
+    kind = vendor or gpu_vendor()
+    order: list[Path | None]
+    if kind == "cuda":
+        order = [cuda_best, vulkan, hip_best]
+    elif kind == "hip":
+        order = [hip_best, vulkan, cuda_best]
+    elif kind == "vulkan":
+        order = [vulkan, cuda_best, hip_best]
+    else:
+        order = []
+    for item in order:
+        if item is not None:
+            return item
+    return None
+
+
+def library_dirs_for_llama(exe: Path, vendor: str | None = None) -> list[Path]:
+    root = exe.parent
+    dirs = [root]
+    gpu = preferred_gpu_dir(root, vendor=vendor)
+    if gpu is not None and gpu not in dirs:
+        dirs.insert(0, gpu)
+    return dirs
+
+
+def spawn_env(
+    exe: Path, base: dict[str, str] | None = None, vendor: str | None = None
+) -> dict[str, str]:
+    env = dict(base if base is not None else os.environ)
+    joined = os.pathsep.join(str(path) for path in library_dirs_for_llama(exe, vendor=vendor))
+    env["OLLAMA_LIBRARY_PATH"] = joined
+    env["PATH"] = joined + os.pathsep + env.get("PATH", "")
+    return env
+
+
 def llama_server_exe() -> Path | None:
     candidates: list[Path] = []
     local = os.environ.get("LOCALAPPDATA")
@@ -82,6 +170,12 @@ def llama_server_exe() -> Path | None:
     return None
 
 
+def _runner_matches(signature: tuple[str, ...]) -> bool:
+    with _lock:
+        current = _runner
+        return current is not None and current.signature == signature and current.alive()
+
+
 def embed_with_forced_runner(req: EmbedRequest) -> EmbedResult:
     from app.runtime.embeddings import _embed_batched
 
@@ -90,8 +184,9 @@ def embed_with_forced_runner(req: EmbedRequest) -> EmbedResult:
     exe = llama_server_exe()
     if not files or exe is None:
         raise RuntimeApiError("runtime.embedUnsupported")
-    _unload(root, req.model)
     signature = tuple(str(path) for path in files)
+    if not _runner_matches(signature):
+        _unload(root, req.model)
     port = _acquire(exe, files, signature)
     try:
         local = req.model_copy(
@@ -227,6 +322,8 @@ def _spawn(exe: Path, files: list[Path], port: int) -> subprocess.Popen[bytes]:
         "last",
         "--flash-attn",
         "auto",
+        "-ngl",
+        "auto",
         "-b",
         "512",
         "-ub",
@@ -241,7 +338,8 @@ def _spawn(exe: Path, files: list[Path], port: int) -> subprocess.Popen[bytes]:
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
-        "cwd": str(exe.parent),
+        "cwd": str(library_dirs_for_llama(exe)[0]),
+        "env": spawn_env(exe),
         "close_fds": True,
     }
     if sys.platform == "win32":

@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { bindChannelHandle, connectionAllowed, type PortContext } from '@/modules/network/schema/ports';
 import { createNode } from '@/modules/network/schema/defaults';
 import { issuesForNode, validateDocument } from '@/modules/network/validation/validate';
+import { useMcpRecipesQuery, useMcpServersQuery } from '@/modules/settings/api';
 import type { GraphEdge, NodeType } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { CanvasContextMenu, type MenuState } from '@/modules/network/canvas/ContextMenu';
@@ -54,12 +55,19 @@ export function FlowCanvas({
   const showGrid = useNetworkEditor((state) => state.showGrid);
   const showMinimap = useNetworkEditor((state) => state.showMinimap);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const mcp = useMcpServersQuery();
+  const mcpRecipes = useMcpRecipesQuery();
 
   const issues = useMemo(
-    () => validateDocument(document),
+    () =>
+      validateDocument(document, {
+        mcpServers: mcp.data?.items,
+        mcpRecipes: mcpRecipes.data?.items,
+        mcpReady: !mcp.isLoading,
+      }),
     // Positions/viewport are ignored; structure and name drive validation.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- document fields listed
-    [document.nodes, document.edges, document.name],
+    [document.nodes, document.edges, document.name, mcp.data, mcp.isLoading, mcpRecipes.data],
   );
   const graphSig = useMemo(
     () =>

@@ -28,7 +28,7 @@ Escolhe fornecedor e modelo. Local via Ollama; senão, nuvem mais credencial.
 
 ## Orquestrador
 
-Nó com o seu próprio LLM. É a única voz do chat da execução, faz perguntas e chama os agentes ligados um de cada vez, cada um por um canal. No máximo um. O chat só se liga a ele. A saída de mensagem vai para o Fim ou para um router. Não vês os textos dos agentes nem as ordens internas como bolhas. A app junta o último resultado à tarefa seguinte. Um agente está no canal ou na cadeia de mensagens.
+Nó com o seu próprio LLM. É a única voz do chat da execução, faz perguntas e chama os agentes ligados um de cada vez, cada um por um canal. No máximo um. O chat só se liga a ele. A saída de mensagem vai para o Fim ou para um router. Não vês os textos dos agentes nem as ordens internas como bolhas. A app junta o último resultado à tarefa seguinte. Um agente está no canal ou na cadeia de mensagens. As ferramentas podem ligar-se ao seu porto Ferramenta. Ele próprio as chama.
 
 ## Ferramenta
 
@@ -36,11 +36,11 @@ First-party (HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros) ou 
 
 ## Conhecimento (rede)
 
-Nó de conhecimento: uma pasta de textos para a rede. Pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Modelo de embeddings próprio, índice, topK e pontuação. **Não** é o corpus de ajuda. Ao iniciar vês a indexação; um índice já atual é saltado.
+Nó de conhecimento: uma pasta de Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV e código para a rede. Imagens e .doc/.xls antigos são ignorados. Pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Modelo de embeddings próprio, índice, topK e pontuação. **Não** é o corpus de ajuda. Ao iniciar vês a indexação; um índice já atual é saltado.
 
 ## Ajuda-RAG
 
-Documentos na pasta de ajuda da pasta de dados (guias predefinidos mais os teus Markdown). Só o chatbot de ajuda. Após alterações, reconstrói o índice em Definições → Chat de ajuda.
+Documentos na pasta de ajuda da pasta de dados. Os mesmos tipos de ficheiro que o nó de conhecimento. Só o chatbot de ajuda. Após alterações, reconstrói o índice em Definições → Chat de ajuda.
 
 ## Credencial
 
@@ -48,7 +48,7 @@ Chave guardada no cofre do Windows. Nas listas só máscara. No grafo só o ID/e
 
 ## MCP
 
-Model Context Protocol: servidores de ferramentas externos. Cria-os e ativa-os nas Definições, liga-os no grafo como nó de ferramenta do tipo MCP. A ajuda não usa MCP.
+Model Context Protocol: servidores de ferramentas externos. Cria-os nas **Definições**, atribui uma credencial e **ativa-os**. No grafo são um nó **MCP** próprio, com saída de ferramenta. A ajuda não usa MCP.
 
 ## Fornecedor
 

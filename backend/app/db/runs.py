@@ -9,7 +9,7 @@ from typing import Any
 from app.db.engine import json_dumps, json_loads, locked, transaction, utc_now
 from app.db.errors import StoreUnavailable
 
-_JSON_FIELDS = frozenset({"graph_snapshot", "chat", "models"})
+_JSON_FIELDS = frozenset({"graph_snapshot", "chat", "models", "memory"})
 _UPDATE_FIELDS = frozenset(
     {
         "ended_at",
@@ -22,6 +22,7 @@ _UPDATE_FIELDS = frozenset(
         "chat",
         "models",
         "updated_at",
+        "memory",
     }
 )
 
@@ -54,7 +55,18 @@ def _run_dict(row: Any) -> dict[str, Any]:
         "graph_snapshot": graph,
         "chat": chat,
         "models": models,
+        "memory": _optional_json(row, "memory"),
     }
+
+
+def _optional_json(row: Any, key: str) -> Any:
+    try:
+        raw = row[key]
+    except (IndexError, KeyError):
+        return None
+    if not raw:
+        return None
+    return json_loads(raw, default=None)
 
 
 def _log_dict(row: Any) -> dict[str, Any]:

@@ -6,5 +6,118 @@
   "command": "npx",
   "args": ["-y", "@modelcontextprotocol/server-filesystem@2025.3.28", "{{rootPath}}"],
   "needsRoot": true,
-  "appendRoot": false
+  "rootOnNode": true,
+  "appendRoot": false,
+  "listedTools": [
+    "read_file",
+    "read_multiple_files",
+    "write_file",
+    "edit_file",
+    "create_directory",
+    "list_directory",
+    "directory_tree",
+    "move_file",
+    "search_files",
+    "get_file_info",
+    "list_allowed_directories"
+  ],
+  "toolSchemas": {
+    "read_file": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "description": "File path. Use '.' or a relative path under the node root folder." },
+        "head": { "type": "number", "description": "Optional: first N lines only" },
+        "tail": { "type": "number", "description": "Optional: last N lines only" }
+      },
+      "required": ["path"]
+    },
+    "read_multiple_files": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "File paths relative to the node root folder"
+        }
+      },
+      "required": ["paths"]
+    },
+    "write_file": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "description": "File path under the node root folder" },
+        "content": { "type": "string", "description": "File contents" }
+      },
+      "required": ["path", "content"]
+    },
+    "edit_file": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "edits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "oldText": { "type": "string" },
+              "newText": { "type": "string" }
+            },
+            "required": ["oldText", "newText"]
+          }
+        },
+        "dryRun": { "type": "boolean" }
+      },
+      "required": ["path", "edits"]
+    },
+    "create_directory": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "description": "Directory path under the node root folder" }
+      },
+      "required": ["path"]
+    },
+    "list_directory": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "description": "Directory to list. Use '.' for the node root folder." }
+      },
+      "required": ["path"]
+    },
+    "directory_tree": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "description": "Directory to walk. Use '.' for the node root folder." },
+        "excludePatterns": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["path"]
+    },
+    "move_file": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string" },
+        "destination": { "type": "string" }
+      },
+      "required": ["source", "destination"]
+    },
+    "search_files": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "description": "Start directory. Use '.' for the node root folder." },
+        "pattern": { "type": "string", "description": "Glob, e.g. '*.xlsx' or '**/*.txt'" },
+        "excludePatterns": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["path", "pattern"]
+    },
+    "get_file_info": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" }
+      },
+      "required": ["path"]
+    },
+    "list_allowed_directories": {
+      "type": "object",
+      "properties": {}
+    }
+  }
 }

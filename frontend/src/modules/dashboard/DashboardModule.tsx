@@ -12,6 +12,7 @@ import { SetupCard } from '@/modules/dashboard/sections/SetupCard';
 import { StatusCard } from '@/modules/dashboard/sections/StatusCard';
 import { WeekStatsCard } from '@/modules/dashboard/sections/WeekStatsCard';
 import { ResourcesPanel } from '@/modules/monitoring/resources/ResourcesPanel';
+import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { useAppStore } from '@/store';
 
 function useErrorToast(active: boolean, titleKey: string) {
@@ -38,6 +39,7 @@ export function DashboardModule() {
   useErrorToast(recentRuns.isError, 'dashboard.error.runs');
 
   const networksLoading = networks.isLoading;
+  const pageLoading = networks.isLoading && !networks.data;
   const activeItem = networks.data?.items.find((item) => item.id === activeNetworkId);
 
   return (
@@ -45,37 +47,43 @@ export function DashboardModule() {
       <h1 className="text-xl font-semibold tracking-tight">{t('dashboard.title')}</h1>
       <StatusCard />
       <ResourcesPanel resources={resources.data ?? null} />
-      <HelpHintCard onboardingSeen={help.data?.onboardingSeen} loading={help.isLoading} />
-      <SetupCard
-        loading={ping.isLoading || help.isLoading || networksLoading}
-        ollamaOk={ping.isLoading ? undefined : ping.data?.ok === true}
-        helpConfigured={help.isLoading ? undefined : help.data?.configured === true}
-        hasNetwork={networksLoading ? undefined : (networks.data?.items.length ?? 0) > 0}
-      />
-      <div className="grid w-full gap-4 md:grid-cols-2">
-        <ActiveNetworkCard loading={networksLoading} item={activeItem} />
-        <RecentNetworksCard loading={networksLoading} items={networks.data?.items ?? []} />
-        <RecentRunsCard
-          loading={stores.isLoading || recentRuns.isLoading}
-          storeOk={historyOk}
-          items={recentRuns.data?.items ?? []}
-        />
-        <div className="flex flex-col gap-4">
-          <WeekStatsCard
-            loading={stores.isLoading || weekRuns.isLoading}
-            storeOk={historyOk}
-            items={weekRuns.data?.items ?? []}
+      {pageLoading ? (
+        <ModuleLoading />
+      ) : (
+        <>
+          <HelpHintCard onboardingSeen={help.data?.onboardingSeen} loading={help.isLoading} />
+          <SetupCard
+            loading={ping.isLoading || help.isLoading || networksLoading}
+            ollamaOk={ping.isLoading ? undefined : ping.data?.ok === true}
+            helpConfigured={help.isLoading ? undefined : help.data?.configured === true}
+            hasNetwork={networksLoading ? undefined : (networks.data?.items.length ?? 0) > 0}
           />
-          <EnvironmentCard
-            loading={ping.isLoading || models.isLoading || stores.isLoading || help.isLoading}
-            ping={ping.data}
-            models={models.data?.items ?? []}
-            stores={stores.data}
-            help={help.data}
-          />
-          <QuickLinks />
-        </div>
-      </div>
+          <div className="grid w-full gap-4 md:grid-cols-2">
+            <ActiveNetworkCard loading={networksLoading} item={activeItem} />
+            <RecentNetworksCard loading={networksLoading} items={networks.data?.items ?? []} />
+            <RecentRunsCard
+              loading={stores.isLoading || recentRuns.isLoading}
+              storeOk={historyOk}
+              items={recentRuns.data?.items ?? []}
+            />
+            <div className="flex flex-col gap-4">
+              <WeekStatsCard
+                loading={stores.isLoading || weekRuns.isLoading}
+                storeOk={historyOk}
+                items={weekRuns.data?.items ?? []}
+              />
+              <EnvironmentCard
+                loading={ping.isLoading || models.isLoading || stores.isLoading || help.isLoading}
+                ping={ping.data}
+                models={models.data?.items ?? []}
+                stores={stores.data}
+                help={help.data}
+              />
+              <QuickLinks />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

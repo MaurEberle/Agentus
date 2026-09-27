@@ -1,13 +1,30 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from app.db.paths import RAG_DIR_NAME, is_invalid_data_dir
 from app.http.errors import AppError
 
-ROOT_RECIPE_IDS = frozenset(
-    {"filesystem", "git", "pdf", "excel", "powerpoint", "word", "office"}
+_PATH_KEYS = frozenset(
+    {
+        "path",
+        "filepath",
+        "file_path",
+        "filePath",
+        "fileAbsolutePath",
+        "filename",
+        "file_name",
+        "file",
+        "source",
+        "destination",
+        "output",
+        "target",
+        "workbook",
+    }
 )
+
+ROOT_RECIPE_IDS = frozenset({"filesystem", "git", "excel"})
 _STORE_FILES = frozenset(
     {"settings.sqlite", "help.sqlite", "workspace.sqlite", "history.sqlite"}
 )
@@ -63,3 +80,35 @@ def reject_app_db_dsn(secret: str | None) -> None:
     lowered = secret.lower()
     if any(snippet in lowered for snippet in _DSN_SNIPPETS):
         raise AppError("mcp.postgres.appDb", status_code=400)
+
+
+def confine_tool_arguments(arguments: dict[str, Any], root: str) -> dict[str, Any]:
+    try:
+        base = Path(root).expanduser().resolve()
+    except (OSError, RuntimeError):
+        raise AppError("mcp.root.invalid", status_code=400) from None
+    if not base.is_dir():
+        raise AppError("mcp.root.invalid", status_code=400)
+
+    def fix_str(value: str) -> str:
+        raw = Path(value)
+        try:
+            resolved = raw.resolve() if raw.is_absolute() else (base / value).resolve()
+        except (OSError, RuntimeError):
+            raise AppError("mcp.root.invalid", status_code=400) from None
+        try:
+            resolved.relative_to(base)
+        except ValueError:
+            raise AppError("mcp.root.denied", status_code=400)
+        return str(resolved)
+
+    def walk(obj: Any, key: str | None = None) -> Any:
+        if isinstance(obj, dict):
+            return {str(name): walk(item, str(name)) for name, item in obj.items()}
+        if isinstance(obj, list):
+            return [walk(item, key) for item in obj]
+        if isinstance(obj, str) and key in _PATH_KEYS:
+            return fix_str(obj)
+        return obj
+
+    return walk(arguments)

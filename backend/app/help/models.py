@@ -12,6 +12,7 @@ class HelpChatStatus(ApiModel):
     onboarding_seen: bool = Field(alias="onboardingSeen")
     web_search_enabled: bool = Field(alias="webSearchEnabled")
     degraded: bool = False
+    using_fallback: bool = Field(default=False, alias="usingFallback")
 
 
 class HelpSource(ApiModel):
@@ -42,3 +43,5 @@ class HelpReindexResult(ApiModel):
     state: Literal["idle", "running", "ready", "error"]
     message_key: str | None = Field(default=None, alias="messageKey")
     job_id: str | None = Field(default=None, alias="id")
+    done: int | None = None
+    total: int | None = None

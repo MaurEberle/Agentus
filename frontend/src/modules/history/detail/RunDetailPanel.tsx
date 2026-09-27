@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ArchiveLog } from '@/modules/history/log/ArchiveLog';
+import { formatChatBody, formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { RunGraph } from '@/modules/history/detail/RunGraph';
 import {
   durationMs,
@@ -95,7 +96,7 @@ export function RunDetailPanel({
       {detail.errorMessage && (detail.outcome === 'failed' || detail.outcome === 'timeout') ? (
         <Alert variant="destructive">
           <AlertTitle>{t('history.detail.error')}</AlertTitle>
-          <AlertDescription>{detail.errorMessage}</AlertDescription>
+          <AlertDescription>{formatRunLogMessage(detail.errorMessage, t)}</AlertDescription>
         </Alert>
       ) : null}
       {detail.graphSnapshot ? <RunGraph graph={detail.graphSnapshot} steps={detail.steps} /> : null}
@@ -164,7 +165,9 @@ function StepsCalls({ detail }: { detail: RunDetail }) {
                 <TableCell>{step.nodeName ?? step.nodeId}</TableCell>
                 <TableCell>{step.role ?? step.type ?? '—'}</TableCell>
                 <TableCell>{t(`history.nodeStatus.${step.status}`)}</TableCell>
-                <TableCell className="text-xs text-destructive">{step.errorMessage ?? '—'}</TableCell>
+                <TableCell className="text-xs text-destructive">
+                  {step.errorMessage ? formatRunLogMessage(step.errorMessage, t) : '—'}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -211,7 +214,7 @@ function StepsCalls({ detail }: { detail: RunDetail }) {
 }
 
 function ChatTranscript({ detail }: { detail: RunDetail }) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <div className="space-y-2">
       {detail.chat?.map((message) => (
@@ -225,7 +228,7 @@ function ChatTranscript({ detail }: { detail: RunDetail }) {
               message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted',
             )}
           >
-            {message.content}
+            {formatChatBody(message, t)}
           </div>
           <time className="text-[11px] text-muted-foreground">
             {formatDateTime(message.createdAt, i18n.language)}

@@ -26,10 +26,11 @@ Düğümler paletten sürüklenir. Kartlar kompakt kalır; formlar denetçidedir
 | Ad | Tür | Görev |
 |-------------|-----|---------|
 | Sohbet | `chat_input` | Çalışma sohbeti. **En fazla bir.** Çıkış **İleti**. Orkestratör varken sohbet sorular için açık kalır. |
-| Orkestratör | `orchestrator` | Çalıştırma sohbetinin sesi. Girişler **İleti** ve **LLM**. Ajan başına bir **Kanal** çıkışı. **İleti** yalnız **Son** veya yönlendiriciye. **En fazla bir.** |
+| Orkestratör | `orchestrator` | Çalıştırma sohbetinin sesi. Girişler **İleti**, **LLM** ve **Araç**. Ajan başına bir **Kanal** çıkışı. **İleti** yalnız **Son** veya yönlendiriciye. **En fazla bir.** |
 | LLM | `llm` | Sağlayıcı (Ollama, xAI, OpenAI, Claude, Gemini), model, bulut kimlik bilgisi, sıcaklık, belirteç sınırı. Çıkış **LLM**. |
 | Ajan | `agent` | Sistem istemi. Girişler İleti, LLM, Araç, Bilgi ve isteğe bağlı **Kanal**. Çıkışlar İleti ve Devretme. Kanal yalnız orkestratörden gelir. Kanalsız ajan ileti üzerinden bir kez çalışır. |
-| Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi — veya **MCP**. Çıkış **Araç**. |
+| Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi. Çıkış **Araç**. |
+| MCP | `mcp` | **Ayarlar**’da oluşturulup **etkinleştirilen** bir sunucu. Çıkış **Araç**, bir araç düğümü gibi. |
 | Bilgi | `knowledge` | Ağ için dosya klasörü. Çıkış **Bilgi**, yalnızca ajanın Bilgi bağlantı noktasına. |
 | Yönlendirici | `router` | İletiyi koşullara göre ayırır (ilk satır / adlı dallar) artı varsayılan çıkış. |
 | Son | `end` | Bitiş. **En az bir.** |
@@ -41,7 +42,7 @@ Yalnızca uyumlu bağlantı noktaları:
 - İleti’den İleti’ye (Sohbet → Ajan veya Sohbet → Orkestratör, Ajan → Son, Ajan → Yönlendirici, yönlendirici dalları → …). Orkestratör İleti’yi yalnız Son’a veya bir yönlendiriciye gönderir.
 - Kanaldan kanala (Orkestratör → Ajan). Ajan başına bir bağlantı noktası. Yanıt çalıştırma içinde döner, ikinci kenar gerekmez.
 - LLM çıkışı ajanın veya orkestratörün **LLM**’sine — her ajan ve orkestratör **tam olarak bir** böyle kenar ister
-- Araç çıkışı ajan **Araç**’ına (birden fazla izinli)
+- Araç çıkışı ajan veya orkestratör **Araç**’ına (birden fazla izinli). Bir araç ikisine birden bağlanabilir.
 - Bilgi çıkışı yalnızca ajan **Bilgi**’sine
 - Döngüler yasaktır (döngüsüz yönlü grafik)
 
@@ -55,10 +56,11 @@ Düğüm seçili:
 
 - **LLM:** sağlayıcı, model (çalışma zamanı listesi), bulut kimlik bilgisi, ping, gelişmiş sıcaklık / en fazla belirteç. Kimlik bilgisi olmadan bulut geçersizdir.
 - **Ajan:** sistem istemi ve görünen ad. Ajan bir kanaldaysa denetçi görevlerin orkestratörden geldiğini açıklar.
-- **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. Dosya erişimi: kök klasör, sürücü kökü değil; ajan yalnız onun altında çalışır, yazma ve silme anahtardır. MCP: Ayarlar’dan etkin sunucu; varsayılan o sunucunun tüm araçları.
-- **Bilgi:** kaynak klasör (klasör seçimi), gömme sağlayıcısı (Ollama, OpenAI veya Gemini) ve gömme modeli, topK, puan eşiği, **Dizini yenile**. Klasör sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Bulut gömmeleri kimlik bilgisi ister. Dizin bu ağa aittir, yardıma değil.
+- **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. Dosya erişimi: kök klasör, sürücü kökü değil; ajan yalnız onun altında çalışır, yazma ve silme anahtardır.
+- **MCP:** **Ayarlar → MCP sunucuları**ndaki etkin sunucu. Varsayılan tüm araçlar; yoklamadan sonra alt küme seçebilirsiniz. Kimlik Ayarlar’dadır. Dosya sistemi ve Excel kök klasörü düğümdedir; Git klasörü Ayarlar’da kalır.
+- **Bilgi:** kaynak klasör (klasör seçimi), gömme sağlayıcısı (Ollama, OpenAI veya Gemini) ve gömme modeli, topK, puan eşiği, **Dizini yenile**. Klasör sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Dizine alınanlar: Markdown, metin, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV ve kaynak kodu. Görseller ve eski .doc/.xls atlanır. Bulut gömmeleri kimlik bilgisi ister. Dizin bu ağa aittir, yardıma değil.
 - **Sohbet:** yer tutucu, başlangıç metni, «Giriş gerekli» anahtarı.
-- **Orkestratör:** sistem istemi. Model bir soru, bir ajanın kanalından tek görev, bir yanıt veya bitiş seçer. Ajanlar kanallardır, ikinci bir liste değil.
+- **Orkestratör:** sistem istemi. Model bir soru, bir ajanın kanalından tek görev, bir yanıt veya bitiş seçer. Ajanlar kanallardır, ikinci bir liste değil. Bağlı araçları kendisi çağırır. Yalnız soru kullanıcıyı bekler.
 - **Yönlendirici:** adlı dallar (ad + koşul) ve varsayılan.
 
 Sırlar denetçi metnine ve grafik dışa aktarımına **ait değildir** — yalnızca bir kimlik bilgisi seçimi.

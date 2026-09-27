@@ -199,7 +199,7 @@
       "deleteTitle": "Supprimer l’identifiant ?",
       "deleteBody": "« {{name}} » sera retiré. Le secret ne sera plus disponible.",
       "inUseTitle": "Identifiant utilisé",
-      "inUseBody": "« {{name}} » est encore lié à un profil d’aide, un réseau ou un serveur MCP et ne peut pas être supprimé.",
+      "inUseBody": "« {{name}} » est encore attribué et ne peut pas être supprimé.",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -216,6 +216,31 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Jeton"
+      },
+      "kindHint": {
+        "xai": "Clé API xAI.",
+        "openai": "Clé API OpenAI.",
+        "anthropic": "Clé API Anthropic (Claude).",
+        "gemini": "Clé API Google Gemini.",
+        "openai_compat": "Jeton Bearer pour une URL compatible OpenAI.",
+        "web_search": "Clé pour la recherche web du réseau.",
+        "github": "Jeton d’accès personnel GitHub (PAT). Classic : repos, issues ou actions selon la tâche.",
+        "azure": "Jeton Azure/Entra ou PAT.",
+        "gitlab": "Jeton d’accès personnel GitLab.",
+        "slack": "Jeton bot Slack (xoxb-…).",
+        "notion": "Jeton d’intégration Notion.",
+        "atlassian": "Jeton API Atlassian Cloud (Jira/Confluence).",
+        "linear": "Clé API Linear.",
+        "postgres": "Chaîne de connexion Postgres (pas les bases de l’app).",
+        "token": "Clé API ou jeton Bearer générique (Context7, Sentry, etc.)."
+      },
+      "inUseMcpHint": "Attribuez un autre identifiant au serveur MCP, ou supprimez ce serveur. Ensuite vous pourrez retirer cet identifiant.",
+      "usedBy": {
+        "helpChatLlm": "Chat d’aide (chat)",
+        "helpChatEmbed": "Chat d’aide (embeddings)",
+        "helpChatSearch": "Chat d’aide (recherche web)",
+        "mcp": "Serveur MCP {{name}}",
+        "network": "Réseau « {{name}} »"
       }
     },
     "runtime": {
@@ -249,6 +274,8 @@
       "providerEmpty": "Non défini",
       "openaiCompat": "Compatible OpenAI",
       "model": "Modèle de chat",
+      "missingModel": "Aucun modèle de chat sélectionné. Le chat d’aide reste inactif jusqu’à ce que vous en choisissiez un.",
+      "missingModelFallback": "Aucun modèle de chat sélectionné. Le modèle économique ({{name}}) est utilisé.",
       "credential": "Identifiant",
       "credentialEmpty": "Aucun identifiant",
       "credentialHint": "Choisissez d’abord une clé API valide. Les modèles sont ensuite chargés.",
@@ -270,10 +297,11 @@
       "clearTitle": "Effacer l’historique d’aide ?",
       "clearBody": "Tous les messages du chat d’aide seront supprimés. Le profil est conservé.",
       "reindex": "Reconstruire l’index",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Réafficher l’introduction"
     },
     "mcp": {
-      "lead": "Recettes et serveurs personnalisés. Par défaut : inactif. L’aide n’utilise pas ces serveurs.",
+      "lead": "Recettes et serveurs personnalisés. Inactifs par défaut. L’aide ne les utilise pas. Créez-les ici, puis connectez un nœud MCP dans le réseau.",
       "recipes": "Recettes",
       "servers": "Serveurs configurés",
       "empty": "Aucun serveur MCP pour le moment.",
@@ -285,15 +313,14 @@
       "enabled": "Actif",
       "status": "Statut",
       "probe": "Sonde",
-      "presetHint": "Identifiants et chemin racine facultatif selon la recette. L’enregistrement crée le serveur immédiatement.",
-      "officeHint": "Office regroupe PDF et formats Office. N’activez les préréglages individuels en parallèle qu’en cas de besoin.",
+      "presetHint": "Identifiants selon la recette. Fichiers et Excel prennent le dossier sur le nœud MCP de l’éditeur. L’enregistrement crée le serveur immédiatement.",
       "rootPath": "Chemin racine",
       "untrusted": "Un processus inconnu sera lancé avec les droits indiqués. N’utilisez que des commandes de confiance.",
       "command": "Commande",
       "args": "Arguments",
       "url": "URL",
       "deleteTitle": "Supprimer le serveur ?",
-      "deleteBody": "La configuration de ce serveur personnalisé sera supprimée.",
+      "deleteBody": "La configuration de ce serveur est supprimée. La recette reste dans la liste.",
       "pingOk": "Le serveur MCP a répondu",
       "pingError": "Sonde MCP échouée",
       "runtimeMissing": "Runtime manquant (Node, npx, Docker ou uvx).",
@@ -318,12 +345,37 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
-      }
+        "excel": "Excel"
+      },
+      "credentialsLead": "Créez PAT, jetons et chaînes de connexion dans Identifiants, puis assignez-les ici. Sans identifiant adapté, le serveur reste invalide.",
+      "pickRoot": "Dossier",
+      "needsNone": "Aucun identifiant requis",
+      "needsRoot": "Dossier racine",
+      "needsRootNode": "Dossier racine sur le nœud",
+      "runtimeNeed": "Runtime local : {{runtime}} (dans le PATH).",
+      "credentialHelp": "Créez d’abord un identifiant du type adapté.",
+      "noCredentialOfKind": "Aucun identifiant de ce type — créez-en un dans Identifiants.",
+      "hint": {
+        "github": "PAT GitHub dans Identifiants (type GitHub). npx local. Pas de dossier racine.",
+        "azure": "Jeton Azure/Entra ou PAT (type Azure). npx local.",
+        "gitlab": "Jeton d’accès personnel GitLab (type GitLab). npx local.",
+        "filesystem": "Aucun identifiant. Le dossier racine se règle sur le nœud MCP dans l’éditeur, pas dans Paramètres. npx local.",
+        "git": "Aucun identifiant. Répertoire de travail comme racine. uvx local.",
+        "playwright": "Aucun identifiant. Node/npx plus un runtime de navigateur.",
+        "postgres": "Chaîne de connexion (type Postgres), pas les SQLite de l’app. npx local.",
+        "context7": "Clé API en identifiant Token. HTTP distant, pas de npx.",
+        "slack": "Jeton bot Slack (type Slack). npx local.",
+        "notion": "Jeton d’intégration Notion (type Notion). npx local.",
+        "atlassian": "Jeton API Atlassian Cloud (type Atlassian). Distant via mcp-remote.",
+        "linear": "Clé API Linear (type Linear). HTTP distant.",
+        "fetch": "Aucun identifiant. URLs publiques en texte. uvx local.",
+        "sentry": "Jeton Sentry (type Token). npx local.",
+        "excel": "Aucun identifiant. Dossier pour .xlsx sur le nœud MCP dans l’éditeur. npx local."
+      },
+      "reset": "Désactiver",
+      "secretNew": "Nouveau secret (facultatif)",
+      "secretName": "Nom du nouvel identifiant",
+      "secretDefaultHint": "Le secret créé ou choisi ici est le défaut de ce serveur. Dans le réseau vous pouvez en choisir un autre s’il y en a plusieurs."
     },
     "data": {
       "lead": "Dossier de données et état des stores. Pas de navigateur SQL, pas de secrets.",
@@ -380,7 +432,8 @@
       "onboardingReset": "L’introduction s’affichera à la prochaine ouverture de l’aide",
       "mcpSaved": "Serveur MCP enregistré",
       "mcpDeleted": "Serveur MCP supprimé",
-      "dataDirOk": "Dossier de données mis à jour"
+      "dataDirOk": "Dossier de données mis à jour",
+      "mcpReset": "Serveur MCP désactivé"
     }
   },
   "helpChat": {
@@ -416,6 +469,7 @@
       "body": "L’aide n’est pas encore configurée. Définissez le fournisseur et le modèle dans Paramètres.",
       "cta": "Aller aux paramètres"
     },
+    "usingFallback": "Aucun modèle de chat défini. Les réponses utilisent le modèle économique.",
     "sources": {
       "rag": "Document",
       "web": "Web"
@@ -566,19 +620,21 @@
       "chat_input": "Chat",
       "chat_inputHint": "Au plus un. Conversation de l’exécution. Avec un orchestrateur, elle reste ouverte pour les questions.",
       "orchestrator": "Orchestrateur",
-      "orchestratorHint": "Mène le chat. Un canal par agent, et le message vers la fin.",
+      "orchestratorHint": "Mène le chat. Un canal par agent, et le message vers la fin. Les outils se branchent sur le port outil.",
       "llm": "LLM",
       "llmHint": "Modèle et fournisseur. Arête vers le port llm de l’agent.",
       "agent": "Agent",
       "agentHint": "Invite système. Seul via le message, ou via un canal de l’orchestrateur.",
       "tool": "Outil",
-      "toolHint": "Type du catalogue, MCP facultatif.",
+      "toolHint": "HTTP, recherche web, date/heure, calculatrice, accès fichiers. Vers l’agent ou l’orchestrateur.",
       "knowledge": "Connaissances",
       "knowledgeHint": "Dossier source, uniquement vers le port knowledge de l’agent.",
       "router": "Routeur",
       "routerHint": "Aiguille les messages selon des conditions.",
       "end": "Fin",
-      "endHint": "Au moins un. Termine l’exécution."
+      "endHint": "Au moins un. Termine l’exécution.",
+      "mcp": "MCP",
+      "mcpHint": "Un serveur activé dans Paramètres. Se connecte comme un outil."
     },
     "ports": {
       "message": "Message",
@@ -623,7 +679,9 @@
         "noModels": "Aucun modèle chargé.",
         "useModel": "Utiliser « {{name}} »",
         "temperature": "Température",
-        "maxTokens": "Jetons max."
+        "maxTokens": "Jetons max.",
+        "numCtx": "Fenêtre de contexte",
+        "numCtxHint": "Vide conserve la valeur du modèle. Au-delà de 8192 jetons, une fenêtre plus grande est chargée."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",
@@ -631,7 +689,7 @@
         "systemPrompt": "Invite système"
       },
       "orchestrator": {
-        "hint": "Un LLM par une arête. Le chat arrive ici. Chaque agent a son canal. La sortie message reste la fin.",
+        "hint": "Un LLM par une arête. Le chat arrive ici. Chaque agent a son canal. La sortie message reste la fin. Il appelle lui-même les outils branchés.",
         "systemPrompt": "Invite système"
       },
       "tool": {
@@ -660,6 +718,7 @@
       "knowledge": {
         "path": "Dossier source",
         "pick": "Dossier",
+        "filesHint": "Indexés : Markdown, texte, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV et code source (dont C#, TypeScript, Python). Les images et les anciens .doc/.xls sont ignorés.",
         "embedProvider": "Fournisseur d’embeddings",
         "embedModel": "Modèle d’embeddings",
         "topK": "topK",
@@ -680,6 +739,20 @@
         "placeholder": "Espace réservé",
         "startMessage": "Texte de départ",
         "requireInput": "Saisie obligatoire"
+      },
+      "mcp": {
+        "hint": "Un serveur activé dans Paramètres → Serveurs MCP. Sortie outil vers l’agent ou l’orchestrateur.",
+        "server": "Serveur MCP",
+        "empty": "Aucun serveur",
+        "noneEnabled": "Aucun serveur actif. Configurez une recette dans Paramètres et activez-la.",
+        "tools": "Outils de ce serveur",
+        "toolsHint": "Vide = tous les outils après une sonde.",
+        "probeHint": "Une sonde dans Paramètres liste les outils de ce serveur.",
+        "settings": "Paramètres MCP",
+        "credential": "Identifiant",
+        "credentialDefault": "Par défaut ({{name}})",
+        "credentialHint": "Par défaut : l’identifiant des paramètres MCP. Choisissez-en un autre s’il en existe plusieurs du même type.",
+        "rootHint": "Dossier dans lequel ce serveur peut lire et écrire. Pas la racine d’un lecteur."
       }
     },
     "load": {
@@ -736,8 +809,8 @@
       "modelRequired": "Le modèle est obligatoire.",
       "credentialRequired": "Un fournisseur cloud a besoin d’un identifiant.",
       "toolKind": "Le type d’outil manque.",
-      "mcpServer": "Choisissez un serveur MCP actif.",
-      "mcpRoot": "Ce serveur MCP a besoin d’un chemin racine dans Paramètres.",
+      "mcpServer": "Choisissez un serveur MCP actif. Créez-le et activez-le dans Paramètres.",
+      "mcpRoot": "Ce serveur MCP a besoin d’un dossier racine.",
       "fileAccessRoot": "L’accès aux fichiers nécessite un dossier qui n’est pas la racine d’un lecteur.",
       "knowledgePath": "Le dossier source est obligatoire.",
       "knowledgeRoot": "La racine d’un lecteur ou du système n’est pas autorisée.",
@@ -749,7 +822,8 @@
         "missing": "L’index manque.",
         "stale": "L’index est obsolète.",
         "error": "Erreur d’index."
-      }
+      },
+      "mcpDisabled": "Ce serveur MCP est désactivé dans Paramètres."
     },
     "notify": {
       "saved": "Réseau enregistré",
@@ -950,7 +1024,8 @@
       "tool": "Outil",
       "knowledge": "Connaissances",
       "router": "Routeur",
-      "end": "Fin"
+      "end": "Fin",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "Inactif",
@@ -964,11 +1039,16 @@
       "llm": "LLM",
       "tool": "Outil",
       "human": "Saisie",
-      "index": "Index"
+      "index": "Index",
+      "knowledge": "Connaissances"
     },
     "activity": {
       "title": "Activité",
       "current": "Nœuds actuels",
+      "now": "Maintenant",
+      "task": "Tâche",
+      "agents": "Agents",
+      "agentsDone": "{{completed}} sur {{total}} terminés",
       "none": "Aucun nœud actif",
       "dag": "Étape {{completed}} sur {{total}}",
       "pending": "En attente",
@@ -991,7 +1071,9 @@
       "waitInput": "Écrivez le premier message. Le graphe attend une saisie.",
       "waitReply": "Question : l’exécution attend votre réponse.",
       "empty": "Aucun message dans cette exécution.",
-      "disabled": "Chat uniquement pendant une exécution."
+      "disabled": "Chat uniquement pendant une exécution.",
+      "agentDone": "{{name}} est terminé.",
+      "agentDoneFiles": "{{name}} est terminé. Fichiers : {{files}}."
     },
     "log": {
       "pause": "Pause",
@@ -1123,7 +1205,8 @@
       "llm_error": "LLM",
       "validation": "Validation",
       "service": "Service",
-      "unknown": "Inconnu"
+      "unknown": "Inconnu",
+      "orchestrator": "Orchestrateur"
     },
     "tab": {
       "history": "Historique",
@@ -1290,7 +1373,9 @@
       },
       "stepLimit": "Limite d’étapes atteinte",
       "orchestrator": {
-        "repair": "Commande illisible, nouvel essai."
+        "repair": "Commande illisible, nouvel essai.",
+        "unreadable": "L’orchestrateur n’a pas fourni d’étape lisible.",
+        "window": "L’invite ne tient dans aucune fenêtre de contexte."
       }
     },
     "graph": {
@@ -1301,6 +1386,11 @@
     "runtime": {
       "timeout": "Aucun progrès du modèle",
       "unreachable": "Runtime injoignable"
+    },
+    "mcp": {
+      "ping": {
+        "failed": "Le serveur MCP n’a pas répondu, ou sa liste d’outils était illisible."
+      }
     }
   },
   "help": {
@@ -1321,5 +1411,59 @@
     "modelNotFound": "Le modèle d’embeddings est introuvable.",
     "missingCredential": "Ce modèle d’embeddings exige un accès.",
     "unauthorized": "L’accès pour les embeddings a été refusé."
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "excel": "Excel"
+    },
+    "runtime": {
+      "missing": "Runtime manquant (Node, npx, Docker ou uvx)."
+    },
+    "ping": {
+      "failed": "La sonde MCP a échoué."
+    },
+    "root": {
+      "required": "Le dossier racine est obligatoire.",
+      "invalid": "La racine d’un disque ou du système n’est pas autorisée.",
+      "denied": "Ce dossier est bloqué pour MCP."
+    },
+    "credential": {
+      "required": "Cette recette nécessite un identifiant du type adapté."
+    },
+    "custom": {
+      "invalid": "Un serveur personnalisé nécessite une commande ou une URL."
+    },
+    "postgres": {
+      "appDb": "Postgres ne doit pas pointer vers les bases de l’app."
+    },
+    "session": {
+      "closed": "La session MCP est fermée."
+    },
+    "call": {
+      "failed": "L’appel MCP a échoué."
+    },
+    "notFound": "Serveur MCP introuvable."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Choisissez un serveur MCP actif.",
+      "disabled": "Ce serveur MCP est désactivé.",
+      "root": "Ce serveur MCP a besoin d’un chemin racine dans Paramètres.",
+      "unavailable": "MCP n’est pas disponible dans cette installation."
+    }
   }
 }

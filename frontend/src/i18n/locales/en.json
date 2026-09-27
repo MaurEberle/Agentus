@@ -199,7 +199,15 @@
       "deleteTitle": "Delete credential?",
       "deleteBody": "“{{name}}” will be removed. The secret will no longer be available.",
       "inUseTitle": "Credential in use",
-      "inUseBody": "“{{name}}” is still used by a help profile, network, or MCP server and cannot be deleted.",
+      "inUseBody": "“{{name}}” is still assigned and cannot be deleted.",
+      "inUseMcpHint": "Assign a different credential on the MCP server, or delete that server. Then you can remove this credential.",
+      "usedBy": {
+        "helpChatLlm": "Help chatbot (chat)",
+        "helpChatEmbed": "Help chatbot (embeddings)",
+        "helpChatSearch": "Help chatbot (web search)",
+        "mcp": "MCP server {{name}}",
+        "network": "Network “{{name}}”"
+      },
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -216,6 +224,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Token"
+      },
+      "kindHint": {
+        "xai": "API key from xAI.",
+        "openai": "API key from OpenAI.",
+        "anthropic": "API key from Anthropic (Claude).",
+        "gemini": "API key from Google Gemini.",
+        "openai_compat": "Bearer token for an OpenAI-compatible URL.",
+        "web_search": "Key for web search in the network.",
+        "github": "GitHub personal access token (PAT). Classic: repo, issues, or actions scopes as needed.",
+        "azure": "Azure or Entra token, or a PAT.",
+        "gitlab": "GitLab personal access token.",
+        "slack": "Slack bot token (xoxb-…).",
+        "notion": "Notion integration token.",
+        "atlassian": "Atlassian Cloud API token (Jira/Confluence).",
+        "linear": "Linear API key.",
+        "postgres": "Postgres connection string (not the app databases).",
+        "token": "Generic API key or bearer token (Context7, Sentry, and similar)."
       }
     },
     "runtime": {
@@ -249,6 +274,8 @@
       "providerEmpty": "Not set",
       "openaiCompat": "OpenAI-compatible",
       "model": "Chat model",
+      "missingModel": "No chat model selected. Help chat stays off until you pick one.",
+      "missingModelFallback": "No chat model selected. The economy model ({{name}}) is used.",
       "credential": "Credential",
       "credentialEmpty": "No credential",
       "credentialHint": "Choose a valid API key first. Models are loaded afterwards.",
@@ -270,14 +297,20 @@
       "clearTitle": "Clear help history?",
       "clearBody": "All help-chat messages will be removed. The profile stays.",
       "reindex": "Rebuild index",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Show onboarding again"
     },
     "mcp": {
-      "lead": "Recipes and custom servers. Default: inactive. Help does not use these servers.",
+      "lead": "Recipes and custom servers. Default: inactive. Help does not use these servers. Create and enable them here, then connect an MCP node in the network.",
+      "credentialsLead": "Create PATs, tokens, and connection strings under Credentials, then assign them here. Without a matching credential the server stays invalid.",
       "recipes": "Recipes",
       "servers": "Configured servers",
       "empty": "No MCP servers yet.",
       "enable": "Enable",
+      "reset": "Disable",
+      "secretNew": "New secret (optional)",
+      "secretName": "Name for the new credential",
+      "secretDefaultHint": "A secret created or chosen here is the default for this server. In the network you can pick another one when several exist.",
       "added": "Added",
       "custom": "Custom",
       "customCreate": "Custom server",
@@ -285,18 +318,41 @@
       "enabled": "Enabled",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Credentials and optional root path from the recipe. Saving creates the server immediately.",
-      "officeHint": "Office bundles PDF and Office formats. Enable the individual presets in parallel only if needed.",
+      "presetHint": "Credentials from the recipe. Filesystem and Excel take their folder on the MCP node in the editor. Saving creates and enables the server.",
       "rootPath": "Root path",
+      "pickRoot": "Folder",
+      "needsNone": "No credential needed",
+      "needsRoot": "Root folder",
+      "needsRootNode": "Root folder on the node",
+      "runtimeNeed": "Local runtime required: {{runtime}} (on PATH).",
+      "credentialHelp": "Create a credential of the matching kind first.",
+      "noCredentialOfKind": "No credential of this kind — add one under Credentials first.",
       "untrusted": "An untrusted process will start with the given privileges. Use trusted commands only.",
       "command": "Command",
       "args": "Arguments",
       "url": "URL",
       "deleteTitle": "Delete server?",
-      "deleteBody": "This custom server configuration will be removed.",
+      "deleteBody": "This server configuration will be removed. The recipe stays in the list.",
       "pingOk": "MCP server responded",
       "pingError": "MCP probe failed",
       "runtimeMissing": "Runtime missing (Node, npx, Docker, or uvx).",
+      "hint": {
+        "github": "GitHub PAT under Credentials (kind GitHub). Local npx. No root folder.",
+        "azure": "Azure/Entra token or PAT (kind Azure). Local npx.",
+        "gitlab": "GitLab personal access token (kind GitLab). Local npx.",
+        "filesystem": "No credential. Set the root folder on the MCP node in the editor, not in Settings. Local npx.",
+        "git": "No credential. Working directory as root. Local uvx.",
+        "playwright": "No credential. Node/npx plus a browser runtime.",
+        "postgres": "Connection string (kind Postgres), not the app SQLite files. Local npx.",
+        "context7": "API key as a Token credential. Remote HTTP, no npx.",
+        "slack": "Slack bot token (kind Slack). Local npx.",
+        "notion": "Notion integration token (kind Notion). Local npx.",
+        "atlassian": "Atlassian Cloud API token (kind Atlassian). Remote via mcp-remote.",
+        "linear": "Linear API key (kind Linear). Remote HTTP.",
+        "fetch": "No credential. Public URLs as text. Local uvx.",
+        "sentry": "Sentry auth token (kind Token). Local npx.",
+        "excel": "No credential. Folder for .xlsx on the MCP node in the editor. Local npx."
+      },
       "statusName": {
         "unknown": "Unknown",
         "ok": "OK",
@@ -318,11 +374,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       }
     },
     "data": {
@@ -379,8 +431,63 @@
       "reindexed": "Help index rebuilt",
       "onboardingReset": "Onboarding will show the next time help opens",
       "mcpSaved": "MCP server saved",
+      "mcpReset": "MCP server disabled",
       "mcpDeleted": "MCP server deleted",
       "dataDirOk": "Data folder updated"
+    }
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "excel": "Excel"
+    },
+    "runtime": {
+      "missing": "Runtime missing (Node, npx, Docker, or uvx)."
+    },
+    "ping": {
+      "failed": "MCP probe failed."
+    },
+    "root": {
+      "required": "A root folder is required.",
+      "invalid": "A drive or system root is not allowed.",
+      "denied": "This folder is blocked for MCP."
+    },
+    "credential": {
+      "required": "This recipe needs a credential of the matching kind."
+    },
+    "custom": {
+      "invalid": "A custom server needs a command or a URL."
+    },
+    "postgres": {
+      "appDb": "Postgres must not point at the app databases."
+    },
+    "session": {
+      "closed": "MCP session is closed."
+    },
+    "call": {
+      "failed": "MCP call failed."
+    },
+    "notFound": "MCP server not found."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Choose an enabled MCP server.",
+      "disabled": "This MCP server is disabled.",
+      "root": "This MCP server needs a root path in Settings.",
+      "unavailable": "MCP is not available in this install."
     }
   },
   "helpChat": {
@@ -416,6 +523,7 @@
       "body": "Help is not configured yet. Set provider and model under Settings.",
       "cta": "Go to settings"
     },
+    "usingFallback": "No chat model set. Answers use the economy model.",
     "sources": {
       "rag": "Document",
       "web": "Web"
@@ -566,13 +674,15 @@
       "chat_input": "Chat",
       "chat_inputHint": "At most one. The run conversation. With an orchestrator it stays open for follow-ups.",
       "orchestrator": "Orchestrator",
-      "orchestratorHint": "Runs the chat. One channel per agent, and message out to the end.",
+      "orchestratorHint": "Runs the chat. One channel per agent, and message out to the end. Tools connect to the tool port.",
       "llm": "LLM",
       "llmHint": "Model and provider. Edge to the agent llm port.",
       "agent": "Agent",
       "agentHint": "System prompt. On its own via message, or on an orchestrator via a channel.",
       "tool": "Tool",
-      "toolHint": "Catalog kind, optional MCP.",
+      "toolHint": "HTTP, web search, date/time, calculator, file access. Connect to an agent or the orchestrator.",
+      "mcp": "MCP",
+      "mcpHint": "An enabled server from Settings. Connects like a tool.",
       "knowledge": "Knowledge",
       "knowledgeHint": "Source folder, only to the agent knowledge port.",
       "router": "Router",
@@ -623,7 +733,9 @@
         "noModels": "No models loaded.",
         "useModel": "Use “{{name}}”",
         "temperature": "Temperature",
-        "maxTokens": "Max tokens"
+        "maxTokens": "Max tokens",
+        "numCtx": "Context window",
+        "numCtxHint": "Empty keeps the model default. Above 8192 tokens the run loads a larger window."
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
@@ -631,7 +743,7 @@
         "systemPrompt": "System prompt"
       },
       "orchestrator": {
-        "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end.",
+        "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end. It calls tools on the tool port.",
         "systemPrompt": "System prompt"
       },
       "tool": {
@@ -657,9 +769,24 @@
         "mcpHint": "Default: all tools of the server. Create servers in Settings.",
         "mcpSettings": "MCP settings"
       },
+      "mcp": {
+        "hint": "An enabled server from Settings → MCP servers. Tool output to an agent or the orchestrator.",
+        "server": "MCP server",
+        "empty": "No server",
+        "noneEnabled": "No enabled server. Set up a recipe in Settings and enable it.",
+        "tools": "Tools on this server",
+        "toolsHint": "Empty = all tools after a probe.",
+        "probeHint": "A probe in Settings lists this server’s tools.",
+        "settings": "MCP settings",
+        "credential": "Credential",
+        "credentialDefault": "Default ({{name}})",
+        "credentialHint": "Default uses the credential from MCP settings. Pick another when several of the same kind exist.",
+        "rootHint": "Folder this server may read and write. Not a drive root."
+      },
       "knowledge": {
         "path": "Source folder",
         "pick": "Folder",
+        "filesHint": "Indexed types: Markdown, text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV, and source code (including C#, TypeScript, Python). Images and legacy .doc/.xls are skipped.",
         "embedProvider": "Embedding provider",
         "embedModel": "Embedding model",
         "topK": "topK",
@@ -736,8 +863,9 @@
       "modelRequired": "Model is required.",
       "credentialRequired": "Cloud provider needs a credential.",
       "toolKind": "Tool kind is missing.",
-      "mcpServer": "Choose an enabled MCP server.",
-      "mcpRoot": "This MCP server needs a root path in Settings.",
+      "mcpServer": "Choose an enabled MCP server. Create and enable it in Settings.",
+      "mcpRoot": "This MCP server needs a root folder.",
+      "mcpDisabled": "This MCP server is disabled in Settings.",
       "fileAccessRoot": "File access needs a folder that is not a drive root.",
       "knowledgePath": "Source folder is required.",
       "knowledgeRoot": "Drive or system root is not allowed.",
@@ -948,6 +1076,7 @@
       "llm": "LLM",
       "agent": "Agent",
       "tool": "Tool",
+      "mcp": "MCP",
       "knowledge": "Knowledge",
       "router": "Router",
       "end": "End"
@@ -964,11 +1093,16 @@
       "llm": "LLM",
       "tool": "Tool",
       "human": "Input",
-      "index": "Index"
+      "index": "Index",
+      "knowledge": "Knowledge"
     },
     "activity": {
       "title": "Activity",
       "current": "Current nodes",
+      "now": "Now",
+      "task": "Task",
+      "agents": "Agents",
+      "agentsDone": "{{completed}} of {{total}} done",
       "none": "No node active",
       "dag": "Step {{completed}} of {{total}}",
       "pending": "Pending",
@@ -991,7 +1125,9 @@
       "waitInput": "Write the first message. The graph is waiting for input.",
       "waitReply": "Follow-up: the run is waiting for your answer.",
       "empty": "No messages in this run yet.",
-      "disabled": "Chat is available only while a run is active."
+      "disabled": "Chat is available only while a run is active.",
+      "agentDone": "{{name}} is done.",
+      "agentDoneFiles": "{{name}} is done. Files: {{files}}."
     },
     "log": {
       "pause": "Hold",
@@ -1123,7 +1259,8 @@
       "llm_error": "LLM",
       "validation": "Validation",
       "service": "Service",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "orchestrator": "Orchestrator"
     },
     "tab": {
       "history": "History",
@@ -1290,7 +1427,14 @@
       },
       "stepLimit": "Step limit reached",
       "orchestrator": {
-        "repair": "Control message was unreadable, trying again."
+        "repair": "Control message was unreadable, trying again.",
+        "unreadable": "The orchestrator did not produce a readable next step.",
+        "window": "The prompt does not fit any context window."
+      }
+    },
+    "mcp": {
+      "ping": {
+        "failed": "The MCP server did not respond, or its tool list was unreadable."
       }
     },
     "graph": {

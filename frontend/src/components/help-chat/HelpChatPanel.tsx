@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useViewportSize } from '@/hooks/useViewportSize';
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
@@ -34,6 +35,7 @@ export function HelpChatPanel({
   const width = useAppStore((state) => state.helpChatWidth);
   const height = useAppStore((state) => state.helpChatHeight);
   const setHelpChatSize = useAppStore((state) => state.setHelpChatSize);
+  const viewport = useViewportSize();
   const { data: messages = [] } = useHelpMessagesQuery();
   const generating = useHelpChatWidget((state) => state.generating);
   const streamContent = useHelpChatWidget((state) => state.streamContent);
@@ -63,8 +65,12 @@ export function HelpChatPanel({
 
   useLayoutEffect(() => {
     if (compact) return;
-    setHelpChatSize(defaultHelpChatSize({ w: window.innerWidth, h: window.innerHeight }));
-  }, [compact, setHelpChatSize]);
+    const next =
+      width > 0 && height > 0
+        ? clampHelpChatSize(width, height, viewport)
+        : defaultHelpChatSize(viewport);
+    if (next.width !== width || next.height !== height) setHelpChatSize(next);
+  }, [compact, height, setHelpChatSize, viewport, width]);
 
   function startResize(edge: 'left' | 'top' | 'corner') {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -151,9 +157,7 @@ export function HelpChatPanel({
               width,
               height,
               minWidth: 280,
-              minHeight: 320,
-              maxWidth: '30vw',
-              maxHeight: '80vh',
+              minHeight: Math.min(320, height || 320),
             }
       }
       role="dialog"
@@ -194,6 +198,14 @@ export function HelpChatPanel({
           <X className="size-4" />
         </Button>
       </header>
+      {configured && status?.usingFallback ? (
+        <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+          {t('helpChat.usingFallback')}{' '}
+          <Link to="/settings#help-chat" className="underline underline-offset-2">
+            {t('helpChat.unconfigured.cta')}
+          </Link>
+        </p>
+      ) : null}
       {!configured ? (
         <div className="flex flex-1 flex-col items-start justify-center gap-3 p-4">
           <p className="text-sm text-muted-foreground">{t('helpChat.unconfigured.body')}</p>

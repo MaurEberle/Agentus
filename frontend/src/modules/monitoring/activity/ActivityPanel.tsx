@@ -8,7 +8,11 @@ import { moduleCardBodyClass } from '@/modules/moduleCard';
 
 export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: boolean }) {
   const { t, i18n } = useTranslation();
-  const current = run.activity.currentNodeIds
+  const currentIds = new Set(run.activity.currentNodeIds);
+  for (const [id, runtime] of Object.entries(run.nodesRuntime)) {
+    if (runtime.status === 'running' || runtime.status === 'waiting') currentIds.add(id);
+  }
+  const current = [...currentIds]
     .map((id) => {
       const node = run.graph.nodes.find((item) => item.id === id);
       const runtime = run.nodesRuntime[id];
@@ -17,10 +21,14 @@ export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: bool
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
+  const agents = run.graph.nodes.filter((node) => node.type === 'agent');
+  const agentsDone = agents.filter((node) => run.nodesRuntime[node.id]?.status === 'done').length;
   const tokens = runTokenStats(run);
-  const dag = run.activity.dag && run.activity.dag.total > 0 ? run.activity.dag : null;
   const stepError = run.activity.stepError;
   const errorNode = stepError ? run.graph.nodes.find((item) => item.id === stepError.nodeId) : null;
+  const task = current
+    .map((row) => row.runtime?.lastMessage)
+    .find((text) => Boolean(text && text.trim()));
 
   return (
     <Card className={cn('flex h-full min-h-0 flex-col overflow-hidden', dimmed && 'opacity-60')}>
@@ -38,7 +46,7 @@ export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: bool
           </Alert>
         ) : null}
         <div>
-          <p className="text-xs font-medium text-muted-foreground">{t('monitoring.activity.current')}</p>
+          <p className="text-xs font-medium text-muted-foreground">{t('monitoring.activity.now')}</p>
           {current.length === 0 ? (
             <p className="mt-1 text-muted-foreground">{t('monitoring.activity.none')}</p>
           ) : (
@@ -58,21 +66,36 @@ export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: bool
               ))}
             </ul>
           )}
+          {task ? (
+            <p className="mt-2 text-sm leading-snug">
+              <span className="text-xs font-medium text-muted-foreground">{t('monitoring.activity.task')}: </span>
+              {task}
+            </p>
+          ) : null}
         </div>
-        {dag ? (
+        {agents.length > 0 ? (
           <div>
-            <p className="font-medium">{t('monitoring.activity.dag', { completed: dag.completed, total: dag.total })}</p>
-            {dag.pendingNodeIds.length > 0 ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('monitoring.activity.pending')}:{' '}
-                {dag.pendingNodeIds
-                  .map((id) => {
-                    const node = run.graph.nodes.find((item) => item.id === id);
-                    return node ? nodeDisplayName(node) : id;
-                  })
-                  .join(', ')}
-              </p>
-            ) : null}
+            <p className="text-xs font-medium text-muted-foreground">{t('monitoring.activity.agents')}</p>
+            <p className="mt-1 font-medium">
+              {t('monitoring.activity.agentsDone', { completed: agentsDone, total: agents.length })}
+            </p>
+            <ul className="mt-1 space-y-1">
+              {agents.map((node) => {
+                const runtime = run.nodesRuntime[node.id];
+                const status = runtime?.status ?? 'idle';
+                return (
+                  <li key={node.id} className="flex flex-wrap items-center gap-2">
+                    <span>{nodeDisplayName(node)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {t(`monitoring.nodeStatus.${status}`)}
+                      {runtime?.waitReason && runtime.waitReason !== 'none' && status !== 'idle'
+                        ? ` · ${t(`monitoring.wait.${runtime.waitReason}`)}`
+                        : ''}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : null}
         <div className="mt-auto grid grid-cols-2 gap-3 border-t pt-3">

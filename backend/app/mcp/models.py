@@ -22,6 +22,9 @@ class McpRecipe(ApiModel):
     transport: McpTransport
     credential_kinds: list[str] = Field(default_factory=list, alias="credentialKinds")
     needs_root: bool = Field(alias="needsRoot")
+    root_on_node: bool = Field(default=False, alias="rootOnNode")
+    runtime: str = "none"
+    notes: str | None = None
 
 
 class McpServerListItem(ApiModel):
@@ -33,6 +36,7 @@ class McpServerListItem(ApiModel):
     status: McpServerStatus
     credential_ids: list[str] | None = Field(default=None, alias="credentialIds")
     root_path: str | None = Field(default=None, alias="rootPath")
+    tool_names: list[str] | None = Field(default=None, alias="toolNames")
 
 
 class McpServerCreate(ApiModel):

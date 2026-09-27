@@ -16,6 +16,7 @@ from app.db.networks import (
 from app.http.errors import AppError
 from app.run.graph_models import AgentNetworkDocument
 from app.run.knowledge import index_node, status_for_network
+from app.run.mcp_bridge import validation_kwargs
 from app.run.validate import validate_document
 from app.settings.service import load_settings
 
@@ -41,7 +42,7 @@ def _item(row: NetworkRow) -> dict[str, Any]:
         if doc:
             errors = [
                 e.model_dump(by_alias=True)
-                for e in validate_document(doc, data_dir=data_dir)
+                for e in validate_document(doc, data_dir=data_dir, **validation_kwargs())
             ]
             status = "invalid" if errors else "valid"
     except Exception:
@@ -203,7 +204,7 @@ def validate_network(network_id: str, document: dict[str, Any] | None = None) ->
         if row is None:
             raise AppError("networks.notFound", status_code=404)
         doc = AgentNetworkDocument.model_validate(row.document)
-    errors = validate_document(doc, data_dir=data_dir)
+    errors = validate_document(doc, data_dir=data_dir, **validation_kwargs())
     return {
         "valid": not errors,
         "errors": [e.model_dump(by_alias=True) for e in errors],

@@ -7,7 +7,7 @@ from pydantic import Field
 from app.http.app import ApiModel
 
 NodeType = Literal[
-    "chat_input", "orchestrator", "llm", "agent", "tool", "knowledge", "router", "end"
+    "chat_input", "orchestrator", "llm", "agent", "tool", "mcp", "knowledge", "router", "end"
 ]
 
 
@@ -36,3 +36,24 @@ class AgentNetworkDocument(ApiModel):
     viewport: dict[str, Any] | None = None
     nodes: list[GraphNode] = Field(default_factory=list)
     edges: list[GraphEdge] = Field(default_factory=list)
+
+
+def is_mcp_node(node: GraphNode) -> bool:
+    return node.type == "mcp" or (node.type == "tool" and str(node.data.get("kind") or "") == "mcp")
+
+
+def normalize_mcp_nodes(doc: AgentNetworkDocument) -> AgentNetworkDocument:
+    """Rewrite tool nodes with kind=mcp into type=mcp so older graphs keep running."""
+    changed = False
+    nodes: list[GraphNode] = []
+    for node in doc.nodes:
+        if node.type == "tool" and str(node.data.get("kind") or "") == "mcp":
+            data = dict(node.data)
+            data.pop("kind", None)
+            nodes.append(node.model_copy(update={"type": "mcp", "data": data}))
+            changed = True
+        else:
+            nodes.append(node)
+    if not changed:
+        return doc
+    return doc.model_copy(update={"nodes": nodes})

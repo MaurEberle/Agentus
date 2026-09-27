@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+
 from app.common.http import client
 from app.runtime.completions import _auth_secret, _endpoint, request_headers
 from app.runtime.errors import (
@@ -16,6 +19,24 @@ from app.runtime.models import EmbedRequest, EmbedResult
 # Cloud embedding APIs reject a whole corpus in one body (Gemini batches top out
 # near 100 inputs; OpenAI also caps tokens per request). Keep each call small.
 _BATCH = 64
+_progress: Callable[[int, int], None] | None = None
+
+
+@contextmanager
+def progress_hook(fn: Callable[[int, int], None] | None) -> Iterator[None]:
+    global _progress
+    previous = _progress
+    _progress = fn
+    try:
+        yield
+    finally:
+        _progress = previous
+
+
+def _notify_progress(done: int, total: int) -> None:
+    hook = _progress
+    if hook is not None:
+        hook(done, total)
 
 
 def embed(req: EmbedRequest) -> EmbedResult:
@@ -39,17 +60,21 @@ def embed(req: EmbedRequest) -> EmbedResult:
 
 def _embed_batched(req: EmbedRequest, *, batch_size: int | None = None) -> EmbedResult:
     size = batch_size or _BATCH
-    if len(req.texts) <= size:
-        return _embed_once(req)
+    total = len(req.texts)
+    if total <= size:
+        out = _embed_once(req)
+        _notify_progress(total, total)
+        return out
     vectors: list[list[float]] = []
     dimension = 0
-    for start in range(0, len(req.texts), size):
+    for start in range(0, total, size):
         batch = req.texts[start : start + size]
         part = _embed_once(req.model_copy(update={"texts": batch}))
         if vectors and part.dimension != dimension:
             raise RuntimeApiError("runtime.badRequest")
         dimension = part.dimension
         vectors.extend(part.vectors)
+        _notify_progress(len(vectors), total)
     return EmbedResult(vectors=vectors, dimension=dimension, model=req.model)
 
 

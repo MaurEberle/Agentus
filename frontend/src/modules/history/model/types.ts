@@ -1,7 +1,7 @@
 export type RunOutcome = 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timeout';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
-export type ErrorClass = 'timeout' | 'tool_error' | 'llm_error' | 'validation' | 'service' | 'unknown';
+export type ErrorClass = 'timeout' | 'tool_error' | 'llm_error' | 'validation' | 'service' | 'unknown' | 'orchestrator';
 export type RangeKey = 'today' | '7d' | '30d' | 'custom';
 export type HistoryTab = 'history' | 'model' | 'network';
 export type DetailTab = 'log' | 'steps' | 'chat';
@@ -83,6 +83,8 @@ export type RunChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
 };
 
 export type RunDetail = RunSummary & {

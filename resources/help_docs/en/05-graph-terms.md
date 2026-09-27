@@ -12,7 +12,7 @@ One execution of the active graph. At most **one** at a time. Start and Stop in 
 
 ## Nodes and edges
 
-Building blocks (chat, orchestrator, agent, LLM, tool, knowledge, router, end) and typed connections. Arbitrary box-to-box arrows are invalid.
+Building blocks (chat, orchestrator, agent, LLM, tool, MCP, knowledge, router, end) and typed connections. Arbitrary box-to-box arrows are invalid.
 
 ## Agent
 
@@ -28,19 +28,19 @@ The only entry for user text in a run. At most one per network. Monitoring chat 
 
 ## Orchestrator
 
-A node with its own LLM. It is the only voice in the run chat, asks follow-ups, and calls connected agents one at a time through a channel each. At most one. Chat connects only to it. Its message output goes to end or a router. You do not see agent text or internal commands as chat bubbles. The app attaches the latest result to the next task. An agent is either on the channel or on the message chain.
+A node with its own LLM. It is the only voice in the run chat, asks follow-ups, and calls connected agents one at a time through a channel each. At most one. Chat connects only to it. Its message output goes to end or a router. You do not see agent text or internal commands as chat bubbles. The app attaches the latest result to the next task. An agent is either on the channel or on the message chain. Tools may connect to its tool port. It calls them itself.
 
 ## Tool
 
-First-party (HTTP, web search, date/time, calculator, file access) or MCP. File access stays inside a root folder, not a drive root. Configured in the inspector, executed only during a run.
+First-party: HTTP, web search, date/time, calculator, file access. File access stays inside a root folder, not a drive root. Configured in the inspector, executed only during a run.
 
 ## Knowledge (network)
 
-Knowledge node: a folder of text for the network. It may sit anywhere except a drive or system root and the help corpus. Its own embedding model, index, topK, and score. **Not** the help corpus. At start you see the indexing; an index that is already current is skipped.
+Knowledge node: a folder of Markdown, text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV, and source code for the network. Images and legacy .doc/.xls are skipped. It may sit anywhere except a drive or system root and the help corpus. Its own embedding model, index, topK, and score. **Not** the help corpus. At start you see the indexing; an index that is already current is skipped.
 
 ## Help RAG
 
-Documents in the help folder inside the data directory (default guides plus your markdown). Help chatbot only. After changes, rebuild the index under Settings → Help chatbot.
+Documents in the help folder inside the data directory. Same file types as the knowledge node. Help chatbot only. After changes, rebuild the index under Settings → Help chatbot.
 
 ## Credential
 
@@ -48,7 +48,7 @@ A stored secret in the Windows vault. Lists show a mask. The graph stores only t
 
 ## MCP
 
-Model Context Protocol: external tool servers. Create and enable them in Settings, connect them in the graph as a tool node of kind MCP. Help does not use MCP.
+Model Context Protocol: external tool servers. Create them in **Settings**, assign a credential, and **enable** them. In the graph they are their own **MCP** node, with a tool output. Help does not use MCP.
 
 ## Provider
 

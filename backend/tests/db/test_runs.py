@@ -228,6 +228,20 @@ def test_delete_runs_cascade() -> None:
     assert items == []
 
 
+def test_run_memory_roundtrip() -> None:
+    init()
+    now = utc_now()
+    insert_run(id="run-m", network_id="n1", network_name="Demo", started_at=now)
+    update_run("run-m", memory={"turns": [{"role": "user", "kind": "user", "text": "Hallo"}]})
+    row = get_run("run-m")
+    assert row is not None
+    assert row["memory"]["turns"][0]["text"] == "Hallo"
+    insert_run(id="run-empty", network_id="n1", network_name="Demo", started_at=now)
+    empty = get_run("run-empty")
+    assert empty is not None
+    assert empty["memory"] is None
+
+
 def test_history_missing_does_not_block_networks() -> None:
     init()
     upsert_network(

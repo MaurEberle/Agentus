@@ -37,6 +37,7 @@ import { ByModelTable } from '@/modules/history/tables/ByModelTable';
 import { ByNetworkTable } from '@/modules/history/tables/ByNetworkTable';
 import { cn } from '@/lib/utils';
 import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
+import { ModuleLoading } from '@/components/layout/ModuleLoading';
 
 
 export function HistoryModule() {
@@ -372,9 +373,10 @@ export function HistoryModule() {
           </AlertDescription>
         </Alert>
       ) : null}
-      {historyOk ? (
+      {historyOk && runsQuery.isLoading ? <ModuleLoading /> : null}
+      {historyOk && !runsQuery.isLoading ? (
         <>
-          <KpiRow kpis={kpis} loading={runsQuery.isLoading} />
+          <KpiRow kpis={kpis} loading={false} />
           <div className="grid w-full gap-4 lg:grid-cols-2 lg:items-start">
             <RunsChart buckets={buckets} />
             <ErrorTop rows={errors} onPick={onPickError} />

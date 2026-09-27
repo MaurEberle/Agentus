@@ -79,7 +79,7 @@ export function NodeDetail({ run }: { run: RunSnapshot }) {
                 {runtime.tokens.perSecond !== undefined ? (
                   <p>{t('monitoring.activity.perSecond', { value: Math.round(runtime.tokens.perSecond) })}</p>
                 ) : null}
-                {runtime.tokens.contextUsed !== undefined && runtime.tokens.contextMax !== undefined ? (
+                {runtime.tokens.contextUsed != null && runtime.tokens.contextMax != null ? (
                   <p>
                     {t('monitoring.activity.context', {
                       used: runtime.tokens.contextUsed,

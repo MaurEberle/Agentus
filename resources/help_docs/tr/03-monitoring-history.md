@@ -31,7 +31,7 @@ Bir ajana bilgi bağlıysa başlangıç, dizin oluşurken çalıştırmayı gös
 
 ## Ağ sohbeti (izleme)
 
-**Sohbet** sekmesi: çalışan grafiğin konuşması. Yalnızca çalıştırma sürerken etkin. Orkestratör yoksa sohbet ilk satırı bekler ve zincire verir. Orkestratör varken yalnız onunla konuşursun. Sorular aynı çalıştırmada açık kalır. Ajan metinleri ve iç komutlar burada görünmez.
+**Sohbet** sekmesi: çalışan grafiğin konuşması. Yalnızca çalıştırma sürerken etkin. Orkestratör yoksa sohbet ilk satırı bekler ve zincire verir. Orkestratör varken yalnız onunla konuşursun. Çalıştırma yalnız bir soruda bekler. Ajan metinleri ve iç komutlar burada görünmez.
 
 Bu **yardım baloncuğu değildir**. Geçmiş ve araçlar ağındır.
 

@@ -8,7 +8,7 @@ from app.common.types import ServiceStatus
 from app.http.app import ApiModel
 
 NodeRuntimeStatus = Literal["idle", "waiting", "running", "done", "error"]
-WaitReason = Literal["none", "llm", "tool", "human", "index"]
+WaitReason = Literal["none", "llm", "tool", "human", "index", "knowledge"]
 LogLevel = Literal["debug", "info", "warn", "error"]
 
 
@@ -20,12 +20,19 @@ class NodeTokens(ApiModel):
     context_max: int | None = Field(default=None, alias="contextMax")
 
 
+class NodeLlmInfo(ApiModel):
+    model: str = ""
+    provider: str = "ollama"
+    node_id: str = Field(default="", alias="nodeId")
+
+
 class NodeRuntime(ApiModel):
     status: NodeRuntimeStatus = "idle"
     role: str | None = None
     wait_reason: WaitReason | None = Field(default=None, alias="waitReason")
     last_message: str | None = Field(default=None, alias="lastMessage")
     error: str | None = None
+    llm: NodeLlmInfo | None = None
     tokens: NodeTokens | None = None
 
 
@@ -55,6 +62,8 @@ class ChatMessage(ApiModel):
     role: Literal["user", "assistant"]
     content: str
     created_at: str = Field(alias="createdAt")
+    message_key: str | None = Field(default=None, alias="messageKey")
+    message_params: dict[str, Any] | None = Field(default=None, alias="messageParams")
 
 
 class ActivityDag(ApiModel):

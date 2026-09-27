@@ -109,7 +109,7 @@ try:
     hiddenimports += collect_submodules("app")
 except Exception:
     pass
-for pkg in ("webview", "fastapi", "uvicorn", "httpx", "pydantic"):
+for pkg in ("webview", "fastapi", "uvicorn", "httpx", "pydantic", "pypdf", "docx", "lxml", "openpyxl"):
     try:
         extra_d, extra_b, extra_h = collect_all(pkg)
         datas += extra_d

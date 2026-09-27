@@ -65,6 +65,7 @@ class CredentialListItem(ApiModel):
     kind: CredentialKind
     mask: str
     in_use: bool = Field(alias="inUse")
+    used_by: list[str] = Field(default_factory=list, alias="usedBy")
 
 
 class CredentialListResponse(ApiModel):

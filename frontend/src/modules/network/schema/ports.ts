@@ -11,6 +11,7 @@ const STATIC_PORTS: Record<NodeType, PortDef[]> = {
   orchestrator: [
     { id: 'message', kind: 'message', direction: 'in', required: true },
     { id: 'llm', kind: 'llm', direction: 'in', required: true },
+    { id: 'tool', kind: 'tool', direction: 'in' },
     { id: 'message', kind: 'message', direction: 'out' },
   ],
   llm: [{ id: 'llm', kind: 'llm', direction: 'out' }],
@@ -24,6 +25,7 @@ const STATIC_PORTS: Record<NodeType, PortDef[]> = {
     { id: 'handoff', kind: 'handoff', direction: 'out' },
   ],
   tool: [{ id: 'tool', kind: 'tool', direction: 'out' }],
+  mcp: [{ id: 'tool', kind: 'tool', direction: 'out' }],
   knowledge: [{ id: 'knowledge', kind: 'knowledge', direction: 'out' }],
   router: [{ id: 'message', kind: 'message', direction: 'in', required: true }],
   end: [{ id: 'message', kind: 'message', direction: 'in', required: true }],
@@ -256,6 +258,7 @@ export const PALETTE_TYPES: NodeType[] = [
   'llm',
   'agent',
   'tool',
+  'mcp',
   'knowledge',
   'router',
   'end',

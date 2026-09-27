@@ -33,19 +33,17 @@ Si la dirección es local y Ollama está instalado pero parado, la app arranca e
 - búsqueda web sí/no más credencial de búsqueda; sin credencial el chat sigue configurado y la búsqueda apagada
 - comprobar conexión, borrar historial, **reconstruir índice**, volver a mostrar el onboarding
 
-Tras cambiar el modelo de embeddings o añadir archivos al corpus de ayuda: **reconstruir índice**. El trabajo sigue aunque salgas de Ajustes. Un segundo clic no inicia otro índice. El corpus es la carpeta de documentos de ayuda en la carpeta de datos, no el conocimiento de la red. Las guías nuevas que trae la app no sustituyen solas los archivos que ya están ahí.
+Tras cambiar el modelo de embeddings o añadir archivos al corpus de ayuda: **reconstruir índice**. El trabajo sigue aunque salgas de Ajustes. Un segundo clic no inicia otro índice. El corpus es la carpeta de documentos de ayuda en la carpeta de datos, no el conocimiento de la red. Valen los mismos tipos de archivo que en el nodo de conocimiento. Las guías nuevas que trae la app no sustituyen solas los archivos que ya están ahí.
 
 La ayuda responde en el idioma de la interfaz. Si el modelo no puede usar ese idioma, responde en inglés. No cita títulos de las guías. Solo una búsqueda web muestra fuentes, como título y dirección. Los bloques internos de razonamiento del modelo no se ven. La ayuda **no** usa servidores MCP ni el conocimiento de los grafos.
 
 ## Servidores MCP
 
-Plantillas (**recetas**) para herramientas externas: GitHub, sistema de archivos, Git, Playwright, Postgres, Slack, Notion, formatos Office y otras. Las recetas no son programas incluidos. Muchas necesitan Node/`npx`, Docker o `uvx` en el PC más una credencial.
+Plantillas (**recetas**) para herramientas externas: GitHub, sistema de archivos, Git, Playwright, Postgres, Slack, Notion, Excel y otras. Las recetas no son programas incluidos. Muchas necesitan Node/`npx`, Docker o `uvx` en el PC más una credencial.
 
-Predeterminado: servidor **inactivo**. La app no arranca procesos MCP al abrir, sino cuando una ejecución necesita un nodo de herramienta MCP conectado.
+Predeterminado: servidor **inactivo**. La app no arranca procesos MCP al abrir, sino cuando una ejecución necesita un **nodo MCP** conectado. Primero **Ajustes → Credenciales** (PAT, token o cadena), luego la receta. En el grafo usa el nodo de paleta **MCP**.
 
-Crear desde una receta (credencial, ruta raíz opcional) o como **servidor propio** (comando, argumentos o URL). Usa comandos desconocidos solo si confías en ellos. La sonda comprueba si responde; «Falta el runtime» si no hay Node/Docker/`uvx`.
-
-Office agrupa PDF y formatos Office; activa los presets sueltos solo si de verdad los necesitas.
+Crear desde una receta (credencial). Sistema de archivos y Excel se activan sin carpeta; la carpeta va en el nodo MCP del editor. Git sigue pidiendo la carpeta aquí. O un **servidor propio** (comando, argumentos o URL). Usa comandos desconocidos solo si confías en ellos. La sonda comprueba si responde; «Falta el runtime» si no hay Node/Docker/`uvx`.
 
 Borrar quita la configuración del servidor, no Ollama ni las credenciales.
 

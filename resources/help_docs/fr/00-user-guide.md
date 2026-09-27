@@ -47,7 +47,7 @@ Connexions (ports typés, pas de flèches arbitraires) :
 
 **Orchestrateur** optionnel : le chat seulement vers l’orchestrateur, un LLM vers l’orchestrateur, un **Canal** de l’orchestrateur vers le canal de chaque agent, et **Message** de l’orchestrateur vers **Fin**. Il est la seule voix du chat de l’exécution, pose des questions et appelle les agents un par un. Les textes des agents et les ordres internes n’apparaissent pas comme bulles. L’app joint le dernier résultat à la tâche suivante ; inutile de le coller dans le chat. Le chat reste ouvert jusqu’à ce qu’il termine l’exécution. Sans orchestrateur, chaque agent reste sa propre chaîne via message et transfert. Un agent est soit sur le canal, soit sur la chaîne, jamais les deux.
 
-Optionnel : **Outil** vers le port **Outil** de l’agent, **Connaissances** vers **Connaissances**. Enregistrer. Dans la **Bibliothèque**, « Définir comme actif » si la sélection rapide ne l’est pas encore.
+Optionnel : **Outil** vers le port **Outil** de l’agent ou de l’orchestrateur, **Connaissances** vers **Connaissances**. Enregistrer. Dans la **Bibliothèque**, « Définir comme actif » si la sélection rapide ne l’est pas encore.
 
 ## Démarrer et arrêter
 

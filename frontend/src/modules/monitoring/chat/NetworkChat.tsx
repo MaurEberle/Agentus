@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { abortRunChat, sendRunChat } from '@/modules/monitoring/live/adapter';
 import { chatInputConfig } from '@/modules/monitoring/model/graph';
 import { formatTime } from '@/modules/monitoring/model/format';
+import { formatChatBody } from '@/modules/monitoring/model/logMessage';
 import type { ChatMessage, RunSnapshot } from '@/modules/monitoring/model/types';
 import { useMonitoringStore } from '@/modules/monitoring/store';
 import type { ServiceStatus } from '@/store/session';
@@ -105,6 +106,7 @@ export function NetworkChat({
 }
 
 function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
+  const { t } = useTranslation();
   const user = message.role === 'user';
   return (
     <article className={cn('flex flex-col gap-1', user ? 'items-end' : 'items-start')}>
@@ -114,7 +116,7 @@ function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
           user ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         )}
       >
-        {message.content}
+        {formatChatBody(message, t)}
       </div>
       <time className="text-[11px] text-muted-foreground">{formatTime(message.createdAt, locale)}</time>
     </article>

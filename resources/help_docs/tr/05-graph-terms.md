@@ -28,7 +28,7 @@ Sağlayıcı ve modeli seçer. Yerel Ollama; değilse bulut artı kimlik bilgisi
 
 ## Orkestratör
 
-Kendi LLM’i olan düğüm. Çalıştırma sohbetinin tek sesidir, soru sorar ve bağlı ajanları teker teker, her birini bir kanaldan çağırır. En fazla bir. Sohbet yalnız ona bağlanır. İleti çıkışı Son’a veya bir yönlendiriciye gider. Ajan metinlerini ve iç komutları baloncuk olarak görmezsin. Uygulama son sonucu sonraki göreve ekler. Bir ajan ya kanaldadır ya ileti zincirindedir.
+Kendi LLM’i olan düğüm. Çalıştırma sohbetinin tek sesidir, soru sorar ve bağlı ajanları teker teker, her birini bir kanaldan çağırır. En fazla bir. Sohbet yalnız ona bağlanır. İleti çıkışı Son’a veya bir yönlendiriciye gider. Ajan metinlerini ve iç komutları baloncuk olarak görmezsin. Uygulama son sonucu sonraki göreve ekler. Bir ajan ya kanaldadır ya ileti zincirindedir. Araçlar onun Araç girişine bağlanabilir. Onları kendisi çağırır.
 
 ## Araç
 
@@ -36,11 +36,11 @@ First-party (HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi) vey
 
 ## Bilgi (ağ)
 
-Bilgi düğümü: ağ için metin klasörü. Sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Kendi gömme modeli, dizini, topK ve puanı. **Yardım derlemi değil.** Başlangıçta dizin oluşumunu görürsün; güncel bir dizin atlanır.
+Bilgi düğümü: ağ için Markdown, metin, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV ve kaynak kodu klasörü. Görseller ve eski .doc/.xls atlanır. Sürücü veya sistem kökü ve yardım derlemi dışında herhangi bir yerde olabilir. Kendi gömme modeli, dizini, topK ve puanı. **Yardım derlemi değil.** Başlangıçta dizin oluşumunu görürsün; güncel bir dizin atlanır.
 
 ## Yardım-RAG
 
-Veri klasöründeki yardım klasöründeki belgeler (varsayılan kılavuzlar artı Markdown’ların). Yalnızca yardım sohbet botu. Değişiklikten sonra Ayarlar → Yardım sohbeti altında dizini yeniden oluştur.
+Veri klasöründeki yardım klasöründeki belgeler. Bilgi düğümüyle aynı dosya türleri. Yalnızca yardım sohbet botu. Değişiklikten sonra Ayarlar → Yardım sohbeti altında dizini yeniden oluştur.
 
 ## Kimlik bilgisi / credential
 
@@ -48,7 +48,7 @@ Windows kasasında saklanan anahtar. Listelerde yalnızca maske. Grafikte yalnı
 
 ## MCP
 
-Model Context Protocol: dış araç sunucuları. Ayarlar’da oluşturup etkinleştir, grafikte MCP türünde araç düğümü olarak bağla. Yardım MCP kullanmaz.
+Model Context Protocol: dış araç sunucuları. **Ayarlar**’da oluşturun, kimlik atayın ve **etkinleştirin**. Grafikte kendi **MCP** düğümleridir, araç çıkışı vardır. Yardım MCP kullanmaz.
 
 ## Sağlayıcı
 

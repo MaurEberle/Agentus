@@ -8,14 +8,18 @@ import threading
 import time
 from typing import Any, Protocol
 
-from app.common.secrets import mask_obj
+from app.common.secrets import mask_obj, mask_text
 from app.db.errors import PersistError
-from app.db.settings import get_mcp_server
+from app.db.settings import get_mcp_server, put_mcp_server
 from app.db.vault import get as vault_get
 from app.mcp.models import McpToolInfo
 from app.mcp.recipe_loader import get_recipe
-from app.mcp.runtime_check import runtime_available
-from app.mcp.sandbox import reject_app_db_dsn, resolve_args
+
+from app.mcp.payload import coerce_tool_arguments, compact_tool_result
+from app.http.errors import AppError
+from app.mcp.runtime_check import resolve_stdio_command, runtime_available
+from app.mcp.excel_files import annotate_excel_tools, folder_tool_result, workbook_hint
+from app.mcp.sandbox import confine_tool_arguments, reject_app_db_dsn, resolve_args
 
 IDLE_SEC = 300.0
 
@@ -84,24 +88,10 @@ class _SdkSession:
         return future.result(timeout=timeout)
 
     def list_tools(self) -> list[McpToolInfo]:
-        listed = self._run(self._session.list_tools(), timeout=15)
-        tools = getattr(listed, "tools", listed) or []
-        out: list[McpToolInfo] = []
-        for tool in tools:
-            schema = getattr(tool, "inputSchema", None) or getattr(tool, "input_schema", None) or {}
-            out.append(
-                McpToolInfo(
-                    name=str(getattr(tool, "name", "")),
-                    description=getattr(tool, "description", None),
-                    input_schema=schema if isinstance(schema, dict) else {},
-                )
-            )
-        return out
+        return self._run(_list_tools_tolerant(self._session), timeout=15)
 
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        raw = self._run(self._session.call_tool(name, arguments), timeout=60)
-        is_error = bool(getattr(raw, "isError", False) or (isinstance(raw, dict) and raw.get("isError")))
-        return {"isError": is_error, "result": _content(raw)}
+        return self._run(_call_tool_tolerant(self._session, name, arguments), timeout=60)
 
     def close(self) -> None:
         try:
@@ -112,6 +102,230 @@ class _SdkSession:
             self._loop.call_soon_threadsafe(self._loop.stop)
         except Exception:
             pass
+
+
+def _inline_json_schema_ref(schema: dict[str, Any]) -> dict[str, Any]:
+    ref = schema.get("$ref")
+    if not isinstance(ref, str) or not ref.startswith("#/"):
+        return schema
+    defs = schema.get("$defs") or schema.get("definitions") or {}
+    if not isinstance(defs, dict):
+        return schema
+    target = defs.get(ref.rsplit("/", 1)[-1])
+    if not isinstance(target, dict):
+        return schema
+    merged = dict(target)
+    for key, value in schema.items():
+        if key != "$ref":
+            merged[key] = value
+    return merged
+
+
+def schema_properties_empty(schema: dict[str, Any]) -> bool:
+    props = schema.get("properties")
+    return not isinstance(props, dict) or len(props) == 0
+
+
+def repair_input_schema(schema: object) -> dict[str, Any]:
+    """Older MCP servers omit JSON Schema ``type``; the Python SDK requires it.
+
+    npm MCP 0.6.x plus Zod 4 often yields only ``$schema`` (zod-to-json-schema
+    cannot convert Zod 4). Inline ``$ref`` when present; callers overlay
+    recipe fallbacks when properties stay empty.
+    """
+    if not isinstance(schema, dict):
+        return {"type": "object", "properties": {}}
+    out = _inline_json_schema_ref(dict(schema))
+    if "type" not in out:
+        out["type"] = "object"
+    if out.get("type") == "object" and "properties" not in out:
+        out["properties"] = {}
+    return out
+
+
+def github_login(token: str | None) -> str | None:
+    if not token:
+        return None
+    try:
+        import urllib.request
+
+        request = urllib.request.Request(
+            "https://api.github.com/user",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "agentus-network",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=8) as response:
+            body = json.loads(response.read().decode("utf-8"))
+        login = body.get("login") if isinstance(body, dict) else None
+        return str(login) if login else None
+    except Exception:
+        return None
+
+
+def annotate_github_login(tools: list[McpToolInfo], token: str | None) -> list[McpToolInfo]:
+    login = github_login(token)
+    if not login:
+        return tools
+    note = (
+        f" Authenticated user is {login}. "
+        f"To list that user's repositories, set query to user:{login}."
+    )
+    out: list[McpToolInfo] = []
+    for tool in tools:
+        description = tool.description or ""
+        schema = dict(tool.input_schema or {})
+        if tool.name == "search_repositories":
+            description = (description + note).strip()
+            props = dict(schema.get("properties") or {})
+            query = dict(props.get("query") or {"type": "string"})
+            extra = f" For the signed-in account use user:{login}."
+            if extra not in str(query.get("description") or ""):
+                query["description"] = (query.get("description") or "Search query") + extra
+            props["query"] = query
+            schema["properties"] = props
+        out.append(
+            McpToolInfo(name=tool.name, description=description, input_schema=schema)
+        )
+    return out
+
+
+def apply_recipe_tool_schemas(
+    tools: list[McpToolInfo], recipe: Any | None
+) -> list[McpToolInfo]:
+    fallbacks = dict(getattr(recipe, "tool_schemas", None) or {})
+    out: list[McpToolInfo] = []
+    for tool in tools:
+        schema = repair_input_schema(tool.input_schema)
+        if schema_properties_empty(schema):
+            overlay = fallbacks.get(tool.name)
+            if isinstance(overlay, dict):
+                schema = repair_input_schema(overlay)
+        out.append(
+            McpToolInfo(
+                name=tool.name,
+                description=tool.description,
+                input_schema=schema,
+            )
+        )
+    return out
+
+
+def tools_from_list_payload(raw: object) -> list[McpToolInfo]:
+    items = raw.get("tools") if isinstance(raw, dict) else None
+    if not isinstance(items, list):
+        items = getattr(raw, "tools", None)
+    if not isinstance(items, list):
+        return []
+    out: list[McpToolInfo] = []
+    for item in items:
+        if isinstance(item, dict):
+            name = str(item.get("name") or "")
+            if not name:
+                continue
+            schema = item.get("inputSchema") or item.get("input_schema") or {}
+            out.append(
+                McpToolInfo(
+                    name=name,
+                    description=item.get("description"),
+                    input_schema=repair_input_schema(schema),
+                )
+            )
+            continue
+        name = str(getattr(item, "name", "") or "")
+        if not name:
+            continue
+        schema = getattr(item, "inputSchema", None) or getattr(item, "input_schema", None) or {}
+        out.append(
+            McpToolInfo(
+                name=name,
+                description=getattr(item, "description", None),
+                input_schema=repair_input_schema(schema),
+            )
+        )
+    return out
+
+
+def _output_schema_from_item(item: object) -> dict[str, Any] | None:
+    if isinstance(item, dict):
+        schema = item.get("outputSchema") or item.get("output_schema")
+    else:
+        schema = getattr(item, "outputSchema", None) or getattr(item, "output_schema", None)
+    if isinstance(schema, dict) and schema.get("type"):
+        return schema
+    return None
+
+
+def seed_tool_output_cache(
+    session: Any, tools: list[McpToolInfo], raw_items: object = None
+) -> None:
+    """Fill ClientSession._tool_output_schemas so call_tool does not re-list.
+
+    MCP SDK 2.x re-runs tools/list after a successful tools/call when the
+    cache is empty. Older servers (GitHub 0.6.2) omit inputSchema.type, so
+    that re-list raises ValidationError and the tool result is discarded.
+    """
+    cache = getattr(session, "_tool_output_schemas", None)
+    if not isinstance(cache, dict):
+        return
+    raw_by_name: dict[str, object] = {}
+    if isinstance(raw_items, list):
+        for item in raw_items:
+            name = None
+            if isinstance(item, dict):
+                name = item.get("name")
+            else:
+                name = getattr(item, "name", None)
+            if name:
+                raw_by_name[str(name)] = item
+    for tool in tools:
+        if tool.name in cache:
+            continue
+        cache[tool.name] = _output_schema_from_item(raw_by_name.get(tool.name))
+
+
+async def _list_tools_tolerant(session: Any) -> list[McpToolInfo]:
+    from pydantic import ValidationError
+
+    raw_items: object = None
+    try:
+        listed = await session.list_tools()
+        tools = tools_from_list_payload(listed)
+        raw_items = getattr(listed, "tools", None)
+    except ValidationError:
+        dispatcher = getattr(session, "_dispatcher", None)
+        if dispatcher is None:
+            raise
+        raw = await dispatcher.send_raw_request("tools/list", None)
+        tools = tools_from_list_payload(raw)
+        raw_items = raw.get("tools") if isinstance(raw, dict) else None
+    seed_tool_output_cache(session, tools, raw_items)
+    return tools
+
+
+def call_result_from_payload(raw: object) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        is_error = bool(raw.get("isError") or raw.get("is_error"))
+        return {"isError": is_error, "result": _content(raw)}
+    is_error = bool(getattr(raw, "isError", False) or getattr(raw, "is_error", False))
+    return {"isError": is_error, "result": _content(raw)}
+
+
+async def _call_tool_tolerant(
+    session: Any, name: str, arguments: dict[str, Any]
+) -> dict[str, Any]:
+    """Call via raw JSON-RPC so old servers are not re-validated as ListToolsResult."""
+    dispatcher = getattr(session, "_dispatcher", None)
+    if dispatcher is not None:
+        payload = await dispatcher.send_raw_request(
+            "tools/call",
+            {"name": name, "arguments": arguments or {}},
+        )
+        return call_result_from_payload(payload)
+    raw = await session.call_tool(name, arguments)
+    return call_result_from_payload(raw)
 
 
 async def _setup(
@@ -161,30 +375,92 @@ async def _teardown(holder: _SdkSession) -> None:
             pass
 
 
-def _content(raw: Any) -> Any:
+def _content_blocks(raw: Any) -> Any:
     if isinstance(raw, dict):
-        return raw.get("result", raw)
-    content = getattr(raw, "content", None)
-    if not content:
+        if "content" in raw:
+            return raw.get("content")
         return None
+    return getattr(raw, "content", None)
+
+
+def _structured(raw: Any) -> Any:
+    if isinstance(raw, dict):
+        if "structuredContent" in raw:
+            return raw.get("structuredContent")
+        if "result" in raw and "content" not in raw:
+            return raw.get("result")
+        return None
+    return getattr(raw, "structured_content", None) or getattr(raw, "structuredContent", None)
+
+
+def _texts_from_blocks(content: Any) -> list[str]:
     texts: list[str] = []
-    for item in content:
-        text = getattr(item, "text", None)
+    if not content:
+        return texts
+    items = content if isinstance(content, list) else [content]
+    for item in items:
+        if isinstance(item, dict):
+            text = item.get("text")
+        else:
+            text = getattr(item, "text", None)
         if isinstance(text, str):
             texts.append(text)
-    if not texts:
-        return None
+    return texts
+
+
+def _content(raw: Any) -> Any:
+    texts = _texts_from_blocks(_content_blocks(raw))
     if len(texts) == 1:
         try:
             return json.loads(texts[0])
         except ValueError:
             return texts[0]
-    return texts
+    if len(texts) > 1:
+        return texts
+    structured = _structured(raw)
+    if structured is not None:
+        return structured
+    if isinstance(raw, dict) and "result" in raw:
+        return raw.get("result")
+    return None
+
+
+_FS_PATH_TOOLS = frozenset(
+    {
+        "read_file",
+        "read_text_file",
+        "read_media_file",
+        "write_file",
+        "edit_file",
+        "create_directory",
+        "list_directory",
+        "list_directory_with_sizes",
+        "directory_tree",
+        "search_files",
+        "get_file_info",
+    }
+)
+
+
+def default_filesystem_arguments(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
+    args = dict(arguments or {})
+    if name in _FS_PATH_TOOLS and not str(args.get("path") or "").strip():
+        args["path"] = "."
+    return args
 
 
 class _Live:
-    def __init__(self, session: TransportSession) -> None:
+    def __init__(
+        self,
+        session: TransportSession,
+        tools: list[McpToolInfo] | None = None,
+        root: str | None = None,
+        recipe_id: str | None = None,
+    ) -> None:
         self.session = session
+        self.root = root
+        self.recipe_id = recipe_id
+        self.tools = list(tools or [])
         self.last_used = time.monotonic()
         self.timer: threading.Timer | None = None
 
@@ -194,42 +470,72 @@ class McpSessions:
         self._lock = threading.Lock()
         self._live: dict[str, _Live] = {}
 
-    def open_for(self, server_ids: list[str]) -> None:
+    def open_for(
+        self,
+        server_ids: list[str],
+        credential_overrides: dict[str, str] | None = None,
+        root_overrides: dict[str, str] | None = None,
+    ) -> None:
         unique: list[str] = []
         for sid in server_ids:
             if sid not in unique:
                 unique.append(sid)
         if not unique:
             return
+        overrides = credential_overrides or {}
+        roots = root_overrides or {}
         try:
             for sid in unique:
-                self._open_one(sid)
+                self._open_one(sid, overrides.get(sid), roots.get(sid))
         except Exception:
             self.close_all()
             raise
 
-    def _open_one(self, server_id: str) -> None:
+    def _open_one(
+        self,
+        server_id: str,
+        credential_id: str | None = None,
+        root_override: str | None = None,
+    ) -> None:
         with self._lock:
             if server_id in self._live:
                 return
-        row = get_mcp_server(server_id)
-        if row is None:
+        stored = get_mcp_server(server_id)
+        if stored is None:
             raise McpError("mcp.notFound")
+        row = dict(stored)
         if not row.get("enabled"):
             raise McpError("graph.mcp.disabled")
+        if credential_id:
+            row["credential_ids"] = [credential_id]
         recipe = get_recipe(str(row.get("recipe_id") or "")) if row.get("recipe_id") else None
-        root = row.get("root_path")
+        root = str(root_override or row.get("root_path") or "").strip() or None
         needs_root = bool(recipe.needs_root) if recipe else False
         if needs_root and not root:
             raise McpError("graph.mcp.root")
+        if root:
+            from pathlib import Path
+
+            try:
+                if not Path(root).expanduser().resolve().is_dir():
+                    raise McpError("mcp.root.invalid")
+            except (OSError, RuntimeError) as exc:
+                raise McpError("mcp.root.invalid") from exc
         runtime = recipe.runtime if recipe else "none"
         if not runtime_available(runtime):
             raise McpError("mcp.runtime.missing")
         env, headers = _spawn_env(row, recipe)
-        args = list(row.get("args") or (recipe.args if recipe else []))
+        if recipe and recipe.id == "excel":
+            env.setdefault("EXCEL_MCP_PAGING_CELLS_LIMIT", "4000")
+        if recipe:
+            args = list(recipe.args)
+            command = recipe.command
+        else:
+            args = list(row.get("args") or [])
+            command = row.get("command")
         append = recipe.append_root if recipe else False
         args = resolve_args(args, root, append_root=append)
-        command = row.get("command") or (recipe.command if recipe else None)
+        command, args = resolve_stdio_command(command, args, runtime)
         url = row.get("url") or (recipe.url if recipe else None)
         cwd = root if root else None
         session = connect_transport(
@@ -241,10 +547,47 @@ class McpSessions:
             cwd=cwd,
             headers=headers,
         )
-        live = _Live(session)
+        tools = apply_recipe_tool_schemas(session.list_tools(), recipe)
+        if recipe and recipe.id == "github":
+            tools = annotate_github_login(tools, env.get("GITHUB_PERSONAL_ACCESS_TOKEN"))
+        if recipe and recipe.id == "excel":
+            tools = annotate_excel_tools(tools, root)
+        stored["status"] = "ok"
+        stored["cached_tools"] = [
+            {
+                "name": item.name,
+                "description": item.description,
+                "input_schema": item.input_schema,
+            }
+            for item in tools
+        ]
+        put_mcp_server(server_id, stored)
+        live = _Live(session, tools, root=root, recipe_id=recipe.id if recipe else None)
         with self._lock:
             self._live[server_id] = live
         self._arm_idle(server_id)
+
+    def listed_tools(self, server_id: str) -> list[McpToolInfo]:
+        with self._lock:
+            live = self._live.get(server_id)
+            if live is not None:
+                return list(live.tools)
+        row = get_mcp_server(server_id) or {}
+        cached = row.get("cached_tools") or []
+        out: list[McpToolInfo] = []
+        if isinstance(cached, list):
+            for item in cached:
+                if not isinstance(item, dict) or not item.get("name"):
+                    continue
+                schema = item.get("input_schema") or item.get("inputSchema") or {}
+                out.append(
+                    McpToolInfo(
+                        name=str(item["name"]),
+                        description=item.get("description"),
+                        input_schema=schema if isinstance(schema, dict) else {},
+                    )
+                )
+        return out
 
     def close_all(self) -> None:
         with self._lock:
@@ -265,17 +608,38 @@ class McpSessions:
             return {"ok": False, "errorKey": "mcp.session.closed"}
         live.last_used = time.monotonic()
         self._arm_idle(server_id)
+        args = coerce_tool_arguments(arguments) if isinstance(arguments, dict) else arguments
+        if not isinstance(args, dict):
+            args = {}
+        if live.recipe_id == "filesystem":
+            args = default_filesystem_arguments(tool_name, args)
+        if live.root:
+            try:
+                args = confine_tool_arguments(args, live.root)
+            except AppError as exc:
+                return {"ok": False, "errorKey": exc.message_key}
+        if live.recipe_id == "excel":
+            listing = folder_tool_result(args, live.root)
+            if listing:
+                return {"ok": True, "result": listing}
         try:
-            raw = live.session.call_tool(tool_name, arguments)
-        except Exception:
-            return {"ok": False, "errorKey": "mcp.call.failed"}
-        if raw.get("isError"):
+            raw = live.session.call_tool(tool_name, args)
+        except Exception as exc:
             return {
+                "ok": False,
+                "errorKey": "mcp.call.failed",
+                "error": mask_text(str(exc)[:400]),
+            }
+        if raw.get("isError"):
+            payload = {
                 "ok": False,
                 "errorKey": "mcp.call.failed",
                 "result": mask_obj(raw.get("result")),
             }
-        return {"ok": True, "result": mask_obj(raw.get("result"))}
+            if live.recipe_id == "excel" and live.root:
+                payload["error"] = workbook_hint(live.root)
+            return payload
+        return {"ok": True, "result": mask_obj(compact_tool_result(raw.get("result")))}
 
     def is_enabled(self, server_id: str) -> bool:
         row = get_mcp_server(server_id)

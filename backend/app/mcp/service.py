@@ -35,9 +35,24 @@ def list_recipes() -> list[McpRecipe]:
             transport=item.transport,  # type: ignore[arg-type]
             credential_kinds=item.credential_kinds,
             needs_root=item.needs_root,
+            root_on_node=item.root_on_node,
+            runtime=item.runtime,
+            notes=item.notes,
         )
         for item in load_recipes()
     ]
+
+
+def _tool_names(row: dict[str, Any]) -> list[str] | None:
+    cached = row.get("cached_tools") or []
+    if not isinstance(cached, list):
+        return None
+    names = [
+        str(item["name"])
+        for item in cached
+        if isinstance(item, dict) and item.get("name")
+    ]
+    return names or None
 
 
 def _item(row: dict[str, Any]) -> McpServerListItem:
@@ -50,6 +65,7 @@ def _item(row: dict[str, Any]) -> McpServerListItem:
         status=row.get("status") or "unknown",
         credential_ids=row.get("credential_ids"),
         root_path=row.get("root_path"),
+        tool_names=_tool_names(row),
     )
 
 
@@ -64,10 +80,35 @@ def _require(server_id: str) -> dict[str, Any]:
     return row
 
 
+def _tools_from_recipe(recipe: RecipeRecord | None) -> list[dict[str, Any]]:
+    if recipe is None:
+        return []
+    schemas = dict(recipe.tool_schemas or {})
+    names = list(schemas) or list(recipe.listed_tools)
+    out: list[dict[str, Any]] = []
+    for name in names:
+        schema = schemas.get(name) or {"type": "object", "properties": {}}
+        out.append({"name": name, "description": None, "input_schema": schema})
+    return out
+
+
+def _seed_listed_tools(payload: dict[str, Any], recipe: RecipeRecord | None) -> None:
+    if payload.get("cached_tools"):
+        return
+    tools = _tools_from_recipe(recipe)
+    if not tools:
+        return
+    payload["cached_tools"] = tools
+    if payload.get("status") in {None, "unknown"}:
+        payload["status"] = "ok"
+
+
 def _check_root(recipe: RecipeRecord | None, root_path: str | None, enabled: bool) -> None:
     if not enabled:
         return
     needs = bool(recipe and recipe.needs_root)
+    if needs and recipe and recipe.root_on_node:
+        return
     if needs and not root_path:
         raise AppError("mcp.root.required", status_code=400)
     if needs and root_path:
@@ -75,6 +116,19 @@ def _check_root(recipe: RecipeRecord | None, root_path: str | None, enabled: boo
         validate_root_path(
             root_path, data_dir=bootstrap.data_dir, app_home=local_app_data()
         )
+
+
+def _check_credentials(
+    recipe: RecipeRecord | None, credential_ids: list[str] | None, enabled: bool
+) -> None:
+    if not enabled or recipe is None:
+        return
+    kinds = list(recipe.credential_kinds or [])
+    if not kinds:
+        return
+    filled = [item for item in (credential_ids or []) if str(item).strip()]
+    if len(filled) < len(kinds):
+        raise AppError("mcp.credential.required", status_code=400)
 
 
 def _save(payload: dict[str, Any]) -> McpServerListItem:
@@ -92,6 +146,7 @@ def create_server(body: McpServerCreate) -> McpServerListItem:
         creds = list(body.credential_ids or [])[: len(kinds)] if kinds else list(body.credential_ids or [])
         enabled = bool(body.enabled)
         _check_root(recipe, body.root_path, enabled)
+        _check_credentials(recipe, creds, enabled)
         payload = {
             "id": server_id,
             "recipe_id": recipe.id,
@@ -107,6 +162,7 @@ def create_server(body: McpServerCreate) -> McpServerListItem:
             "status": "unknown",
             "cached_tools": None,
         }
+        _seed_listed_tools(payload, recipe)
         return _save(payload)
     if not body.transport or not (body.command or body.url):
         raise AppError("mcp.custom.invalid", status_code=400)
@@ -152,11 +208,20 @@ def patch_server(server_id: str, body: McpServerPatch) -> McpServerListItem:
     enabled = row.get("enabled", False) if body.enabled is None else body.enabled
     row["enabled"] = enabled
     _check_root(recipe, row.get("root_path"), bool(enabled))
+    _check_credentials(recipe, row.get("credential_ids"), bool(enabled))
+    _seed_listed_tools(row, recipe)
     return _save(row)
 
 
 def set_enabled(server_id: str, enabled: bool) -> McpServerListItem:
-    return patch_server(server_id, McpServerPatch(enabled=enabled))
+    row = dict(_require(server_id))
+    recipe = get_recipe(str(row.get("recipe_id") or "")) if row.get("recipe_id") else None
+    if enabled:
+        _check_root(recipe, row.get("root_path"), True)
+        _check_credentials(recipe, row.get("credential_ids"), True)
+        _seed_listed_tools(row, recipe)
+    row["enabled"] = bool(enabled)
+    return _save(row)
 
 
 def delete_server(server_id: str) -> None:
@@ -181,14 +246,40 @@ def ping_server(server_id: str) -> tuple[McpServerStatus, str | None]:
     try:
         env, headers = mcp_sessions._spawn_env(row, recipe)
         root = row.get("root_path")
+        needs_spawn_root = bool(
+            recipe
+            and recipe.needs_root
+            and "{{rootPath}}" in "".join(recipe.args)
+        )
+        if needs_spawn_root and not root:
+            tools = _tools_from_recipe(recipe)
+            if tools:
+                row["status"] = "ok"
+                row["cached_tools"] = tools
+                _save(row)
+                return "ok", None
+            row["status"] = "unknown"
+            _save(row)
+            return "unknown", "mcp.ping.rootOnNode"
+        if recipe:
+            args = list(recipe.args)
+            command = recipe.command
+        else:
+            args = list(row.get("args") or [])
+            command = row.get("command")
         args = resolve_args(
-            list(row.get("args") or (recipe.args if recipe else [])),
+            args,
             root,
             append_root=recipe.append_root if recipe else False,
         )
+        from app.mcp.runtime_check import resolve_stdio_command
+
+        command, args = resolve_stdio_command(
+            command, args, recipe.runtime if recipe else "none"
+        )
         session = mcp_sessions.connect_transport(
             transport=str(row.get("transport") or "stdio"),
-            command=row.get("command") or (recipe.command if recipe else None),
+            command=command,
             args=args,
             url=row.get("url") or (recipe.url if recipe else None),
             env=env,
@@ -196,7 +287,11 @@ def ping_server(server_id: str) -> tuple[McpServerStatus, str | None]:
             headers=headers,
         )
         try:
-            tools = session.list_tools()
+            tools = mcp_sessions.apply_recipe_tool_schemas(session.list_tools(), recipe)
+            if recipe and recipe.id == "github":
+                tools = mcp_sessions.annotate_github_login(
+                    tools, env.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+                )
         finally:
             session.close()
         row["status"] = "ok"

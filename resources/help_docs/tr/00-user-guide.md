@@ -47,7 +47,7 @@ Bağlantılar (tipli bağlantı noktaları, rastgele oklar değil):
 
 İsteğe bağlı **Orkestratör**: sohbet yalnız orkestratöre, bir LLM orkestratöre, orkestratörden her ajanın kanalına bir **Kanal** ve orkestratörden **Son**’a **İleti**. Çalıştırma sohbetinin tek sesidir, soru sorar ve ajanları teker teker çağırır. Ajan metinleri ve iç komutlar baloncuk olarak görünmez. Uygulama son ajan sonucunu sonraki göreve ekler; sohbete yapıştırman gerekmez. Sohbet, çalıştırmayı bitirene kadar açık kalır. Orkestratör yoksa her ajan ileti ve devretme üzerinden kendi zinciridir. Bir ajan ya kanaldadır ya zincirdedir, ikisinde birden değil.
 
-İsteğe bağlı: **Araç** ajanın **Araç** bağlantı noktasına, **Bilgi** **Bilgi**’ye. Kaydet. **Kitaplıkta** hızlı seçim henüz değilse «Etkin yap».
+İsteğe bağlı: **Araç** ajanın veya orkestratörün **Araç** bağlantı noktasına, **Bilgi** **Bilgi**’ye. Kaydet. **Kitaplıkta** hızlı seçim henüz değilse «Etkin yap».
 
 ## Başlat ve durdur
 

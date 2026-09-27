@@ -199,7 +199,7 @@
       "deleteTitle": "Kimlik bilgisi silinsin mi?",
       "deleteBody": "“{{name}}” kaldırılacak. Gizli artık kullanılamaz.",
       "inUseTitle": "Kimlik bilgisi kullanılıyor",
-      "inUseBody": "“{{name}}” hâlâ bir yardım profiline, ağa veya MCP sunucusuna bağlı ve silinemez.",
+      "inUseBody": "«{{name}}» hâlâ atanmış ve silinemez.",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -216,6 +216,31 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Belirteç"
+      },
+      "kindHint": {
+        "xai": "xAI API anahtarı.",
+        "openai": "OpenAI API anahtarı.",
+        "anthropic": "Anthropic (Claude) API anahtarı.",
+        "gemini": "Google Gemini API anahtarı.",
+        "openai_compat": "OpenAI uyumlu URL için Bearer jetonu.",
+        "web_search": "Ağdaki web araması için anahtar.",
+        "github": "GitHub kişisel erişim jetonu (PAT). Classic: göreve göre repo, issue veya action hakları.",
+        "azure": "Azure/Entra jetonu veya PAT.",
+        "gitlab": "GitLab kişisel erişim jetonu.",
+        "slack": "Slack bot jetonu (xoxb-…).",
+        "notion": "Notion entegrasyon jetonu.",
+        "atlassian": "Atlassian Cloud API jetonu (Jira/Confluence).",
+        "linear": "Linear API anahtarı.",
+        "postgres": "Postgres bağlantı dizesi (uygulama veritabanları değil).",
+        "token": "Genel API anahtarı veya Bearer jetonu (Context7, Sentry vb.)."
+      },
+      "inUseMcpHint": "MCP sunucusunda başka bir kimlik ata veya sunucuyu sil. Sonra bu kimliği kaldırabilirsin.",
+      "usedBy": {
+        "helpChatLlm": "Yardım sohbeti (sohbet)",
+        "helpChatEmbed": "Yardım sohbeti (gömme)",
+        "helpChatSearch": "Yardım sohbeti (web araması)",
+        "mcp": "MCP sunucusu {{name}}",
+        "network": "Ağ «{{name}}»"
       }
     },
     "runtime": {
@@ -249,6 +274,8 @@
       "providerEmpty": "Ayarlanmadı",
       "openaiCompat": "OpenAI uyumlu",
       "model": "Sohbet modeli",
+      "missingModel": "Sohbet modeli seçilmedi. Bir tane seçene kadar yardım sohbeti kapalı kalır.",
+      "missingModelFallback": "Sohbet modeli seçilmedi. Tasarruf modeli ({{name}}) kullanılır.",
       "credential": "Kimlik bilgisi",
       "credentialEmpty": "Kimlik bilgisi yok",
       "credentialHint": "Önce geçerli bir API anahtarı seçin. Modeller ardından yüklenir.",
@@ -270,10 +297,11 @@
       "clearTitle": "Yardım geçmişi silinsin mi?",
       "clearBody": "Yardım sohbetindeki tüm iletiler kaldırılır. Profil kalır.",
       "reindex": "Dizini yeniden oluştur",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Karşılama ekranını yeniden göster"
     },
     "mcp": {
-      "lead": "Tarifler ve özel sunucular. Varsayılan: kapalı. Yardım bu sunucuları kullanmaz.",
+      "lead": "Tarifler ve özel sunucular. Varsayılan: kapalı. Yardım bunları kullanmaz. Burada oluşturup etkinleştirin, sonra ağda bir MCP düğümü bağlayın.",
       "recipes": "Tarifler",
       "servers": "Yapılandırılmış sunucular",
       "empty": "Henüz MCP sunucusu yok.",
@@ -285,15 +313,14 @@
       "enabled": "Etkin",
       "status": "Durum",
       "probe": "Sonda",
-      "presetHint": "Tarife göre kimlik bilgileri ve isteğe bağlı kök yolu. Kaydetmek sunucuyu hemen oluşturur.",
-      "officeHint": "Office, PDF ve Office biçimlerini bir araya getirir. Tekil hazır ayarları yalnızca gerekirse birlikte açın.",
+      "presetHint": "Tarife göre kimlik bilgileri. Dosya sistemi ve Excel klasörü düzenleyicideki MCP düğümünde. Kaydetmek sunucuyu hemen oluşturur.",
       "rootPath": "Kök yolu",
       "untrusted": "Bilinmeyen bir süreç verilen yetkilerle başlatılır. Yalnızca güvenilir komutlar kullanın.",
       "command": "Komut",
       "args": "Argümanlar",
       "url": "URL",
       "deleteTitle": "Sunucu silinsin mi?",
-      "deleteBody": "Bu özel sunucu yapılandırması kaldırılacak.",
+      "deleteBody": "Bu sunucu yapılandırması silinir. Tarif listede kalır.",
       "pingOk": "MCP sunucusu yanıt verdi",
       "pingError": "MCP sondası başarısız",
       "runtimeMissing": "Çalışma zamanı yok (Node, npx, Docker veya uvx).",
@@ -318,12 +345,37 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
-      }
+        "excel": "Excel"
+      },
+      "credentialsLead": "PAT, jeton ve bağlantı dizelerini Kimlik bilgilerinde oluşturup burada atayın. Uygun kimlik olmadan sunucu geçersiz kalır.",
+      "pickRoot": "Klasör",
+      "needsNone": "Kimlik gerekmez",
+      "needsRoot": "Kök klasör",
+      "needsRootNode": "Kök klasör düğümde",
+      "runtimeNeed": "Yerel çalışma zamanı: {{runtime}} (PATH’te).",
+      "credentialHelp": "Önce uygun türde bir kimlik oluşturun.",
+      "noCredentialOfKind": "Bu türde kimlik yok — önce Kimlik bilgilerinde ekleyin.",
+      "hint": {
+        "github": "Kimlik bilgilerinde GitHub PAT (tür GitHub). Yerel npx. Kök klasör yok.",
+        "azure": "Azure/Entra jetonu veya PAT (tür Azure). Yerel npx.",
+        "gitlab": "GitLab kişisel erişim jetonu (tür GitLab). Yerel npx.",
+        "filesystem": "Kimlik gerekmez. Kök klasör düzenleyicideki MCP düğümünde, Ayarlar’da değil. Yerel npx.",
+        "git": "Kimlik yok. Çalışma klasörü kök. Yerel uvx.",
+        "playwright": "Kimlik gerekmez. Node/npx ve tarayıcı çalışma zamanı.",
+        "postgres": "Bağlantı dizesi (tür Postgres), uygulamanın SQLite dosyaları değil. Yerel npx.",
+        "context7": "Token türünde API anahtarı. Uzak HTTP, npx yok.",
+        "slack": "Slack bot jetonu (tür Slack). Yerel npx.",
+        "notion": "Notion entegrasyon jetonu (tür Notion). Yerel npx.",
+        "atlassian": "Atlassian Cloud API jetonu (tür Atlassian). mcp-remote ile uzak.",
+        "linear": "Linear API anahtarı (tür Linear). Uzak HTTP.",
+        "fetch": "Kimlik yok. Genel URL metin olarak. Yerel uvx.",
+        "sentry": "Sentry kimlik jetonu (tür Token). Yerel npx.",
+        "excel": "Kimlik gerekmez. .xlsx klasörü düzenleyicideki MCP düğümünde. Yerel npx."
+      },
+      "reset": "Devre dışı bırak",
+      "secretNew": "Yeni sır (isteğe bağlı)",
+      "secretName": "Yeni kimliğin adı",
+      "secretDefaultHint": "Burada oluşturulan veya seçilen sır bu sunucunun varsayılanıdır. Ağda birden fazla varsa başka birini seçebilirsin."
     },
     "data": {
       "lead": "Veri klasörü ve depo durumu. SQL tarayıcısı yok, gizli yok.",
@@ -380,7 +432,8 @@
       "onboardingReset": "Yardım bir sonraki açılışta karşılama ekranını gösterir",
       "mcpSaved": "MCP sunucusu kaydedildi",
       "mcpDeleted": "MCP sunucusu silindi",
-      "dataDirOk": "Veri klasörü güncellendi"
+      "dataDirOk": "Veri klasörü güncellendi",
+      "mcpReset": "MCP sunucusu kapatıldı"
     }
   },
   "helpChat": {
@@ -416,6 +469,7 @@
       "body": "Yardım henüz yapılandırılmadı. Sağlayıcı ve modeli Ayarlar altında belirleyin.",
       "cta": "Ayarlara git"
     },
+    "usingFallback": "Sohbet modeli yok. Yanıtlar tasarruf modelinden gelir.",
     "sources": {
       "rag": "Belge",
       "web": "Web"
@@ -566,19 +620,21 @@
       "chat_input": "Sohbet",
       "chat_inputHint": "En fazla bir. Çalışma sohbeti. Orkestratör varken takip soruları için açık kalır.",
       "orchestrator": "Orkestratör",
-      "orchestratorHint": "Sohbeti yürütür. Ajan başına bir kanal, bitişe ileti.",
+      "orchestratorHint": "Sohbeti yürütür. Ajan başına bir kanal, bitişe ileti. Araçlar Araç girişine bağlanır.",
       "llm": "LLM",
       "llmHint": "Model ve sağlayıcı. Ajan llm bağlantı noktasına kenar.",
       "agent": "Ajan",
       "agentHint": "Sistem istemi. Tek başına iletiyle veya orkestratörün bir kanalıyla.",
       "tool": "Araç",
-      "toolHint": "Katalog türü, isteğe bağlı MCP.",
+      "toolHint": "HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi. Ajan veya orkestratöre.",
       "knowledge": "Bilgi",
       "knowledgeHint": "Kaynak klasör, yalnızca ajan knowledge bağlantı noktasına.",
       "router": "Yönlendirici",
       "routerHint": "İletileri koşullara göre ayırır.",
       "end": "Son",
-      "endHint": "En az bir tane. Çalıştırmayı bitirir."
+      "endHint": "En az bir tane. Çalıştırmayı bitirir.",
+      "mcp": "MCP",
+      "mcpHint": "Ayarlar’daki etkin bir sunucu. Bir araç gibi bağlanır."
     },
     "ports": {
       "message": "İleti",
@@ -623,7 +679,9 @@
         "noModels": "Yüklenmiş model yok.",
         "useModel": "“{{name}}” kullan",
         "temperature": "Sıcaklık",
-        "maxTokens": "En fazla belirteç"
+        "maxTokens": "En fazla belirteç",
+        "numCtx": "Bağlam penceresi",
+        "numCtxHint": "Boş, model varsayılanını kullanır. 8192 belirtecin üstünde daha büyük bir pencere yüklenir."
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",
@@ -631,7 +689,7 @@
         "systemPrompt": "Sistem istemi"
       },
       "orchestrator": {
-        "hint": "Bir LLM kenarı. Sohbet buraya gelir. Her ajanın kendi kanalı vardır. İleti çıkışı bitiştir.",
+        "hint": "Bir LLM kenarı. Sohbet buraya gelir. Her ajanın kendi kanalı vardır. İleti çıkışı bitiştir. Bağlı araçları kendisi çağırır.",
         "systemPrompt": "Sistem istemi"
       },
       "tool": {
@@ -660,6 +718,7 @@
       "knowledge": {
         "path": "Kaynak klasör",
         "pick": "Klasör",
+        "filesHint": "Dizine alınanlar: Markdown, metin, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV ve kaynak kodu (C#, TypeScript, Python dahil). Görseller ve eski .doc/.xls atlanır.",
         "embedProvider": "Gömme sağlayıcısı",
         "embedModel": "Gömme modeli",
         "topK": "topK",
@@ -680,6 +739,20 @@
         "placeholder": "Yer tutucu",
         "startMessage": "Başlangıç metni",
         "requireInput": "Giriş gerekli"
+      },
+      "mcp": {
+        "hint": "Ayarlar → MCP sunucularındaki etkin sunucu. Araç çıkışı ajana veya orkestratöre.",
+        "server": "MCP sunucusu",
+        "empty": "Sunucu yok",
+        "noneEnabled": "Etkin sunucu yok. Ayarlar’da bir tarif kurun ve açın.",
+        "tools": "Bu sunucunun araçları",
+        "toolsHint": "Boş = yoklamadan sonra tüm araçlar.",
+        "probeHint": "Ayarlar’daki yoklama bu sunucunun araçlarını listeler.",
+        "settings": "MCP ayarları",
+        "credential": "Kimlik",
+        "credentialDefault": "Varsayılan ({{name}})",
+        "credentialHint": "Varsayılan, MCP ayarlarındaki kimliktir. Aynı türden birkaç tane varsa burada seç.",
+        "rootHint": "Bu sunucunun okuyup yazabileceği klasör. Sürücü kökü değil."
       }
     },
     "load": {
@@ -736,8 +809,8 @@
       "modelRequired": "Model zorunludur.",
       "credentialRequired": "Bulut sağlayıcısı bir kimlik bilgisi ister.",
       "toolKind": "Araç türü eksik.",
-      "mcpServer": "Etkin bir MCP sunucusu seçin.",
-      "mcpRoot": "Bu MCP sunucusunun Ayarlar’da bir kök yoluna ihtiyacı var.",
+      "mcpServer": "Etkin bir MCP sunucusu seçin. Ayarlar’da oluşturup açın.",
+      "mcpRoot": "Bu MCP sunucusunun bir kök klasöre ihtiyacı var.",
       "fileAccessRoot": "Dosya erişimi, sürücü kökü olmayan bir klasör ister.",
       "knowledgePath": "Kaynak klasör zorunludur.",
       "knowledgeRoot": "Sürücü veya sistem kökü izinli değil.",
@@ -749,7 +822,8 @@
         "missing": "Dizin yok.",
         "stale": "Dizin eski.",
         "error": "Dizin hatası."
-      }
+      },
+      "mcpDisabled": "Bu MCP sunucusu Ayarlar’da kapalı."
     },
     "notify": {
       "saved": "Ağ kaydedildi",
@@ -950,7 +1024,8 @@
       "tool": "Araç",
       "knowledge": "Bilgi",
       "router": "Yönlendirici",
-      "end": "Son"
+      "end": "Son",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "Boşta",
@@ -964,11 +1039,16 @@
       "llm": "LLM",
       "tool": "Araç",
       "human": "Giriş",
-      "index": "Dizin"
+      "index": "Dizin",
+      "knowledge": "Bilgi"
     },
     "activity": {
       "title": "Etkinlik",
       "current": "Geçerli düğümler",
+      "now": "Şimdi",
+      "task": "Görev",
+      "agents": "Ajanlar",
+      "agentsDone": "{{completed}} / {{total}} bitti",
       "none": "Etkin düğüm yok",
       "dag": "Adım {{completed}} / {{total}}",
       "pending": "Beklemede",
@@ -991,7 +1071,9 @@
       "waitInput": "İlk iletiyi yazın. Grafik giriş bekliyor.",
       "waitReply": "Soru: çalışma yanıtınızı bekliyor.",
       "empty": "Bu çalıştırmada henüz ileti yok.",
-      "disabled": "Sohbet yalnızca çalıştırma sırasında."
+      "disabled": "Sohbet yalnızca çalıştırma sırasında.",
+      "agentDone": "{{name}} bitti.",
+      "agentDoneFiles": "{{name}} bitti. Dosyalar: {{files}}."
     },
     "log": {
       "pause": "Duraklat",
@@ -1123,7 +1205,8 @@
       "llm_error": "LLM",
       "validation": "Doğrulama",
       "service": "Hizmet",
-      "unknown": "Bilinmiyor"
+      "unknown": "Bilinmiyor",
+      "orchestrator": "Orkestratör"
     },
     "tab": {
       "history": "Geçmiş",
@@ -1290,7 +1373,9 @@
       },
       "stepLimit": "Adım sınırına ulaşıldı",
       "orchestrator": {
-        "repair": "Komut okunamadı, yeniden deneniyor."
+        "repair": "Komut okunamadı, yeniden deneniyor.",
+        "unreadable": "Orkestratör okunabilir bir sonraki adım üretmedi.",
+        "window": "İstem hiçbir bağlam penceresine sığmıyor."
       }
     },
     "graph": {
@@ -1301,6 +1386,11 @@
     "runtime": {
       "timeout": "Modelden ilerleme yok",
       "unreachable": "Çalışma zamanına erişilemiyor"
+    },
+    "mcp": {
+      "ping": {
+        "failed": "MCP sunucusu yanıt vermedi veya araç listesi okunamadı."
+      }
     }
   },
   "help": {
@@ -1321,5 +1411,59 @@
     "modelNotFound": "Gömme modeli bulunamadı.",
     "missingCredential": "Bu gömme modeli bir kimlik bilgisi gerektiriyor.",
     "unauthorized": "Gömme kimlik bilgisi reddedildi."
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "excel": "Excel"
+    },
+    "runtime": {
+      "missing": "Çalışma zamanı yok (Node, npx, Docker veya uvx)."
+    },
+    "ping": {
+      "failed": "MCP yoklaması başarısız."
+    },
+    "root": {
+      "required": "Kök klasör zorunlu.",
+      "invalid": "Sürücü veya sistem kökü izinli değil.",
+      "denied": "Bu klasör MCP için kilitli."
+    },
+    "credential": {
+      "required": "Bu tarif uygun türde bir kimlik ister."
+    },
+    "custom": {
+      "invalid": "Özel sunucu komut veya URL ister."
+    },
+    "postgres": {
+      "appDb": "Postgres uygulama veritabanlarına bağlanamaz."
+    },
+    "session": {
+      "closed": "MCP oturumu kapalı."
+    },
+    "call": {
+      "failed": "MCP çağrısı başarısız."
+    },
+    "notFound": "MCP sunucusu bulunamadı."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Etkin bir MCP sunucusu seçin.",
+      "disabled": "Bu MCP sunucusu kapalı.",
+      "root": "Bu MCP sunucusunun Ayarlar’da bir kök yolu olmalı.",
+      "unavailable": "Bu kurulumda MCP yok."
+    }
   }
 }

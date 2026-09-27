@@ -19,7 +19,7 @@ from app.run.graph_models import AgentNetworkDocument
 from app.run.help_bridge import set_help_degraded
 from app.run.knowledge import index_node
 from app.run.limits import LOG_PAYLOAD_MAX
-from app.run.mcp_bridge import get_mcp
+from app.run.mcp_bridge import get_mcp, validation_kwargs
 from app.run.models import (
     Activity,
     ActivityDag,
@@ -64,6 +64,8 @@ class RunController:
         self._unloads: list[str] = []
         self._help_model: str | None = None
         self.last_error_node_id: str | None = None
+        self.fail_message: str | None = None
+        self.fail_class: str | None = None
         self.tokens_in = 0
         self.tokens_out = 0
         self._phase = None
@@ -85,6 +87,8 @@ class RunController:
         self._unloads = []
         self._help_model = None
         self.last_error_node_id = None
+        self.fail_message = None
+        self.fail_class = None
         self.tokens_in = 0
         self.tokens_out = 0
         self._phase = None
@@ -115,6 +119,8 @@ class RunController:
             self.chat_input_queue = queue.Queue()
             self.conversation = []
             self.last_error_node_id = None
+            self.fail_message = None
+            self.fail_class = None
             self.tokens_in = 0
             self.tokens_out = 0
         publish("service", {"serviceStatus": "starting"})
@@ -131,17 +137,16 @@ class RunController:
             data_dir = str(get_bootstrap().data_dir)
             mcp = get_mcp()
             doc = normalize_channel_edges(AgentNetworkDocument.model_validate(row.document))
-            has_mcp = any(
-                n.type == "tool" and str(n.data.get("kind")) == "mcp" for n in doc.nodes
-            )
+            from app.run.graph_models import is_mcp_node, normalize_mcp_nodes
+
+            doc = normalize_mcp_nodes(doc)
+            has_mcp = any(is_mcp_node(n) for n in doc.nodes)
             if has_mcp and mcp is None:
                 raise AppError("graph.mcp.unavailable", status_code=409)
             errors = validate_document(
                 doc,
                 data_dir=data_dir,
-                mcp_enabled=(mcp.is_enabled if mcp else None),
-                mcp_root=(mcp.root_path if mcp else None),
-                mcp_available=mcp is not None,
+                **validation_kwargs(),
             )
             if errors:
                 keys = ",".join(e.message_key for e in errors[:8])
@@ -181,9 +186,43 @@ class RunController:
             if self.stop_event.is_set():
                 self.finish("cancelled")
                 return {"serviceStatus": "stopped", "runId": run_id}
-            server_ids = [sid for ag in compiled.agents.values() for sid, _ in ag.mcp if sid]
+            mcp_bindings = [item for ag in compiled.agents.values() for item in ag.mcp]
+            if compiled.orchestrator:
+                mcp_bindings.extend(compiled.orchestrator.mcp)
+            server_ids = [sid for sid, _names, _cred in mcp_bindings if sid]
+            cred_overrides = {
+                sid: cred for sid, _names, cred in mcp_bindings if sid and cred
+            }
+            from app.run.graph_models import is_mcp_node
+
+            root_overrides: dict[str, str] = {}
+            for node in compiled.by_id.values():
+                if not is_mcp_node(node):
+                    continue
+                sid = str(node.data.get("mcpServerId") or "").strip()
+                root = str(node.data.get("rootPath") or "").strip()
+                if sid and root:
+                    root_overrides[sid] = root
             if server_ids and mcp is not None:
-                mcp.open_for(list(dict.fromkeys(server_ids)))
+                try:
+                    mcp.open_for(
+                        list(dict.fromkeys(server_ids)),
+                        cred_overrides or None,
+                        root_overrides or None,
+                    )
+                except AppError:
+                    raise
+                except Exception as exc:
+                    from app.common.secrets import mask_text
+                    from app.db.errors import PersistError
+
+                    if isinstance(exc, PersistError):
+                        raise AppError(exc.message_key, status_code=409) from exc
+                    raise AppError(
+                        "mcp.ping.failed",
+                        status_code=409,
+                        message=mask_text(str(exc)[:240]),
+                    ) from exc
             self._phase = None
             self._phase_label = None
             with self.lock:
@@ -209,23 +248,26 @@ class RunController:
             self.thread.start()
             return {"serviceStatus": "running", "runId": run_id}
         except AppError as exc:
-            self._fail_start()
+            self._fail_start(exc.message_key, exc.message)
             raise exc
         except Exception:
-            self._fail_start()
+            self._fail_start("run.invalidNetwork")
             raise AppError("run.invalidNetwork", status_code=409)
 
-    def _fail_start(self) -> None:
+    def _fail_start(self, message_key: str | None = None, message: str | None = None) -> None:
         run_id = self.run_id
         if run_id:
             try:
                 row = get_run(run_id)
                 if row and row.get("outcome") == "running":
+                    if message_key:
+                        emit_log("error", message_key)
                     complete_run(
                         run_id,
                         outcome="failed",
                         ended_at=utc_now(),
                         error_class="unknown",
+                        error_message=message_key or message,
                     )
             except Exception:
                 pass
@@ -372,7 +414,7 @@ class RunController:
                 row = get_run(run_id)
             except StoreUnavailable:
                 row = None
-            chat = [item.model_dump(by_alias=True) for item in self.conversation] or None
+            chat = [item.model_dump(by_alias=True, exclude_none=True) for item in self.conversation] or None
             if row is None or row.get("outcome") == "running":
                 fields: dict[str, Any] = {
                     "outcome": outcome,
@@ -466,7 +508,7 @@ class RunController:
         return fallback_missing
 
     def _chat_payload(self) -> list[dict[str, Any]]:
-        return [item.model_dump(by_alias=True) for item in self.conversation]
+        return [item.model_dump(by_alias=True, exclude_none=True) for item in self.conversation]
 
     def flush_chat(self, *, generating: bool | None = None) -> None:
         payload = self._chat_payload()
@@ -490,7 +532,7 @@ class RunController:
             self.conversation.append(msg)
             run_id = self.run_id or ""
         self.flush_chat(generating=generating)
-        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True)})
+        publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True, exclude_none=True)})
 
     def send_chat(self, text: str) -> None:
         with self.lock:

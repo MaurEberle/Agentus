@@ -1,4 +1,4 @@
-from app.run.orchestrate import match_agent, orchestrator_instructions, parse_orchestrator_action
+from app.run.orchestrate import match_agent, orchestrator_instructions, parse_orchestrator_action, reject_reason
 
 
 def test_parse_actions() -> None:
@@ -7,6 +7,7 @@ def test_parse_actions() -> None:
         "text": "Welche Sprache?",
         "agent": "",
         "task": "",
+        "source": "",
     }
     fenced = '```json\n{"action":"call","agent":"ag","task":"schreib"}\n```'
     parsed = parse_orchestrator_action(fenced)
@@ -18,6 +19,13 @@ def test_parse_actions() -> None:
 def test_plain_text_is_a_reply() -> None:
     assert parse_orchestrator_action("Hallo")["action"] == "reply"
     assert parse_orchestrator_action("Hallo")["text"] == "Hallo"
+    assert reject_reason("Hallo") is None
+
+
+def test_json_reply_is_kept() -> None:
+    raw = '{"action":"reply","text":"Ich lasse den Autor schreiben."}'
+    assert parse_orchestrator_action(raw)["action"] == "reply"
+    assert reject_reason(raw) is None
 
 
 def test_truncated_call_json_still_calls() -> None:
@@ -29,13 +37,21 @@ def test_truncated_call_json_still_calls() -> None:
     assert parsed["task"] == "Schreibe eine freundliche Kindergeschichte."
 
 
-def test_prose_call_addresses_the_agent() -> None:
-    parsed = parse_orchestrator_action(
-        'Call agent-7fef4344 with the full German story under the title "Der Tiger auf dem Bauernhof".'
-    )
-    assert parsed["action"] == "call"
-    assert parsed["agent"] == "agent-7fef4344"
-    assert "Der Tiger auf dem Bauernhof" in parsed["task"]
+def test_prose_call_is_not_a_call() -> None:
+    raw = 'Call agent-7fef4344 with the full German story under the title "Der Tiger auf dem Bauernhof".'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+    assert reject_reason(raw) == "unreadable"
+
+
+def test_think_only_control_is_empty() -> None:
+    raw = '<think>{"action":"call","agent":"ag","task":"schreib"}</think>'
+    assert reject_reason(raw) == "empty"
+
+
+def test_empty_ask_is_rejected() -> None:
+    raw = '{"action":"ask","text":""}'
+    assert reject_reason(raw) == "empty"
 
 
 def test_pasted_story_with_broken_quotes_is_not_a_call() -> None:
@@ -51,6 +67,23 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "private channel" in text
     assert "id: ag" in text
     assert "parallel" not in text
+    assert "not in this prompt" in text
+    assert "status line" in text
+    assert "result of that call" in text
+    assert "text agent needs the source" in text
+    assert "did not write" in text
+    assert "waits only on ask" in text
+    assert "without waiting" in text
+
+
+def test_instructions_mention_connected_tools() -> None:
+    plain = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
+    assert "You have tools" not in plain
+    text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"])
+    assert "You have tools: file_access." in text
+    assert "not the tool result" in text
+    assert "instead of calling an agent" in text
+    assert "At most two tool rounds" in text
 
 
 def test_match_agent_by_id_or_name() -> None:

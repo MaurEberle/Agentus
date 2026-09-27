@@ -24,7 +24,10 @@ class RecipeRecord:
     credential_kinds: list[str] = field(default_factory=list)
     env_from_kind: dict[str, str] = field(default_factory=dict)
     append_root: bool = False
+    root_on_node: bool = False
+    listed_tools: list[str] = field(default_factory=list)
     notes: str | None = None
+    tool_schemas: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
@@ -44,7 +47,14 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
     env_map = raw.get("envFromKind") if isinstance(raw.get("envFromKind"), dict) else {}
     append = raw.get("appendRoot")
     if append is None:
-        append = needs_root
+        append = needs_root and not bool(raw.get("rootOnNode", False))
+    listed = raw.get("listedTools") if isinstance(raw.get("listedTools"), list) else []
+    raw_schemas = raw.get("toolSchemas") if isinstance(raw.get("toolSchemas"), dict) else {}
+    tool_schemas = {
+        str(name): dict(schema)
+        for name, schema in raw_schemas.items()
+        if isinstance(name, str) and isinstance(schema, dict)
+    }
     return RecipeRecord(
         id=recipe_id,
         title_key=title,
@@ -57,7 +67,10 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
         credential_kinds=[str(k) for k in kinds],
         env_from_kind={str(k): str(v) for k, v in env_map.items()},
         append_root=bool(append),
+        root_on_node=bool(raw.get("rootOnNode", False)),
+        listed_tools=[str(name) for name in listed if str(name).strip()],
         notes=str(raw["notes"]) if raw.get("notes") else None,
+        tool_schemas=tool_schemas,
     )
 
 

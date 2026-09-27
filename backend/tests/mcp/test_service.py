@@ -26,9 +26,47 @@ def test_create_github_disabled(api_env) -> None:
 def test_filesystem_enable_without_root(api_env) -> None:
     init()
     item = create_server(McpServerCreate(recipe_id="filesystem"))
+    enabled = set_enabled(item.id, True)
+    assert enabled.enabled is True
+    assert enabled.tool_names
+    assert "read_file" in enabled.tool_names
+
+
+def test_excel_enable_without_root(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="excel", enabled=True))
+    assert item.enabled is True
+    assert item.tool_names
+    assert "excel_read_sheet" in item.tool_names
+
+
+def test_git_enable_without_root(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="git"))
     with pytest.raises(AppError) as err:
         set_enabled(item.id, True)
     assert err.value.message_key == "mcp.root.required"
+
+
+def test_github_enable_without_credential(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="github"))
+    with pytest.raises(AppError) as err:
+        set_enabled(item.id, True)
+    assert err.value.message_key == "mcp.credential.required"
+
+
+def test_github_disable_keeps_default_credential(api_env) -> None:
+    init()
+    item = create_server(
+        McpServerCreate(recipe_id="github", credential_ids=["cred-1"], enabled=True)
+    )
+    assert item.enabled is True
+    disabled = set_enabled(item.id, False)
+    assert disabled.enabled is False
+    assert disabled.credential_ids == ["cred-1"]
+    listed = list_servers()
+    assert listed[0].enabled is False
 
 
 def test_custom_without_command_or_url(api_env) -> None:

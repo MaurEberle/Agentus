@@ -28,7 +28,7 @@ Seul point d’entrée du texte utilisateur dans l’exécution. Au plus un par 
 
 ## Orchestrateur
 
-Nœud avec son propre LLM. Il est la seule voix du chat de l’exécution, pose des questions et appelle les agents reliés un par un, chacun par un canal. Au plus un. Le chat ne se branche que sur lui. Sa sortie message va vers Fin ou un routeur. Tu ne vois ni les textes des agents ni les ordres internes comme bulles. L’app joint le dernier résultat à la tâche suivante. Un agent est sur le canal ou dans la chaîne de messages.
+Nœud avec son propre LLM. Il est la seule voix du chat de l’exécution, pose des questions et appelle les agents reliés un par un, chacun par un canal. Au plus un. Le chat ne se branche que sur lui. Sa sortie message va vers Fin ou un routeur. Tu ne vois ni les textes des agents ni les ordres internes comme bulles. L’app joint le dernier résultat à la tâche suivante. Un agent est sur le canal ou dans la chaîne de messages. Les outils peuvent se brancher sur son port Outil. Il les appelle lui-même.
 
 ## Outil
 
@@ -36,11 +36,11 @@ First-party (HTTP, recherche web, date/heure, calculatrice, accès aux fichiers)
 
 ## Connaissances (réseau)
 
-Nœud de connaissances : un dossier de textes pour le réseau. Il peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Modèle d’embeddings, index, topK et score propres. **Pas** le corpus d’aide. Au démarrage tu vois l’indexation ; un index déjà à jour est sauté.
+Nœud de connaissances : un dossier de Markdown, texte, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV et code source pour le réseau. Les images et les anciens .doc/.xls sont ignorés. Il peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Modèle d’embeddings, index, topK et score propres. **Pas** le corpus d’aide. Au démarrage tu vois l’indexation ; un index déjà à jour est sauté.
 
 ## Aide-RAG
 
-Documents dans le dossier d’aide du dossier de données (guides par défaut plus tes Markdown). Uniquement le chatbot d’aide. Après modifications, reconstruire l’index sous Paramètres → Chat d’aide.
+Documents dans le dossier d’aide du dossier de données. Mêmes types de fichiers que le nœud de connaissances. Uniquement le chatbot d’aide. Après modifications, reconstruire l’index sous Paramètres → Chat d’aide.
 
 ## Identifiant / credential
 
@@ -48,7 +48,7 @@ Clé stockée dans le coffre Windows. Dans les listes, seulement un masque. Dans
 
 ## MCP
 
-Model Context Protocol : serveurs d’outils externes. À créer et activer dans Paramètres, à relier dans le graphe comme nœud d’outil de type MCP. L’aide n’utilise pas MCP.
+Model Context Protocol : serveurs d’outils externes. Créez-les dans **Paramètres**, assignez un identifiant et **activez-les**. Dans le graphe c’est un nœud **MCP** à part, avec une sortie outil. L’aide n’utilise pas MCP.
 
 ## Fournisseur
 

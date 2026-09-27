@@ -31,7 +31,7 @@ Si hay conocimiento en un agente, el inicio ya muestra la ejecución mientras se
 
 ## Chat de red (supervisión)
 
-Pestaña **Chat**: conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. Las preguntas siguen abiertas en la misma ejecución. Los textos de los agentes y las órdenes internas no se ven aquí.
+Pestaña **Chat**: conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí.
 
 Esto **no** es la burbuja de ayuda. Historial y herramientas son los de la red.
 

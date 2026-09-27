@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   cloneDocument,
   emptyDocument,
+  migrateMcpNodes,
   snapPosition,
   type AgentNetworkDocument,
   type GraphEdge,
@@ -59,7 +60,7 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
   showGrid: true,
   showMinimap: true,
   hydrate: (doc, saved) => {
-    const next = normalizeChannelEdges(doc);
+    const next = migrateMcpNodes(normalizeChannelEdges(doc));
     set({
       document: cloneDocument(next),
       saved: saved ? cloneDocument(next) : null,

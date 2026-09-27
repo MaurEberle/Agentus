@@ -33,3 +33,15 @@ def test_postgres_app_db_dsn() -> None:
     with pytest.raises(AppError) as err:
         reject_app_db_dsn("sqlite:///C:/x/workspace.sqlite")
     assert err.value.message_key == "mcp.postgres.appDb"
+
+
+def test_confine_relative_and_denied(tmp_path: Path) -> None:
+    from app.mcp.sandbox import confine_tool_arguments
+
+    root = tmp_path / "kb"
+    root.mkdir()
+    inside = confine_tool_arguments({"path": "note.txt"}, str(root))
+    assert Path(inside["path"]).resolve() == (root / "note.txt").resolve()
+    with pytest.raises(AppError) as err:
+        confine_tool_arguments({"fileAbsolutePath": str(tmp_path / "other.xlsx")}, str(root))
+    assert err.value.message_key == "mcp.root.denied"

@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { queryClient } from '@/api/client';
 import i18n from '@/i18n';
 import { notify } from '@/lib/notifications';
 import {
@@ -10,6 +11,7 @@ import {
 type Phase = 'idle' | 'running';
 
 let phase: Phase = 'idle';
+let progress: { done: number; total: number } | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -25,6 +27,10 @@ function subscribe(listener: () => void) {
 
 function getSnapshot() {
   return phase === 'running';
+}
+
+function getProgressSnapshot() {
+  return progress;
 }
 
 function sleep(ms: number) {
@@ -45,6 +51,7 @@ function report(result: HelpReindexResult) {
           : 'help.index.failed',
     variant: failed ? 'error' : 'success',
   });
+  void queryClient.invalidateQueries({ queryKey: ['help-chat'] });
 }
 
 async function poll(jobId: string | undefined) {
@@ -59,7 +66,15 @@ async function poll(jobId: string | undefined) {
     }
     if (jobId && status.id && status.id !== jobId) continue;
     if (!jobId && status.state === 'running' && status.id) jobId = status.id;
-    if (status.state === 'running' || status.state === 'idle') continue;
+    if (status.total && status.total > 0) {
+      progress = { done: status.done ?? 0, total: status.total };
+      emit();
+    }
+    if (status.state === 'idle') {
+      notify({ titleKey: 'help.index.failed', variant: 'error' });
+      return;
+    }
+    if (status.state === 'running') continue;
     report(status);
     return;
   }
@@ -102,6 +117,7 @@ async function run(start: boolean) {
     await poll(jobId);
   } finally {
     phase = 'idle';
+    progress = null;
     emit();
   }
 }
@@ -127,4 +143,8 @@ export function useHelpReindexRunning() {
       .catch(() => undefined);
   }, []);
   return running;
+}
+
+export function useHelpReindexProgress() {
+  return useSyncExternalStore(subscribe, getProgressSnapshot, getProgressSnapshot);
 }

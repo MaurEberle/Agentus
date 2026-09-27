@@ -33,21 +33,42 @@ Einzige Stelle für das Hilfe-Widget. Unvollständig ohne Chat-Provider und Chat
 - Websuche an/aus plus Such-Zugang; ohne Zugang bleibt der Chat konfiguriert, die Suche ist aus
 - Verbindung prüfen, Verlauf löschen, **Index neu aufbauen**, Onboarding erneut zeigen
 
-Nach Wechsel des Embedding-Modells oder nach neuen Dateien im Hilfe-Korpus: **Index neu aufbauen**. Der Lauf geht weiter, auch wenn du die Einstellungen verlässt. Ein zweiter Klick startet keinen zweiten Index. Der Korpus ist der Ordner für Hilfe-Dokumente im Datenordner, nicht das Netz-Wissen. Neue mitgelieferte Anleitungen überschreiben Dateien, die schon dort liegen, nicht von selbst.
+Nach Wechsel des Embedding-Modells oder nach neuen Dateien im Hilfe-Korpus: **Index neu aufbauen**. Der Lauf geht weiter, auch wenn du die Einstellungen verlässt. Ein zweiter Klick startet keinen zweiten Index. Der Korpus ist der Ordner für Hilfe-Dokumente im Datenordner, nicht das Netz-Wissen. Es gelten dieselben Dateitypen wie beim Knowledge-Knoten. Neue mitgelieferte Anleitungen überschreiben Dateien, die schon dort liegen, nicht von selbst.
 
 Die Hilfe antwortet in der Oberflächensprache. Kann das Modell die Sprache nicht, antwortet es auf Englisch. Sie nennt keine Dokumenttitel aus den Anleitungen. Nur eine Websuche zeigt Quellen, und zwar Titel und Adresse. Interne Denkblöcke des Modells erscheinen nicht. Die Hilfe nutzt **keine** MCP-Server und **kein** Knowledge der Graphen.
 
 ## MCP-Server
 
-Vorlagen (**Rezepte**) für externe Tools: GitHub, Dateisystem, Git, Playwright, Postgres, Slack, Notion, Office-Formate und andere. Rezepte sind keine mitgelieferten Programme. Viele brauchen Node/`npx`, Docker oder `uvx` auf dem PC plus einen Zugang.
+Vorlagen (**Rezepte**) für externe Tools. Rezepte sind keine mitgelieferten Programme. Viele brauchen Node/`npx`, Docker oder `uvx` auf dem PC plus einen **Zugang**.
 
-Standard: Server **inaktiv**. Die App startet MCP-Prozesse nicht beim Öffnen, sondern wenn ein Lauf einen verbundenen MCP-Werkzeugknoten braucht.
+Standard: Server **inaktiv**. Die App startet MCP-Prozesse nicht beim Öffnen, sondern wenn ein Lauf einen verbundenen **MCP-Knoten** braucht.
 
-Anlegen aus einem Rezept (Zugang, optionaler Wurzelpfad) oder als **eigener Server** (Befehl, Argumente oder URL). Unbekannte Befehle nur verwenden, wenn du ihnen vertraust. Probe prüft Erreichbarkeit; „Runtime fehlt“, wenn Node/Docker/`uvx` nicht da ist.
+**Einrichten:** Rezept wählen, Zugänge der passenden Art zuordnen. Dateisystem und Excel aktivierst du ohne Ordner; den Ordner setzt du am MCP-Knoten im Editor. Git braucht den Wurzelordner hier. Speichern legt den Server an und aktiviert ihn. **Probe** spricht `tools/list`. „Runtime fehlt“, wenn Node/Docker/`uvx` nicht da ist.
 
-Office bündelt PDF und Office-Formate; Einzel-Presets nur extra aktivieren, wenn du sie wirklich brauchst.
+Was welches Rezept braucht:
 
-Löschen entfernt die Server-Konfiguration, nicht Ollama und nicht Zugänge.
+| Rezept | Zugang | Sonst |
+|--------|--------|--------|
+| GitHub | PAT, Art **GitHub** | lokal `npx` |
+| GitLab | PAT, Art **GitLab** | lokal `npx` |
+| Azure | Token/PAT, Art **Azure** | lokal `npx` |
+| Slack | Bot-Token, Art **Slack** | lokal `npx` |
+| Notion | Integration-Token, Art **Notion** | lokal `npx` |
+| Atlassian | Cloud-Token, Art **Atlassian** | remote |
+| Linear | API-Key, Art **Linear** | remote HTTP |
+| Context7 | API-Key, Art **Token** | remote HTTP |
+| Sentry | Auth-Token, Art **Token** | lokal `npx` |
+| Postgres | Verbindungszeichenfolge, Art **Postgres** (nicht die App-SQLite) | lokal `npx` |
+| Dateisystem, Excel | keiner | Wurzelordner **am MCP-Knoten** im Editor; lokal `npx` |
+| Git | keiner | **Wurzelordner** in den Einstellungen; lokal `uvx` |
+| Fetch | keiner | lokal `uvx` |
+| Playwright | keiner | lokal `npx` plus Browser |
+
+Zugänge legst du unter **Zugänge** an, nicht im Rezept-Dialog. Ohne passenden Zugang bleibt der Server ungültig.
+
+Oder **eigener Server** (Befehl, Argumente oder URL). Unbekannte Befehle nur verwenden, wenn du ihnen vertraust.
+
+Löschen entfernt die Server-Konfiguration, nicht Ollama und nicht Zugänge. Im Netz verbindest du den Server über den Palette-Knoten **MCP**, nicht über die Werkzeug-Art.
 
 ## Daten
 

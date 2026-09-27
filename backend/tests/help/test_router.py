@@ -169,6 +169,41 @@ def test_reindex_keeps_running_after_the_request_returns(client: TestClient, mon
     assert calls["n"] == 1
 
 
+def test_snapshot_heals_dead_running_job(api_env) -> None:
+    from app.help import reindex_job
+
+    reindex_job.reset_for_tests()
+    dead = threading.Thread(target=lambda: None)
+    dead.start()
+    dead.join()
+    reindex_job._job = reindex_job._Job(job_id="dead", state="running")  # type: ignore[attr-defined]
+    reindex_job._thread = dead  # type: ignore[attr-defined]
+    snap = reindex_job.snapshot()
+    assert snap.state == "error"
+    assert snap.message_key == "help.index.failed"
+    reindex_job.reset_for_tests()
+
+
+def test_reindex_reports_progress(client: TestClient, monkeypatch) -> None:
+    folder = corpus_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "intro.md").write_text("# Hello\nworld " * 40, encoding="utf-8")
+    seen: list[tuple[int, int]] = []
+
+    def _embed(req: object) -> EmbedResult:
+        texts = getattr(req, "texts", [])
+        from app.help.reindex_job import report_progress
+
+        seen.append((len(texts), len(texts)))
+        report_progress(len(texts), len(texts))
+        return EmbedResult(vectors=[[1.0, 0.0] for _ in texts], dimension=2, model="m")
+
+    monkeypatch.setattr("app.runtime.embeddings.embed", _embed)
+    body = _finish_reindex(client)
+    assert body["state"] == "ready"
+    assert seen
+
+
 def test_status_and_ping(client: TestClient, monkeypatch) -> None:
     status = client.get("/api/help-chat/status")
     assert status.status_code == 200

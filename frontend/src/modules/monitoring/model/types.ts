@@ -1,7 +1,7 @@
 import type { ServiceStatus } from '@/store/session';
 
 export type NodeRuntimeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error';
-export type WaitReason = 'none' | 'llm' | 'tool' | 'human' | 'index';
+export type WaitReason = 'none' | 'llm' | 'tool' | 'human' | 'index' | 'knowledge';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
 
@@ -68,6 +68,8 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
 };
 
 export type RunSnapshot = {

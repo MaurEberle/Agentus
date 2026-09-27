@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Iterator
 
@@ -7,7 +8,7 @@ from app.common.secrets import mask_text
 from app.db.engine import utc_now
 from app.db.help_chat import HelpMessageRow, insert_message
 from app.help.abort import begin_request, end_request
-from app.help.index import SCORE_MIN, index_is_ready
+from app.help.index import index_is_ready
 from app.help.models import HelpMessage, HelpSource
 from app.help.prompt import build_user_packet, system_prompt
 from app.help.retrieve import retrieve_scored
@@ -17,6 +18,8 @@ from app.http.errors import AppError
 from app.http.sse import sse_event
 from app.runtime.errors import RuntimeApiError
 from app.runtime.models import ChatMessage, CompletionRequest, StreamEvent
+
+log = logging.getLogger("agentus.help")
 
 
 def _persist(message: HelpMessage) -> None:
@@ -33,16 +36,21 @@ def _persist(message: HelpMessage) -> None:
     )
 
 
-def _web_sources(query: str) -> list[HelpSource]:
+def _web_search_ready(help_chat) -> bool:
+    return bool(help_chat.web_search_enabled and help_chat.web_search_credential_id)
+
+
+def _web_hits(query: str) -> list[tuple[HelpSource, str]]:
     settings = get_settings_merged()
     help_chat = settings.help_chat
-    if not help_chat.web_search_enabled or not help_chat.web_search_credential_id:
+    if not _web_search_ready(help_chat):
         return []
     from app.db.vault import get as vault_get
     from app.tools.execute import execute_first_party
 
     secret = vault_get(help_chat.web_search_credential_id)
     if not secret:
+        log.warning("help web search skipped: empty vault")
         return []
     result = execute_first_party(
         "web_search",
@@ -51,21 +59,24 @@ def _web_sources(query: str) -> list[HelpSource]:
         secret=secret,
     )
     if not result.ok or not isinstance(result.result, dict):
+        log.warning("help web search failed: %s", result.error_key or "unknown")
         return []
     rows = result.result.get("results") or []
-    sources: list[HelpSource] = []
+    hits: list[tuple[HelpSource, str]] = []
     if isinstance(rows, list):
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            sources.append(
-                HelpSource(
-                    kind="web",
-                    title=str(row.get("title") or ""),
-                    url=str(row.get("url") or "") or None,
+            title = str(row.get("title") or "")
+            url = str(row.get("url") or "") or None
+            snippet = str(row.get("snippet") or "")
+            hits.append(
+                (
+                    HelpSource(kind="web", title=title, url=url),
+                    snippet,
                 )
             )
-    return sources
+    return hits
 
 
 def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
@@ -106,18 +117,26 @@ def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
                 text = source.section or source.title
             rag_blocks.append(f"[{index}]\n{text}")
             max_score = max(max_score, score)
-        weak = len(rag_blocks) == 0 or max_score < SCORE_MIN
+        settings = get_settings_merged()
+        help_chat = settings.help_chat
+        search_on = _web_search_ready(help_chat)
         web_sources: list[HelpSource] = []
-        if weak:
-            web_sources = _web_sources(stripped)
+        web_lines: list[str] = []
+        if search_on:
+            hits = _web_hits(stripped)
+            web_sources = [item[0] for item in hits]
+            web_lines = [
+                f"- {src.title}: {src.url or ''} — {snippet}"
+                if snippet
+                else f"- {src.title}: {src.url or ''}"
+                for src, snippet in hits
+            ]
+            log.info("help web search hits=%d best_rag=%.3f", len(hits), max_score)
         if web_sources:
             yield sse_event(
                 "sources",
                 {"sources": [item.model_dump(by_alias=True) for item in web_sources]},
             )
-        settings = get_settings_merged()
-        help_chat = settings.help_chat
-        web_lines = [f"- {src.title}: {src.url or ''}" for src in web_sources]
         user_packet = build_user_packet(stripped, rag_blocks, web_lines)
         degraded = get_degraded()
         options = {"num_gpu": 0} if degraded and help_chat.provider == "ollama" else None
@@ -140,7 +159,10 @@ def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
                     provider=help_chat.provider,  # type: ignore[arg-type]
                     model=effective_help_model(),
                     messages=[
-                        ChatMessage(role="system", content=system_prompt(locale)),
+                        ChatMessage(
+                            role="system",
+                            content=system_prompt(locale, web_search_enabled=search_on),
+                        ),
                         ChatMessage(role="user", content=user_packet),
                     ],
                     credential_id=help_chat.credential_id,

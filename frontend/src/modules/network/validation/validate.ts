@@ -1,22 +1,16 @@
 import { embeddingNeedsCredential, isForbiddenDataRoot } from '@/modules/settings/model';
-import type { McpServerListItem } from '@/modules/settings/model';
+import type { McpRecipe, McpServerListItem } from '@/modules/settings/model';
 import { connectionAllowed, portKind, type PortContext } from '@/modules/network/schema/ports';
-import type {
-  AgentNetworkDocument,
-  GraphNode,
-  KnowledgeState,
-  ValidationIssue,
+import {
+  isMcpNode,
+  migrateMcpNodes,
+  type AgentNetworkDocument,
+  type GraphNode,
+  type KnowledgeState,
+  type ValidationIssue,
 } from '@/modules/network/model/document';
 
-const MCP_NEEDS_ROOT = new Set([
-  'filesystem',
-  'git',
-  'pdf',
-  'excel',
-  'powerpoint',
-  'word',
-  'office',
-]);
+
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -48,11 +42,14 @@ export function validateDocument(
   doc: AgentNetworkDocument,
   options: {
     mcpServers?: McpServerListItem[];
+    mcpRecipes?: McpRecipe[];
+    mcpReady?: boolean;
     dataDir?: string;
     helpCorpusHint?: string;
     knowledge?: Array<{ nodeId: string; state: KnowledgeState }>;
   } = {},
 ): ValidationIssue[] {
+  doc = migrateMcpNodes(doc);
   const issues: ValidationIssue[] = [];
   const byId = new Map(doc.nodes.map((node) => [node.id, node]));
   const portContext: PortContext = { nodes: doc.nodes, edges: doc.edges };
@@ -144,6 +141,8 @@ function validateNode(
   doc: AgentNetworkDocument,
   options: {
     mcpServers?: McpServerListItem[];
+    mcpRecipes?: McpRecipe[];
+    mcpReady?: boolean;
     dataDir?: string;
     helpCorpusHint?: string;
     knowledge?: Array<{ nodeId: string; state: KnowledgeState }>;
@@ -182,6 +181,25 @@ function validateNode(
       issues.push({ nodeId: node.id, messageKey: 'network.validation.credentialRequired' });
     }
   }
+  if (node.type === 'mcp' || isMcpNode(node)) {
+    const serverId = asString(node.data.mcpServerId);
+    if (!serverId) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.mcpServer' });
+    } else if (options.mcpReady !== false) {
+      const server = options.mcpServers?.find((item) => item.id === serverId);
+      if (!server || !server.enabled) {
+        issues.push({ nodeId: node.id, messageKey: 'network.validation.mcpServer' });
+      } else {
+        const recipe = options.mcpRecipes?.find((item) => item.id === server.recipeId);
+        if (recipe?.needsRoot) {
+          const root = recipe.rootOnNode ? asString(node.data.rootPath) : asString(server.rootPath);
+          if (!root || isForbiddenDataRoot(root)) {
+            issues.push({ nodeId: node.id, messageKey: 'network.validation.mcpRoot' });
+          }
+        }
+      }
+    }
+  }
   if (node.type === 'tool') {
     const kind = asString(node.data.kind);
     if (!kind) issues.push({ nodeId: node.id, messageKey: 'network.validation.toolKind' });
@@ -189,15 +207,6 @@ function validateNode(
       const root = asString(node.data.rootPath);
       if (!root || isForbiddenDataRoot(root)) {
         issues.push({ nodeId: node.id, messageKey: 'network.validation.fileAccessRoot' });
-      }
-    }
-    if (kind === 'mcp') {
-      const serverId = asString(node.data.mcpServerId);
-      const server = options.mcpServers?.find((item) => item.id === serverId);
-      if (!server || !server.enabled) {
-        issues.push({ nodeId: node.id, messageKey: 'network.validation.mcpServer' });
-      } else if (MCP_NEEDS_ROOT.has(server.recipeId ?? '') && !asString(server.rootPath)) {
-        issues.push({ nodeId: node.id, messageKey: 'network.validation.mcpRoot' });
       }
     }
   }

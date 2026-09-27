@@ -37,24 +37,14 @@ function Sources({ sources }: { sources: HelpSource[] }) {
 function TypingIndicator() {
   const { t } = useTranslation();
   return (
-    <div className="flex gap-2" role="status" aria-live="polite" aria-label={t('helpChat.status.generating')}>
-      <span className="relative mt-0.5 size-7 shrink-0">
-        <span
-          aria-hidden
-          className="absolute -inset-1 rounded-full border border-warning/80 motion-safe:animate-help-typing-ring"
-        />
-        <BrandMark className="relative size-7" alt="" />
-      </span>
-      <div className="relative flex h-9 items-center gap-1.5 overflow-hidden rounded-lg bg-muted px-3.5">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-1 left-0 w-5 rounded-full bg-warning/45 blur-md motion-safe:animate-help-typing-sweep"
-        />
+    <div className="flex items-end gap-2" role="status" aria-live="polite" aria-label={t('helpChat.status.generating')}>
+      <BrandMark spinning className="size-12" alt="" />
+      <div className="relative mb-1.5 flex h-7 items-center gap-1 overflow-hidden rounded-lg bg-muted px-2.5">
         {[0, 150, 300].map((delay) => (
           <span
             key={delay}
             aria-hidden
-            className="relative size-1.5 rounded-full bg-muted-foreground/40 motion-safe:animate-help-typing-dot"
+            className="relative size-1 rounded-full bg-muted-foreground/40 motion-safe:animate-help-typing-dot"
             style={{ animationDelay: `${delay}ms` }}
           />
         ))}
@@ -66,9 +56,13 @@ function TypingIndicator() {
 function Bubble({
   message,
   locale,
+  spinning = false,
+  chill = false,
 }: {
   message: HelpMessage;
   locale: string;
+  spinning?: boolean;
+  chill?: boolean;
 }) {
   const time = new Date(message.createdAt).toLocaleTimeString(locale, {
     hour: '2-digit',
@@ -76,8 +70,8 @@ function Bubble({
   });
   const isUser = message.role === 'user';
   return (
-    <article className={cn('flex gap-2', isUser ? 'flex-row-reverse' : 'flex-row')}>
-      {!isUser ? <BrandMark className="mt-0.5 size-7" alt="" /> : <span className="size-7 shrink-0" />}
+    <article className={cn('flex gap-2', isUser ? 'justify-end' : 'flex-row')}>
+      {!isUser ? <BrandMark spinning={spinning} chill={chill} className="mt-0.5 size-12" alt="" /> : null}
       <div className={cn('flex min-w-0 flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
@@ -112,6 +106,8 @@ export function HelpChatMessages({
   const { t, i18n } = useTranslation();
   const endRef = useRef<HTMLDivElement>(null);
   const items = streaming ? [...messages, streaming] : messages;
+  const lastAssistantId = [...items].reverse().find((message) => message.role === 'assistant')?.id;
+  const chillLast = Boolean(lastAssistantId) && !waiting && !streaming;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
@@ -129,7 +125,13 @@ export function HelpChatMessages({
     <ScrollArea className="min-h-0 flex-1">
       <div className="flex flex-col gap-3 p-3">
         {items.map((message) => (
-          <Bubble key={message.id} message={message} locale={i18n.language} />
+          <Bubble
+            key={message.id}
+            message={message}
+            locale={i18n.language}
+            spinning={message.id === 'streaming'}
+            chill={chillLast && message.id === lastAssistantId}
+          />
         ))}
         {waiting ? <TypingIndicator /> : null}
         <div ref={endRef} />

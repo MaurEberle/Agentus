@@ -14,6 +14,19 @@ def _create(client: TestClient) -> str:
     ).json()["id"]
 
 
+def test_list_includes_used_by_help_chat(client: TestClient) -> None:
+    cred_id = _create(client)
+    patch = client.patch(
+        "/api/settings",
+        json={"helpChat": {"credentialId": cred_id}},
+    )
+    assert patch.status_code == 200
+    listed = client.get("/api/credentials").json()["items"]
+    item = next(row for row in listed if row["id"] == cred_id)
+    assert item["inUse"] is True
+    assert "helpChat.llm" in item["usedBy"]
+
+
 def test_help_chat_credential_blocks_delete(client: TestClient) -> None:
     cred_id = _create(client)
     patch = client.patch(

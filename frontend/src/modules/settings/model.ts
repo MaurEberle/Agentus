@@ -55,12 +55,18 @@ export function credentialMatchesProvider(kind: string, provider: string): boole
   return kind === provider || kind === 'token';
 }
 
+export function credentialMatchesToolKind(credentialKind: string, toolKind: string): boolean {
+  if (toolKind === 'web_search') return credentialKind === 'web_search';
+  return true;
+}
+
 export type CredentialListItem = {
   id: string;
   name: string;
   kind: CredentialKind;
   mask: string;
   inUse?: boolean;
+  usedBy?: string[];
 };
 
 export type HelpChatSettings = {
@@ -113,6 +119,9 @@ export type McpRecipe = {
   transport: McpTransport;
   credentialKinds: CredentialKind[];
   needsRoot?: boolean;
+  rootOnNode?: boolean;
+  runtime?: string;
+  notes?: string;
 };
 
 export type McpServerListItem = {
@@ -127,6 +136,7 @@ export type McpServerListItem = {
   command?: string;
   args?: string[];
   url?: string;
+  toolNames?: string[];
 };
 
 export type RuntimePing = { ok: boolean; messageKey?: string };
@@ -185,7 +195,8 @@ export function isForbiddenDataRoot(path: string): boolean {
 }
 
 export function helpChatConfigured(help: HelpChatSettings): boolean {
-  if (!help.provider || !help.model.trim()) return false;
+  const model = (help.model || '').trim() || (help.fallbackModel || '').trim();
+  if (!help.provider || !model) return false;
   if (providerNeedsCredential(help.provider) && !help.credentialId) {
     return false;
   }
@@ -207,7 +218,7 @@ export function helpChatSnapshot(help: HelpChatSettings): string {
       ? optionalText(help.embeddingCredentialId)
       : '',
     webSearchEnabled: Boolean(help.webSearchEnabled),
-    webSearchCredentialId: help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '',
+    webSearchCredentialId: optionalText(help.webSearchCredentialId),
     fallbackModel: optionalText(help.fallbackModel),
   });
 }
@@ -217,7 +228,7 @@ export function helpChatWritePayload(help: HelpChatSettings) {
   const embeddingCredentialId = embeddingNeedsCredential(help.embeddingProvider || '')
     ? optionalText(help.embeddingCredentialId)
     : '';
-  const webSearchCredentialId = help.webSearchEnabled ? optionalText(help.webSearchCredentialId) : '';
+  const webSearchCredentialId = optionalText(help.webSearchCredentialId);
   return {
     provider: help.provider,
     model: help.model,

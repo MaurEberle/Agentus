@@ -199,7 +199,7 @@
       "deleteTitle": "删除凭据？",
       "deleteBody": "将移除“{{name}}”。密钥将不再可用。",
       "inUseTitle": "凭据正在使用",
-      "inUseBody": "“{{name}}”仍被帮助配置、网络或 MCP 服务器使用，无法删除。",
+      "inUseBody": "“{{name}}”仍被占用，无法删除。",
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -216,6 +216,31 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "令牌"
+      },
+      "kindHint": {
+        "xai": "xAI 的 API 密钥。",
+        "openai": "OpenAI 的 API 密钥。",
+        "anthropic": "Anthropic（Claude）的 API 密钥。",
+        "gemini": "Google Gemini 的 API 密钥。",
+        "openai_compat": "兼容 OpenAI 的 URL 的 Bearer 令牌。",
+        "web_search": "网络中网页搜索所用的密钥。",
+        "github": "GitHub 个人访问令牌（PAT）。Classic：按任务授予仓库、议题或 Actions 权限。",
+        "azure": "Azure/Entra 令牌或 PAT。",
+        "gitlab": "GitLab 个人访问令牌。",
+        "slack": "Slack 机器人令牌（xoxb-…）。",
+        "notion": "Notion 集成令牌。",
+        "atlassian": "Atlassian Cloud API 令牌（Jira/Confluence）。",
+        "linear": "Linear API 密钥。",
+        "postgres": "Postgres 连接字符串（不要指向应用数据库）。",
+        "token": "通用 API 密钥或 Bearer 令牌（Context7、Sentry 等）。"
+      },
+      "inUseMcpHint": "在 MCP 服务器上改用其他凭据，或删除该服务器。然后即可移除此凭据。",
+      "usedBy": {
+        "helpChatLlm": "帮助聊天（对话）",
+        "helpChatEmbed": "帮助聊天（嵌入）",
+        "helpChatSearch": "帮助聊天（网页搜索）",
+        "mcp": "MCP 服务器 {{name}}",
+        "network": "网络“{{name}}”"
       }
     },
     "runtime": {
@@ -249,6 +274,8 @@
       "providerEmpty": "未设置",
       "openaiCompat": "OpenAI 兼容",
       "model": "聊天模型",
+      "missingModel": "尚未选择聊天模型。在选择之前，帮助聊天保持关闭。",
+      "missingModelFallback": "尚未选择聊天模型。将使用节能模型（{{name}}）。",
       "credential": "凭据",
       "credentialEmpty": "不选择凭据",
       "credentialHint": "请先选择有效的 API 密钥。随后加载模型。",
@@ -270,10 +297,11 @@
       "clearTitle": "清除帮助历史？",
       "clearBody": "将删除帮助聊天中的所有消息。配置保留。",
       "reindex": "重建索引",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "再次显示引导"
     },
     "mcp": {
-      "lead": "配方和自定义服务器。默认：未启用。帮助不使用这些服务器。",
+      "lead": "配方和自定义服务器。默认关闭。帮助不使用它们。在此创建并启用，然后在网络中连接 MCP 节点。",
       "recipes": "配方",
       "servers": "已配置的服务器",
       "empty": "尚无 MCP 服务器。",
@@ -285,15 +313,14 @@
       "enabled": "已启用",
       "status": "状态",
       "probe": "探测",
-      "presetHint": "按配方填写凭据和可选根路径。保存会立即创建服务器。",
-      "officeHint": "Office 捆绑 PDF 和 Office 格式。仅在需要时并行启用单项预设。",
+      "presetHint": "按配方填写凭据。文件系统和 Excel 的文件夹在编辑器的 MCP 节点上。保存会立即创建服务器。",
       "rootPath": "根路径",
       "untrusted": "将以给定权限启动未知进程。请仅使用可信命令。",
       "command": "命令",
       "args": "参数",
       "url": "URL",
       "deleteTitle": "删除服务器？",
-      "deleteBody": "将移除此自定义服务器配置。",
+      "deleteBody": "将删除此服务器配置。配方仍留在列表中。",
       "pingOk": "MCP 服务器已响应",
       "pingError": "MCP 探测失败",
       "runtimeMissing": "缺少运行时（Node、npx、Docker 或 uvx）。",
@@ -318,12 +345,37 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
-      }
+        "excel": "Excel"
+      },
+      "credentialsLead": "在凭据中创建 PAT、令牌和连接字符串，再在此分配。没有匹配凭据时服务器无效。",
+      "pickRoot": "文件夹",
+      "needsNone": "无需凭据",
+      "needsRoot": "根文件夹",
+      "needsRootNode": "根文件夹在节点上",
+      "runtimeNeed": "需要本地运行时：{{runtime}}（在 PATH 中）。",
+      "credentialHelp": "请先创建匹配类型的凭据。",
+      "noCredentialOfKind": "没有此类型的凭据 — 先在凭据中添加。",
+      "hint": {
+        "github": "在凭据中使用 GitHub PAT（类型 GitHub）。本地 npx。无需根目录。",
+        "azure": "Azure/Entra 令牌或 PAT（类型 Azure）。本地 npx。",
+        "gitlab": "GitLab 个人访问令牌（类型 GitLab）。本地 npx。",
+        "filesystem": "无需凭据。根文件夹在编辑器的 MCP 节点上，不在设置里。本地 npx。",
+        "git": "无需凭据。工作目录作为根。本地 uvx。",
+        "playwright": "无需凭据。需要 Node/npx 和浏览器运行时。",
+        "postgres": "连接字符串（类型 Postgres），不要指向应用的 SQLite。本地 npx。",
+        "context7": "用 Token 类型的 API 密钥。远程 HTTP，无需 npx。",
+        "slack": "Slack 机器人令牌（类型 Slack）。本地 npx。",
+        "notion": "Notion 集成令牌（类型 Notion）。本地 npx。",
+        "atlassian": "Atlassian Cloud API 令牌（类型 Atlassian）。通过 mcp-remote 远程连接。",
+        "linear": "Linear API 密钥（类型 Linear）。远程 HTTP。",
+        "fetch": "无需凭据。公开 URL 作为文本。本地 uvx。",
+        "sentry": "Sentry 授权令牌（类型 Token）。本地 npx。",
+        "excel": "无需凭据。.xlsx 文件夹在编辑器的 MCP 节点上。本地 npx。"
+      },
+      "reset": "停用",
+      "secretNew": "新密钥（可选）",
+      "secretName": "新凭据名称",
+      "secretDefaultHint": "在此创建或选择的密钥是该服务器的默认凭据。若有多个，可在网络中另选。"
     },
     "data": {
       "lead": "数据文件夹和存储状态。无 SQL 浏览器，无密钥。",
@@ -380,7 +432,8 @@
       "onboardingReset": "下次打开帮助时将再次显示引导",
       "mcpSaved": "已保存 MCP 服务器",
       "mcpDeleted": "已删除 MCP 服务器",
-      "dataDirOk": "已更新数据文件夹"
+      "dataDirOk": "已更新数据文件夹",
+      "mcpReset": "MCP 服务器已停用"
     }
   },
   "helpChat": {
@@ -416,6 +469,7 @@
       "body": "帮助尚未配置。请在设置中指定提供方和模型。",
       "cta": "前往设置"
     },
+    "usingFallback": "未设置聊天模型。回复使用节能模型。",
     "sources": {
       "rag": "文档",
       "web": "网页"
@@ -566,19 +620,21 @@
       "chat_input": "聊天",
       "chat_inputHint": "最多一个。运行中的对话。有编排器时会为追问保持打开。",
       "orchestrator": "编排器",
-      "orchestratorHint": "主持运行聊天。每个智能体一条通道，消息输出到结束。",
+      "orchestratorHint": "主持运行聊天。每个智能体一条通道，消息输出到结束。工具接到工具端口。",
       "llm": "LLM",
       "llmHint": "模型和提供方。连接到智能体 llm 端口。",
       "agent": "智能体",
       "agentHint": "系统提示。单独使用时走消息，或通过编排器的通道。",
       "tool": "工具",
-      "toolHint": "目录类型，可选 MCP。",
+      "toolHint": "HTTP、网页搜索、日期/时间、计算器、文件访问。接到智能体或编排器。",
       "knowledge": "知识",
       "knowledgeHint": "源文件夹，仅连接到智能体 knowledge 端口。",
       "router": "路由器",
       "routerHint": "按条件分支消息。",
       "end": "结束",
-      "endHint": "至少一个。结束运行。"
+      "endHint": "至少一个。结束运行。",
+      "mcp": "MCP",
+      "mcpHint": "设置中已启用的服务器。像工具一样连接。"
     },
     "ports": {
       "message": "消息",
@@ -623,7 +679,9 @@
         "noModels": "未加载模型。",
         "useModel": "使用“{{name}}”",
         "temperature": "温度",
-        "maxTokens": "最大 token 数"
+        "maxTokens": "最大 token 数",
+        "numCtx": "上下文窗口",
+        "numCtxHint": "留空使用模型默认值。超过 8192 个 token 时会加载更大的窗口。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",
@@ -631,7 +689,7 @@
         "systemPrompt": "系统提示"
       },
       "orchestrator": {
-        "hint": "一条 LLM 连线。聊天进入这里。每个智能体有自己的通道。消息输出仍指向结束。",
+        "hint": "一条 LLM 连线。聊天进入这里。每个智能体有自己的通道。消息输出仍指向结束。已连接的工具由它自己调用。",
         "systemPrompt": "系统提示"
       },
       "tool": {
@@ -660,6 +718,7 @@
       "knowledge": {
         "path": "源文件夹",
         "pick": "文件夹",
+        "filesHint": "会索引 Markdown、文本、PDF、Word（.docx）、Excel（.xlsx）、HTML、JSON、CSV 以及源代码（含 C#、TypeScript、Python）。图片和旧版 .doc/.xls 会被跳过。",
         "embedProvider": "嵌入提供方",
         "embedModel": "嵌入模型",
         "topK": "topK",
@@ -680,6 +739,20 @@
         "placeholder": "占位符",
         "startMessage": "起始文本",
         "requireInput": "需要输入"
+      },
+      "mcp": {
+        "hint": "设置 → MCP 服务器中已启用的服务器。工具输出接到智能体或编排器。",
+        "server": "MCP 服务器",
+        "empty": "无服务器",
+        "noneEnabled": "没有已启用的服务器。请在设置中配置配方并启用。",
+        "tools": "此服务器的工具",
+        "toolsHint": "空 = 探测后使用全部工具。",
+        "probeHint": "设置中的探测会列出此服务器的工具。",
+        "settings": "MCP 设置",
+        "credential": "凭据",
+        "credentialDefault": "默认（{{name}}）",
+        "credentialHint": "默认使用 MCP 设置中的凭据。同一类型有多份时在此选择。",
+        "rootHint": "此服务器可读写的文件夹。不能是驱动器根。"
       }
     },
     "load": {
@@ -736,8 +809,8 @@
       "modelRequired": "模型为必填。",
       "credentialRequired": "云提供方需要凭据。",
       "toolKind": "缺少工具类型。",
-      "mcpServer": "请选择已启用的 MCP 服务器。",
-      "mcpRoot": "此 MCP 服务器需要在设置中指定根路径。",
+      "mcpServer": "请选择已启用的 MCP 服务器。在设置中创建并启用。",
+      "mcpRoot": "此 MCP 服务器需要一个根文件夹。",
       "fileAccessRoot": "文件访问需要不是驱动器根目录的文件夹。",
       "knowledgePath": "源文件夹为必填。",
       "knowledgeRoot": "不允许使用驱动器或系统根目录。",
@@ -749,7 +822,8 @@
         "missing": "缺少索引。",
         "stale": "索引已过期。",
         "error": "索引错误。"
-      }
+      },
+      "mcpDisabled": "此 MCP 服务器在设置中已停用。"
     },
     "notify": {
       "saved": "网络已保存",
@@ -950,7 +1024,8 @@
       "tool": "工具",
       "knowledge": "知识",
       "router": "路由器",
-      "end": "结束"
+      "end": "结束",
+      "mcp": "MCP"
     },
     "nodeStatus": {
       "idle": "空闲",
@@ -964,11 +1039,16 @@
       "llm": "LLM",
       "tool": "工具",
       "human": "输入",
-      "index": "索引"
+      "index": "索引",
+      "knowledge": "知识"
     },
     "activity": {
       "title": "活动",
       "current": "当前节点",
+      "now": "当前",
+      "task": "任务",
+      "agents": "智能体",
+      "agentsDone": "{{completed}} / {{total}} 已完成",
       "none": "无活动节点",
       "dag": "步骤 {{completed}} / {{total}}",
       "pending": "待处理",
@@ -991,7 +1071,9 @@
       "waitInput": "请写下第一条消息。图正在等待输入。",
       "waitReply": "追问：运行正在等待你的回答。",
       "empty": "此运行尚无消息。",
-      "disabled": "仅在运行期间可聊天。"
+      "disabled": "仅在运行期间可聊天。",
+      "agentDone": "{{name}} 已完成。",
+      "agentDoneFiles": "{{name}} 已完成。文件：{{files}}。"
     },
     "log": {
       "pause": "暂停",
@@ -1123,7 +1205,8 @@
       "llm_error": "LLM",
       "validation": "验证",
       "service": "服务",
-      "unknown": "未知"
+      "unknown": "未知",
+      "orchestrator": "编排器"
     },
     "tab": {
       "history": "历史",
@@ -1290,7 +1373,9 @@
       },
       "stepLimit": "已达到步骤上限",
       "orchestrator": {
-        "repair": "控制指令无法读取，正在重试。"
+        "repair": "控制指令无法读取，正在重试。",
+        "unreadable": "编排器没有给出可读的下一步。",
+        "window": "提示词无法放入任何上下文窗口。"
       }
     },
     "graph": {
@@ -1301,6 +1386,11 @@
     "runtime": {
       "timeout": "模型无进展",
       "unreachable": "运行时不可达"
+    },
+    "mcp": {
+      "ping": {
+        "failed": "MCP 服务器没有响应，或其工具列表无法读取。"
+      }
     }
   },
   "help": {
@@ -1321,5 +1411,59 @@
     "modelNotFound": "未找到嵌入模型。",
     "missingCredential": "此嵌入模型需要凭据。",
     "unauthorized": "嵌入凭据被拒绝。"
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Filesystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "excel": "Excel"
+    },
+    "runtime": {
+      "missing": "缺少运行时（Node、npx、Docker 或 uvx）。"
+    },
+    "ping": {
+      "failed": "MCP 探测失败。"
+    },
+    "root": {
+      "required": "必须指定根文件夹。",
+      "invalid": "不允许使用驱动器或系统根目录。",
+      "denied": "此文件夹禁止用于 MCP。"
+    },
+    "credential": {
+      "required": "此配方需要匹配类型的凭据。"
+    },
+    "custom": {
+      "invalid": "自定义服务器需要命令或 URL。"
+    },
+    "postgres": {
+      "appDb": "Postgres 不得指向应用数据库。"
+    },
+    "session": {
+      "closed": "MCP 会话已关闭。"
+    },
+    "call": {
+      "failed": "MCP 调用失败。"
+    },
+    "notFound": "未找到 MCP 服务器。"
+  },
+  "graph": {
+    "mcp": {
+      "server": "请选择已启用的 MCP 服务器。",
+      "disabled": "此 MCP 服务器已停用。",
+      "root": "此 MCP 服务器需要在设置中指定根路径。",
+      "unavailable": "此安装中没有 MCP。"
+    }
   }
 }

@@ -33,21 +33,42 @@ The only place that configures the help widget. Incomplete without chat provider
 - web search on/off plus a search credential; without a credential the chat stays configured and search stays off
 - ping, clear history, **rebuild index**, show onboarding again
 
-After changing the embedding model or adding files to the help corpus: **rebuild index**. The job keeps running if you leave Settings. A second click does not start a second index. The corpus is the help-documents folder in the data directory, not network knowledge. New bundled guides do not overwrite files that are already there.
+After changing the embedding model or adding files to the help corpus: **rebuild index**. The job keeps running if you leave Settings. A second click does not start a second index. The corpus is the help-documents folder in the data directory, not network knowledge. The same file types as the knowledge node apply. New bundled guides do not overwrite files that are already there.
 
 Help answers in the UI language. If the model cannot use that language, it answers in English. It does not name document titles from the guides. Only a web search shows sources, as title and address. Internal thinking blocks from the model are hidden. Help uses **no** MCP servers and **no** graph knowledge nodes.
 
 ## MCP servers
 
-**Recipes** for external tools: GitHub, filesystem, Git, Playwright, Postgres, Slack, Notion, Office formats, and others. Recipes are not bundled binaries. Many need Node/`npx`, Docker, or `uvx` on the PC plus a credential.
+**Recipes** for external tools. Recipes are not bundled binaries. Many need Node/`npx`, Docker, or `uvx` on the PC plus a **credential**.
 
-Default: servers **off**. The app does not start MCP processes when you open Settings — only when a run needs a connected MCP tool node.
+Default: servers **off**. The app does not start MCP processes when you open Settings — only when a run needs a connected **MCP node**.
 
-Create from a recipe (credential, optional root path) or as a **custom server** (command, args, or URL). Use unknown commands only if you trust them. Probe checks reachability; “runtime missing” if Node/Docker/`uvx` is absent.
+**Set up:** pick a recipe and assign credentials of the matching kind. Filesystem and Excel enable without a folder; you set the folder on the MCP node in the editor. Git still needs the root folder here. Saving creates and enables the server. **Probe** calls `tools/list`. “Runtime missing” if Node/Docker/`uvx` is absent.
 
-Office bundles PDF and Office formats; enable single presets only if you really need them.
+What each recipe needs:
 
-Delete removes the server config, not Ollama and not credentials.
+| Recipe | Credential | Other |
+|--------|------------|--------|
+| GitHub | PAT, kind **GitHub** | local `npx` |
+| GitLab | PAT, kind **GitLab** | local `npx` |
+| Azure | token/PAT, kind **Azure** | local `npx` |
+| Slack | bot token, kind **Slack** | local `npx` |
+| Notion | integration token, kind **Notion** | local `npx` |
+| Atlassian | Cloud token, kind **Atlassian** | remote |
+| Linear | API key, kind **Linear** | remote HTTP |
+| Context7 | API key, kind **Token** | remote HTTP |
+| Sentry | auth token, kind **Token** | local `npx` |
+| Postgres | connection string, kind **Postgres** (not the app SQLite) | local `npx` |
+| Filesystem, Excel | none | root folder **on the MCP node** in the editor; local `npx` |
+| Git | none | **root folder** in Settings; local `uvx` |
+| Fetch | none | local `uvx` |
+| Playwright | none | local `npx`; Playwright also needs a browser |
+
+Create credentials under **Credentials**, not in the recipe dialog. Without a matching credential the server stays invalid.
+
+Or a **custom server** (command, args, or URL). Use unknown commands only if you trust them.
+
+Delete removes the server config, not Ollama and not credentials. In the network you attach the server with the palette node **MCP**, not a tool kind.
 
 ## Data
 

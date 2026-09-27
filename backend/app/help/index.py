@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Literal
 
+from app.common.extract import extract_text, is_indexable
 from app.db.engine import get_bootstrap
 from app.db.help_rag import HelpRagChunk, list_all_chunks, replace_all_chunks, wipe_chunks
 from app.db.paths import RAG_DIR_NAME
@@ -40,28 +41,13 @@ def _iter_corpus_files(root: Path) -> list[Path]:
             resolved.relative_to(root)
         except (OSError, ValueError):
             continue
-        suffix = path.suffix.lower()
-        if suffix in {".md", ".txt"}:
-            out.append(path)
-        elif suffix == ".pdf":
-            try:
-                import pypdf  # noqa: F401
-            except ImportError:
-                continue
+        if is_indexable(path):
             out.append(path)
     return out
 
 
 def _read_file(path: Path) -> str:
-    if path.suffix.lower() == ".pdf":
-        try:
-            from pypdf import PdfReader
-
-            reader = PdfReader(str(path))
-            return "\n".join(page.extract_text() or "" for page in reader.pages)
-        except Exception:
-            return ""
-    return path.read_text(encoding="utf-8", errors="replace")
+    return extract_text(path)
 
 
 def _build_chunks() -> list[HelpRagChunk]:
@@ -100,7 +86,7 @@ def index_is_ready() -> bool:
 
 
 def reindex() -> tuple[Literal["ready", "error"], str | None]:
-    from app.runtime.embeddings import embed
+    from app.runtime.embeddings import embed, progress_hook
 
     settings = get_settings_merged()
     help_chat = settings.help_chat
@@ -119,16 +105,20 @@ def reindex() -> tuple[Literal["ready", "error"], str | None]:
     if not chunks:
         wipe_chunks()
         return "ready", None
+    from app.help.reindex_job import report_progress
+
+    report_progress(0, len(chunks))
     try:
-        result = embed(
-            EmbedRequest(
-                texts=[chunk.text for chunk in chunks],
-                model=model,
-                provider=provider,  # type: ignore[arg-type]
-                credential_id=credential_id,
-                timeout_sec=180,
+        with progress_hook(report_progress):
+            result = embed(
+                EmbedRequest(
+                    texts=[chunk.text for chunk in chunks],
+                    model=model,
+                    provider=provider,  # type: ignore[arg-type]
+                    credential_id=credential_id,
+                    timeout_sec=600,
+                )
             )
-        )
         if len(result.vectors) != len(chunks):
             return "error", "help.index.failed"
         dimension = result.dimension

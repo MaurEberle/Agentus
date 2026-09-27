@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from app.run.channels import normalize_channel_edges
-from app.run.graph_models import AgentNetworkDocument, GraphNode
+from app.run.graph_models import AgentNetworkDocument, GraphNode, is_mcp_node, normalize_mcp_nodes
 
 
 @dataclass
@@ -15,6 +15,7 @@ class CompiledLlm:
     credential_id: str | None
     temperature: float | None
     max_tokens: int | None
+    num_ctx: int | None
     node_id: str
 
 
@@ -25,6 +26,8 @@ class CompiledOrchestrator:
     llm: CompiledLlm
     agents: list[str]
     finals: list[str]
+    tool_kinds: list[str] = field(default_factory=list)
+    mcp: list[tuple[str, list[str] | None, str | None]] = field(default_factory=list)
 
 
 @dataclass
@@ -33,7 +36,7 @@ class CompiledAgent:
     system_prompt: str
     llm: CompiledLlm
     tool_kinds: list[str]
-    mcp: list[tuple[str, list[str] | None]]
+    mcp: list[tuple[str, list[str] | None, str | None]]
     knowledge_node_ids: list[str]
     outbound_message: list[str]
 
@@ -63,8 +66,50 @@ def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id
         credential_id=data.get("credentialId"),
         temperature=data.get("temperature"),
         max_tokens=data.get("maxTokens"),
+        num_ctx=_num_ctx(data),
         node_id=llm_node.id if llm_node else "",
     )
+
+
+def _num_ctx(data: dict) -> int | None:
+    raw = data.get("numCtx")
+    if isinstance(raw, bool) or raw is None:
+        return None
+    if isinstance(raw, int) and raw > 0:
+        return raw
+    if isinstance(raw, float) and raw > 0:
+        return int(raw)
+    return None
+
+
+def _compile_tools(
+    doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str
+) -> tuple[list[str], list[tuple[str, list[str] | None]]]:
+    tool_kinds: list[str] = []
+    mcp: list[tuple[str, list[str] | None, str | None]] = []
+    for edge in doc.edges:
+        if edge.target != node_id or edge.target_handle != "tool":
+            continue
+        tool = by_id.get(edge.source)
+        if not tool:
+            continue
+        if is_mcp_node(tool):
+            names = tool.data.get("mcpToolNames")
+            server_id = str(tool.data.get("mcpServerId") or "").strip()
+            cred = str(tool.data.get("credentialId") or "").strip() or None
+            if server_id:
+                mcp.append(
+                    (
+                        server_id,
+                        list(names) if isinstance(names, list) else None,
+                        cred,
+                    )
+                )
+            continue
+        kind = str(tool.data.get("kind") or "")
+        if kind:
+            tool_kinds.append(kind)
+    return tool_kinds, mcp
 
 
 def _compile_orchestrator(
@@ -90,19 +135,22 @@ def _compile_orchestrator(
             agents.append(target.id)
         elif edge.source_handle == "message":
             finals.append(target.id)
+    tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
     return CompiledOrchestrator(
         node_id=node.id,
         system_prompt=str(node.data.get("systemPrompt") or ""),
         llm=_compile_llm(doc, by_id, node.id),
         agents=agents,
         finals=finals,
+        tool_kinds=tool_kinds,
+        mcp=mcp,
     )
 
 
 def compile_document(
     doc: AgentNetworkDocument, *, network_id: str, network_name: str
 ) -> CompiledGraph:
-    doc = normalize_channel_edges(doc)
+    doc = normalize_mcp_nodes(normalize_channel_edges(doc))
     by_id = {n.id: n for n in doc.nodes}
     chats = [n for n in doc.nodes if n.type == "chat_input"]
     chat_input = chats[0] if chats else None
@@ -123,25 +171,7 @@ def compile_document(
         if node.type != "agent":
             continue
         llm = _compile_llm(doc, by_id, node.id)
-        tool_kinds: list[str] = []
-        mcp: list[tuple[str, list[str] | None]] = []
-        for edge in doc.edges:
-            if edge.target != node.id or edge.target_handle != "tool":
-                continue
-            tool = by_id.get(edge.source)
-            if not tool:
-                continue
-            kind = str(tool.data.get("kind") or "")
-            if kind == "mcp":
-                names = tool.data.get("mcpToolNames")
-                mcp.append(
-                    (
-                        str(tool.data.get("mcpServerId") or ""),
-                        list(names) if isinstance(names, list) else None,
-                    )
-                )
-            elif kind:
-                tool_kinds.append(kind)
+        tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
         knowledge_ids = [
             e.source
             for e in doc.edges

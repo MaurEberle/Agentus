@@ -199,7 +199,15 @@
       "deleteTitle": "Zugang löschen?",
       "deleteBody": "„{{name}}“ wird entfernt. Das Geheimnis ist danach nicht mehr verfügbar.",
       "inUseTitle": "Zugang wird verwendet",
-      "inUseBody": "„{{name}}“ ist noch einem Hilfe-Profil, Netz oder MCP-Server zugeordnet und kann nicht gelöscht werden.",
+      "inUseBody": "„{{name}}“ ist noch zugeordnet und kann nicht gelöscht werden.",
+      "inUseMcpHint": "Weise unter MCP-Server einen anderen Zugang zu oder lösche den Server. Danach lässt sich dieser Zugang entfernen.",
+      "usedBy": {
+        "helpChatLlm": "Hilfe-Chatbot (Chat)",
+        "helpChatEmbed": "Hilfe-Chatbot (Embeddings)",
+        "helpChatSearch": "Hilfe-Chatbot (Websuche)",
+        "mcp": "MCP-Server {{name}}",
+        "network": "Netz „{{name}}“"
+      },
       "kindName": {
         "xai": "xAI",
         "openai": "OpenAI",
@@ -216,6 +224,23 @@
         "linear": "Linear",
         "postgres": "Postgres",
         "token": "Token"
+      },
+      "kindHint": {
+        "xai": "API-Key von xAI.",
+        "openai": "API-Key von OpenAI.",
+        "anthropic": "API-Key von Anthropic (Claude).",
+        "gemini": "API-Key von Google Gemini.",
+        "openai_compat": "Bearer-Token für eine OpenAI-kompatible URL.",
+        "web_search": "Schlüssel für die Websuche im Netz.",
+        "github": "GitHub Personal Access Token (PAT). Classic: Rechte für Repos, Issues oder Actions, je nach Aufgabe.",
+        "azure": "Azure- oder Entra-Token bzw. PAT.",
+        "gitlab": "GitLab Personal Access Token.",
+        "slack": "Slack Bot-Token (xoxb-…).",
+        "notion": "Notion Integration Token.",
+        "atlassian": "Atlassian Cloud API-Token (Jira/Confluence).",
+        "linear": "Linear API-Key.",
+        "postgres": "Postgres-Verbindungszeichenfolge (nicht die App-Datenbanken).",
+        "token": "Allgemeiner API-Key oder Bearer-Token (Context7, Sentry u. a.)."
       }
     },
     "runtime": {
@@ -249,6 +274,8 @@
       "providerEmpty": "Nicht gesetzt",
       "openaiCompat": "OpenAI-kompatibel",
       "model": "Chat-Modell",
+      "missingModel": "Kein Chat-Modell gewählt. Der Hilfe-Chat bleibt aus, bis du eines setzt.",
+      "missingModelFallback": "Kein Chat-Modell gewählt. Es gilt das Spar-Modell ({{name}}).",
       "credential": "Zugang",
       "credentialEmpty": "Keinen Zugang wählen",
       "credentialHint": "Zuerst einen gültigen API-Key wählen. Danach werden die Modelle geladen.",
@@ -270,14 +297,20 @@
       "clearTitle": "Hilfe-Verlauf löschen?",
       "clearBody": "Alle Nachrichten im Hilfe-Chat werden entfernt. Das Profil bleibt erhalten.",
       "reindex": "Index neu aufbauen",
+      "reindexProgress": "{{done}} / {{total}}",
       "resetOnboarding": "Onboarding erneut zeigen"
     },
     "mcp": {
-      "lead": "Rezepte und eigene Server. Standard: inaktiv. Die Hilfe nutzt diese Server nicht.",
+      "lead": "Rezepte und eigene Server. Standard: inaktiv. Die Hilfe nutzt diese Server nicht. Erst hier anlegen und aktivieren, dann im Netz als MCP-Knoten verbinden.",
+      "credentialsLead": "Zugänge (PAT, Token, Verbindungszeichenfolge) legst du unter Zugänge an und ordnest sie hier dem Rezept zu. Ohne passenden Zugang bleibt der Server ungültig.",
       "recipes": "Rezepte",
       "servers": "Konfigurierte Server",
       "empty": "Noch keine MCP-Server.",
       "enable": "Aktivieren",
+      "reset": "Deaktivieren",
+      "secretNew": "Neues Secret (optional)",
+      "secretName": "Name für den neuen Zugang",
+      "secretDefaultHint": "Ein hier angelegtes oder gewähltes Secret ist der Standard für diesen Server. Im Netz kannst du bei mehreren Zugängen einen anderen wählen.",
       "added": "Vorhanden",
       "custom": "Benutzerdefiniert",
       "customCreate": "Eigener Server",
@@ -285,18 +318,41 @@
       "enabled": "Aktiv",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Zugänge und optionaler Wurzelpfad laut Rezept. Speichern legt den Server sofort an.",
-      "officeHint": "Office bündelt PDF und Office-Formate. Einzel-Presets parallel nur bei Bedarf aktivieren.",
+      "presetHint": "Zugänge laut Rezept. Dateisystem und Excel bekommen den Ordner am MCP-Knoten im Editor. Speichern legt den Server an und aktiviert ihn.",
       "rootPath": "Wurzelpfad",
+      "pickRoot": "Ordner",
+      "needsNone": "Kein Zugang nötig",
+      "needsRoot": "Wurzelordner",
+      "needsRootNode": "Wurzelordner im Editor",
+      "runtimeNeed": "Lokal nötig: {{runtime}} (im PATH).",
+      "credentialHelp": "Lege zuerst einen Zugang der passenden Art an.",
+      "noCredentialOfKind": "Kein Zugang dieser Art — zuerst unter Zugänge anlegen.",
       "untrusted": "Ein unbekannter Prozess wird mit den angegebenen Rechten gestartet. Nur vertrauenswürdige Befehle verwenden.",
       "command": "Befehl",
       "args": "Argumente",
       "url": "URL",
       "deleteTitle": "Server löschen?",
-      "deleteBody": "Die Konfiguration dieses eigenen Servers wird entfernt.",
+      "deleteBody": "Die Konfiguration dieses Servers wird entfernt. Das Rezept bleibt in der Liste.",
       "pingOk": "MCP-Server antwortet",
       "pingError": "MCP-Probe fehlgeschlagen",
       "runtimeMissing": "Runtime fehlt (Node, npx, Docker oder uvx).",
+      "hint": {
+        "github": "GitHub PAT unter Zugänge (Art GitHub). Lokal npx. Kein Wurzelordner.",
+        "azure": "Azure-/Entra-Token oder PAT (Art Azure). Lokal npx.",
+        "gitlab": "GitLab Personal Access Token (Art GitLab). Lokal npx.",
+        "filesystem": "Kein Zugang. Wurzelordner am MCP-Knoten im Editor, nicht in den Einstellungen. Lokal npx.",
+        "git": "Kein Zugang. Arbeitsverzeichnis als Wurzel. Lokal uvx.",
+        "playwright": "Kein Zugang. Node/npx plus Browser-Runtime.",
+        "postgres": "Verbindungszeichenfolge (Art Postgres), nicht die App-SQLite. Lokal npx.",
+        "context7": "API-Key als Zugang der Art Token. Remote-HTTP, kein npx.",
+        "slack": "Slack Bot-Token (Art Slack). Lokal npx.",
+        "notion": "Notion Integration Token (Art Notion). Lokal npx.",
+        "atlassian": "Atlassian Cloud API-Token (Art Atlassian). Remote über mcp-remote.",
+        "linear": "Linear API-Key (Art Linear). Remote-HTTP.",
+        "fetch": "Kein Zugang. Öffentliche URLs als Text. Lokal uvx.",
+        "sentry": "Sentry Auth-Token (Art Token). Lokal npx.",
+        "excel": "Kein Zugang. Ordner für .xlsx am MCP-Knoten im Editor. Lokal npx."
+      },
       "statusName": {
         "unknown": "Unbekannt",
         "ok": "OK",
@@ -318,11 +374,7 @@
         "linear": "Linear",
         "fetch": "Fetch",
         "sentry": "Sentry",
-        "pdf": "PDF",
-        "excel": "Excel",
-        "powerpoint": "PowerPoint",
-        "word": "Word",
-        "office": "Office"
+        "excel": "Excel"
       }
     },
     "data": {
@@ -379,8 +431,63 @@
       "reindexed": "Hilfe-Index neu aufgebaut",
       "onboardingReset": "Onboarding wird beim nächsten Öffnen wieder gezeigt",
       "mcpSaved": "MCP-Server gespeichert",
+      "mcpReset": "MCP-Server deaktiviert",
       "mcpDeleted": "MCP-Server gelöscht",
       "dataDirOk": "Datenordner aktualisiert"
+    }
+  },
+  "mcp": {
+    "recipe": {
+      "github": "GitHub",
+      "azure": "Azure",
+      "gitlab": "GitLab",
+      "filesystem": "Dateisystem",
+      "git": "Git",
+      "playwright": "Playwright",
+      "postgres": "Postgres",
+      "context7": "Context7",
+      "slack": "Slack",
+      "notion": "Notion",
+      "atlassian": "Atlassian",
+      "linear": "Linear",
+      "fetch": "Fetch",
+      "sentry": "Sentry",
+      "excel": "Excel"
+    },
+    "runtime": {
+      "missing": "Runtime fehlt (Node, npx, Docker oder uvx)."
+    },
+    "ping": {
+      "failed": "MCP-Probe fehlgeschlagen."
+    },
+    "root": {
+      "required": "Wurzelordner ist Pflicht.",
+      "invalid": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "denied": "Dieser Ordner ist für MCP gesperrt."
+    },
+    "credential": {
+      "required": "Dieses Rezept braucht einen Zugang der passenden Art."
+    },
+    "custom": {
+      "invalid": "Eigener Server braucht Befehl oder URL."
+    },
+    "postgres": {
+      "appDb": "Postgres darf nicht auf die App-Datenbanken zeigen."
+    },
+    "session": {
+      "closed": "MCP-Sitzung ist geschlossen."
+    },
+    "call": {
+      "failed": "MCP-Aufruf fehlgeschlagen."
+    },
+    "notFound": "MCP-Server nicht gefunden."
+  },
+  "graph": {
+    "mcp": {
+      "server": "Aktiven MCP-Server wählen.",
+      "disabled": "Dieser MCP-Server ist deaktiviert.",
+      "root": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "unavailable": "MCP ist in dieser Installation nicht verfügbar."
     }
   },
   "helpChat": {
@@ -416,6 +523,7 @@
       "body": "Die Hilfe ist noch nicht konfiguriert. Provider und Modell setzt du unter Einstellungen.",
       "cta": "Zu den Einstellungen"
     },
+    "usingFallback": "Kein Chat-Modell gesetzt. Antworten kommen vom Spar-Modell.",
     "sources": {
       "rag": "Dokument",
       "web": "Web"
@@ -566,13 +674,15 @@
       "chat_input": "Chat",
       "chat_inputHint": "Höchstens einer. Gespräch im Lauf. Mit Orchestrator bleiben Rückfragen offen.",
       "orchestrator": "Orchestrator",
-      "orchestratorHint": "Führt den Lauf-Chat. Pro Agent ein Kanal, das Ende über Nachricht.",
+      "orchestratorHint": "Führt den Lauf-Chat. Pro Agent ein Kanal, das Ende über Nachricht. Werkzeuge am Anschluss Werkzeug.",
       "llm": "LLM",
       "llmHint": "Modell und Provider. Kante zum Agenten-Port llm.",
       "agent": "Agent",
       "agentHint": "Systemprompt. Allein über Nachricht, oder über einen Kanal am Orchestrator.",
       "tool": "Werkzeug",
-      "toolHint": "Katalog-Art, optional MCP.",
+      "toolHint": "HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. An Agent oder Orchestrator.",
+      "mcp": "MCP",
+      "mcpHint": "Ein aktivierter Server aus den Einstellungen. Anschluss wie ein Werkzeug.",
       "knowledge": "Wissen",
       "knowledgeHint": "Quellenordner, nur zum Agenten-Port knowledge.",
       "router": "Router",
@@ -623,7 +733,9 @@
         "noModels": "Keine Modelle geladen.",
         "useModel": "„{{name}}“ verwenden",
         "temperature": "Temperature",
-        "maxTokens": "Max. Tokens"
+        "maxTokens": "Max. Tokens",
+        "numCtx": "Kontextfenster",
+        "numCtxHint": "Leer lässt die Vorgabe des Modells. Über 8192 Token lädt der Lauf ein größeres Fenster."
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",
@@ -631,7 +743,7 @@
         "systemPrompt": "Systemprompt"
       },
       "orchestrator": {
-        "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang.",
+        "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang. Angeschlossene Werkzeuge ruft er selbst auf.",
         "systemPrompt": "Systemprompt"
       },
       "tool": {
@@ -657,9 +769,24 @@
         "mcpHint": "Standard: alle Tools des Servers. Server anlegen unter Einstellungen.",
         "mcpSettings": "Zu MCP-Einstellungen"
       },
+      "mcp": {
+        "hint": "Ein aktivierter Server aus Einstellungen → MCP-Server. Ausgang Werkzeug an Agent oder Orchestrator.",
+        "server": "MCP-Server",
+        "empty": "Kein Server",
+        "noneEnabled": "Kein aktiver Server. Unter Einstellungen ein Rezept einrichten und aktivieren.",
+        "tools": "Tools dieses Servers",
+        "toolsHint": "Leer = alle Tools nach der Probe.",
+        "probeHint": "Probe in den Einstellungen listet die Tools dieses Servers.",
+        "settings": "Zu MCP-Einstellungen",
+        "credential": "Zugang",
+        "credentialDefault": "Standard ({{name}})",
+        "credentialHint": "Standard ist der Zugang aus den MCP-Einstellungen. Bei mehreren Zugängen derselben Art hier wählen.",
+        "rootHint": "Ordner, in dem dieser Server Dateien lesen und schreiben darf. Nicht die Laufwerkswurzel."
+      },
       "knowledge": {
         "path": "Quellenordner",
         "pick": "Ordner",
+        "filesHint": "Indexiert werden Markdown, Text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV und Quellcode (unter anderem C#, TypeScript, Python). Bilder und alte .doc/.xls bleiben außen vor.",
         "embedProvider": "Embedding-Provider",
         "embedModel": "Embedding-Modell",
         "topK": "topK",
@@ -736,8 +863,9 @@
       "modelRequired": "Modell ist Pflicht.",
       "credentialRequired": "Cloud-Provider braucht einen Zugang.",
       "toolKind": "Werkzeug-Art fehlt.",
-      "mcpServer": "Aktiven MCP-Server wählen.",
-      "mcpRoot": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
+      "mcpServer": "Aktiven MCP-Server wählen. Server unter Einstellungen anlegen und aktivieren.",
+      "mcpRoot": "Dieser MCP-Server braucht einen Wurzelordner.",
+      "mcpDisabled": "Dieser MCP-Server ist in den Einstellungen deaktiviert.",
       "fileAccessRoot": "Dateizugriff braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "knowledgePath": "Quellenordner ist Pflicht.",
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
@@ -948,6 +1076,7 @@
       "llm": "LLM",
       "agent": "Agent",
       "tool": "Werkzeug",
+      "mcp": "MCP",
       "knowledge": "Wissen",
       "router": "Router",
       "end": "Ende"
@@ -964,11 +1093,16 @@
       "llm": "LLM",
       "tool": "Werkzeug",
       "human": "Eingabe",
-      "index": "Index"
+      "index": "Index",
+      "knowledge": "Wissen"
     },
     "activity": {
       "title": "Aktivität",
       "current": "Aktuelle Knoten",
+      "now": "Jetzt",
+      "task": "Auftrag",
+      "agents": "Agenten",
+      "agentsDone": "{{completed}} von {{total}} fertig",
       "none": "Kein Knoten aktiv",
       "dag": "Schritt {{completed}} von {{total}}",
       "pending": "Offen",
@@ -991,7 +1125,9 @@
       "waitInput": "Erste Nachricht schreiben. Der Graph wartet auf Eingabe.",
       "waitReply": "Rückfrage: der Lauf wartet auf deine Antwort.",
       "empty": "Noch keine Nachrichten in diesem Lauf.",
-      "disabled": "Chat nur während eines Laufs."
+      "disabled": "Chat nur während eines Laufs.",
+      "agentDone": "{{name}} ist fertig.",
+      "agentDoneFiles": "{{name}} ist fertig. Dateien: {{files}}."
     },
     "log": {
       "pause": "Halten",
@@ -1123,7 +1259,8 @@
       "llm_error": "LLM",
       "validation": "Validierung",
       "service": "Dienst",
-      "unknown": "Unbekannt"
+      "unknown": "Unbekannt",
+      "orchestrator": "Orchestrator"
     },
     "tab": {
       "history": "Historie",
@@ -1290,7 +1427,14 @@
       },
       "stepLimit": "Schrittlimit erreicht",
       "orchestrator": {
-        "repair": "Steuerbefehl war unlesbar, neuer Versuch."
+        "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
+        "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
+        "window": "Der Prompt passt in kein Kontextfenster."
+      }
+    },
+    "mcp": {
+      "ping": {
+        "failed": "MCP-Server hat nicht geantwortet oder die Tool-Liste war unlesbar."
       }
     },
     "graph": {

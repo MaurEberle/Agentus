@@ -2,9 +2,18 @@
   "id": "excel",
   "titleKey": "mcp.recipe.excel",
   "transport": "stdio",
-  "runtime": "uvx",
-  "command": "uvx",
-  "args": ["excel-mcp-server"],
+  "runtime": "npx",
+  "command": "npx",
+  "args": ["-y", "@negokaz/excel-mcp-server"],
   "needsRoot": true,
-  "appendRoot": true
+  "rootOnNode": true,
+  "appendRoot": false,
+  "listedTools": [
+    "excel_describe_sheets",
+    "excel_read_sheet",
+    "excel_write_to_sheet",
+    "excel_create_table",
+    "excel_copy_sheet",
+    "excel_format_range"
+  ]
 }

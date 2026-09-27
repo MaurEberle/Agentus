@@ -12,7 +12,7 @@ Eine Ausführung des aktiven Graphen. Es läuft höchstens **einer**. Start und 
 
 ## Knoten und Kanten
 
-Bausteine (Chat, Orchestrator, Agent, LLM, Werkzeug, Wissen, Router, Ende) und typisierte Verbindungen. Beliebige Pfeile zwischen Kästen sind ungültig.
+Bausteine (Chat, Orchestrator, Agent, LLM, Werkzeug, MCP, Wissen, Router, Ende) und typisierte Verbindungen. Beliebige Pfeile zwischen Kästen sind ungültig.
 
 ## Agent
 
@@ -28,19 +28,19 @@ Einziger Einstieg für Nutzertext im Lauf. Höchstens einer pro Netz. Der Monito
 
 ## Orchestrator
 
-Knoten mit eigenem LLM. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende oder an einen Router. Agententexte und interne Aufträge siehst du nicht als Chatblasen. Die App hängt das letzte Ergebnis an den nächsten Auftrag. Ein Agent ist entweder am Kanal oder in der Nachrichtenkette.
+Knoten mit eigenem LLM. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende oder an einen Router. Agententexte und interne Aufträge siehst du nicht als Chatblasen. Die App hängt das letzte Ergebnis an den nächsten Auftrag. Ein Agent ist entweder am Kanal oder in der Nachrichtenkette. Werkzeuge dürfen an seinen Anschluss Werkzeug. Er ruft sie selbst auf.
 
 ## Werkzeug
 
-First-Party (HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff) oder MCP. Dateizugriff bleibt in einem Wurzelordner, nicht auf der Laufwerkswurzel. Konfiguration im Inspector, Ausführung nur im Lauf.
+First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. Dateizugriff bleibt in einem Wurzelordner, nicht auf der Laufwerkswurzel. Konfiguration im Inspector, Ausführung nur im Lauf.
 
 ## Wissen (Netz)
 
-Knowledge-Knoten: ein Ordner mit Texten für das Netz. Er darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Eigenes Embedding-Modell, eigener Index, topK und Score. Beim Start siehst du die Indizierung. Ein schon aktueller Index wird übersprungen.
+Knowledge-Knoten: ein Ordner mit Markdown, Text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV und Quellcode für das Netz. Bilder und alte .doc/.xls werden nicht gelesen. Er darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Eigenes Embedding-Modell, eigener Index, topK und Score. Beim Start siehst du die Indizierung. Ein schon aktueller Index wird übersprungen.
 
 ## Hilfe-RAG
 
-Dokumente im Hilfe-Ordner im Datenordner (Default-Anleitungen plus deine Markdown-Dateien). Nur der Hilfe-Chatbot. Nach Änderungen Index unter Einstellungen → Hilfe-Chatbot neu aufbauen.
+Dokumente im Hilfe-Ordner im Datenordner. Dieselben Dateitypen wie beim Knowledge-Knoten. Nur der Hilfe-Chatbot. Nach Änderungen Index unter Einstellungen → Hilfe-Chatbot neu aufbauen.
 
 ## Credential / Zugang
 
@@ -48,7 +48,7 @@ Gespeicherter Schlüssel im Windows-Tresor. In Listen nur Maske. Im Graphen nur 
 
 ## MCP
 
-Model Context Protocol: externe Tool-Server. In den Einstellungen anlegen und aktivieren, im Graphen als Werkzeug-Knoten der Art MCP verbinden. Die Hilfe verwendet MCP nicht.
+Model Context Protocol: externe Tool-Server. In den **Einstellungen** anlegen, Zugang zuordnen und **aktivieren**. Im Graphen eigener Knoten **MCP**, Ausgang wie ein Werkzeug. Die Hilfe verwendet MCP nicht.
 
 ## Provider
 

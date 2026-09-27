@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatInt } from '@/modules/history/model/format';
+import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import type { ErrorTopRow } from '@/modules/history/model/types';
 
@@ -32,7 +33,7 @@ export function ErrorTop({
                   onClick={() => onPick(row)}
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{row.message}</span>
+                    <span className="block truncate text-sm font-medium">{formatRunLogMessage(row.message, t)}</span>
                     <span className="text-xs text-muted-foreground">
                       {t(`history.errorClass.${row.errorClass}`)}
                       {row.nodeName ? ` · ${row.nodeName}` : ''}

@@ -33,19 +33,17 @@ Seul endroit pour le widget d’aide. Incomplet sans fournisseur et modèle de c
 - recherche web on/off plus identifiant de recherche ; sans identifiant le chat reste configuré, la recherche est off
 - vérifier la connexion, effacer l’historique, **reconstruire l’index**, réafficher l’onboarding
 
-Après changement du modèle d’embeddings ou de nouveaux fichiers dans le corpus d’aide : **reconstruire l’index**. Le travail continue si tu quittes Paramètres. Un second clic n’en lance pas un autre. Le corpus est le dossier des documents d’aide dans le dossier de données, pas le savoir du réseau. Les nouveaux guides livrés n’écrasent pas les fichiers déjà présents.
+Après changement du modèle d’embeddings ou de nouveaux fichiers dans le corpus d’aide : **reconstruire l’index**. Le travail continue si tu quittes Paramètres. Un second clic n’en lance pas un autre. Le corpus est le dossier des documents d’aide dans le dossier de données, pas le savoir du réseau. Ce sont les mêmes types de fichiers que pour le nœud de connaissances. Les nouveaux guides livrés n’écrasent pas les fichiers déjà présents.
 
 L’aide répond dans la langue de l’interface. Si le modèle ne peut pas l’utiliser, il répond en anglais. Elle ne cite pas les titres des guides. Seule une recherche web montre des sources, titre et adresse. Les blocs de réflexion internes du modèle restent cachés. L’aide n’utilise **aucun** serveur MCP ni le knowledge des graphes.
 
 ## Serveurs MCP
 
-Modèles (**recettes**) pour outils externes : GitHub, système de fichiers, Git, Playwright, Postgres, Slack, Notion, formats Office et autres. Les recettes ne sont pas des programmes livrés. Beaucoup ont besoin de Node/`npx`, Docker ou `uvx` sur le PC plus un identifiant.
+Modèles (**recettes**) pour outils externes : GitHub, système de fichiers, Git, Playwright, Postgres, Slack, Notion, Excel et autres. Les recettes ne sont pas des programmes livrés. Beaucoup ont besoin de Node/`npx`, Docker ou `uvx` sur le PC plus un identifiant.
 
-Défaut : serveur **inactif**. L’app ne démarre pas les processus MCP à l’ouverture, mais quand une exécution a besoin d’un nœud d’outil MCP connecté.
+Défaut : serveur **inactif**. L’app ne démarre pas les processus MCP à l’ouverture, mais quand une exécution a besoin d’un **nœud MCP** connecté. D’abord **Paramètres → Identifiants** (PAT, jeton ou chaîne), puis la recette. Dans le graphe, le nœud palette **MCP**.
 
 Créer depuis une recette (identifiant, chemin racine optionnel) ou comme **serveur personnalisé** (commande, arguments ou URL). N’utilise des commandes inconnues que si tu leur fais confiance. La sonde vérifie la joignabilité ; « Runtime manquant » si Node/Docker/`uvx` n’est pas là.
-
-Office regroupe PDF et formats Office ; n’active les presets individuels que si tu en as vraiment besoin.
 
 Supprimer retire la configuration du serveur, pas Ollama ni les identifiants.
 

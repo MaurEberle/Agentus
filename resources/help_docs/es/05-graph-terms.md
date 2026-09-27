@@ -28,7 +28,7 @@ Elige proveedor y modelo. Local vía Ollama; si no, nube más credencial.
 
 ## Orquestador
 
-Nodo con su propio LLM. Es la única voz del chat de la ejecución, hace preguntas y llama a los agentes conectados de uno en uno por un canal cada uno. Como máximo uno. El chat solo se conecta a él. Su salida de mensaje va a Fin o a un enrutador. No ves los textos de los agentes ni las órdenes internas como burbujas. La app adjunta el último resultado al siguiente encargo. Un agente está en el canal o en la cadena de mensajes.
+Nodo con su propio LLM. Es la única voz del chat de la ejecución, hace preguntas y llama a los agentes conectados de uno en uno por un canal cada uno. Como máximo uno. El chat solo se conecta a él. Su salida de mensaje va a Fin o a un enrutador. No ves los textos de los agentes ni las órdenes internas como burbujas. La app adjunta el último resultado al siguiente encargo. Un agente está en el canal o en la cadena de mensajes. Las herramientas pueden conectarse a su puerto Herramienta. Las llama él mismo.
 
 ## Herramienta
 
@@ -36,11 +36,11 @@ First-party (HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos) o 
 
 ## Conocimiento (red)
 
-Nodo de conocimiento: una carpeta de textos para la red. Puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Modelo de embeddings propio, índice, topK y puntuación. **No** es el corpus de ayuda. Al iniciar ves la indexación; un índice ya actual se omite.
+Nodo de conocimiento: una carpeta de Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV y código para la red. Las imágenes y los .doc/.xls antiguos se omiten. Puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Modelo de embeddings propio, índice, topK y puntuación. **No** es el corpus de ayuda. Al iniciar ves la indexación; un índice ya actual se omite.
 
 ## Ayuda-RAG
 
-Documentos en la carpeta de ayuda de la carpeta de datos (guías predeterminadas más tus Markdown). Solo el chatbot de ayuda. Tras cambios, reconstruye el índice en Ajustes → Chat de ayuda.
+Documentos en la carpeta de ayuda de la carpeta de datos. Los mismos tipos de archivo que el nodo de conocimiento. Solo el chatbot de ayuda. Tras cambios, reconstruye el índice en Ajustes → Chat de ayuda.
 
 ## Credencial
 
@@ -48,7 +48,7 @@ Clave guardada en el almacén de Windows. En las listas solo máscara. En el gra
 
 ## MCP
 
-Model Context Protocol: servidores de herramientas externos. Créalos y actívalos en Ajustes, conéctalos en el grafo como nodo de herramienta de tipo MCP. La ayuda no usa MCP.
+Model Context Protocol: servidores de herramientas externos. Créalos en **Ajustes**, asigna una credencial y **actívalos**. En el grafo son un nodo **MCP** propio, con salida de herramienta. La ayuda no usa MCP.
 
 ## Proveedor
 

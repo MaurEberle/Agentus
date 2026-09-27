@@ -17,6 +17,7 @@ import {
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 import { durationMs, formatDateTime, formatDuration, outcomeBadgeVariant, shortId } from '@/modules/history/model/format';
+import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import type { RunSummary } from '@/modules/history/model/types';
 import { useHistoryUi } from '@/modules/history/store';
 
@@ -160,7 +161,7 @@ function DesktopTable({
                 <OutcomeCell item={item} />
               </TableCell>
               <TableCell className="max-w-[12rem] truncate text-xs text-muted-foreground">
-                {item.errorMessage ?? '—'}
+                {item.errorMessage ? formatRunLogMessage(item.errorMessage, t) : '—'}
               </TableCell>
               <TableCell className="w-40 max-w-[10rem]">
                 <div className="flex max-w-full flex-col gap-0.5">
