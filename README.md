@@ -18,7 +18,7 @@ Version: `0.1.0` (eine Quelle: `backend/pyproject.toml`).
 
 Der **Hilfe-Chatbot** (FAB unten rechts) beantwortet Fragen zur App in der gewählten Oberflächensprache. Quellen nennt er nur bei der Websuche (Titel und Adresse), nicht für die eingebauten Anleitungen.
 
-Ein Netz ist entweder eine **Kette** (Chat → Agent → Ende, optional Router, Werkzeug, Wissen) oder hat **einen** Orchestrator. Der Orchestrator ist die einzige Stimme im Lauf-Chat. Er ruft angeschlossene Agenten nacheinander über je einen Kanal auf. Deren Texte erscheinen nicht als eigene Chatblasen. Ohne Orchestrator läuft jeder Agent einmal über Nachricht und Übergabe.
+Ein Netz ist entweder eine **Kette** (Chat → Agent → Ende, optional Router, Werkzeug, Wissen) oder hat **einen** Orchestrator. Der Orchestrator ist die einzige Stimme im Lauf-Chat. Er ruft angeschlossene Agenten nacheinander über je einen Kanal auf. Deren Texte erscheinen nicht als eigene Chatblasen. Ohne Orchestrator läuft jeder Agent einmal über Nachricht und Übergabe; der Agent, dessen **Nachricht** am **Ende** hängt (direkt oder über Router), schreibt in den Lauf-Chat.
 
 Wissen darf auf einen beliebigen Ordner zeigen, außer auf eine Laufwerk- oder Systemwurzel und auf den Hilfe-Korpus. Hängt Wissen an einem Agenten, bleibt der Start in „startet“, bis der Index fertig oder als aktuell erkannt ist. Monitoring, Kopfzeile und Dashboard nennen den Knoten.
 

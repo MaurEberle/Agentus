@@ -16,7 +16,7 @@ Briques (chat, orchestrateur, agent, LLM, outil, connaissances, routeur, fin) et
 
 ## Agent
 
-Nœud avec invite système. Modèle, message, outils et connaissances arrivent par des ports. Sans orchestrateur, le message le démarre, et message ou transfert transmet la réponse. Avec orchestrateur, il tient à son propre canal : une tâche entre, un résultat revient.
+Nœud avec invite système. Modèle, message, outils et connaissances arrivent par des ports. Sans orchestrateur, le message le démarre, et message ou transfert transmet la réponse. Si la sortie **Message** atteint **Fin** (directement ou via un routeur), la réponse apparaît dans le chat de l’exécution. Avec orchestrateur, il tient à son propre canal : une tâche entre, un résultat revient, sans bulle à lui.
 
 ## Nœud LLM
 
@@ -24,7 +24,7 @@ Choisit fournisseur et modèle. Local via Ollama, sinon cloud plus identifiant.
 
 ## Chat
 
-Seul point d’entrée du texte utilisateur dans l’exécution. Au plus un par réseau. Le chat de supervision écrit ici. Avec orchestrateur, la conversation reste ouverte sur plusieurs messages.
+Seul point d’entrée du texte utilisateur dans l’exécution. Au plus un par réseau. Le chat de supervision écrit ici. Sans orchestrateur, la réponse de l’agent dont le message atteint Fin y apparaît aussi. Avec orchestrateur, la conversation reste ouverte sur plusieurs messages, et seul l’orchestrateur répond.
 
 ## Orchestrateur
 

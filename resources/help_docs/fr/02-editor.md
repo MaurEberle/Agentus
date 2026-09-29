@@ -28,7 +28,7 @@ Pendant que **précisément ce** réseau tourne : bannière **Lecture seule** �
 | Chat | `chat_input` | Conversation de l’exécution. **Au plus un.** Sortie **Message**. Avec orchestrateur, le chat reste ouvert pour les questions. |
 | Orchestrateur | `orchestrator` | Voix du chat de l’exécution. Entrées **Message**, **LLM** et **Outil**. Une sortie **Canal** par agent. **Message** seulement vers **Fin** (ou un routeur). **Au plus un.** |
 | LLM | `llm` | Fournisseur (Ollama, xAI, OpenAI, Claude, Gemini), modèle, identifiant cloud, température, limite de jetons. Sortie **LLM**. |
-| Agent | `agent` | Invite système. Entrées Message, LLM, Outil, Connaissances, **Canal** optionnel. Sorties Message et transfert. Le canal vient seulement de l’orchestrateur. Sans canal, l’agent s’exécute une fois via le message. |
+| Agent | `agent` | Invite système. Entrées Message, LLM, Outil, Connaissances, **Canal** optionnel. Sorties Message et transfert. Le canal vient seulement de l’orchestrateur. Sans canal, l’agent s’exécute une fois via le message. Si **Message** atteint **Fin** (ou un routeur vers Fin), sa réponse apparaît dans le chat de l’exécution. |
 | Outil | `tool` | First-party : HTTP, recherche web, date/heure, calculatrice, accès aux fichiers. Sortie **Outil**. |
 | MCP | `mcp` | Un serveur créé et **activé** dans **Paramètres**. Sortie **Outil**, comme un nœud outil. |
 | Connaissances | `knowledge` | Dossier de fichiers pour le réseau. Sortie **Connaissances**, uniquement vers le port Connaissances de l’agent. |

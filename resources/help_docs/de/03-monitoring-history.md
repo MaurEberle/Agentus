@@ -31,7 +31,7 @@ Hängt Wissen an einem Agenten, zeigt der Start den Lauf schon während der Indi
 
 ## Netz-Chat (Monitoring)
 
-Tab **Chat**: Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht.
+Tab **Chat**: Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile, gibt sie an die Kette und zeigt die Antwort des Agenten, dessen **Nachricht** am **Ende** hängt. Mit Orchestrator sprichst du nur mit ihm; Agententexte und interne Aufträge siehst du dann nicht als Chatblasen. Der Lauf wartet nur bei einer Rückfrage.
 
 Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 

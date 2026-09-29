@@ -16,7 +16,7 @@ Parçalar (sohbet, orkestratör, ajan, LLM, araç, bilgi, yönlendirici, son) ve
 
 ## Ajan
 
-Sistem istemi olan düğüm. Model, ileti, araçlar ve bilgi bağlantı noktalarından gelir. Orkestratör yoksa ileti onu başlatır, ileti veya devretme yanıtı iletir. Orkestratör varken kendi kanalına bağlıdır: bir görev girer, bir sonuç döner.
+Sistem istemi olan düğüm. Model, ileti, araçlar ve bilgi bağlantı noktalarından gelir. Orkestratör yoksa ileti onu başlatır, ileti veya devretme yanıtı iletir. **İleti** çıkışı **Son**’a (doğrudan veya bir yönlendirici üzerinden) ulaşırsa yanıt çalıştırma sohbetinde görünür. Orkestratör varken kendi kanalına bağlıdır: bir görev girer, bir sonuç döner, kendi baloncuğu yoktur.
 
 ## LLM düğümü
 
@@ -24,7 +24,7 @@ Sağlayıcı ve modeli seçer. Yerel Ollama; değilse bulut artı kimlik bilgisi
 
 ## Sohbet
 
-Çalıştırmada kullanıcı metninin tek girişi. Ağ başına en fazla bir. İzleme sohbeti buraya yazar. Orkestratör varken konuşma birkaç ileti boyunca açık kalır.
+Çalıştırmada kullanıcı metninin tek girişi. Ağ başına en fazla bir. İzleme sohbeti buraya yazar. Orkestratör yoksa iletisi Sona ulaşan ajanın yanıtı da burada görünür. Orkestratör varken konuşma birkaç ileti boyunca açık kalır ve yalnız orkestratör yanıtlar.
 
 ## Orkestratör
 

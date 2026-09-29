@@ -28,7 +28,7 @@ Mientras corre **exactamente esta** red: banner **Solo lectura** — primero det
 | Chat | `chat_input` | Conversación de la ejecución. **Como máximo uno.** Salida **Mensaje**. Con orquestador el chat sigue abierto para preguntas. |
 | Orquestador | `orchestrator` | Voz del chat de la ejecución. Entradas **Mensaje**, **LLM** y **Herramienta**. Una salida **Canal** por agente. **Mensaje** solo hacia **Fin** (o enrutador). **Como máximo uno.** |
 | LLM | `llm` | Proveedor (Ollama, xAI, OpenAI, Claude, Gemini), modelo, credencial para la nube, temperatura, límite de tokens. Salida **LLM**. |
-| Agente | `agent` | Prompt de sistema. Entradas Mensaje, LLM, Herramienta, Conocimiento y **Canal** opcional. Salidas Mensaje y Transferencia. El canal viene solo del orquestador. Sin canal el agente corre una vez por el mensaje. |
+| Agente | `agent` | Prompt de sistema. Entradas Mensaje, LLM, Herramienta, Conocimiento y **Canal** opcional. Salidas Mensaje y Transferencia. El canal viene solo del orquestador. Sin canal el agente corre una vez por el mensaje. Si **Mensaje** llega a **Fin** (o a un enrutador hacia Fin), su respuesta aparece en el chat de la ejecución. |
 | Herramienta | `tool` | First-party: HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos. Salida **Herramienta**. |
 | MCP | `mcp` | Un servidor creado y **activado** en **Ajustes**. Salida **Herramienta**, como un nodo de herramienta. |
 | Conocimiento | `knowledge` | Carpeta con archivos para la red. Salida **Conocimiento**, solo al puerto Conocimiento del agente. |

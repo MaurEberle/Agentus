@@ -28,7 +28,7 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 | Chat | `chat_input` | Gespräch des Laufs. **Höchstens einer.** Ausgang **Nachricht**. Mit Orchestrator bleibt der Chat für Rückfragen offen. |
 | Orchestrator | `orchestrator` | Stimme im Lauf-Chat. Eingänge **Nachricht**, **LLM** und **Werkzeug**. Pro Agent ein Ausgang **Kanal**. **Nachricht** nur zum **Ende** (oder Router). **Höchstens einer.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel), Modell, Zugang für Cloud, Temperature, Token-Limit. Ausgang **LLM**. |
-| Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen, optional **Kanal**. Ausgänge Nachricht und Übergabe. Der Kanal kommt nur vom Orchestrator. Ohne Kanal läuft der Agent einmal über die Nachricht. |
+| Agent | `agent` | Systemprompt. Eingänge Nachricht, LLM, Werkzeug, Wissen, optional **Kanal**. Ausgänge Nachricht und Übergabe. Der Kanal kommt nur vom Orchestrator. Ohne Kanal läuft der Agent einmal über die Nachricht. Hängt **Nachricht** am **Ende** (oder über einen Router), erscheint seine Antwort im Lauf-Chat. |
 | Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. Ausgang **Werkzeug**. |
 | MCP | `mcp` | Ein in den **Einstellungen** angelegter und **aktiver** Server. Ausgang **Werkzeug**, wie ein Werkzeug-Knoten. |
 | Wissen | `knowledge` | Ordner mit Dateien für das Netz. Ausgang **Wissen**, nur zum Agent-Anschluss Wissen. |

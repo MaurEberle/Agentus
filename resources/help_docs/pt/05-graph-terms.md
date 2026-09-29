@@ -16,7 +16,7 @@ Peças (chat, orquestrador, agente, LLM, ferramenta, conhecimento, router, fim) 
 
 ## Agente
 
-Nó com prompt de sistema. Modelo, mensagem, ferramentas e conhecimento chegam por portos. Sem orquestrador a mensagem inicia-o, e mensagem ou transferência seguem com a resposta. Com orquestrador fica no seu próprio canal: uma tarefa entra, um resultado volta.
+Nó com prompt de sistema. Modelo, mensagem, ferramentas e conhecimento chegam por portos. Sem orquestrador a mensagem inicia-o, e mensagem ou transferência seguem com a resposta. Se a saída **Mensagem** chega ao **Fim** (diretamente ou por um router), a resposta aparece no chat da execução. Com orquestrador fica no seu próprio canal: uma tarefa entra, um resultado volta, sem bolha própria.
 
 ## Nó LLM
 
@@ -24,7 +24,7 @@ Escolhe fornecedor e modelo. Local via Ollama; senão, nuvem mais credencial.
 
 ## Chat
 
-Única entrada de texto do utilizador na execução. No máximo um por rede. O chat de monitorização escreve aqui. Com orquestrador a conversa fica aberta em várias mensagens.
+Única entrada de texto do utilizador na execução. No máximo um por rede. O chat de monitorização escreve aqui. Sem orquestrador também aparece aí a resposta do agente cuja mensagem chega ao Fim. Com orquestrador a conversa fica aberta em várias mensagens, e só o orquestrador responde.
 
 ## Orquestrador
 

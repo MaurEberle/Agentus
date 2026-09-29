@@ -39,6 +39,7 @@ class CompiledAgent:
     mcp: list[tuple[str, list[str] | None, str | None]]
     knowledge_node_ids: list[str]
     outbound_message: list[str]
+    speaks_to_chat: bool = False
 
 
 @dataclass
@@ -147,6 +148,27 @@ def _compile_orchestrator(
     )
 
 
+def _message_reaches_end(
+    agent_id: str, doc: AgentNetworkDocument, by_id: dict[str, GraphNode]
+) -> bool:
+    """True when this agent's message output (not handoff) reaches an end node."""
+    seen: set[str] = set()
+    stack = [e.target for e in doc.edges if e.source == agent_id and e.source_handle == "message"]
+    while stack:
+        node_id = stack.pop()
+        if node_id in seen:
+            continue
+        seen.add(node_id)
+        node = by_id.get(node_id)
+        if node is None:
+            continue
+        if node.type == "end":
+            return True
+        if node.type == "router":
+            stack.extend(e.target for e in doc.edges if e.source == node_id)
+    return False
+
+
 def compile_document(
     doc: AgentNetworkDocument, *, network_id: str, network_name: str
 ) -> CompiledGraph:
@@ -190,6 +212,7 @@ def compile_document(
             mcp=mcp,
             knowledge_node_ids=knowledge_ids,
             outbound_message=outbound,
+            speaks_to_chat=_message_reaches_end(node.id, doc, by_id),
         )
 
     topo = list(agents.keys())

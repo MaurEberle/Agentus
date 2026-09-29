@@ -214,7 +214,14 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
         if invocations > MAX_AGENT_INVOCATIONS:
             emit_log("error", "run.stepLimit", node_id=node_id)
             return "failed"
-        text = _agent_turn(ctrl, compiled, node_id, payload, conversation)
+        text = _agent_turn(
+            ctrl,
+            compiled,
+            node_id,
+            payload,
+            conversation,
+            publish_chat=compiled.agents[node_id].speaks_to_chat,
+        )
         if text is None:
             if ctrl.stop_event.is_set():
                 break
@@ -607,14 +614,16 @@ def _agent_turn(
         break
     _set_node(ctrl, agent_id, "done")
     emit_log("info", "run.agent.done", node_id=agent_id)
-    if publish_chat and compiled.chat_input:
-        text = (content or "").strip()
-        if not text and record is not None:
-            for event in reversed(record.tools):
-                if event.result:
-                    text = event.result[:4000]
-                    break
-        if text:
+    text = (content or "").strip()
+    if not text and record is not None:
+        for event in reversed(record.tools):
+            if event.result:
+                text = event.result[:4000]
+                break
+    if text:
+        conversation.append(LlmMessage(role="assistant", content=text))
+        content = text
+        if publish_chat and compiled.chat_input:
             msg = ChatMessage(
                 id=str(uuid.uuid4()),
                 run_id=ctrl.run_id or "",
@@ -623,8 +632,6 @@ def _agent_turn(
                 created_at=utc_now(),
             )
             ctrl.remember_chat(msg, generating=False)
-            conversation.append(LlmMessage(role="assistant", content=text))
-            content = text
     return content
 
 

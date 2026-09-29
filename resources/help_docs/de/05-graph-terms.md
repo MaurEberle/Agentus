@@ -16,7 +16,7 @@ Bausteine (Chat, Orchestrator, Agent, LLM, Werkzeug, MCP, Wissen, Router, Ende) 
 
 ## Agent
 
-Knoten mit Systemprompt. Modell, Nachricht, Werkzeuge und Wissen kommen über Anschlüsse. Ohne Orchestrator startet ihn die Nachricht, und Nachricht oder Übergabe geben die Antwort weiter. Mit Orchestrator hängt er an einem eigenen Kanal: ein Auftrag hinein, ein Ergebnis zurück.
+Knoten mit Systemprompt. Modell, Nachricht, Werkzeuge und Wissen kommen über Anschlüsse. Ohne Orchestrator startet ihn die Nachricht, und Nachricht oder Übergabe geben die Antwort weiter. Erreicht der Ausgang **Nachricht** ein **Ende** (direkt oder über Router), erscheint die Antwort im Lauf-Chat. Mit Orchestrator hängt er an einem eigenen Kanal: ein Auftrag hinein, ein Ergebnis zurück, keine eigene Chatblase.
 
 ## LLM-Knoten
 
@@ -24,11 +24,11 @@ Wählt Provider und Modell. Lokal über Ollama, sonst Cloud oder OpenAI-kompatib
 
 ## Chat
 
-Einziger Einstieg für Nutzertext im Lauf. Höchstens einer pro Netz. Der Monitoring-Chat schreibt hier hinein. Mit Orchestrator bleibt das Gespräch über mehrere Nachrichten offen.
+Einziger Einstieg für Nutzertext im Lauf. Höchstens einer pro Netz. Der Monitoring-Chat schreibt hier hinein. Ohne Orchestrator erscheint dort auch die Agentenantwort, deren Nachricht am Ende hängt. Mit Orchestrator bleibt das Gespräch über mehrere Nachrichten offen, und nur der Orchestrator antwortet.
 
 ## Orchestrator
 
-Knoten mit eigenem LLM. Er ist die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende oder an einen Router. Agententexte und interne Aufträge siehst du nicht als Chatblasen. Die App hängt das letzte Ergebnis an den nächsten Auftrag. Ein Agent ist entweder am Kanal oder in der Nachrichtenkette. Werkzeuge dürfen an seinen Anschluss Werkzeug. Er ruft sie selbst auf.
+Knoten mit eigenem LLM. **Mit** Orchestrator ist er die einzige Stimme im Lauf-Chat, stellt Rückfragen und ruft die angeschlossenen Agenten einzeln über je einen Kanal auf. Höchstens einer. Der Chat verbindet sich nur mit ihm. Sein Nachrichtenausgang geht an Ende oder an einen Router. Agententexte und interne Aufträge siehst du dann nicht als Chatblasen. Die App hängt das letzte Ergebnis an den nächsten Auftrag. Ein Agent ist entweder am Kanal oder in der Nachrichtenkette. Werkzeuge dürfen an seinen Anschluss Werkzeug. Er ruft sie selbst auf.
 
 ## Werkzeug
 

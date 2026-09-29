@@ -28,7 +28,7 @@ While **this** network is running: **read-only** banner — stop it in the heade
 | Chat | `chat_input` | Run conversation. **At most one.** Output **message**. With an orchestrator it stays open for follow-ups. |
 | Orchestrator | `orchestrator` | Voice of the run chat. Inputs **message**, **LLM**, and **tool**. One **channel** output per agent. **Message** only to **end** (or a router). **At most one.** |
 | LLM | `llm` | Provider (Ollama, xAI, OpenAI, Claude, Gemini, OpenAI-compatible), model, credential for cloud, temperature, token limit. Output **llm**. |
-| Agent | `agent` | System prompt. Inputs message, llm, tool, knowledge, optional **channel**. Outputs message and handoff. The channel comes only from the orchestrator. Without it the agent runs once along the message. |
+| Agent | `agent` | System prompt. Inputs message, llm, tool, knowledge, optional **channel**. Outputs message and handoff. The channel comes only from the orchestrator. Without it the agent runs once along the message. If **message** reaches **end** (or a router to end), its reply appears in the run chat. |
 | Tool | `tool` | First-party: HTTP, web search, date/time, calculator, file access. Output **tool**. |
 | MCP | `mcp` | One server created and **enabled** in **Settings**. Output **tool**, same as a tool node. |
 | Knowledge | `knowledge` | Folder of files for the network. Output **knowledge**, only to the agent knowledge port. |

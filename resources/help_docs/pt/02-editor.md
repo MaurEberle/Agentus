@@ -28,7 +28,7 @@ Enquanto corre **exactamente esta** rede: faixa **Só de leitura** — primeiro 
 | Chat | `chat_input` | Conversa da execução. **No máximo um.** Saída **Mensagem**. Com orquestrador o chat fica aberto para perguntas. |
 | Orquestrador | `orchestrator` | Voz do chat da execução. Entradas **Mensagem**, **LLM** e **Ferramenta**. Uma saída **Canal** por agente. **Mensagem** só para o **Fim** (ou router). **No máximo um.** |
 | LLM | `llm` | Fornecedor (Ollama, xAI, OpenAI, Claude, Gemini), modelo, credencial na nuvem, temperatura, limite de tokens. Saída **LLM**. |
-| Agente | `agent` | Prompt de sistema. Entradas Mensagem, LLM, Ferramenta, Conhecimento e **Canal** opcional. Saídas Mensagem e transferência. O canal vem só do orquestrador. Sem canal o agente corre uma vez pela mensagem. |
+| Agente | `agent` | Prompt de sistema. Entradas Mensagem, LLM, Ferramenta, Conhecimento e **Canal** opcional. Saídas Mensagem e transferência. O canal vem só do orquestrador. Sem canal o agente corre uma vez pela mensagem. Se **Mensagem** chega ao **Fim** (ou a um router até ao Fim), a resposta aparece no chat da execução. |
 | Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros. Saída **Ferramenta**. |
 | MCP | `mcp` | Um servidor criado e **ativado** nas **Definições**. Saída **Ferramenta**, como um nó de ferramenta. |
 | Conhecimento | `knowledge` | Pasta com ficheiros para a rede. Saída **Conhecimento**, só para o porto Conhecimento do agente. |

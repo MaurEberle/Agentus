@@ -16,7 +16,7 @@ Piezas (chat, orquestador, agente, LLM, herramienta, conocimiento, enrutador, fi
 
 ## Agente
 
-Nodo con prompt de sistema. Modelo, mensaje, herramientas y conocimiento llegan por puertos. Sin orquestador lo arranca el mensaje, y mensaje o transferencia siguen con la respuesta. Con orquestador cuelga de su propio canal: un encargo entra, un resultado vuelve.
+Nodo con prompt de sistema. Modelo, mensaje, herramientas y conocimiento llegan por puertos. Sin orquestador lo arranca el mensaje, y mensaje o transferencia siguen con la respuesta. Si la salida **Mensaje** llega a **Fin** (directamente o por un enrutador), la respuesta aparece en el chat de la ejecución. Con orquestador cuelga de su propio canal: un encargo entra, un resultado vuelve, sin burbuja propia.
 
 ## Nodo LLM
 
@@ -24,7 +24,7 @@ Elige proveedor y modelo. Local vía Ollama; si no, nube más credencial.
 
 ## Chat
 
-Única entrada de texto de usuario en la ejecución. Como máximo una por red. El chat de supervisión escribe aquí. Con orquestador la conversación sigue abierta en varios mensajes.
+Única entrada de texto de usuario en la ejecución. Como máximo una por red. El chat de supervisión escribe aquí. Sin orquestador también aparece ahí la respuesta del agente cuya mensaje llega a Fin. Con orquestador la conversación sigue abierta en varios mensajes, y solo responde el orquestador.
 
 ## Orquestador
 

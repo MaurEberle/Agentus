@@ -11,6 +11,88 @@ def test_compile_agent_without_tools() -> None:
     assert compiled.agents["ag"].tool_kinds == []
     assert compiled.chat_input is not None
     assert "end" in compiled.end_ids
+    assert compiled.agents["ag"].speaks_to_chat is True
+
+
+def test_speaks_to_chat_follows_message_not_handoff() -> None:
+    raw = mini_doc()
+    raw["nodes"].extend(
+        [
+            {
+                "id": "llm2",
+                "type": "llm",
+                "position": {"x": 0, "y": 0},
+                "data": {"provider": "ollama", "model": "llama3.2:1b"},
+            },
+            {
+                "id": "ag2",
+                "type": "agent",
+                "position": {"x": 0, "y": 0},
+                "data": {"systemPrompt": "second"},
+            },
+        ]
+    )
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e3"]
+    raw["edges"].extend(
+        [
+            {
+                "id": "e3",
+                "source": "ag",
+                "sourceHandle": "handoff",
+                "target": "ag2",
+                "targetHandle": "message",
+            },
+            {
+                "id": "e4",
+                "source": "llm2",
+                "sourceHandle": "llm",
+                "target": "ag2",
+                "targetHandle": "llm",
+            },
+            {
+                "id": "e5",
+                "source": "ag2",
+                "sourceHandle": "message",
+                "target": "end",
+                "targetHandle": "message",
+            },
+        ]
+    )
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].speaks_to_chat is False
+    assert compiled.agents["ag2"].speaks_to_chat is True
+
+
+def test_speaks_to_chat_through_router() -> None:
+    raw = mini_doc()
+    raw["nodes"].append(
+        {"id": "rt", "type": "router", "position": {"x": 0, "y": 0}, "data": {}}
+    )
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e3"]
+    raw["edges"].extend(
+        [
+            {
+                "id": "e3",
+                "source": "ag",
+                "sourceHandle": "message",
+                "target": "rt",
+                "targetHandle": "message",
+            },
+            {
+                "id": "e4",
+                "source": "rt",
+                "sourceHandle": "default",
+                "target": "end",
+                "targetHandle": "message",
+            },
+        ]
+    )
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].speaks_to_chat is True
 
 
 def test_compile_mcp_node_on_agent() -> None:

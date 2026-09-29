@@ -298,6 +298,111 @@ def _drive(monkeypatch, complete, *, doc=None, user_texts=("Hallo",)):
     return stored
 
 
+def test_linear_agent_message_to_end_appears_in_chat(monkeypatch, api_env) -> None:
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        return CompletionResult(content="DIE-GESCHICHTE", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=mini_doc())
+    assert stored["outcome"] == "succeeded"
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "DIE-GESCHICHTE" in texts
+
+
+def test_linear_only_message_to_end_speaks(monkeypatch, api_env) -> None:
+    raw = mini_doc()
+    raw["nodes"].extend(
+        [
+            {
+                "id": "llm2",
+                "type": "llm",
+                "position": {"x": 0, "y": 0},
+                "data": {"provider": "ollama", "model": "llama3.2:1b"},
+            },
+            {
+                "id": "ag2",
+                "type": "agent",
+                "position": {"x": 0, "y": 0},
+                "data": {"systemPrompt": "second"},
+            },
+        ]
+    )
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e3"]
+    raw["edges"].extend(
+        [
+            {
+                "id": "e3",
+                "source": "ag",
+                "sourceHandle": "handoff",
+                "target": "ag2",
+                "targetHandle": "message",
+            },
+            {
+                "id": "e4",
+                "source": "llm2",
+                "sourceHandle": "llm",
+                "target": "ag2",
+                "targetHandle": "llm",
+            },
+            {
+                "id": "e5",
+                "source": "ag2",
+                "sourceHandle": "message",
+                "target": "end",
+                "targetHandle": "message",
+            },
+        ]
+    )
+    second_prompt: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "second" in system:
+            second_prompt.append(blob)
+            return CompletionResult(content="ZWEITER-TEXT", model=req.model, finish_reason="stop")
+        return CompletionResult(content="ERSTER-TEXT", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=raw)
+    assert stored["outcome"] == "succeeded"
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "ZWEITER-TEXT" in texts
+    assert "ERSTER-TEXT" not in texts
+    assert second_prompt
+    assert "ERSTER-TEXT" in second_prompt[0]
+
+
+def test_linear_message_through_router_to_end_appears_in_chat(monkeypatch, api_env) -> None:
+    raw = mini_doc()
+    raw["nodes"].append({"id": "rt", "type": "router", "position": {"x": 0, "y": 0}, "data": {}})
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e3"]
+    raw["edges"].extend(
+        [
+            {
+                "id": "e3",
+                "source": "ag",
+                "sourceHandle": "message",
+                "target": "rt",
+                "targetHandle": "message",
+            },
+            {
+                "id": "e4",
+                "source": "rt",
+                "sourceHandle": "default",
+                "target": "end",
+                "targetHandle": "message",
+            },
+        ]
+    )
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        return CompletionResult(content="VIA-ROUTER", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=raw)
+    assert stored["outcome"] == "succeeded"
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "VIA-ROUTER" in texts
+
+
 def test_agent_timeout_lets_the_orchestrator_finish(monkeypatch, api_env) -> None:
     from app.runtime.errors import RuntimeApiError
 

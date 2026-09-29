@@ -16,7 +16,7 @@ Building blocks (chat, orchestrator, agent, LLM, tool, MCP, knowledge, router, e
 
 ## Agent
 
-Node with a system prompt. Model, message, tools, and knowledge arrive through ports. Without an orchestrator the message starts it, and message or handoff passes the answer on. With an orchestrator it hangs on its own channel: one task in, one result back.
+Node with a system prompt. Model, message, tools, and knowledge arrive through ports. Without an orchestrator the message starts it, and message or handoff passes the answer on. If the **message** output reaches **end** (directly or through a router), the reply appears in the run chat. With an orchestrator it hangs on its own channel: one task in, one result back, no chat bubble of its own.
 
 ## LLM node
 
@@ -24,11 +24,11 @@ Chooses provider and model. Local via Ollama, otherwise cloud plus a credential.
 
 ## Chat
 
-The only entry for user text in a run. At most one per network. Monitoring chat writes here. With an orchestrator the conversation stays open across several messages.
+The only entry for user text in a run. At most one per network. Monitoring chat writes here. Without an orchestrator the agent reply whose message reaches end appears there too. With an orchestrator the conversation stays open across several messages, and only the orchestrator replies.
 
 ## Orchestrator
 
-A node with its own LLM. It is the only voice in the run chat, asks follow-ups, and calls connected agents one at a time through a channel each. At most one. Chat connects only to it. Its message output goes to end or a router. You do not see agent text or internal commands as chat bubbles. The app attaches the latest result to the next task. An agent is either on the channel or on the message chain. Tools may connect to its tool port. It calls them itself.
+A node with its own LLM. **With** an orchestrator it is the only voice in the run chat, asks follow-ups, and calls connected agents one at a time through a channel each. At most one. Chat connects only to it. Its message output goes to end or a router. You then do not see agent text or internal commands as chat bubbles. The app attaches the latest result to the next task. An agent is either on the channel or on the message chain. Tools may connect to its tool port. It calls them itself.
 
 ## Tool
 
