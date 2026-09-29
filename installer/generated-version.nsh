@@ -7,7 +7,7 @@
 !endif
 !define WEBVIEW2_NAME "MicrosoftEdgeWebview2Setup.exe"
 !define WEBVIEW2_URL "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
-!define WEBVIEW2_SHA256 "83004a28553bcf2f932bf03564fbab407b8e1f59cd265f8dc99cc53d028e459c"
+!define WEBVIEW2_SHA256 "81c01751c8cc385a5991abb104205d42ac70094350ee8fb9e8ea580b51bb9554"
 !define OLLAMA_NAME "OllamaSetup.exe"
-!define OLLAMA_URL "https://github.com/ollama/ollama/releases/download/v0.34.2/OllamaSetup.exe"
-!define OLLAMA_SHA256 "8c9eb7ba71f3c6a62df4c7d204cc4739d90c335e1cbeb07c99fd471544066a8b"
+!define OLLAMA_URL "https://github.com/ollama/ollama/releases/download/v0.34.4/OllamaSetup.exe"
+!define OLLAMA_SHA256 "4a6514323eb8c131f6c8bb651b4fe2edf5f1525f4fd8b84315ba20f1af3e210f"

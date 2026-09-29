@@ -1,6 +1,6 @@
 # Agentus Network — Windows-Installer
 
-PyInstaller onedir + NSIS 3 Unicode, Per-User, kein Admin. Version kommt aus `backend/pyproject.toml`.
+PyInstaller onedir + NSIS 3 Unicode, Per-User, kein Admin. Version kommt aus `backend/pyproject.toml`. Fehlt `makensis`, lädt der Build die **aktuellste** portable NSIS-ZIP nach `build/nsis/` (kein `setup.exe`, keine Adminrechte). WebView2-Bootstrapper und Ollama-URL/SHA256 werden beim Build auf den jeweils neuesten Stand gezogen.
 
 Build:
 

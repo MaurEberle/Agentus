@@ -2,12 +2,13 @@
   "webview2_bootstrapper": {
     "name": "MicrosoftEdgeWebview2Setup.exe",
     "url": "https://go.microsoft.com/fwlink/p/?LinkId=2124703",
-    "sha256": "83004a28553bcf2f932bf03564fbab407b8e1f59cd265f8dc99cc53d028e459c"
+    "sha256": "81c01751c8cc385a5991abb104205d42ac70094350ee8fb9e8ea580b51bb9554",
+    "comment": "Evergreen WebView2 bootstrapper. Build re-downloads and accepts a new hash when Authenticode is Microsoft Corporation."
   },
   "ollama_setup": {
     "name": "OllamaSetup.exe",
-    "url": "https://github.com/ollama/ollama/releases/download/v0.34.2/OllamaSetup.exe",
-    "sha256": "8c9eb7ba71f3c6a62df4c7d204cc4739d90c335e1cbeb07c99fd471544066a8b",
-    "comment": "Ollama v0.34.2 official Windows setup. Update hash in a dedicated commit when bumping."
+    "url": "https://github.com/ollama/ollama/releases/download/v0.34.4/OllamaSetup.exe",
+    "sha256": "4a6514323eb8c131f6c8bb651b4fe2edf5f1525f4fd8b84315ba20f1af3e210f",
+    "comment": "Fallback pin of official OllamaSetup.exe. Build resolves GitHub latest (URL + sha256 digest) into generated-version.nsh."
   }
 }

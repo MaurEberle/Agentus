@@ -79,27 +79,259 @@ function Invoke-Python {
     }
 }
 
-function Find-Makensis {
+function Get-HttpUserAgent {
+    return "AgentusNetwork-build"
+}
+
+function Invoke-HttpJson {
+    param([Parameter(Mandatory = $true)][string]$Uri)
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $headers = @{
+        "User-Agent" = Get-HttpUserAgent
+        "Accept"     = "application/json"
+    }
+    return Invoke-RestMethod -Uri $Uri -Headers $headers
+}
+
+function Invoke-HttpDownload {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$OutFile,
+        [int]$MinBytes = 65536
+    )
+    $dir = Split-Path -Parent $OutFile
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Path $dir | Out-Null
+    }
+    $partial = "$OutFile.partial"
+    if (Test-Path -LiteralPath $partial) {
+        Remove-Item -LiteralPath $partial -Force
+    }
+    $curl = Join-Path $env:SystemRoot "System32\curl.exe"
+    if (-not (Test-Path -LiteralPath $curl)) {
+        throw "curl.exe not found under System32; cannot download $Url"
+    }
+    Write-Host "download $Url"
+    & $curl -fL --retry 3 --retry-delay 2 --connect-timeout 30 `
+        -A (Get-HttpUserAgent) -o $partial -- $Url
+    if ($LASTEXITCODE -ne 0) {
+        Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+        throw "curl exited $LASTEXITCODE downloading $Url"
+    }
+    if (-not (Test-Path -LiteralPath $partial) -or (Get-Item -LiteralPath $partial).Length -lt $MinBytes) {
+        $len = 0
+        if (Test-Path -LiteralPath $partial) {
+            $len = (Get-Item -LiteralPath $partial).Length
+        }
+        Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+        throw "download too small ($len bytes, min $MinBytes) from $Url"
+    }
+    Move-Item -LiteralPath $partial -Destination $OutFile -Force
+}
+
+function Find-CachedMakensis {
+    $root = Join-Path $RepoRoot "build\nsis"
+    if (-not (Test-Path -LiteralPath $root)) {
+        return $null
+    }
+    $found = @(Get-ChildItem -Path $root -Filter makensis.exe -Recurse -ErrorAction SilentlyContinue |
+            Sort-Object { $_.Directory.Name } -Descending)
+    if ($found.Count -gt 0) {
+        return $found[0].FullName
+    }
+    return $null
+}
+
+function Find-SystemMakensis {
     $cmd = Get-Command makensis -ErrorAction SilentlyContinue
     if ($cmd) {
         return $cmd.Source
     }
     foreach ($candidate in @(
-            "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
-            "${env:ProgramFiles}\NSIS\makensis.exe",
             "$env:LOCALAPPDATA\Programs\NSIS\makensis.exe",
-            (Join-Path $RepoRoot "build\nsis\nsis-3.12\makensis.exe")
+            "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
+            "${env:ProgramFiles}\NSIS\makensis.exe"
         )) {
         if ($candidate -and (Test-Path -LiteralPath $candidate)) {
             return $candidate
         }
     }
-    $portable = Get-ChildItem -Path (Join-Path $RepoRoot "build\nsis") -Filter makensis.exe -Recurse -ErrorAction SilentlyContinue |
-        Select-Object -First 1 -ExpandProperty FullName
-    if ($portable) {
-        return $portable
-    }
     return $null
+}
+
+function Get-LatestNsisRelease {
+    $best = Invoke-HttpJson -Uri "https://sourceforge.net/projects/nsis/best_release.json"
+    $filename = [string]$best.platform_releases.windows.filename
+    $match = [regex]::Match($filename, 'nsis-(\d+\.\d+(?:\.\d+)?)')
+    if (-not $match.Success) {
+        throw "could not parse NSIS version from ${filename}"
+    }
+    $ver = $match.Groups[1].Value
+    $zipName = "nsis-${ver}.zip"
+    return [pscustomobject]@{
+        Version = $ver
+        ZipName = $zipName
+        ZipUrl  = "https://sourceforge.net/projects/nsis/files/NSIS%203/${ver}/${zipName}/download"
+    }
+}
+
+function Install-NsisPortable {
+    param($Release)
+    $root = Join-Path $RepoRoot "build\nsis"
+    $dest = Join-Path $root "nsis-$($Release.Version)"
+    $makensis = Join-Path $dest "makensis.exe"
+    if (Test-Path -LiteralPath $makensis) {
+        return $makensis
+    }
+    $zip = Join-Path $root $Release.ZipName
+    $zipUrls = @(
+        $Release.ZipUrl,
+        "https://downloads.sourceforge.net/project/nsis/NSIS%203/$($Release.Version)/$($Release.ZipName)"
+    )
+    $isZip = {
+        param($Path)
+        if (-not (Test-Path -LiteralPath $Path)) { return $false }
+        $head = [System.IO.File]::ReadAllBytes($Path)
+        return ($head.Length -ge 64KB -and $head[0] -eq 0x50 -and $head[1] -eq 0x4B)
+    }
+    if (-not (& $isZip $zip)) {
+        $saved = $false
+        foreach ($zipUrl in $zipUrls) {
+            try {
+                Invoke-HttpDownload -Url $zipUrl -OutFile $zip
+                if (& $isZip $zip) {
+                    $saved = $true
+                    break
+                }
+            }
+            catch {
+                Write-Warning $_.Exception.Message
+            }
+        }
+        if (-not $saved) {
+            throw "could not download portable NSIS zip $($Release.ZipName) (no admin setup.exe)"
+        }
+    }
+    $stage = Join-Path $root ("extract-" + $Release.Version)
+    if (Test-Path -LiteralPath $stage) {
+        Remove-Item -LiteralPath $stage -Recurse -Force
+    }
+    Expand-Archive -LiteralPath $zip -DestinationPath $stage -Force
+    $extracted = Get-ChildItem -Path $stage -Filter makensis.exe -Recurse -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if (-not $extracted) {
+        throw "makensis.exe missing inside $($Release.ZipName)"
+    }
+    $extractedRoot = $extracted.Directory.FullName
+    if (Test-Path -LiteralPath $dest) {
+        Remove-Item -LiteralPath $dest -Recurse -Force
+    }
+    Move-Item -LiteralPath $extractedRoot -Destination $dest
+    Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+    if (-not (Test-Path -LiteralPath $makensis)) {
+        throw "portable NSIS extract failed: $makensis"
+    }
+    Write-Host "nsis $($Release.Version) portable (no admin): $makensis"
+    return $makensis
+}
+
+function Ensure-Makensis {
+    $release = $null
+    try {
+        $release = Get-LatestNsisRelease
+        Write-Host "nsis latest $($release.Version)"
+    }
+    catch {
+        Write-Warning "Could not query latest NSIS release: $($_.Exception.Message)"
+    }
+    if ($release) {
+        try {
+            return Install-NsisPortable -Release $release
+        }
+        catch {
+            Write-Warning "Portable NSIS $($release.Version) download failed (setup.exe is not used; it needs admin): $($_.Exception.Message)"
+        }
+    }
+    $cached = Find-CachedMakensis
+    if ($cached) {
+        Write-Warning "using cached portable makensis $cached"
+        return $cached
+    }
+    $system = Find-SystemMakensis
+    if ($system) {
+        Write-Warning "using existing makensis $system"
+        return $system
+    }
+    throw "makensis not found. Portable NSIS zip download failed and no local copy exists. Re-run with network access (no admin required), or pass -SkipNsis."
+}
+
+function Get-OllamaSetupFromGitHubApi {
+    $rel = Invoke-HttpJson -Uri "https://api.github.com/repos/ollama/ollama/releases/latest"
+    $asset = @($rel.assets) | Where-Object { $_.name -eq "OllamaSetup.exe" } | Select-Object -First 1
+    if (-not $asset) {
+        throw "OllamaSetup.exe missing from $($rel.tag_name)"
+    }
+    $digest = [string]$asset.digest
+    $digestMatch = [regex]::Match($digest, '^sha256:([0-9a-fA-F]{64})$')
+    if (-not $digestMatch.Success) {
+        throw "OllamaSetup.exe has no sha256 digest in $($rel.tag_name)"
+    }
+    return [pscustomobject]@{
+        Tag    = [string]$rel.tag_name
+        Url    = [string]$asset.browser_download_url
+        Sha256 = $digestMatch.Groups[1].Value.ToLowerInvariant()
+    }
+}
+
+function Get-OllamaSetupFromLatestRedirect {
+    $curl = Join-Path $env:SystemRoot "System32\curl.exe"
+    if (-not (Test-Path -LiteralPath $curl)) {
+        throw "curl.exe not found; cannot resolve Ollama latest without GitHub API"
+    }
+    $effective = & $curl -fsSL -o NUL -w "%{url_effective}" -A (Get-HttpUserAgent) `
+        --proto "=https" --proto-redir "=https" -- "https://github.com/ollama/ollama/releases/latest"
+    if ($LASTEXITCODE -ne 0) {
+        throw "curl exited $LASTEXITCODE resolving Ollama latest"
+    }
+    $tagMatch = [regex]::Match([string]$effective, '/releases/tag/(v[\d.]+)')
+    if (-not $tagMatch.Success) {
+        throw "could not parse Ollama tag from $effective"
+    }
+    $tag = $tagMatch.Groups[1].Value
+    $sumsUrl = "https://github.com/ollama/ollama/releases/download/${tag}/sha256sum.txt"
+    $sumsFile = Join-Path $env:TEMP "ollama-sha256sum-$tag.txt"
+    Invoke-HttpDownload -Url $sumsUrl -OutFile $sumsFile -MinBytes 32
+    $line = Get-Content -LiteralPath $sumsFile | Where-Object { $_ -match 'OllamaSetup\.exe\s*$' } | Select-Object -First 1
+    $hashMatch = [regex]::Match([string]$line, '^([0-9a-fA-F]{64})\s')
+    if (-not $hashMatch.Success) {
+        throw "OllamaSetup.exe hash missing in sha256sum.txt for $tag"
+    }
+    return [pscustomobject]@{
+        Tag    = $tag
+        Url    = "https://github.com/ollama/ollama/releases/download/${tag}/OllamaSetup.exe"
+        Sha256 = $hashMatch.Groups[1].Value.ToLowerInvariant()
+    }
+}
+
+function Update-OllamaLockFromGitHub {
+    param($Lock)
+    $resolved = $null
+    try {
+        $resolved = Get-OllamaSetupFromGitHubApi
+    }
+    catch {
+        Write-Warning "GitHub API latest Ollama failed: $($_.Exception.Message)"
+        try {
+            $resolved = Get-OllamaSetupFromLatestRedirect
+        }
+        catch {
+            Write-Warning "Could not resolve latest Ollama release; using vendor.lock.json. $($_.Exception.Message)"
+            return
+        }
+    }
+    $Lock.ollama_setup.url = $resolved.Url
+    $Lock.ollama_setup.sha256 = $resolved.Sha256
+    Write-Host "ollama latest $($resolved.Tag) sha256=$($resolved.Sha256)"
 }
 
 function Write-GeneratedVersionNsh {
@@ -128,11 +360,32 @@ function Write-GeneratedVersionNsh {
 }
 
 function Ensure-VendorFile {
-    param($Entry, [string]$DestDir)
+    param(
+        $Entry,
+        [string]$DestDir,
+        [string]$TrustedPublisher = "",
+        [switch]$ForceLatest
+    )
     $out = Join-Path $DestDir $Entry.name
-    & $FetchUrl -Url $Entry.url -OutFile $out -Sha256 $Entry.sha256
+    $fetchArgs = @{
+        Url     = $Entry.url
+        OutFile = $out
+        Sha256  = $Entry.sha256
+    }
+    if ($TrustedPublisher) {
+        $fetchArgs.TrustedPublisher = $TrustedPublisher
+    }
+    if ($ForceLatest) {
+        $fetchArgs.Force = $true
+    }
+    & $FetchUrl @fetchArgs
     if ($LASTEXITCODE -ne 0) {
         throw "vendor fetch failed for $($Entry.name)"
+    }
+    $have = (Get-FileHash -LiteralPath $out -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($have -ne $Entry.sha256.Trim().ToLowerInvariant()) {
+        Write-Host "vendor $($Entry.name) sha256 now $have"
+        $Entry.sha256 = $have
     }
 }
 
@@ -239,6 +492,9 @@ foreach ($key in @("webview2_bootstrapper", "ollama_setup")) {
     }
 }
 
+if (-not $SkipNsis) {
+    Update-OllamaLockFromGitHub -Lock $Lock
+}
 Write-GeneratedVersionNsh -Ver $Version -Quad $VersionQuad -Lock $Lock
 
 if (-not $SkipFrontend) {
@@ -318,10 +574,12 @@ if (-not $SkipNsis) {
     if (-not (Test-Path -LiteralPath $Vendor)) {
         New-Item -ItemType Directory -Path $Vendor | Out-Null
     }
-    Ensure-VendorFile -Entry $Lock.webview2_bootstrapper -DestDir $Vendor
-    $makensis = Find-Makensis
+    Ensure-VendorFile -Entry $Lock.webview2_bootstrapper -DestDir $Vendor `
+        -TrustedPublisher "CN=Microsoft Corporation" -ForceLatest
+    Write-GeneratedVersionNsh -Ver $Version -Quad $VersionQuad -Lock $Lock
+    $makensis = Ensure-Makensis
     if (-not $makensis) {
-        throw "makensis not found. Install NSIS 3 Unicode and re-run, or pass -SkipNsis."
+        throw "makensis not found. Portable NSIS zip download failed and no local copy exists. Re-run with network access (no admin required), or pass -SkipNsis."
     }
     Write-Host "makensis $makensis"
     & $makensis "/DPRODUCT_VERSION=$Version" "/DPRODUCT_VERSION_QUAD=$VersionQuad" "/INPUTCHARSET" "UTF8" $Nsi

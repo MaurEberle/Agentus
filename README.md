@@ -37,7 +37,7 @@ Sprachen der Oberfläche und der Hilfe: Deutsch (Default), English, Español, Fr
 - Python **3.12**
 - Node.js (Frontend)
 - Optional: [Ollama](https://ollama.com) auf `http://127.0.0.1:11434`
-- Windows-Installer-Build: NSIS 3 Unicode (`makensis`) plus `pip install -e ".[packaging]"` im Backend
+- Windows-Installer-Build: `pip install -e ".[packaging]"` im Backend. NSIS 3 Unicode kommt als portable ZIP nach `build/nsis/` (aktuellste Version, ohne Admin).
 
 ## Schnellstart für Nutzer
 
@@ -137,7 +137,7 @@ Erzeugt unter `dist/`:
 | `Agentus-Network-Setup-{version}-x64.exe` | NSIS Per-User-Setup |
 | `Agentus-Network-Portable-{version}-x64.zip` | derselbe Freeze plus `portable.txt` |
 
-Voraussetzungen: Python 3.12-venv im Backend, `frontend/dist`, NSIS 3 (`makensis` auf PATH oder unter `build/nsis/`). Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` (PNG `resources/icons/app.png`).
+Voraussetzungen: Python 3.12-venv im Backend, `frontend/dist`. `makensis` wird beim Setup-Build als portable NSIS-ZIP (aktuellste Version) nach `build/nsis/` geladen, ohne Adminrechte. Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` (PNG `resources/icons/app.png`).
 
 Mehr: [`installer/README.md`](installer/README.md), Checkliste für eine frische Windows-VM dort.
 
