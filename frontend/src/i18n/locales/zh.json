@@ -680,8 +680,10 @@
         "useModel": "使用“{{name}}”",
         "temperature": "温度",
         "maxTokens": "最大 token 数",
-        "numCtx": "上下文窗口",
-        "numCtxHint": "留空使用模型默认值。超过 8192 个 token 时会加载更大的窗口。"
+        "numCtx": "上下文长度",
+        "numCtxHint": "上限来自所选模型。",
+        "numCtxLoading": "正在加载模型上限…",
+        "numCtxUnavailable": "此模型没有可用的长度信息。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",

@@ -680,8 +680,10 @@
         "useModel": "Usar “{{name}}”",
         "temperature": "Temperatura",
         "maxTokens": "Máx. tokens",
-        "numCtx": "Janela de contexto",
-        "numCtxHint": "Vazio mantém o padrão do modelo. Acima de 8192 tokens, o processo carrega uma janela maior."
+        "numCtx": "Comprimento de contexto",
+        "numCtxHint": "Os limites vêm do modelo escolhido.",
+        "numCtxLoading": "A carregar limites do modelo…",
+        "numCtxUnavailable": "Este modelo não indica limites de comprimento."
       },
       "agent": {
         "hint": "LLM, ferramentas e conhecimento vêm pelas arestas. Sem orquestrador, a mensagem inicia o agente.",

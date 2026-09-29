@@ -734,8 +734,10 @@
         "useModel": "„{{name}}“ verwenden",
         "temperature": "Temperature",
         "maxTokens": "Max. Tokens",
-        "numCtx": "Kontextfenster",
-        "numCtxHint": "Leer lässt die Vorgabe des Modells. Über 8192 Token lädt der Lauf ein größeres Fenster."
+        "numCtx": "Kontextlänge",
+        "numCtxHint": "Grenzen kommen vom gewählten Modell.",
+        "numCtxLoading": "Modellgrenzen werden geladen…",
+        "numCtxUnavailable": "Für dieses Modell sind keine Längenangaben verfügbar."
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",

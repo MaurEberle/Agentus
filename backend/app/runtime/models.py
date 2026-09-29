@@ -102,3 +102,10 @@ class RuntimeModelOut(ApiModel):
 class RuntimeModelsResponse(ApiModel):
     items: list[RuntimeModelOut]
     message_key: str | None = Field(default=None, alias="messageKey")
+
+
+class RuntimeModelStats(ApiModel):
+    context_min: int | None = Field(default=None, alias="contextMin")
+    context_max: int | None = Field(default=None, alias="contextMax")
+    steps: list[int] = Field(default_factory=list)
+    message_key: str | None = Field(default=None, alias="messageKey")

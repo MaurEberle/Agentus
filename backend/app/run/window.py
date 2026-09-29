@@ -142,7 +142,7 @@ def architecture_context(tag: str, *, base_url: str | None = None) -> int | None
 
     url = f"{_root(base_url)}/api/show"
     try:
-        with client(timeout_sec=2.0) as http:
+        with client(timeout_sec=8.0) as http:
             response = http.post(url, json={"model": tag})
         raise_for_status(response)
         payload = response_json(response)

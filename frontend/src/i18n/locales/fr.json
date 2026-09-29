@@ -680,8 +680,10 @@
         "useModel": "Utiliser « {{name}} »",
         "temperature": "Température",
         "maxTokens": "Jetons max.",
-        "numCtx": "Fenêtre de contexte",
-        "numCtxHint": "Vide conserve la valeur du modèle. Au-delà de 8192 jetons, une fenêtre plus grande est chargée."
+        "numCtx": "Longueur de contexte",
+        "numCtxHint": "Les limites viennent du modèle choisi.",
+        "numCtxLoading": "Chargement des limites du modèle…",
+        "numCtxUnavailable": "Aucune limite de longueur n’est disponible pour ce modèle."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",

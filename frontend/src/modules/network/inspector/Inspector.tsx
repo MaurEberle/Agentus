@@ -16,7 +16,7 @@ import {
   reindexNetworkKnowledge,
   testLlmConnection,
 } from '@/modules/network/api';
-import { useMcpRecipesQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
+import { useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
 import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
@@ -167,6 +167,108 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function formatTokenCount(value: number): string {
+  if (value >= 1_000_000) {
+    const millions = value / 1_000_000;
+    return `${Number.isInteger(millions) ? millions : millions.toFixed(1)}M`;
+  }
+  if (value >= 10_000) return `${Math.round(value / 1000)}k`;
+  return value.toLocaleString();
+}
+
+function sliderStep(min: number, max: number): number {
+  const span = max - min;
+  if (span <= 4096) return 256;
+  if (span <= 16384) return 512;
+  if (span <= 65536) return 1024;
+  return 2048;
+}
+
+function ContextWindowField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const provider = String(node.data.provider ?? 'ollama');
+  const model = String(node.data.model ?? '');
+  const credentialId = String(node.data.credentialId ?? '') || undefined;
+  const local = provider === 'ollama';
+  const stats = useModelStatsQuery({
+    provider: provider as LlmProvider,
+    model,
+    credentialId,
+    baseUrl: String(node.data.baseUrl ?? '') || undefined,
+    enabled: Boolean(model),
+  });
+  const min = stats.data?.contextMin;
+  const max = stats.data?.contextMax;
+  const steps = stats.data?.steps ?? [];
+  const current = Number(node.data.numCtx);
+
+  useEffect(() => {
+    if (readOnly || max == null || min == null) return;
+    if (!Number.isFinite(current) || current < min || current > max) {
+      editorUpdateNodeData(node.id, { numCtx: max });
+    }
+  }, [current, max, min, node.id, readOnly]);
+
+  if (stats.isPending && !stats.data) {
+    return (
+      <Field label={t('network.inspector.llm.numCtx')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numCtxLoading')}</p>
+      </Field>
+    );
+  }
+  if (max == null || min == null) {
+    return (
+      <Field label={t('network.inspector.llm.numCtx')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numCtxUnavailable')}</p>
+      </Field>
+    );
+  }
+
+  const value = Number.isFinite(current) ? Math.min(max, Math.max(min, current)) : max;
+
+  return (
+    <Field label={t('network.inspector.llm.numCtx')}>
+      {local ? (
+        <>
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={sliderStep(min, max)}
+            value={value}
+            disabled={readOnly}
+            className="w-full accent-primary"
+            onChange={(event) => editorUpdateNodeData(node.id, { numCtx: Number(event.target.value) })}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{formatTokenCount(min)}</span>
+            <span className="font-medium text-foreground">{formatTokenCount(value)}</span>
+            <span>{formatTokenCount(max)}</span>
+          </div>
+        </>
+      ) : (
+        <Select
+          value={String(value)}
+          disabled={readOnly}
+          onValueChange={(next) => editorUpdateNodeData(node.id, { numCtx: Number(next) })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(steps.length > 0 ? steps : [max]).map((step) => (
+              <SelectItem key={step} value={String(step)}>
+                {formatTokenCount(step)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numCtxHint')}</p>
+    </Field>
+  );
+}
+
 function DisplayNameField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   return (
@@ -238,6 +340,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     const patch: Record<string, unknown> = { provider: next };
     if (next !== provider) {
       patch.model = '';
+      patch.numCtx = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -278,7 +381,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           onValueChange={(value) =>
             editorUpdateNodeData(node.id, {
               credentialId: value === 'none' ? undefined : value,
-              ...(catalogProvider ? { model: '' } : {}),
+              ...(catalogProvider ? { model: '', numCtx: undefined } : {}),
             })
           }
         >
@@ -334,12 +437,13 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
             modelLocked ? t('network.inspector.llm.pickCredentialFirst') : t('network.inspector.llm.model')
           }
           noModelsLabel={t('network.inspector.llm.noModels')}
-          onChange={(value) => editorUpdateNodeData(node.id, { model: value })}
+          onChange={(value) => editorUpdateNodeData(node.id, { model: value, numCtx: undefined })}
         />
         {catalogFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
         ) : null}
       </Field>
+      {model && !modelLocked ? <ContextWindowField node={node} readOnly={readOnly} /> : null}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
         <Button
           type="button"
@@ -381,19 +485,6 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
                 })
               }
             />
-          </Field>
-          <Field label={t('network.inspector.llm.numCtx')}>
-            <Input
-              type="number"
-              value={node.data.numCtx == null ? '' : String(node.data.numCtx)}
-              disabled={readOnly}
-              onChange={(event) =>
-                editorUpdateNodeData(node.id, {
-                  numCtx: event.target.value === '' ? undefined : Number(event.target.value),
-                })
-              }
-            />
-            <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numCtxHint')}</p>
           </Field>
         </>
       ) : null}

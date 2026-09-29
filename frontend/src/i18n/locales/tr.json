@@ -680,8 +680,10 @@
         "useModel": "“{{name}}” kullan",
         "temperature": "Sıcaklık",
         "maxTokens": "En fazla belirteç",
-        "numCtx": "Bağlam penceresi",
-        "numCtxHint": "Boş, model varsayılanını kullanır. 8192 belirtecin üstünde daha büyük bir pencere yüklenir."
+        "numCtx": "Bağlam uzunluğu",
+        "numCtxHint": "Sınırlar seçilen modelden gelir.",
+        "numCtxLoading": "Model sınırları yükleniyor…",
+        "numCtxUnavailable": "Bu model için uzunluk sınırı yok."
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",
