@@ -54,7 +54,7 @@ Aucun nœud choisi : nom, description, étiquettes, statistiques, liste de valid
 
 Nœud choisi :
 
-- **LLM :** fournisseur, modèle (liste du runtime), identifiant cloud, ping, avancé température / jetons max. Cloud sans identifiant est invalide.
+- **LLM :** fournisseur, modèle (liste du runtime), identifiant cloud, longueur de contexte selon le modèle (curseur en local, liste dans le cloud), ping, avancé température / jetons max. Cloud sans identifiant est invalide.
 - **Agent :** invite système et nom affiché. Si l’agent est sur un canal, l’inspecteur explique que les tâches viennent de l’orchestrateur.
 - **Outil :** type. HTTP : méthode et URL, identifiant optionnel. Recherche web : identifiant de type recherche web. Accès aux fichiers : dossier racine, pas la racine d’un lecteur ; l’agent ne travaille qu’en dessous, et écrire et supprimer sont des interrupteurs.
 - **MCP :** serveur activé dans **Paramètres → Serveurs MCP**. Par défaut tous les outils ; après une sonde vous pouvez en choisir un sous-ensemble. Les identifiants sont dans Paramètres. Le dossier racine pour fichiers et Excel est sur le nœud ; Git garde le dossier dans Paramètres.

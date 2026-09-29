@@ -680,8 +680,10 @@
         "useModel": "Usar «{{name}}»",
         "temperature": "Temperatura",
         "maxTokens": "Máx. tokens",
-        "numCtx": "Ventana de contexto",
-        "numCtxHint": "Vacío usa el valor del modelo. Por encima de 8192 tokens se carga una ventana mayor."
+        "numCtx": "Longitud de contexto",
+        "numCtxHint": "Los límites vienen del modelo elegido.",
+        "numCtxLoading": "Cargando límites del modelo…",
+        "numCtxUnavailable": "Este modelo no informa límites de longitud."
       },
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",

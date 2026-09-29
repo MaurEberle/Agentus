@@ -12,6 +12,7 @@ import type {
   McpRecipe,
   McpServerListItem,
   RuntimeModel,
+  RuntimeModelStats,
   RuntimePing,
   UpsertMcpServerInput,
 } from '@/modules/settings/model';
@@ -202,6 +203,41 @@ export function useSettingsQuery() {
 
 export function useCredentialsQuery() {
   return useQuery({ queryKey: ['credentials'], queryFn: listCredentials });
+}
+
+export type ModelStatsParams = {
+  provider?: LlmProvider;
+  model: string;
+  credentialId?: string;
+  baseUrl?: string;
+};
+
+export async function getModelStats(params: ModelStatsParams): Promise<RuntimeModelStats> {
+  const query = new URLSearchParams();
+  query.set('model', params.model);
+  if (params.provider) query.set('provider', params.provider);
+  if (params.credentialId) query.set('credentialId', params.credentialId);
+  if (params.baseUrl) query.set('baseUrl', params.baseUrl);
+  return apiFetch<RuntimeModelStats>(`/runtime/model-stats?${query.toString()}`);
+}
+
+export function useModelStatsQuery(
+  params: ModelStatsParams & { enabled?: boolean },
+) {
+  const provider = params.provider ?? 'ollama';
+  const credentialId = params.credentialId ?? '';
+  const baseUrl = params.baseUrl ?? '';
+  return useQuery({
+    queryKey: ['runtime', 'model-stats', provider, params.model, credentialId, baseUrl],
+    queryFn: () =>
+      getModelStats({
+        provider: params.provider,
+        model: params.model,
+        credentialId: params.credentialId,
+        baseUrl: params.baseUrl,
+      }),
+    enabled: (params.enabled ?? true) && Boolean(params.model.trim()),
+  });
 }
 
 export function useRuntimeModelsQuery(params: RuntimeModelsParams & { enabled?: boolean } = {}) {

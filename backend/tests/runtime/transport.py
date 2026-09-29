@@ -19,3 +19,4 @@ def install_transport(
     monkeypatch.setattr("app.runtime.completions.client", wrapped)
     monkeypatch.setattr("app.runtime.embeddings.client", wrapped)
     monkeypatch.setattr("app.runtime.catalog.client", wrapped)
+    monkeypatch.setattr("app.runtime.model_stats.client", wrapped)

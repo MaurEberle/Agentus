@@ -141,6 +141,13 @@ export type McpServerListItem = {
 
 export type RuntimePing = { ok: boolean; messageKey?: string };
 export type RuntimeModel = { name: string; sizeBytes?: number };
+
+export type RuntimeModelStats = {
+  contextMin?: number;
+  contextMax?: number;
+  steps?: number[];
+  messageKey?: string;
+};
 export type HelpPing = { ok: boolean; messageKey?: string };
 export type AboutInfo = { apiVersion: string; runtime?: { ok: boolean } };
 

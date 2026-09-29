@@ -110,3 +110,27 @@ def test_test_llm_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> Non
     )
     assert response.status_code == 200
     assert response.json() == {"ok": True}
+
+
+def test_model_stats_ollama(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.http.routers.runtime.get_model_stats",
+        lambda provider, model, credential_id=None, base_url=None: (2048, 32768, []),
+    )
+    response = client.get("/api/runtime/model-stats", params={"provider": "ollama", "model": "llama3.2:1b"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["contextMin"] == 2048
+    assert body["contextMax"] == 32768
+    assert body.get("steps") in ([], None)
+
+
+def test_model_stats_cloud_prefix(client: TestClient) -> None:
+    response = client.get(
+        "/api/runtime/model-stats",
+        params={"provider": "xai", "model": "grok-4.5"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["contextMax"] == 500000
+    assert 500000 in body["steps"]
