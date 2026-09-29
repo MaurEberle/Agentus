@@ -91,6 +91,12 @@ def test_nsi_is_per_user_without_portable_marker() -> None:
     assert r'"$INSTDIR\app.ico" 0' in text
     build = (_REPO / "scripts" / "build-windows.ps1").read_text(encoding="utf-8")
     assert "/INPUTCHARSET" in build
+    assert "Ensure-Makensis" in build
+    assert "Install-NsisPortable" in build
+    assert "best_release.json" in build
+    assert "nsis-${ver}.zip" in build
+    assert "api.github.com/repos/ollama/ollama/releases/latest" in build
+    assert "CN=Microsoft Corporation" in build
     body = _strcontains_fn(text)
     assert "Push $R2" in body
     assert "Pop $R1" in body
@@ -107,11 +113,15 @@ def _makensis() -> Path | None:
     found = shutil.which("makensis")
     if found:
         return Path(found)
+    portable_root = _REPO / "build" / "nsis"
+    if portable_root.is_dir():
+        portable = sorted(portable_root.rglob("makensis.exe"))
+        if portable:
+            return portable[-1]
     for candidate in (
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "NSIS" / "makensis.exe",
         Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "NSIS" / "makensis.exe",
         Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "NSIS" / "makensis.exe",
-        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "NSIS" / "makensis.exe",
-        _REPO / "build" / "nsis" / "nsis-3.12" / "makensis.exe",
     ):
         if candidate and candidate.is_file():
             return candidate
