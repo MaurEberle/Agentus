@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+from collections.abc import Iterable
 from typing import Any
 
 from app.common.http import client
@@ -134,6 +136,13 @@ def list_ollama_models(*, base_url: str | None = None) -> list[OllamaModel]:
     return out
 
 
+def tag_key(name: str) -> str:
+    text = (name or "").strip().lower()
+    if text.endswith(":latest"):
+        text = text[: -len(":latest")]
+    return text
+
+
 def list_loaded_models(*, base_url: str | None = None) -> list[str]:
     url = f"{_root(base_url)}/api/ps"
     try:
@@ -162,18 +171,53 @@ def ensure_loaded(
     tag: str, *, base_url: str | None = None, keep_alive: str = "5m"
 ) -> None:
     loaded = list_loaded_models(base_url=base_url)
-    if tag in loaded:
+    wanted = tag_key(tag)
+    if any(tag_key(name) == wanted for name in loaded):
         return
     _generate(tag, keep_alive=keep_alive, base_url=base_url)
 
 
-def unload(tag: str, *, base_url: str | None = None) -> None:
+def unload(tag: str, *, base_url: str | None = None, wait: bool = True) -> None:
     try:
         _generate(tag, keep_alive=0, base_url=base_url)
     except RuntimeApiError as exc:
         if exc.error_key == "runtime.modelNotFound":
             return
         raise
+    if wait:
+        _wait_absent(tag, base_url=base_url)
+
+
+def keep_only(keep: Iterable[str], *, base_url: str | None = None) -> list[str]:
+    """Unload every resident model that is not in ``keep``. Returns dropped tags."""
+    keep_keys = {tag_key(item) for item in keep if str(item).strip()}
+    dropped: list[str] = []
+    try:
+        loaded = list_loaded_models(base_url=base_url)
+    except Exception:
+        return dropped
+    for name in loaded:
+        if tag_key(name) in keep_keys:
+            continue
+        try:
+            unload(name, base_url=base_url)
+        except Exception:
+            continue
+        dropped.append(name)
+    return dropped
+
+
+def _wait_absent(tag: str, *, base_url: str | None, timeout_sec: float = 20.0) -> None:
+    wanted = tag_key(tag)
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        try:
+            names = list_loaded_models(base_url=base_url)
+        except Exception:
+            return
+        if all(tag_key(name) != wanted for name in names):
+            return
+        time.sleep(0.25)
 
 
 def _generate(

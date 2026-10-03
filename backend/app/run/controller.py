@@ -457,40 +457,33 @@ class RunController:
                 mcp.close_all()
             except Exception:
                 pass
-        from app.runtime.ollama import unload
+        from app.run.vram import release_others
+        from app.runtime.ollama import ensure_loaded
+        from app.settings.service import load_settings
 
-        for tag in list(self._unloads):
-            try:
-                unload(tag)
-            except Exception:
-                pass
+        try:
+            settings = load_settings()
+        except Exception:
+            settings = None
+        if settings is not None:
+            release_others(settings, self.compiled, current=None)
+            help_chat = settings.help_chat
+            primary = (help_chat.model or "").strip()
+            if help_chat.provider == "ollama" and primary:
+                try:
+                    ensure_loaded(primary)
+                except Exception:
+                    pass
         self._unloads.clear()
-        if self._help_model:
-            try:
-                from app.runtime.ollama import ensure_loaded
-
-                ensure_loaded(self._help_model)
-            except Exception:
-                pass
-            self._help_model = None
+        self._help_model = None
         set_help_degraded(False)
         stop_resources()
 
     def _vram_start(self, compiled: CompiledGraph, settings: Any) -> bool:
         from app.runtime.errors import RuntimeApiError
-        from app.runtime.ollama import ensure_loaded, list_ollama_models
+        from app.runtime.ollama import list_ollama_models
+        from app.run.vram import release_others
 
-        fallback_missing = False
-        help_chat = settings.help_chat
-        if help_chat.provider == "ollama" and help_chat.model.strip():
-            set_help_degraded(True)
-            fallback = (help_chat.fallback_model or "llama3.2:1b").strip()
-            self._help_model = help_chat.model.strip()
-            try:
-                ensure_loaded(fallback)
-                self._unloads.append(fallback)
-            except Exception:
-                fallback_missing = True
         try:
             installed = {item.name for item in list_ollama_models()}
         except RuntimeApiError as exc:
@@ -505,7 +498,13 @@ class RunController:
             seen.add(tag)
             if tag not in installed and f"{tag}:latest" not in installed:
                 raise AppError("runtime.modelNotFound", status_code=409, message=tag)
-        return fallback_missing
+        if compiled.orchestrator and compiled.orchestrator.llm.provider == "ollama":
+            tag = compiled.orchestrator.llm.model
+            if tag and tag not in seen and tag not in installed and f"{tag}:latest" not in installed:
+                raise AppError("runtime.modelNotFound", status_code=409, message=tag)
+        set_help_degraded(False)
+        release_others(settings, compiled, current=None)
+        return False
 
     def _chat_payload(self) -> list[dict[str, Any]]:
         return [item.model_dump(by_alias=True, exclude_none=True) for item in self.conversation]

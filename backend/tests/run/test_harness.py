@@ -1003,3 +1003,93 @@ def test_mcp_answer_after_success_is_published(monkeypatch, api_env) -> None:
     assert n["n"] == 2
     texts = [item["content"] for item in (stored["chat"] or [])]
     assert any("Repo: me/repo" in (item or "") for item in texts)
+
+
+def test_second_agent_keeps_only_its_ollama_model(monkeypatch, api_env) -> None:
+    from app.runtime.models import OllamaModel
+    from tests.run.conftest import keeps
+
+    monkeypatch.setattr(
+        "app.runtime.ollama.list_ollama_models",
+        lambda *a, **k: [
+            OllamaModel(name="writer", size_bytes=None),
+            OllamaModel(name="saver", size_bytes=None),
+            OllamaModel(name="llama3.2:1b", size_bytes=None),
+        ],
+    )
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        return CompletionResult(content="ok " + req.model, model=req.model, finish_reason="stop")
+
+    doc = {
+        "schemaVersion": 1,
+        "name": "chain",
+        "nodes": [
+            {
+                "id": "in",
+                "type": "chat_input",
+                "position": {"x": 0, "y": 0},
+                "data": {"startMessage": "go", "requireInput": False},
+            },
+            {
+                "id": "llm-w",
+                "type": "llm",
+                "position": {"x": 0, "y": 0},
+                "data": {"provider": "ollama", "model": "writer"},
+            },
+            {
+                "id": "llm-s",
+                "type": "llm",
+                "position": {"x": 0, "y": 0},
+                "data": {"provider": "ollama", "model": "saver"},
+            },
+            {"id": "ag-w", "type": "agent", "position": {"x": 0, "y": 0}, "data": {"systemPrompt": "write"}},
+            {"id": "ag-s", "type": "agent", "position": {"x": 0, "y": 0}, "data": {"systemPrompt": "save"}},
+            {"id": "end", "type": "end", "position": {"x": 0, "y": 0}, "data": {}},
+        ],
+        "edges": [
+            {
+                "id": "e1",
+                "source": "in",
+                "sourceHandle": "message",
+                "target": "ag-w",
+                "targetHandle": "message",
+            },
+            {
+                "id": "e2",
+                "source": "llm-w",
+                "sourceHandle": "llm",
+                "target": "ag-w",
+                "targetHandle": "llm",
+            },
+            {
+                "id": "e3",
+                "source": "ag-w",
+                "sourceHandle": "handoff",
+                "target": "ag-s",
+                "targetHandle": "message",
+            },
+            {
+                "id": "e4",
+                "source": "llm-s",
+                "sourceHandle": "llm",
+                "target": "ag-s",
+                "targetHandle": "llm",
+            },
+            {
+                "id": "e5",
+                "source": "ag-s",
+                "sourceHandle": "message",
+                "target": "end",
+                "targetHandle": "message",
+            },
+        ],
+    }
+    stored = _drive(monkeypatch, _complete, doc=doc, user_texts=())
+    assert stored["outcome"] == "succeeded"
+    writer_keeps = [item for item in keeps if "writer" in item]
+    saver_keeps = [item for item in keeps if "saver" in item]
+    assert writer_keeps
+    assert saver_keeps
+    assert all("saver" not in item for item in writer_keeps)
+    assert all("writer" not in item for item in saver_keeps)

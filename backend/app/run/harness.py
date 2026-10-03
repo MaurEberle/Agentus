@@ -431,6 +431,7 @@ def _agent_turn(
         options = _ollama_options(agent.llm, choice)
         context_max = choice.context_max if choice is not None else _static_context_max(agent.llm.num_ctx)
         context_est = run_window.prompt_tokens(messages)
+        _prepare_resident(compiled, agent.llm)
         started = time.perf_counter()
         emit_log(
             "info",
@@ -654,6 +655,25 @@ def _parse_args(raw: str) -> dict:
 def _note_tokens(record: AgentRecord | None, out: int | None) -> None:
     if record is not None and out:
         record.saw_tokens = True
+
+
+def _prepare_resident(compiled: CompiledGraph, llm) -> None:
+    if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
+        return
+    from app.run.vram import release_others
+    from app.settings.service import load_settings
+
+    try:
+        settings = load_settings()
+        dropped = release_others(settings, compiled, current=llm.model)
+    except Exception:
+        return
+    if dropped:
+        emit_log(
+            "info",
+            "run.llm.release",
+            payload={"dropped": dropped, "keep": llm.model},
+        )
 
 
 def _static_context_max(num_ctx: int | None) -> int | None:
@@ -1106,6 +1126,7 @@ def _orchestrator_action(
         context_max = choice.context_max
         context_est = run_window.prompt_tokens(messages)
         options = _ollama_options(llm, choice)
+        _prepare_resident(compiled, llm)
         emit_log(
             "info",
             "run.llm.start",

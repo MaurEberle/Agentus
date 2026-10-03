@@ -10,7 +10,7 @@ from app.run.controller import get_controller
 from app.run.help_bridge import get_help_degraded
 from app.settings.models import AppSettingsPatch
 from app.settings.service import is_run_busy, patch_settings
-from tests.run.conftest import mini_doc, unloads
+from tests.run.conftest import keeps, mini_doc
 
 
 def _save_mini(active: bool = True, **chat: object) -> str:
@@ -51,7 +51,7 @@ def test_start_succeeds_and_teardown_unloads(client: TestClient) -> None:
     items = listed.json()["items"]
     assert items[0]["id"] == run_id
     assert items[0]["outcome"] == "succeeded"
-    assert unloads  # teardown unload called
+    assert keeps  # extras released at start and teardown
     assert get_help_degraded() is False
 
 
@@ -181,7 +181,7 @@ def test_finish_does_not_overwrite_cancelled(client: TestClient) -> None:
 def test_stop_while_waiting(client: TestClient) -> None:
     _save_mini(requireInput=True)
     client.post("/api/run/start")
-    assert get_help_degraded() is True
+    assert get_help_degraded() is False
     stop = client.post("/api/run/stop")
     assert stop.status_code == 200
     assert stop.json()["serviceStatus"] == "stopped"

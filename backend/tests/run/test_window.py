@@ -34,9 +34,23 @@ def test_preferred_8k_is_sent_for_a_small_prompt() -> None:
     assert choice.fits is True
 
 
-def test_preferred_above_a_step_uses_the_next_step() -> None:
+def test_preferred_is_a_cap_not_a_floor() -> None:
     choice = _choice(need=1000, preferred=20000)
-    assert choice.num_ctx == 32768
+    assert choice.num_ctx == 8192
+    assert choice.fits is True
+
+
+def test_huge_preferred_uses_the_smallest_fitting_step() -> None:
+    choice = _choice(need=2000, preferred=1_024_000, architecture_max=1_024_000)
+    assert choice.num_ctx == 8192
+    assert choice.context_max == 8192
+    assert choice.fits is True
+
+
+def test_need_above_preferred_does_not_fit() -> None:
+    choice = _choice(need=9000, preferred=8192)
+    assert choice.fits is False
+    assert choice.num_ctx is None
 
 
 def test_loaded_window_does_not_step_down() -> None:

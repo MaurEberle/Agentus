@@ -9,6 +9,7 @@ from app.runtime.errors import RuntimeTransportError
 from app.runtime.ollama import (
     ensure_loaded,
     gpu_layers_for_percent,
+    keep_only,
     list_loaded_models,
     list_ollama_models,
     model_block_count,
@@ -90,6 +91,32 @@ def test_unload_keep_alive_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     unload("llama3.2:1b")
     assert bodies[0]["keep_alive"] == 0
     assert bodies[0]["model"] == "llama3.2:1b"
+
+
+def test_keep_only_unloads_other_tags(monkeypatch: pytest.MonkeyPatch) -> None:
+    loaded = [
+        {"name": "writer"},
+        {"name": "saver"},
+        {"name": "help-chat"},
+    ]
+    dropped: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/api/ps"):
+            return httpx.Response(200, json={"models": list(loaded)})
+        if request.url.path.endswith("/api/generate"):
+            body = json.loads(request.content.decode("utf-8"))
+            if body.get("keep_alive") == 0:
+                dropped.append(body["model"])
+                loaded[:] = [row for row in loaded if row["name"] != body["model"]]
+            return httpx.Response(200, json={})
+        raise AssertionError(request.url.path)
+
+    install_transport(monkeypatch, handler)
+    gone = keep_only({"saver", "help-chat"})
+    assert gone == ["writer"]
+    assert dropped == ["writer"]
+    assert [row["name"] for row in loaded] == ["saver", "help-chat"]
 
 
 def test_list_loaded_uses_model_key(monkeypatch: pytest.MonkeyPatch) -> None:

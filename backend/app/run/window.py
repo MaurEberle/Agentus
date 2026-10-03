@@ -47,10 +47,11 @@ def choose_window(
     architecture_max: int | None,
     provider: str,
 ) -> WindowChoice:
-    """Pick the smallest step that holds ``need`` and respects the node's wish.
+    """Pick the smallest step that holds ``need``.
 
-    Ollama keeps a raised window for the rest of the run. A prompt above 8192
-    never stays on an 8192 window. Cloud providers are not sent ``num_ctx``.
+    ``preferred`` (node numCtx) is a maximum, not a reserved floor. Ollama
+    keeps a raised window for the rest of the run. A prompt above 8192 never
+    stays on an 8192 window. Cloud providers are not sent ``num_ctx``.
     """
     if provider != "ollama":
         cap = preferred if isinstance(preferred, int) and preferred > 0 else None
@@ -59,13 +60,13 @@ def choose_window(
         return WindowChoice(num_ctx=None, context_max=cap, fits=need <= cap)
 
     cap = architecture_max if isinstance(architecture_max, int) and architecture_max > 0 else _LADDER[-1]
+    if isinstance(preferred, int) and preferred > 0:
+        cap = min(cap, preferred)
     steps = [step for step in _LADDER if step <= cap]
     if cap not in steps:
         steps.append(cap)
         steps.sort()
     floor = 0
-    if isinstance(preferred, int) and preferred > 0:
-        floor = preferred
     if isinstance(raised, int) and raised > floor:
         floor = raised
     sticky = max(raised or 0, loaded or 0)
