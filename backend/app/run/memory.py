@@ -78,6 +78,7 @@ class RunMemory:
         self.windows: list[dict[str, object]] = []
         self.raised: dict[str, int] = {}
         self.arch: dict[str, int | None] = {}
+        self.thinking: dict[str, bool] = {}
         self.loaded: dict[str, int | None] = {}
         self._anomaly: str | None = None
 

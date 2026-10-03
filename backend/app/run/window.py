@@ -9,6 +9,9 @@ from app.runtime.models import ChatMessage
 
 # Fixed room for the answer when the node has no maxTokens.
 CONTEXT_RESERVE_TOKENS = 1024
+# Thinking models emit thousands of hidden tokens before the visible answer.
+THINKING_RESERVE_TOKENS = 8192
+THINKING_MIN_CTX = 16384
 _LADDER = (8192, 16384, 32768, 65536)
 _SMALL = 8192
 
@@ -33,8 +36,15 @@ def prompt_tokens(messages: list[ChatMessage]) -> int:
     return estimate_token_count("\n".join(parts))
 
 
-def prompt_need(messages: list[ChatMessage], max_tokens: int | None) -> int:
+def prompt_need(
+    messages: list[ChatMessage],
+    max_tokens: int | None,
+    *,
+    thinking: bool = False,
+) -> int:
     reserve = max_tokens if isinstance(max_tokens, int) and max_tokens > 0 else CONTEXT_RESERVE_TOKENS
+    if thinking:
+        reserve = max(reserve, THINKING_RESERVE_TOKENS)
     return prompt_tokens(messages) + reserve
 
 
@@ -46,12 +56,14 @@ def choose_window(
     raised: int | None,
     architecture_max: int | None,
     provider: str,
+    thinking: bool = False,
 ) -> WindowChoice:
     """Pick the smallest step that holds ``need``.
 
     ``preferred`` (node numCtx) is a maximum, not a reserved floor. Ollama
     keeps a raised window for the rest of the run. A prompt above 8192 never
-    stays on an 8192 window. Cloud providers are not sent ``num_ctx``.
+    stays on an 8192 window. Thinking models start at 16384 when the cap
+    allows. Cloud providers are not sent ``num_ctx``.
     """
     if provider != "ollama":
         cap = preferred if isinstance(preferred, int) and preferred > 0 else None
@@ -79,6 +91,10 @@ def choose_window(
         return WindowChoice(num_ctx=None, context_max=loaded or raised, fits=False)
     if sticky >= need and sticky >= floor and sticky > chosen:
         chosen = sticky
+    if thinking:
+        bumped = [step for step in steps if step >= THINKING_MIN_CTX]
+        if bumped and chosen < THINKING_MIN_CTX:
+            chosen = min(bumped)
     if need > _SMALL and chosen <= _SMALL:
         return WindowChoice(num_ctx=None, context_max=chosen, fits=False)
     if (
@@ -135,8 +151,10 @@ def loaded_context(tag: str, *, base_url: str | None = None) -> int | None:
     return None
 
 
-def architecture_context(tag: str, *, base_url: str | None = None) -> int | None:
-    """Model context length from ``/api/show``, used as the top of the ladder."""
+def _fetch_show(tag: str, *, base_url: str | None = None) -> dict | None:
+    name = (tag or "").strip()
+    if not name:
+        return None
     from app.runtime.ollama import _root
     from app.common.http import client
     from app.runtime.errors import raise_for_status, response_json
@@ -144,11 +162,15 @@ def architecture_context(tag: str, *, base_url: str | None = None) -> int | None
     url = f"{_root(base_url)}/api/show"
     try:
         with client(timeout_sec=8.0) as http:
-            response = http.post(url, json={"model": tag})
+            response = http.post(url, json={"model": name})
         raise_for_status(response)
         payload = response_json(response)
     except Exception:
         return None
+    return payload if isinstance(payload, dict) else None
+
+
+def context_from_show(payload: object) -> int | None:
     if not isinstance(payload, dict):
         return None
     info = payload.get("model_info")
@@ -159,6 +181,26 @@ def architecture_context(tag: str, *, base_url: str | None = None) -> int | None
         if str(key).endswith("context_length") and isinstance(value, int) and value > 0:
             found = value
     return found
+
+
+def thinking_from_show(payload: object) -> bool:
+    """Ollama ``capabilities`` lists ``thinking``. A body key named thinking is ignored."""
+    if not isinstance(payload, dict):
+        return False
+    caps = payload.get("capabilities")
+    if not isinstance(caps, list):
+        return False
+    return any(isinstance(item, str) and item.lower() == "thinking" for item in caps)
+
+
+def architecture_context(tag: str, *, base_url: str | None = None) -> int | None:
+    """Model context length from ``/api/show``, used as the top of the ladder."""
+    return context_from_show(_fetch_show(tag, base_url=base_url))
+
+
+def model_thinking(tag: str, *, base_url: str | None = None) -> bool:
+    """True when Ollama reports the ``thinking`` capability for ``tag``."""
+    return thinking_from_show(_fetch_show(tag, base_url=base_url))
 
 
 def _context_field(item: dict) -> int | None:

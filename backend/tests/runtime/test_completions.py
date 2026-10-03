@@ -15,7 +15,7 @@ from app.runtime.completions import (
     complete_stream,
     estimate_token_count,
 )
-from app.runtime.errors import RuntimeApiError
+from app.runtime.errors import RuntimeApiError, clip_error_detail
 from app.runtime.models import ChatMessage, CompletionRequest, ToolCall
 from tests.runtime.transport import install_transport
 
@@ -207,6 +207,75 @@ def test_stream_read_timeout_error_key(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert events[-1].kind == "error"
     assert events[-1].error_key == "runtime.timeout"
+
+
+def test_clip_error_detail_collapses_and_truncates() -> None:
+    assert clip_error_detail("  a \n b  ") == "a b"
+    assert clip_error_detail("") is None
+    assert clip_error_detail(None) is None
+    clipped = clip_error_detail("x" * 600)
+    assert clipped is not None
+    assert len(clipped) == 500
+    assert clipped.endswith("…")
+
+
+def test_stream_chunk_error_keeps_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b'{"error":"invalid tool call json"}\n')
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    assert events[-1].kind == "error"
+    assert events[-1].error_key == "runtime.badRequest"
+    assert events[-1].error_detail == "invalid tool call json"
+
+
+def test_complete_live_raises_with_stream_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b'{"error":"invalid tool call json"}\n')
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete_live(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    assert err.value.error_key == "runtime.badRequest"
+    assert err.value.detail == "invalid tool call json"
+
+
+def test_stream_protocol_error_keeps_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.RemoteProtocolError("peer closed", request=request)
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    assert events[-1].kind == "error"
+    assert events[-1].error_key == "runtime.badRequest"
+    assert events[-1].error_detail is not None
+    assert "RemoteProtocolError" in events[-1].error_detail
+
+
+def test_http_400_keeps_body_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"error": "messages: invalid role"})
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    assert err.value.error_key == "runtime.badRequest"
+    assert err.value.status == 400
+    assert err.value.detail is not None
+    assert "invalid role" in err.value.detail
 
 
 def test_complete_live_aggregates_stream(monkeypatch: pytest.MonkeyPatch) -> None:

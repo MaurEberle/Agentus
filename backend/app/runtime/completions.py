@@ -12,6 +12,7 @@ from app.common.http import client
 from app.common.types import Provider
 from app.runtime.errors import (
     RuntimeApiError,
+    clip_error_detail,
     is_timeout_error,
     is_transport_error,
     map_http_status,
@@ -282,6 +283,13 @@ def _read_body(response: Any) -> str:
             return ""
 
 
+def _stream_error(error_key: str, detail: str | None = None) -> StreamEvent:
+    clipped = clip_error_detail(detail)
+    if clipped:
+        log.warning("completion error key=%s detail=%s", error_key, clipped)
+    return StreamEvent(kind="error", error_key=error_key, error_detail=clipped)
+
+
 def _chunk_error_text(chunk: dict[str, Any]) -> str:
     raw = chunk.get("error")
     if isinstance(raw, str):
@@ -376,9 +384,10 @@ def _message_content(message: dict[str, Any]) -> str | None:
 
 def _result_from_body(body: object, req: CompletionRequest) -> CompletionResult:
     if not isinstance(body, dict):
-        raise RuntimeApiError("runtime.badRequest")
-    if _chunk_error_text(body):
-        raise RuntimeApiError("runtime.badRequest")
+        raise RuntimeApiError("runtime.badRequest", detail="invalid completion body")
+    err_text = _chunk_error_text(body)
+    if err_text:
+        raise RuntimeApiError("runtime.badRequest", detail=err_text)
     choices = body.get("choices")
     if isinstance(choices, list) and choices:
         first = choices[0] if isinstance(choices[0], dict) else {}
@@ -439,9 +448,13 @@ def complete(req: CompletionRequest) -> CompletionResult:
                 log.info("ollama gpu max failed, retrying with auto model=%s", req.model)
                 current = _retry_gpu_auto(current)
                 continue
-            raise RuntimeApiError("runtime.badRequest")
+            raise RuntimeApiError("runtime.badRequest", detail=last_text)
         return _result_from_body(body, current)
-    raise RuntimeApiError(map_http_status(last_status or 500), status=last_status or None)
+    raise RuntimeApiError(
+        map_http_status(last_status or 500),
+        status=last_status or None,
+        detail=last_text,
+    )
 
 
 def _accumulate_tool_delta(
@@ -560,10 +573,7 @@ def _stream_once(
                     err_text = _read_body(response)
                     if _can_retry_gpu(payload, response.status_code, err_text):
                         return "retry"
-                    yield StreamEvent(
-                        kind="error",
-                        error_key=map_http_status(response.status_code),
-                    )
+                    yield _stream_error(map_http_status(response.status_code), err_text)
                     return "done"
                 for line in response.iter_lines():
                     text = line.decode("utf-8") if isinstance(line, bytes) else str(line)
@@ -582,7 +592,7 @@ def _stream_once(
                         chunk = json.loads(data)
                     except ValueError:
                         if text.startswith("data:"):
-                            yield StreamEvent(kind="error", error_key="runtime.badRequest")
+                            yield _stream_error("runtime.badRequest", "invalid stream json")
                             return "done"
                         continue
                     if not isinstance(chunk, dict):
@@ -591,7 +601,7 @@ def _stream_once(
                     if err_text:
                         if not emitted and _can_retry_gpu(payload, 500, err_text):
                             return "retry"
-                        yield StreamEvent(kind="error", error_key="runtime.badRequest")
+                        yield _stream_error("runtime.badRequest", err_text)
                         return "done"
                     chunk_usage = _parse_usage(chunk.get("usage")) or _parse_usage(chunk)
                     if _usage_nonzero(chunk_usage):
@@ -610,13 +620,13 @@ def _stream_once(
                     elif native_finish:
                         finish = native_finish
     except RuntimeApiError as exc:
-        yield StreamEvent(kind="error", error_key=exc.error_key)
+        yield _stream_error(exc.error_key, exc.detail)
         return "done"
     except Exception as exc:
         if is_timeout_error(exc) or is_transport_error(exc):
-            yield StreamEvent(kind="error", error_key=transport_error_key(exc))
+            yield _stream_error(transport_error_key(exc), f"{type(exc).__name__}: {exc}")
             return "done"
-        yield StreamEvent(kind="error", error_key="runtime.badRequest")
+        yield _stream_error("runtime.badRequest", f"{type(exc).__name__}: {exc}")
         return "done"
     yield StreamEvent(
         kind="done",
@@ -683,7 +693,10 @@ def complete_live(
             if live:
                 _emit(live)
         elif event.kind == "error":
-            raise RuntimeApiError(event.error_key or "runtime.badRequest")
+            raise RuntimeApiError(
+                event.error_key or "runtime.badRequest",
+                detail=event.error_detail,
+            )
         elif event.kind == "done":
             if event.tool_calls:
                 tool_calls = event.tool_calls

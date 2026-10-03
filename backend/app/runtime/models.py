@@ -69,6 +69,7 @@ class StreamEvent(ApiModel):
     usage: CompletionUsage | None = None
     finish_reason: str | None = Field(default=None, alias="finishReason")
     error_key: str | None = Field(default=None, alias="errorKey")
+    error_detail: str | None = Field(default=None, alias="errorDetail")
 
 
 class EmbedRequest(ApiModel):

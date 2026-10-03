@@ -103,7 +103,12 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
             outcome = _run_linear(ctrl, compiled, user_text or "")
     except Exception as exc:
         fail_exc = exc
-        emit_log("error", str(exc), stack=traceback.format_exc())
+        emit_log(
+            "error",
+            str(exc),
+            payload=_runtime_error_payload(exc),
+            stack=traceback.format_exc(),
+        )
         outcome = "failed"
     finally:
         if outcome == "succeeded":
@@ -487,7 +492,7 @@ def _agent_turn(
             if memory is not None and record is not None:
                 key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"
                 record.error = key
-                emit_log("warn", key, node_id=agent_id)
+                emit_log("warn", key, node_id=agent_id, payload=_runtime_error_payload(exc))
                 insert_call(
                     run_id=ctrl.run_id or "",
                     provider=agent.llm.provider,
@@ -501,7 +506,13 @@ def _agent_turn(
                 _set_node(ctrl, agent_id, "done")
                 return ""
             ctrl.last_error_node_id = agent_id
-            emit_log("error", str(exc), node_id=agent_id, stack=traceback.format_exc())
+            emit_log(
+                "error",
+                str(exc),
+                node_id=agent_id,
+                payload=_runtime_error_payload(exc),
+                stack=traceback.format_exc(),
+            )
             _set_node(ctrl, agent_id, "error", error=str(exc))
             insert_call(
                 run_id=ctrl.run_id or "",
@@ -701,19 +712,34 @@ def _ollama_options(llm, choice) -> dict | None:
     return options or None
 
 
+def _runtime_error_payload(exc: BaseException) -> dict | None:
+    if not isinstance(exc, RuntimeApiError):
+        return None
+    payload: dict = {}
+    if exc.detail:
+        payload["detail"] = exc.detail
+    if exc.status is not None:
+        payload["status"] = exc.status
+    return payload or None
+
+
 def _bind_window(llm, messages: list[LlmMessage], memory: RunMemory):
     preferred = llm.num_ctx if isinstance(llm.num_ctx, int) and llm.num_ctx > 0 else None
     tag = llm.model or ""
     loaded = None
     arch = None
+    thinking = False
     if llm.provider == "ollama" and tag:
         if tag not in memory.arch:
             memory.arch[tag] = run_window.architecture_context(tag, base_url=llm.base_url)
+        if tag not in memory.thinking:
+            memory.thinking[tag] = run_window.model_thinking(tag, base_url=llm.base_url)
         if tag not in memory.loaded:
             memory.loaded[tag] = run_window.loaded_context(tag, base_url=llm.base_url)
         arch = memory.arch[tag]
+        thinking = bool(memory.thinking.get(tag))
         loaded = memory.loaded[tag]
-    need = run_window.prompt_need(messages, llm.max_tokens)
+    need = run_window.prompt_need(messages, llm.max_tokens, thinking=thinking)
     choice = run_window.choose_window(
         need=need,
         preferred=preferred,
@@ -721,6 +747,7 @@ def _bind_window(llm, messages: list[LlmMessage], memory: RunMemory):
         raised=memory.raised.get(tag),
         architecture_max=arch,
         provider=llm.provider,
+        thinking=thinking,
     )
     if choice.num_ctx and tag:
         memory.raised[tag] = choice.num_ctx
@@ -1196,7 +1223,13 @@ def _orchestrator_action(
                 emit_log("warn", key, node_id=orch.node_id)
                 continue
             ctrl.last_error_node_id = orch.node_id
-            emit_log("error", str(exc), node_id=orch.node_id, stack=traceback.format_exc())
+            emit_log(
+                "error",
+                str(exc),
+                node_id=orch.node_id,
+                payload=_runtime_error_payload(exc),
+                stack=traceback.format_exc(),
+            )
             _set_node(ctrl, orch.node_id, "error", error=str(exc))
             raise
         _set_llm(ctrl, compiled, llm_node_id, busy=False)

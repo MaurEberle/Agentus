@@ -4,7 +4,9 @@ from app.run.window import (
     architecture_context,
     choose_window,
     loaded_context,
+    model_thinking,
     prompt_need,
+    thinking_from_show,
 )
 from app.runtime.models import ChatMessage
 
@@ -97,6 +99,54 @@ def test_prompt_need_reserves_room_for_the_answer() -> None:
     assert prompt_need(messages, None) == 1 + 1024
     assert prompt_need(messages, 0) == 1 + 1024
     assert prompt_need(messages, 200) == 1 + 200
+
+
+def test_prompt_need_thinking_reserves_8k() -> None:
+    messages = [ChatMessage(role="user", content="abcd")]
+    assert prompt_need(messages, None, thinking=True) == 1 + 8192
+    assert prompt_need(messages, 200, thinking=True) == 1 + 8192
+    assert prompt_need(messages, 16384, thinking=True) == 1 + 16384
+
+
+def test_thinking_raises_8k_window_to_16k() -> None:
+    choice = _choice(need=1000, preferred=262144, architecture_max=262144, thinking=True)
+    assert choice.fits is True
+    assert choice.num_ctx == 16384
+    assert choice.context_max == 16384
+
+
+def test_thinking_keeps_a_larger_window() -> None:
+    choice = _choice(need=20000, preferred=262144, architecture_max=262144, thinking=True)
+    assert choice.num_ctx == 32768
+
+
+def test_thinking_respects_an_8k_cap() -> None:
+    choice = _choice(need=1000, preferred=8192, thinking=True)
+    assert choice.fits is True
+    assert choice.num_ctx == 8192
+
+
+def test_thinking_from_show_uses_capabilities() -> None:
+    assert thinking_from_show({"capabilities": ["tools", "thinking", "completion"]}) is True
+    assert thinking_from_show({"capabilities": ["completion", "tools"]}) is False
+    assert thinking_from_show({"thinking": True, "capabilities": ["completion"]}) is False
+    assert thinking_from_show({"capabilities": ["Thinking"]}) is True
+    assert thinking_from_show(None) is False
+
+
+def test_model_thinking_reads_capabilities(monkeypatch) -> None:
+    class Client:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def post(self, url, json=None):
+            return httpx.Response(200, json={"capabilities": ["tools", "thinking", "completion"]})
+
+    monkeypatch.setattr("app.common.http.client", lambda *args, **kwargs: Client())
+    assert model_thinking("qwen") is True
 
 
 def test_loaded_context_reads_either_field_name(monkeypatch) -> None:

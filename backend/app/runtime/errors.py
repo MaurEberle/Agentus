@@ -4,11 +4,28 @@ from __future__ import annotations
 
 import httpx
 
+ERROR_DETAIL_MAX = 500
+
+
+def clip_error_detail(text: str | None) -> str | None:
+    collapsed = " ".join(str(text or "").split())
+    if not collapsed:
+        return None
+    if len(collapsed) > ERROR_DETAIL_MAX:
+        return collapsed[: ERROR_DETAIL_MAX - 1] + "…"
+    return collapsed
+
 
 class RuntimeApiError(Exception):
-    def __init__(self, error_key: str, status: int | None = None) -> None:
+    def __init__(
+        self,
+        error_key: str,
+        status: int | None = None,
+        detail: str | None = None,
+    ) -> None:
         self.error_key = error_key
         self.status = status
+        self.detail = clip_error_detail(detail)
         super().__init__(error_key)
 
 
@@ -47,8 +64,15 @@ def raise_transport(exc: BaseException) -> None:
 def raise_for_status(response: httpx.Response) -> None:
     if response.status_code == 200:
         return
+    detail = None
+    try:
+        detail = clip_error_detail(response.text)
+    except Exception:
+        detail = None
     raise RuntimeApiError(
-        map_http_status(response.status_code), status=response.status_code
+        map_http_status(response.status_code),
+        status=response.status_code,
+        detail=detail,
     )
 
 
@@ -56,7 +80,7 @@ def response_json(response: httpx.Response) -> object:
     try:
         return response.json()
     except ValueError as exc:
-        raise RuntimeApiError("runtime.badRequest") from exc
+        raise RuntimeApiError("runtime.badRequest", detail="invalid json") from exc
 
 
 def is_transport_error(exc: BaseException) -> bool:
