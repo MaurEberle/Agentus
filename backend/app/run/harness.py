@@ -177,6 +177,15 @@ def _route(compiled: CompiledGraph, router_id: str, text: str) -> str | None:
     return edges[0][1] if edges else None
 
 
+def _fail_step_limit(ctrl: RunController, node_id: str) -> str:
+    emit_log("error", "run.stepLimit", node_id=node_id)
+    ctrl.fail_message = "run.stepLimit"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error="run.stepLimit")
+    return "failed"
+
+
 def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:
     conversation: list[LlmMessage] = []
     if user_text:
@@ -218,8 +227,7 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
             continue
         invocations += 1
         if invocations > MAX_AGENT_INVOCATIONS:
-            emit_log("error", "run.stepLimit", node_id=node_id)
-            return "failed"
+            return _fail_step_limit(ctrl, node_id)
         text = _agent_turn(ctrl, compiled, node_id, payload, conversation)
         if text is None:
             if ctrl.stop_event.is_set():
@@ -916,9 +924,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     while not ctrl.stop_event.is_set():
         steps += 1
         if steps > MAX_ORCHESTRATOR_STEPS:
-            emit_log("error", "run.stepLimit", node_id=orch.node_id)
             _store_memory(ctrl, memory)
-            return "failed"
+            return _fail_step_limit(ctrl, orch.node_id)
         offered = tool_schemas if memory.allow_own_tools else []
         system = orchestrator_instructions(orch.system_prompt, roster, _function_names(offered))
         action = _orchestrator_action(ctrl, compiled, system, memory, offered)

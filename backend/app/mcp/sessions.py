@@ -469,6 +469,9 @@ class McpSessions:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._live: dict[str, _Live] = {}
+        self._wanted: set[str] = set()
+        self._credential_overrides: dict[str, str] = {}
+        self._root_overrides: dict[str, str] = {}
 
     def open_for(
         self,
@@ -484,6 +487,12 @@ class McpSessions:
             return
         overrides = credential_overrides or {}
         roots = root_overrides or {}
+        with self._lock:
+            self._wanted.update(unique)
+            self._credential_overrides.update(
+                {key: value for key, value in overrides.items() if value}
+            )
+            self._root_overrides.update({key: value for key, value in roots.items() if value})
         try:
             for sid in unique:
                 self._open_one(sid, overrides.get(sid), roots.get(sid))
@@ -593,6 +602,9 @@ class McpSessions:
         with self._lock:
             items = list(self._live.items())
             self._live.clear()
+            self._wanted.clear()
+            self._credential_overrides.clear()
+            self._root_overrides.clear()
         for _sid, live in items:
             if live.timer:
                 live.timer.cancel()
@@ -602,8 +614,12 @@ class McpSessions:
                 pass
 
     def call(self, server_id: str, tool_name: str, arguments: dict) -> dict:
-        with self._lock:
-            live = self._live.get(server_id)
+        try:
+            live = self._live_or_reopen(server_id)
+        except McpError as exc:
+            return {"ok": False, "errorKey": exc.message_key}
+        except AppError as exc:
+            return {"ok": False, "errorKey": exc.message_key}
         if live is None:
             return {"ok": False, "errorKey": "mcp.session.closed"}
         live.last_used = time.monotonic()
@@ -640,6 +656,24 @@ class McpSessions:
                 payload["error"] = workbook_hint(live.root)
             return payload
         return {"ok": True, "result": mask_obj(compact_tool_result(raw.get("result")))}
+
+    def _live_or_reopen(self, server_id: str) -> _Live | None:
+        with self._lock:
+            live = self._live.get(server_id)
+            if live is not None:
+                return live
+            if server_id not in self._wanted:
+                return None
+            cred = self._credential_overrides.get(server_id)
+            root = self._root_overrides.get(server_id)
+        try:
+            self._open_one(server_id, cred, root)
+        except (McpError, AppError):
+            raise
+        except Exception:
+            return None
+        with self._lock:
+            return self._live.get(server_id)
 
     def is_enabled(self, server_id: str) -> bool:
         row = get_mcp_server(server_id)

@@ -356,6 +356,22 @@ def test_three_prose_calls_fail_without_asking(monkeypatch, api_env) -> None:
     assert all(item["reason"] == "unreadable" for item in rejected)
 
 
+def test_orchestrator_step_limit_is_stored(monkeypatch, api_env) -> None:
+    monkeypatch.setattr("app.run.harness.MAX_ORCHESTRATOR_STEPS", 2)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        return CompletionResult(
+            content='{"action":"reply","text":"weiter"}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.stepLimit"
+    assert stored["error_class"] == "orchestrator"
+
+
 def test_orchestrator_prompt_contains_the_last_agent_result(monkeypatch, api_env) -> None:
     manuscript = "EINMALIGES-MANUSKRIPT-9f3a"
     prompts: list[str] = []
