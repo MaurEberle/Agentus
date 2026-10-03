@@ -29,6 +29,7 @@
     "start": "بدء",
     "indexing": "تجري فهرسة المعرفة: {{name}}",
     "stop": "إيقاف",
+    "waitAsk": "بانتظار إجابة",
     "quickSelect": "اختيار سريع",
     "quickSelectPlaceholder": "اختر شبكة",
     "noNetwork": "لا توجد شبكة",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "لا توجد شبكة نشطة",
       "desc": "تم تفريغ الاختيار السريع."
+    },
+    "waitAsk": {
+      "title": "سؤال من {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -1344,7 +1349,8 @@
     "run": {
       "start": "بدأ التشغيل ({{networkName}})",
       "wait": {
-        "human": "ينتظر إدخالًا"
+        "human": "ينتظر إدخالًا",
+        "ask": "سؤال من {{speaker}}"
       },
       "chat": {
         "user": "رسالة المستخدم"

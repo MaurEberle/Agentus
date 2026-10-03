@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { selectActiveNetwork, startActiveRun, stopActiveRun, useNetworkOptions } from '@/api/session';
+import { Badge } from '@/components/ui/badge';
+import { openRunChat } from '@/lib/waitAsk';
 import { useAppStore } from '@/store';
 
 export function Header() {
@@ -25,6 +27,7 @@ export function Header() {
   const serviceStatus = useAppStore((state) => state.serviceStatus);
   const phase = useAppStore((state) => state.phase);
   const phaseLabel = useAppStore((state) => state.phaseLabel);
+  const waitAsk = useAppStore((state) => state.waitAsk);
   const { data } = useNetworkOptions();
   const networks = data?.items ?? [];
 
@@ -95,6 +98,17 @@ export function Header() {
           </TooltipTrigger>
           <TooltipContent>{t('shell.stop')}</TooltipContent>
         </Tooltip>
+        {waitAsk ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="hidden h-8 px-2 sm:inline-flex"
+            onClick={() => openRunChat()}
+          >
+            <Badge variant="warning">{t('shell.waitAsk')}</Badge>
+          </Button>
+        ) : null}
         <Select
           value={activeNetworkId ?? 'none'}
           onValueChange={(value) => void selectActiveNetwork(value === 'none' ? null : value)}

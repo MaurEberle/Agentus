@@ -29,6 +29,7 @@
     "start": "開始",
     "indexing": "知識を索引しています: {{name}}",
     "stop": "停止",
+    "waitAsk": "返信待ち",
     "quickSelect": "クイック選択",
     "quickSelectPlaceholder": "ネットワークを選択",
     "noNetwork": "ネットワークなし",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "アクティブなネットワークはありません",
       "desc": "クイック選択をクリアしました。"
+    },
+    "waitAsk": {
+      "title": "{{speaker}} からの確認",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -1344,7 +1349,8 @@
     "run": {
       "start": "実行を開始しました（{{networkName}}）",
       "wait": {
-        "human": "入力待ち"
+        "human": "入力待ち",
+        "ask": "{{speaker}} からの確認"
       },
       "chat": {
         "user": "ユーザーメッセージ"

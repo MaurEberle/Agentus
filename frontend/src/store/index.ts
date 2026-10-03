@@ -25,5 +25,5 @@ export const useAppStore = create<AppStore>()(
 );
 
 export type { AppStore } from '@/store/types';
-export type { ServiceStatus } from '@/store/session';
+export type { ServiceStatus, WaitAsk } from '@/store/session';
 export type { AppNotification, NotificationVariant } from '@/store/notifications';

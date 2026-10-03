@@ -150,3 +150,49 @@ def set_window_icon(window: Any, icon_path: str | None) -> None:
             user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, big)
     except Exception:
         log.debug("set_window_icon failed", exc_info=True)
+
+
+FLASHW_STOP = 0
+FLASHW_ALL = 0x00000003
+FLASHW_TIMERNOFG = 0x0000000C
+
+
+def flash_window(window: Any, active: bool = True) -> bool:
+    """Blink the taskbar until the window is foreground. No-op without a HWND."""
+    hwnd = _hwnd(window)
+    if not hwnd:
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class FLASHWINFO(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", wintypes.UINT),
+                ("hwnd", wintypes.HWND),
+                ("dwFlags", wintypes.DWORD),
+                ("uCount", wintypes.UINT),
+                ("dwTimeout", wintypes.DWORD),
+            ]
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32.GetForegroundWindow.argtypes = []
+        user32.GetForegroundWindow.restype = wintypes.HWND
+        user32.FlashWindowEx.argtypes = [ctypes.POINTER(FLASHWINFO)]
+        user32.FlashWindowEx.restype = wintypes.BOOL
+        info = FLASHWINFO()
+        info.cbSize = ctypes.sizeof(FLASHWINFO)
+        info.hwnd = hwnd
+        if not active:
+            info.dwFlags = FLASHW_STOP
+        else:
+            foreground = int(user32.GetForegroundWindow() or 0)
+            if foreground == hwnd:
+                return False
+            info.dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG
+            info.uCount = 0
+            info.dwTimeout = 0
+        return bool(user32.FlashWindowEx(ctypes.byref(info)))
+    except Exception:
+        log.debug("flash_window failed", exc_info=True)
+        return False

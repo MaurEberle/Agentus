@@ -29,6 +29,7 @@
     "start": "Başlat",
     "indexing": "Bilgi dizini oluşturuluyor: {{name}}",
     "stop": "Durdur",
+    "waitAsk": "Yanıt bekleniyor",
     "quickSelect": "Hızlı seçim",
     "quickSelectPlaceholder": "Ağ seç",
     "noNetwork": "Ağ yok",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "Etkin ağ yok",
       "desc": "Hızlı seçim temizlendi."
+    },
+    "waitAsk": {
+      "title": "{{speaker}} soruyor",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -1344,7 +1349,8 @@
     "run": {
       "start": "Çalıştırma başladı ({{networkName}})",
       "wait": {
-        "human": "Giriş bekleniyor"
+        "human": "Giriş bekleniyor",
+        "ask": "{{speaker}} soruyor"
       },
       "chat": {
         "user": "Kullanıcı iletisi"

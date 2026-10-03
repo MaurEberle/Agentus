@@ -7,6 +7,9 @@ export interface NotifyOptions {
   descriptionKey?: string;
   variant?: NotificationVariant;
   persist?: boolean;
+  toast?: boolean;
+  action?: string;
+  duration?: number;
   values?: Record<string, string>;
 }
 
@@ -15,11 +18,13 @@ function showToast(
   title: string,
   description: string | undefined,
   id: string,
+  duration?: number,
 ) {
   const options: ExternalToast = {
     id,
     description,
     testId: id,
+    duration,
     onDismiss: () => useAppStore.getState().markRead(id),
   };
   switch (variant) {
@@ -52,8 +57,11 @@ export function notify(options: NotifyOptions) {
       descriptionKey: options.descriptionKey,
       values: options.values,
       variant,
+      action: options.action,
     });
   }
 
-  showToast(variant, title, description, id);
+  if (options.toast !== false) {
+    showToast(variant, title, description, id, options.duration);
+  }
 }

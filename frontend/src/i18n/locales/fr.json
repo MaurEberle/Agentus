@@ -29,6 +29,7 @@
     "start": "Démarrer",
     "indexing": "Indexation des connaissances : {{name}}",
     "stop": "Arrêter",
+    "waitAsk": "En attente de réponse",
     "quickSelect": "Sélection rapide",
     "quickSelectPlaceholder": "Choisir un réseau",
     "noNetwork": "Aucun réseau",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "Aucun réseau actif",
       "desc": "La sélection rapide a été vidée."
+    },
+    "waitAsk": {
+      "title": "Question de {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -1344,7 +1349,8 @@
     "run": {
       "start": "Exécution démarrée ({{networkName}})",
       "wait": {
-        "human": "En attente de saisie"
+        "human": "En attente de saisie",
+        "ask": "Question de {{speaker}}"
       },
       "chat": {
         "user": "Message utilisateur"

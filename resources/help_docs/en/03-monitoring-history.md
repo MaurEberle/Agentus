@@ -31,7 +31,7 @@ If knowledge hangs off an agent, start already shows the run while indexing: the
 
 ## Run chat (monitoring)
 
-**Chat** tab: the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. The run waits only on a follow-up question. Agent text and internal commands do not appear here.
+**Chat** tab: the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. The run waits only on a follow-up question. Agent text and internal commands do not appear here. A follow-up question shows in the notification bell and the header; the taskbar icon flashes while the window is in the background.
 
 This is **not** the help bubble. History and tools belong to the network.
 

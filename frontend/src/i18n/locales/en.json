@@ -29,6 +29,7 @@
     "start": "Start",
     "indexing": "Indexing knowledge: {{name}}",
     "stop": "Stop",
+    "waitAsk": "Waiting for a reply",
     "quickSelect": "Quick select",
     "quickSelectPlaceholder": "Select network",
     "noNetwork": "No network",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "No active network",
       "desc": "The quick select was cleared."
+    },
+    "waitAsk": {
+      "title": "Follow-up from {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -1398,7 +1403,8 @@
     "run": {
       "start": "Run started ({{networkName}})",
       "wait": {
-        "human": "Waiting for input"
+        "human": "Waiting for input",
+        "ask": "Follow-up from {{speaker}}"
       },
       "chat": {
         "user": "User message"

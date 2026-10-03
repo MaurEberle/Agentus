@@ -11,6 +11,7 @@ from app.db.runs import insert_call, upsert_step
 from app.db.vault import get as vault_get
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
+from app.run.wait_ask import excerpt as ask_excerpt
 from app.run.knowledge import retrieve
 from app.run.limits import (
     DEFAULT_SCORE_MIN,
@@ -1074,7 +1075,22 @@ def _speak(
     _publish_assistant(ctrl, text)
     memory.add_spoken(kind, text)
     if wait:
+        _begin_ask(ctrl, compiled, text)
         _wait_chat(ctrl, compiled)
+
+
+def _begin_ask(ctrl: RunController, compiled: CompiledGraph, text: str) -> None:
+    orch = compiled.orchestrator
+    node_id = orch.node_id if orch is not None else (compiled.chat_input.id if compiled.chat_input else None)
+    speaker = node_label(compiled, node_id) or "orchestrator"
+    clipped = ask_excerpt(text)
+    ask = ctrl.set_wait_ask(speaker=speaker, excerpt=clipped, node_id=node_id)
+    emit_log(
+        "info",
+        "run.wait.ask",
+        node_id=node_id,
+        payload={"id": ask.id, "speaker": speaker, "excerpt": clipped},
+    )
 
 
 def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
@@ -1087,8 +1103,12 @@ def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
 
 
 def _clear_human_wait(ctrl: RunController, compiled: CompiledGraph) -> None:
+    ctrl.clear_wait_ask()
     if compiled.chat_input:
         _set_node(ctrl, compiled.chat_input.id, "idle")
+    orch = compiled.orchestrator
+    if orch is not None:
+        _set_node(ctrl, orch.node_id, "idle")
 
 
 def _orchestrator_action(

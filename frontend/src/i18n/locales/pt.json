@@ -29,6 +29,7 @@
     "start": "Iniciar",
     "indexing": "A indexar conhecimento: {{name}}",
     "stop": "Parar",
+    "waitAsk": "A aguardar resposta",
     "quickSelect": "Seleção rápida",
     "quickSelectPlaceholder": "Escolher rede",
     "noNetwork": "Sem rede",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "Sem rede ativa",
       "desc": "A seleção rápida foi limpa."
+    },
+    "waitAsk": {
+      "title": "Pergunta de {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -1344,7 +1349,8 @@
     "run": {
       "start": "Execução iniciada ({{networkName}})",
       "wait": {
-        "human": "A aguardar entrada"
+        "human": "A aguardar entrada",
+        "ask": "Pergunta de {{speaker}}"
       },
       "chat": {
         "user": "Mensagem do utilizador"

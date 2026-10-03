@@ -84,6 +84,13 @@ class Activity(ApiModel):
     tokens: ActivityTokens | None = None
 
 
+class WaitAsk(ApiModel):
+    id: str
+    speaker: str
+    excerpt: str = ""
+    node_id: str | None = Field(default=None, alias="nodeId")
+
+
 class RunSnapshot(ApiModel):
     run_id: str = Field(alias="runId")
     network_id: str = Field(alias="networkId")
@@ -95,6 +102,7 @@ class RunSnapshot(ApiModel):
     nodes_runtime: dict[str, NodeRuntime] = Field(default_factory=dict, alias="nodesRuntime")
     activity: Activity = Field(default_factory=Activity)
     chat: dict[str, Any] | None = None
+    wait_ask: WaitAsk | None = Field(default=None, alias="waitAsk")
 
 
 class LogEvent(ApiModel):

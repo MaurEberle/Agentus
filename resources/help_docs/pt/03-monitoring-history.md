@@ -31,7 +31,7 @@ Se houver conhecimento num agente, o início já mostra a execução durante a i
 
 ## Chat da rede (monitorização)
 
-Separador **Chat**: conversa do grafo em execução. Só ativo enquanto a execução corre. Sem orquestrador o chat espera a primeira linha e passa-a à cadeia. Com orquestrador falas só com ele. A execução espera só numa pergunta. Os textos dos agentes e as ordens internas não aparecem aqui.
+Separador **Chat**: conversa do grafo em execução. Só ativo enquanto a execução corre. Sem orquestrador o chat espera a primeira linha e passa-a à cadeia. Com orquestrador falas só com ele. A execução espera só numa pergunta. Os textos dos agentes e as ordens internas não aparecem aqui. Uma pergunta aparece no sino e no cabeçalho; o ícone da barra de tarefas pisca se a janela estiver em segundo plano.
 
 Isto **não** é a bolha de ajuda. Histórico e ferramentas são os da rede.
 

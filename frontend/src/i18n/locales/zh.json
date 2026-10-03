@@ -29,6 +29,7 @@
     "start": "启动",
     "indexing": "正在索引知识：{{name}}",
     "stop": "停止",
+    "waitAsk": "等待回复",
     "quickSelect": "快速选择",
     "quickSelectPlaceholder": "选择网络",
     "noNetwork": "无网络",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "无活动网络",
       "desc": "已清空快速选择。"
+    },
+    "waitAsk": {
+      "title": "{{speaker}} 的追问",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -1344,7 +1349,8 @@
     "run": {
       "start": "运行已启动（{{networkName}}）",
       "wait": {
-        "human": "等待输入"
+        "human": "等待输入",
+        "ask": "{{speaker}} 的追问"
       },
       "chat": {
         "user": "用户消息"

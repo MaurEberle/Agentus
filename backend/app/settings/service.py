@@ -38,6 +38,7 @@ from app.settings.models import (
     DataLocationPost,
     HelpChatSettings,
     SessionOut,
+    SessionWaitAsk,
 )
 from app.settings.urls import normalize_ollama_base_url, normalize_optional_http_url
 
@@ -70,6 +71,7 @@ class RunSlice:
     started_at: str | None = None
     phase: str | None = None
     phase_label: str | None = None
+    wait_ask: dict[str, Any] | None = None
 
 
 _run_slice_provider: Callable[[], RunSlice] | None = None
@@ -244,6 +246,9 @@ def _session_from(settings: AppSettings) -> SessionOut:
         row = get_network(settings.active_network_id)
         if row is not None:
             name = row.name
+    wait_ask = None
+    if slice_.wait_ask:
+        wait_ask = SessionWaitAsk.model_validate(slice_.wait_ask)
     return SessionOut(
         active_network_id=settings.active_network_id,
         active_network_name=name,
@@ -252,6 +257,7 @@ def _session_from(settings: AppSettings) -> SessionOut:
         started_at=slice_.started_at,
         phase=slice_.phase,
         phase_label=slice_.phase_label,
+        wait_ask=wait_ask,
     )
 
 
@@ -290,7 +296,7 @@ def post_location(body: DataLocationPost) -> DataLocation:
 
 def dump_session(session: SessionOut) -> dict[str, Any]:
     data = session.model_dump(by_alias=True)
-    for key in ("activeNetworkName", "runId", "startedAt", "phase", "phaseLabel"):
+    for key in ("activeNetworkName", "runId", "startedAt", "phase", "phaseLabel", "waitAsk"):
         if data.get(key) is None:
             data.pop(key, None)
     return data

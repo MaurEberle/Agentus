@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { notify } from '@/lib/notifications';
+import { applyWaitAsk, hintMonitoringTab } from '@/lib/waitAsk';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 import { loadLatestHistoryRun } from '@/modules/monitoring/model/archive';
@@ -40,7 +41,9 @@ type MonitoringState = {
   selectedLogId: string | null;
   selectedNodeId: string | null;
   lastNotifyKey: string;
+  pendingChatFocus: boolean;
   setTab: (tab: MonitoringTab) => void;
+  setPendingChatFocus: (value: boolean) => void;
   setLogLevelMin: (level: LogLevel) => void;
   setLogQuery: (query: string) => void;
   setLogNodeId: (id: string | null) => void;
@@ -98,7 +101,12 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   selectedLogId: null,
   selectedNodeId: null,
   lastNotifyKey: '',
-  setTab: (tab) => set({ tab }),
+  pendingChatFocus: false,
+  setTab: (tab) => {
+    hintMonitoringTab(tab);
+    set({ tab });
+  },
+  setPendingChatFocus: (pendingChatFocus) => set({ pendingChatFocus }),
   setLogLevelMin: (logLevelMin) => set({ logLevelMin }),
   setLogQuery: (logQuery) => set({ logQuery }),
   setLogNodeId: (logNodeId) => set({ logNodeId }),
@@ -166,6 +174,7 @@ export function hydrateMonitoring(snapshot: {
   store.setServiceStatus(snapshot.serviceStatus);
   store.setRunId(snapshot.run?.runId ?? store.runId);
   lastService = snapshot.serviceStatus;
+  applyWaitAsk(snapshot.run?.archived ? null : snapshot.run?.waitAsk ?? null);
   useMonitoringStore.setState({
     run: snapshot.run,
     resources: snapshot.resources,
@@ -189,7 +198,10 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
 
   if (evt.type === 'service') {
     app.setServiceStatus(evt.serviceStatus);
-    if (evt.serviceStatus === 'stopped') app.setRunId(null);
+    if (evt.serviceStatus === 'stopped') {
+      app.setRunId(null);
+      applyWaitAsk(null);
+    }
     notifyTransitions(evt.serviceStatus, current.run?.runId, evt.errorMessage);
     useMonitoringStore.setState({
       lastErrorMessage: evt.errorMessage ?? (evt.serviceStatus === 'error' ? current.lastErrorMessage : null),
@@ -291,5 +303,6 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       chatMessages,
       chatGenerating,
     });
+    applyWaitAsk(merged.archived || merged.serviceStatus === 'stopped' ? null : merged.waitAsk ?? null);
   }
 }

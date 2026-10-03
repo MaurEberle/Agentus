@@ -1,4 +1,4 @@
-import type { ServiceStatus } from '@/store/session';
+import type { ServiceStatus, WaitAsk } from '@/store/session';
 
 export type NodeRuntimeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error';
 export type WaitReason = 'none' | 'llm' | 'tool' | 'human' | 'index' | 'knowledge';
@@ -97,6 +97,7 @@ export type RunSnapshot = {
     };
   };
   chat?: { messages: ChatMessage[]; generating?: boolean };
+  waitAsk?: WaitAsk | null;
 };
 
 export type LogEvent = {

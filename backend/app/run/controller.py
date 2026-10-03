@@ -31,6 +31,7 @@ from app.run.models import (
     RunGraphEdge,
     RunGraphNode,
     RunSnapshot,
+    WaitAsk,
 )
 from app.run.resources import start_resources, stop_resources
 from app.run.sse import publish
@@ -70,6 +71,7 @@ class RunController:
         self.tokens_out = 0
         self._phase = None
         self._phase_label = None
+        self._wait_ask: WaitAsk | None = None
         set_run_slice_provider(self.slice)
 
     def reset(self) -> None:
@@ -93,18 +95,46 @@ class RunController:
         self.tokens_out = 0
         self._phase = None
         self._phase_label = None
+        self._wait_ask: WaitAsk | None = None
         self.stop_event = threading.Event()
         self.abort_generation = threading.Event()
         set_run_slice_provider(self.slice)
 
     def slice(self) -> RunSlice:
+        wait = self._wait_ask.model_dump(by_alias=True) if self._wait_ask else None
         return RunSlice(
             service_status=self.service_status,
             run_id=self.run_id,
             started_at=self.started_at,
             phase=self._phase,
             phase_label=self._phase_label,
+            wait_ask=wait,
         )
+
+    def set_wait_ask(self, *, speaker: str, excerpt: str, node_id: str | None) -> WaitAsk:
+        ask = WaitAsk(
+            id=str(uuid.uuid4()),
+            speaker=speaker,
+            excerpt=excerpt,
+            node_id=node_id,
+        )
+        self._wait_ask = ask
+        if self.service_status == "running":
+            self._phase = "ask"
+            self._phase_label = speaker
+        if self.snapshot is not None:
+            self.snapshot = self.snapshot.model_copy(update={"wait_ask": ask})
+        return ask
+
+    def clear_wait_ask(self, *, publish_run: bool = False) -> None:
+        self._wait_ask = None
+        if self._phase == "ask":
+            self._phase = None
+            self._phase_label = None
+        if self.snapshot is not None:
+            self.snapshot = self.snapshot.model_copy(update={"wait_ask": None})
+            if publish_run:
+                publish("run", self.snapshot.model_dump(by_alias=True))
 
     def is_busy(self) -> bool:
         return self.service_status in {"starting", "running", "stopping"}
@@ -123,6 +153,7 @@ class RunController:
             self.fail_class = None
             self.tokens_in = 0
             self.tokens_out = 0
+            self._wait_ask = None
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()
@@ -273,6 +304,7 @@ class RunController:
                 pass
         self._phase = None
         self._phase_label = None
+        self._wait_ask = None
         self.teardown(outcome=None)
         with self.lock:
             self.service_status = "stopped"
@@ -441,6 +473,7 @@ class RunController:
         with self.lock:
             if self.service_status == "stopped":
                 return
+        self.clear_wait_ask()
         self.teardown(outcome=outcome)
         with self.lock:
             self.service_status = "stopped"
@@ -538,6 +571,7 @@ class RunController:
             if self.service_status != "running" or not self.compiled or not self.compiled.chat_input:
                 raise AppError("run.busy", status_code=409)
             run_id = self.run_id or ""
+        self.clear_wait_ask(publish_run=True)
         self.chat_input_queue.put(text)
         msg = ChatMessage(
             id=str(uuid.uuid4()),

@@ -9,10 +9,12 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { NAV_MODULES, SETTINGS_MODULE } from '@/modules/registry';
+import { useAppStore } from '@/store';
 
 export function MobileNav() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const waitAsk = useAppStore((state) => state.waitAsk);
   const items = [...NAV_MODULES, SETTINGS_MODULE];
 
   return (
@@ -47,7 +49,12 @@ export function MobileNav() {
                     )
                   }
                 >
-                  <Icon className="size-4" />
+                  <span className="relative shrink-0">
+                    <Icon className="size-4" />
+                    {module.id === 'monitoring' && waitAsk ? (
+                      <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-warning" aria-hidden />
+                    ) : null}
+                  </span>
                   {t(module.titleKey)}
                 </NavLink>
               );

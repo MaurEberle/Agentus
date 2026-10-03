@@ -9,6 +9,7 @@ export interface AppNotification {
   descriptionKey?: string;
   values?: Record<string, string>;
   variant: NotificationVariant;
+  action?: string;
   createdAt: number;
   read: boolean;
 }
@@ -37,6 +38,7 @@ export const createNotificationsSlice: StateCreator<AppStore, [], [], Notificati
         descriptionKey: input.descriptionKey,
         values: input.values,
         variant: input.variant,
+        action: input.action,
         createdAt: Date.now(),
         read: false,
       };

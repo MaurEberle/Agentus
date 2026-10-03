@@ -76,6 +76,11 @@ def test_orchestrator_asks_calls_and_finishes(monkeypatch, api_env) -> None:
 
     waits = [row for row in list_logs(started["runId"]) if row["message"] == "run.wait.human"]
     assert len(waits) == 2
+    asks = [row for row in list_logs(started["runId"]) if row["message"] == "run.wait.ask"]
+    assert len(asks) == 1
+    payload = asks[0].get("payload") or {}
+    assert payload.get("excerpt") == "Welche Sprache?"
+    assert payload.get("speaker")
 
 
 def test_orchestrator_reply_continues_without_waiting(monkeypatch, api_env) -> None:

@@ -122,6 +122,13 @@ class DataLocationPost(ApiModel):
     copy_files: bool = Field(default=False, alias="copy")
 
 
+class SessionWaitAsk(ApiModel):
+    id: str
+    speaker: str
+    excerpt: str = ""
+    node_id: str | None = Field(default=None, alias="nodeId")
+
+
 class SessionOut(ApiModel):
     active_network_id: str | None = Field(alias="activeNetworkId")
     active_network_name: str | None = Field(default=None, alias="activeNetworkName")
@@ -130,6 +137,7 @@ class SessionOut(ApiModel):
     started_at: str | None = Field(default=None, alias="startedAt")
     phase: str | None = None
     phase_label: str | None = Field(default=None, alias="phaseLabel")
+    wait_ask: SessionWaitAsk | None = Field(default=None, alias="waitAsk")
 
 
 class ActiveNetworkPut(ApiModel):

@@ -10,6 +10,7 @@ export function Sidebar() {
   const { t } = useTranslation();
   const collapsed = useAppStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useAppStore((state) => state.toggleSidebar);
+  const waitAsk = useAppStore((state) => state.waitAsk);
 
   return (
     <aside
@@ -33,7 +34,12 @@ export function Sidebar() {
                 )
               }
             >
-              <Icon className="size-4 shrink-0" />
+              <span className="relative shrink-0">
+                <Icon className="size-4" />
+                {module.id === 'monitoring' && waitAsk ? (
+                  <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-warning" aria-hidden />
+                ) : null}
+              </span>
               {!collapsed ? <span className="truncate">{t(module.titleKey)}</span> : null}
               {collapsed ? <span className="sr-only">{t(module.titleKey)}</span> : null}
             </NavLink>

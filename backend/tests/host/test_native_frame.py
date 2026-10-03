@@ -9,6 +9,7 @@ from app.host.native_frame import (
     WS_THICKFRAME,
     configure_webview,
     enable_frameless_resize,
+    flash_window,
     resolve_app_icon,
     set_window_icon,
 )
@@ -52,6 +53,11 @@ def test_resolve_app_icon_dev() -> None:
 
 def test_set_window_icon_without_native() -> None:
     set_window_icon(object(), resolve_app_icon())
+
+
+def test_flash_window_without_native() -> None:
+    assert flash_window(object(), True) is False
+    assert flash_window(object(), False) is False
 
 
 def test_ico_has_small_sizes() -> None:

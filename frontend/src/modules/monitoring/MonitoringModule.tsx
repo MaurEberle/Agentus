@@ -26,6 +26,7 @@ export function MonitoringModule() {
   useLiveMonitoring(params.get('mock'));
 
   const serviceStatus = useAppStore((state) => state.serviceStatus);
+  const waitAsk = useAppStore((state) => state.waitAsk);
   const activeNetworkName = useAppStore((state) => state.activeNetworkName);
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
   const run = useMonitoringStore((state) => state.run);
@@ -103,7 +104,12 @@ export function MonitoringModule() {
           <Card className={cn(moduleCardClass, 'min-h-[16rem]')}>
             <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.log')}>
               {chat ? (
-                <TabButton active={tab === 'chat'} onClick={() => setTab('chat')}>
+                <TabButton
+                  active={tab === 'chat'}
+                  waiting={Boolean(waitAsk)}
+                  waitingLabel={t('shell.waitAsk')}
+                  onClick={() => setTab('chat')}
+                >
                   {t('monitoring.tabs.chat')}
                 </TabButton>
               ) : null}
@@ -133,23 +139,31 @@ function TabButton({
   active,
   onClick,
   children,
+  waiting,
+  waitingLabel,
 }: {
   active: boolean;
   onClick: () => void;
   children: string;
+  waiting?: boolean;
+  waitingLabel?: string;
 }) {
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
+      aria-label={waiting && waitingLabel ? `${children}. ${waitingLabel}` : undefined}
       className={cn(
         'rounded-t-md px-3 py-2 text-sm font-medium',
         active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
       )}
       onClick={onClick}
     >
-      {children}
+      <span className="inline-flex items-center gap-1.5">
+        {children}
+        {waiting ? <span className="size-2 rounded-full bg-warning" aria-hidden /> : null}
+      </span>
     </button>
   );
 }
