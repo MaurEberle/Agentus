@@ -125,6 +125,74 @@ def _openai_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
     return out
 
 
+def _ollama_arguments(raw: str) -> dict[str, Any]:
+    text = (raw or "").strip()
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+    except (TypeError, ValueError):
+        return {"raw": raw}
+    if isinstance(parsed, dict):
+        return parsed
+    return {"value": parsed}
+
+
+def _ollama_tool_call(call: ToolCall, index: int) -> dict[str, Any]:
+    item: dict[str, Any] = {
+        "type": "function",
+        "function": {
+            "index": index,
+            "name": call.name,
+            "arguments": _ollama_arguments(call.arguments),
+        },
+    }
+    if call.id:
+        item["id"] = call.id
+    return item
+
+
+def _consume_tool_name(
+    message: ChatMessage, pending: list[ToolCall], used: set[int]
+) -> str | None:
+    if message.tool_call_id:
+        for index, call in enumerate(pending):
+            if call.id and call.id == message.tool_call_id:
+                used.add(index)
+                return message.name or call.name or None
+    for index, call in enumerate(pending):
+        if index not in used:
+            used.add(index)
+            return message.name or call.name or None
+    return message.name
+
+
+def _ollama_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
+    """Native /api/chat history: arguments as objects, tool results via tool_name."""
+    out: list[dict[str, Any]] = []
+    pending: list[ToolCall] = []
+    used: set[int] = set()
+    for message in messages:
+        item: dict[str, Any] = {"role": message.role}
+        if message.content is not None:
+            item["content"] = message.content
+        elif message.tool_calls or message.role == "tool":
+            item["content"] = ""
+        if message.tool_calls:
+            pending = list(message.tool_calls)
+            used = set()
+            item["tool_calls"] = [
+                _ollama_tool_call(call, index)
+                for index, call in enumerate(message.tool_calls)
+            ]
+        if message.role == "tool":
+            name = _consume_tool_name(message, pending, used)
+            if name:
+                item["tool_name"] = name
+        out.append(item)
+    return out
+
+
 def _apply_gpu_max(req: CompletionRequest, options: dict[str, Any]) -> dict[str, Any]:
     if "num_gpu" in options:
         return options
@@ -136,7 +204,7 @@ def _apply_gpu_max(req: CompletionRequest, options: dict[str, Any]) -> dict[str,
 def _ollama_payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
     body: dict[str, Any] = {
         "model": req.model,
-        "messages": _openai_messages(req.messages),
+        "messages": _ollama_messages(req.messages),
         "stream": stream,
     }
     options = dict(req.ollama_options or {})

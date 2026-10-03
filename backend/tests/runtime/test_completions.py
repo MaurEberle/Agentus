@@ -7,6 +7,8 @@ import httpx
 import pytest
 
 from app.runtime.completions import (
+    _ollama_messages,
+    _openai_messages,
     _parse_usage,
     complete,
     complete_live,
@@ -14,7 +16,7 @@ from app.runtime.completions import (
     estimate_token_count,
 )
 from app.runtime.errors import RuntimeApiError
-from app.runtime.models import ChatMessage, CompletionRequest
+from app.runtime.models import ChatMessage, CompletionRequest, ToolCall
 from tests.runtime.transport import install_transport
 
 _MSG = [ChatMessage(role="user", content="hi")]
@@ -565,3 +567,103 @@ def test_stream_gpu_fallback_before_delta(monkeypatch: pytest.MonkeyPatch) -> No
     assert seen[1]["num_gpu"] == -1
     texts = [e.text for e in events if e.kind == "delta"]
     assert texts == ["ok"]
+
+
+_WRITE_ARGS = '{"action":"write","path":"geschichte-ueber-eine-biene.txt"}'
+
+
+def _tool_followup_messages(*, call_id: str = "", tool_name: str | None = None) -> list[ChatMessage]:
+    return [
+        ChatMessage(role="user", content="speichere den text"),
+        ChatMessage(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                ToolCall(id=call_id, name="file_access", arguments=_WRITE_ARGS),
+            ],
+        ),
+        ChatMessage(
+            role="tool",
+            content='{"ok":true,"bytes":1631}',
+            tool_call_id=call_id or None,
+            name=tool_name,
+        ),
+    ]
+
+
+def test_ollama_tool_followup_uses_native_shape() -> None:
+    messages = _ollama_messages(_tool_followup_messages())
+    assistant = messages[1]
+    tool = messages[2]
+    call = assistant["tool_calls"][0]
+    assert assistant["content"] == ""
+    assert "id" not in call
+    assert call["type"] == "function"
+    assert call["function"]["name"] == "file_access"
+    assert call["function"]["arguments"] == {
+        "action": "write",
+        "path": "geschichte-ueber-eine-biene.txt",
+    }
+    assert tool["role"] == "tool"
+    assert tool["tool_name"] == "file_access"
+    assert "tool_call_id" not in tool
+    assert "name" not in tool
+
+
+def test_openai_tool_followup_keeps_string_arguments() -> None:
+    messages = _openai_messages(_tool_followup_messages(call_id="c1", tool_name="file_access"))
+    call = messages[1]["tool_calls"][0]
+    tool = messages[2]
+    assert call["id"] == "c1"
+    assert call["type"] == "function"
+    assert call["function"]["arguments"] == _WRITE_ARGS
+    assert tool["tool_call_id"] == "c1"
+    assert tool["name"] == "file_access"
+    assert "tool_name" not in tool
+
+
+def test_ollama_complete_sends_native_tool_followup(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="ollama",
+            model="llama3.2:1b",
+            messages=_tool_followup_messages(),
+        )
+    )
+    body = seen[0]
+    call = body["messages"][1]["tool_calls"][0]
+    tool = body["messages"][2]
+    assert isinstance(call["function"]["arguments"], dict)
+    assert call["function"]["arguments"]["action"] == "write"
+    assert tool["tool_name"] == "file_access"
+    assert "tool_call_id" not in tool
+
+
+def test_xai_complete_keeps_openai_tool_followup(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="xai",
+            model="grok",
+            messages=_tool_followup_messages(call_id="c1", tool_name="file_access"),
+            secret="sk-test-secret",
+        )
+    )
+    call = seen[0]["messages"][1]["tool_calls"][0]
+    tool = seen[0]["messages"][2]
+    assert isinstance(call["function"]["arguments"], str)
+    assert tool["tool_call_id"] == "c1"
+    assert "tool_name" not in tool

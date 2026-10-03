@@ -586,7 +586,12 @@ def _agent_turn(
                 if ok_call:
                     tool_ok = True
                 messages.append(
-                    LlmMessage(role="tool", content=body, tool_call_id=call.id)
+                    LlmMessage(
+                        role="tool",
+                        content=body,
+                        tool_call_id=call.id or None,
+                        name=call.name or None,
+                    )
                 )
             if tool_ok:
                 _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
@@ -1218,7 +1223,14 @@ def _orchestrator_action(
                     ),
                     fact,
                 )
-                messages.append(LlmMessage(role="tool", content=body, tool_call_id=call.id))
+                messages.append(
+                    LlmMessage(
+                        role="tool",
+                        content=body,
+                        tool_call_id=call.id or None,
+                        name=call.name or None,
+                    )
+                )
             if rounds >= MAX_ORCHESTRATOR_TOOL_ROUNDS:
                 offered = []
                 messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
