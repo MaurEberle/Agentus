@@ -146,6 +146,7 @@ export type RuntimeModelStats = {
   contextMin?: number;
   contextMax?: number;
   steps?: number[];
+  gpuLayers?: number;
   messageKey?: string;
 };
 export type HelpPing = { ok: boolean; messageKey?: string };

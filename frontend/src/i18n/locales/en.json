@@ -737,7 +737,14 @@
         "numCtx": "Context length",
         "numCtxHint": "Limits come from the selected model.",
         "numCtxLoading": "Loading model limits…",
-        "numCtxUnavailable": "No length limits are available for this model."
+        "numCtxUnavailable": "No length limits are available for this model.",
+        "numThread": "CPU threads",
+        "numThreadHint": "Default is the physical core count.",
+        "numThreadLoading": "Reading CPU cores…",
+        "numThreadUnavailable": "CPU thread count is not available.",
+        "numGpu": "GPU offload",
+        "numGpuHint": "Default is 100%. Ollama receives the layer count. Auto if loading fails.",
+        "numGpuLayers": "{{offload}} of {{total}} layers"
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",

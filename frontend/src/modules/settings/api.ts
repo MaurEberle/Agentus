@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, apiFetch, queryClient } from '@/api/client';
 import { pickFolderPath } from '@/lib/pickFolder';
+import type { ResourceSnapshot } from '@/modules/monitoring/model/types';
 import type {
   AboutInfo,
   AppSettings,
@@ -219,6 +220,16 @@ export async function getModelStats(params: ModelStatsParams): Promise<RuntimeMo
   if (params.credentialId) query.set('credentialId', params.credentialId);
   if (params.baseUrl) query.set('baseUrl', params.baseUrl);
   return apiFetch<RuntimeModelStats>(`/runtime/model-stats?${query.toString()}`);
+}
+
+export function useHostResourcesQuery(options?: { enabled?: boolean; live?: boolean }) {
+  return useQuery({
+    queryKey: ['runtime', 'resources'],
+    queryFn: () => apiFetch<ResourceSnapshot>('/runtime/resources'),
+    enabled: options?.enabled ?? true,
+    refetchInterval: options?.live === false ? false : 1500,
+    staleTime: options?.live === false ? 60_000 : 0,
+  });
 }
 
 export function useModelStatsQuery(

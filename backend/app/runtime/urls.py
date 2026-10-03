@@ -56,6 +56,11 @@ def _provider_base(
     return base.rstrip("/")
 
 
+def ollama_chat_url(ollama_root: str, override_base: str | None = None) -> str:
+    """Native chat. ``options`` (num_gpu, num_thread, num_ctx) only work here."""
+    return f"{ollama_native_root(override_base or ollama_root)}/api/chat"
+
+
 def completions_url(
     provider: Provider,
     *,
@@ -63,6 +68,8 @@ def completions_url(
     override_base: str | None,
     settings_openai: str | None,
 ) -> str:
+    if provider == "ollama":
+        return ollama_chat_url(ollama_root, override_base)
     return _join_api(
         _provider_base(
             provider,

@@ -8,9 +8,9 @@ import {
   type RunSummary,
 } from '@/modules/dashboard/model';
 import { listNetworkSummaries } from '@/modules/network/api';
-import { pingRuntime, useRuntimeModelsQuery, useStoresQuery } from '@/modules/settings/api';
+import { pingRuntime, useHostResourcesQuery, useRuntimeModelsQuery, useStoresQuery } from '@/modules/settings/api';
 import { normalizeRun } from '@/modules/history/model/normalize';
-import type { ResourceSnapshot } from '@/modules/monitoring/model/types';
+
 
 export { listNetworkSummaries };
 
@@ -54,14 +54,7 @@ export function useRuntimePingQuery() {
   });
 }
 
-export function useHostResourcesQuery() {
-  return useQuery({
-    queryKey: ['runtime', 'resources'],
-    queryFn: () => apiFetch<ResourceSnapshot>('/runtime/resources'),
-    refetchInterval: 1500,
-    staleTime: 0,
-  });
-}
+export { useHostResourcesQuery };
 
 export function useDashboardQueries() {
   const networks = useNetworksQuery();

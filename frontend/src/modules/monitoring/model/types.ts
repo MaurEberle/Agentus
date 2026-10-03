@@ -20,6 +20,8 @@ export type ResourceSnapshot = {
   ts: string;
   cpuPercent: number;
   cpuPerCore?: number[];
+  cpuCores?: number;
+  cpuThreads?: number;
   ramUsedBytes: number;
   ramTotalBytes: number;
   gpus?: ResourceGpu[];

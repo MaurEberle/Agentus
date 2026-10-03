@@ -683,7 +683,14 @@
         "numCtx": "Bağlam uzunluğu",
         "numCtxHint": "Sınırlar seçilen modelden gelir.",
         "numCtxLoading": "Model sınırları yükleniyor…",
-        "numCtxUnavailable": "Bu model için uzunluk sınırı yok."
+        "numCtxUnavailable": "Bu model için uzunluk sınırı yok.",
+        "numThread": "CPU iş parçacıkları",
+        "numThreadHint": "Varsayılan, fiziksel çekirdek sayısıdır.",
+        "numThreadLoading": "CPU çekirdekleri okunuyor…",
+        "numThreadUnavailable": "CPU iş parçacığı sayısı yok.",
+        "numGpu": "GPU offload",
+        "numGpuHint": "Varsayılan %100. Ollama katman sayısını alır. Yükleme başarısızsa Auto.",
+        "numGpuLayers": "{{offload}} / {{total}} katman"
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",

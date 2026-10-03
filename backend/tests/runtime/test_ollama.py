@@ -6,7 +6,16 @@ import httpx
 import pytest
 
 from app.runtime.errors import RuntimeTransportError
-from app.runtime.ollama import ensure_loaded, list_loaded_models, list_ollama_models, ping_ollama, unload
+from app.runtime.ollama import (
+    ensure_loaded,
+    gpu_layers_for_percent,
+    list_loaded_models,
+    list_ollama_models,
+    model_block_count,
+    parse_block_count,
+    ping_ollama,
+    unload,
+)
 from tests.runtime.transport import install_transport
 
 
@@ -89,3 +98,86 @@ def test_list_loaded_uses_model_key(monkeypatch: pytest.MonkeyPatch) -> None:
 
     install_transport(monkeypatch, handler)
     assert list_loaded_models() == ["mistral"]
+
+
+def test_parse_block_count() -> None:
+    assert parse_block_count({"model_info": {"llama.block_count": 16}}) == 16
+    assert parse_block_count({"model_info": {"qwen3.block_count": 65, "qwen3.attention.head_count": 20}}) == 65
+    assert parse_block_count({}) is None
+    assert parse_block_count({"model_info": {"llama.block_count": 0}}) is None
+    assert parse_block_count({"model_info": {"llama.block_count": -1}}) is None
+
+
+def test_parse_block_count_uses_architecture_not_dense_prefix() -> None:
+    payload = {
+        "model_info": {
+            "general.architecture": "deepseek2",
+            "deepseek2.block_count": 47,
+            "deepseek2.leading_dense_block_count": 1,
+        }
+    }
+    assert parse_block_count(payload) == 47
+
+
+def test_parse_block_count_ignores_fast_and_vision() -> None:
+    assert (
+        parse_block_count(
+            {
+                "model_info": {
+                    "general.architecture": "fish-speech",
+                    "fish-speech.block_count": 36,
+                    "fish_speech.fast_block_count": 4,
+                }
+            }
+        )
+        == 36
+    )
+    assert (
+        parse_block_count(
+            {
+                "model_info": {
+                    "general.architecture": "qwen3vl",
+                    "qwen3vl.block_count": 28,
+                    "qwen3vl.vision.block_count": 1,
+                }
+            }
+        )
+        == 28
+    )
+
+
+def test_gpu_layers_for_percent() -> None:
+    assert gpu_layers_for_percent(100, 47) == 47
+    assert gpu_layers_for_percent(10, 47) == 5
+    assert gpu_layers_for_percent(50, 47) == 24
+    assert gpu_layers_for_percent(10, 16) == 2
+    assert gpu_layers_for_percent(100, None) == 999
+    assert gpu_layers_for_percent(50, None) == 999
+
+
+def test_model_block_count_caches(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime import ollama as ollama_mod
+
+    ollama_mod._block_counts.clear()
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        return httpx.Response(200, json={"model_info": {"llama.block_count": 16}})
+
+    install_transport(monkeypatch, handler)
+    assert model_block_count("llama3.2:1b") == 16
+    assert model_block_count("llama3.2:1b") == 16
+    assert calls == ["/api/show"]
+
+
+def test_model_block_count_missing_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime import ollama as ollama_mod
+
+    ollama_mod._block_counts.clear()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("offline", request=request)
+
+    install_transport(monkeypatch, handler)
+    assert model_block_count("missing") is None

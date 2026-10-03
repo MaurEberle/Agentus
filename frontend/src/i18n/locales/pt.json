@@ -683,7 +683,14 @@
         "numCtx": "Comprimento de contexto",
         "numCtxHint": "Os limites vêm do modelo escolhido.",
         "numCtxLoading": "A carregar limites do modelo…",
-        "numCtxUnavailable": "Este modelo não indica limites de comprimento."
+        "numCtxUnavailable": "Este modelo não indica limites de comprimento.",
+        "numThread": "Threads da CPU",
+        "numThreadHint": "O padrão é o número de núcleos físicos.",
+        "numThreadLoading": "A ler núcleos da CPU…",
+        "numThreadUnavailable": "A contagem de threads da CPU não está disponível.",
+        "numGpu": "Offload GPU",
+        "numGpuHint": "O padrão é 100 %. O Ollama recebe a contagem de camadas. Auto se o carregamento falhar.",
+        "numGpuLayers": "{{offload}} de {{total}} camadas"
       },
       "agent": {
         "hint": "LLM, ferramentas e conhecimento vêm pelas arestas. Sem orquestrador, a mensagem inicia o agente.",

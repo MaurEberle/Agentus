@@ -20,6 +20,11 @@ from tests.runtime.transport import install_transport
 _MSG = [ChatMessage(role="user", content="hi")]
 
 
+@pytest.fixture(autouse=True)
+def _stub_block_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.runtime.completions.model_block_count", lambda *a, **k: 16)
+
+
 def _chat_ok(content: str = "hello", tool_calls: object | None = None) -> dict:
     message: dict = {"role": "assistant", "content": content}
     if tool_calls is not None:
@@ -126,7 +131,8 @@ def test_stream_two_deltas_then_done(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode("utf-8"))
         assert body["stream"] is True
-        assert body["stream_options"] == {"include_usage": True}
+        assert "stream_options" not in body
+        assert body["options"]["num_gpu"] == 16
         return httpx.Response(200, content=payload)
 
     install_transport(monkeypatch, handler)
@@ -212,7 +218,7 @@ def test_complete_live_aggregates_stream(monkeypatch: pytest.MonkeyPatch) -> Non
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode("utf-8"))
         assert body["stream"] is True
-        assert body["stream_options"] == {"include_usage": True}
+        assert "stream_options" not in body
         return httpx.Response(200, content=payload)
 
     install_transport(monkeypatch, handler)
@@ -369,3 +375,193 @@ def test_complete_live_abort(monkeypatch: pytest.MonkeyPatch) -> None:
             should_abort=lambda: True,
         )
     assert err.value.error_key == "run.cancelled"
+
+
+def test_openai_stream_sends_stream_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        assert body["stream_options"] == {"include_usage": True}
+        return httpx.Response(200, content=b"data: [DONE]\n\n")
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(
+                provider="xai",
+                model="grok",
+                messages=_MSG,
+                secret="sk-test-secret",
+            )
+        )
+    )
+    assert events[-1].kind == "done"
+
+
+def test_complete_native_ollama_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "model": "llama3.2:1b",
+                "message": {"role": "assistant", "content": "hi native"},
+                "done": True,
+                "done_reason": "stop",
+                "prompt_eval_count": 4,
+                "eval_count": 2,
+            },
+        )
+
+    install_transport(monkeypatch, handler)
+    result = complete(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+    )
+    assert result.content == "hi native"
+    assert result.finish_reason == "stop"
+    assert result.usage is not None
+    assert result.usage.prompt_tokens == 4
+    assert result.usage.completion_tokens == 2
+
+
+def test_native_stream_deltas(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'{"message":{"role":"assistant","content":"Hel"},"done":false}\n'
+        b'{"message":{"role":"assistant","content":"lo"},"done":false}\n'
+        b'{"message":{"role":"assistant","content":""},"done":true,"done_reason":"stop","prompt_eval_count":3,"eval_count":2}\n'
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    texts = [e.text for e in events if e.kind == "delta"]
+    assert texts == ["Hel", "lo"]
+    usage = [e for e in events if e.kind == "usage"]
+    assert usage
+    assert usage[-1].usage is not None
+    assert usage[-1].usage.completion_tokens == 2
+    assert events[-1].kind == "done"
+    assert events[-1].finish_reason == "stop"
+
+
+def test_gpu_max_in_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG))
+    assert seen[0]["options"]["num_gpu"] == 16
+
+
+def test_gpu_max_falls_back_to_auto(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        seen.append(body.get("options") or {})
+        if len(seen) == 1:
+            return httpx.Response(500, json={"error": "not enough memory to load model"})
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    result = complete(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+    )
+    assert result.content == "hello"
+    assert seen[0]["num_gpu"] == 16
+    assert seen[1]["num_gpu"] == -1
+
+
+def test_gpu_cpu_forced_does_not_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(500, json={"error": "not enough memory to load model"})
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete(
+            CompletionRequest(
+                provider="ollama",
+                model="llama3.2:1b",
+                messages=_MSG,
+                ollama_options={"num_gpu": 0},
+            )
+        )
+    assert err.value.error_key == "runtime.upstream"
+    assert calls["n"] == 1
+
+
+def test_explicit_num_gpu_is_kept(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="ollama",
+            model="llama3.2:1b",
+            messages=_MSG,
+            ollama_options={"num_gpu": 8},
+        )
+    )
+    assert seen[0]["options"]["num_gpu"] == 8
+
+
+def test_num_thread_in_ollama_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="ollama",
+            model="llama3.2:1b",
+            messages=_MSG,
+            ollama_options={"num_thread": 6, "num_ctx": 8192},
+        )
+    )
+    options = seen[0]["options"]
+    assert options["num_thread"] == 6
+    assert options["num_ctx"] == 8192
+    assert options["num_gpu"] == 16
+
+
+def test_stream_gpu_fallback_before_delta(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+    payload = (
+        b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'
+        b"data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        seen.append(body.get("options") or {})
+        if len(seen) == 1:
+            return httpx.Response(500, json={"error": "failed to load model into vram"})
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    assert seen[0]["num_gpu"] == 16
+    assert seen[1]["num_gpu"] == -1
+    texts = [e.text for e in events if e.kind == "delta"]
+    assert texts == ["ok"]

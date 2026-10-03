@@ -20,7 +20,7 @@ from app.runtime.models import (
 )
 from app.run.models import ResourceSnapshot
 from app.run.resources import latest as latest_resources
-from app.runtime.ollama import list_ollama_models, ping_ollama
+from app.runtime.ollama import list_ollama_models, model_block_count, ping_ollama
 
 router = APIRouter()
 
@@ -68,7 +68,13 @@ def runtime_model_stats(
         )
     except RuntimeApiError as exc:
         return RuntimeModelStats(message_key=exc.error_key)
-    return RuntimeModelStats(context_min=minimum, context_max=maximum, steps=steps)
+    gpu_layers = model_block_count(tag, base_url=base_url) if provider == "ollama" else None
+    return RuntimeModelStats(
+        context_min=minimum,
+        context_max=maximum,
+        steps=steps,
+        gpu_layers=gpu_layers,
+    )
 
 
 @router.post("/runtime/test-llm", response_model=PingResult, response_model_exclude_none=True)

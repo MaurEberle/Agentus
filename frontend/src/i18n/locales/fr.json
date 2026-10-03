@@ -683,7 +683,14 @@
         "numCtx": "Longueur de contexte",
         "numCtxHint": "Les limites viennent du modèle choisi.",
         "numCtxLoading": "Chargement des limites du modèle…",
-        "numCtxUnavailable": "Aucune limite de longueur n’est disponible pour ce modèle."
+        "numCtxUnavailable": "Aucune limite de longueur n’est disponible pour ce modèle.",
+        "numThread": "Threads CPU",
+        "numThreadHint": "La valeur par défaut est le nombre de cœurs physiques.",
+        "numThreadLoading": "Lecture des cœurs CPU…",
+        "numThreadUnavailable": "Le nombre de threads CPU n’est pas disponible.",
+        "numGpu": "Offload GPU",
+        "numGpuHint": "La valeur par défaut est 100 %. Ollama reçoit le nombre de couches. Auto si le chargement échoue.",
+        "numGpuLayers": "{{offload}} sur {{total}} couches"
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",

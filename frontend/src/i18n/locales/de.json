@@ -737,7 +737,14 @@
         "numCtx": "Kontextlänge",
         "numCtxHint": "Grenzen kommen vom gewählten Modell.",
         "numCtxLoading": "Modellgrenzen werden geladen…",
-        "numCtxUnavailable": "Für dieses Modell sind keine Längenangaben verfügbar."
+        "numCtxUnavailable": "Für dieses Modell sind keine Längenangaben verfügbar.",
+        "numThread": "CPU-Threads",
+        "numThreadHint": "Standard sind die physischen Kerne.",
+        "numThreadLoading": "CPU-Kerne werden gelesen…",
+        "numThreadUnavailable": "Die CPU-Thread-Zahl ist nicht verfügbar.",
+        "numGpu": "GPU-Offload",
+        "numGpuHint": "Standard ist 100 %. Ollama erhält die Layerzahl. Bei Ladefehler Auto.",
+        "numGpuLayers": "{{offload}} von {{total}} Layern"
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",

@@ -21,9 +21,9 @@ def test_completions_url_ollama_root() -> None:
         override_base=None,
         settings_openai=None,
     )
-    assert url.endswith("/v1/chat/completions")
+    assert url.endswith("/api/chat")
     assert "/v1/v1" not in url
-    assert url == "http://127.0.0.1:11434/v1/chat/completions"
+    assert url == "http://127.0.0.1:11434/api/chat"
 
 
 def test_completions_url_xai_default() -> None:

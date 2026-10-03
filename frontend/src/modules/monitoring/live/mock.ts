@@ -165,6 +165,8 @@ function hostResources(cloud: boolean): ResourceSnapshot {
     ts: nowIso(),
     cpuPercent,
     cpuPerCore: cores,
+    cpuCores: cores.length,
+    cpuThreads: cores.length,
     ramUsedBytes: 18.4 * 1024 ** 3,
     ramTotalBytes: 32 * 1024 ** 3,
     gpus: cloud

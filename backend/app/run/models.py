@@ -120,6 +120,8 @@ class ResourceGpu(ApiModel):
 class ResourceSnapshot(ApiModel):
     ts: str
     cpu_percent: float = Field(alias="cpuPercent")
+    cpu_cores: int | None = Field(default=None, alias="cpuCores")
+    cpu_threads: int | None = Field(default=None, alias="cpuThreads")
     ram_used_bytes: int = Field(alias="ramUsedBytes")
     ram_total_bytes: int = Field(alias="ramTotalBytes")
     gpus: list[ResourceGpu] | None = None

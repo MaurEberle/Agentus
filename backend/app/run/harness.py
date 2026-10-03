@@ -428,7 +428,7 @@ def _agent_turn(
             _set_node(ctrl, agent_id, "done")
             emit_log("warn", "run.agent.window", node_id=agent_id)
             return ""
-        options = {"num_ctx": choice.num_ctx} if choice is not None and choice.num_ctx else None
+        options = _ollama_options(agent.llm, choice)
         context_max = choice.context_max if choice is not None else _static_context_max(agent.llm.num_ctx)
         context_est = run_window.prompt_tokens(messages)
         started = time.perf_counter()
@@ -655,6 +655,24 @@ def _static_context_max(num_ctx: int | None) -> int | None:
     if isinstance(num_ctx, int) and num_ctx > 0:
         return num_ctx
     return None
+
+
+def _ollama_options(llm, choice) -> dict | None:
+    if llm.provider != "ollama":
+        return None
+    options: dict = {}
+    if choice is not None and choice.num_ctx:
+        options["num_ctx"] = choice.num_ctx
+    if isinstance(llm.num_thread, int) and llm.num_thread > 0:
+        options["num_thread"] = llm.num_thread
+    if isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0:
+        from app.runtime.ollama import gpu_layers_for_percent, model_block_count
+
+        options["num_gpu"] = gpu_layers_for_percent(
+            llm.num_gpu_percent,
+            model_block_count(llm.model, base_url=llm.base_url),
+        )
+    return options or None
 
 
 def _bind_window(llm, messages: list[LlmMessage], memory: RunMemory):
@@ -1082,7 +1100,7 @@ def _orchestrator_action(
         llm_node_id = llm.node_id or orch.node_id
         context_max = choice.context_max
         context_est = run_window.prompt_tokens(messages)
-        options = {"num_ctx": choice.num_ctx} if choice.num_ctx else None
+        options = _ollama_options(llm, choice)
         emit_log(
             "info",
             "run.llm.start",

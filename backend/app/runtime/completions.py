@@ -1,10 +1,11 @@
-"""One OpenAI-compatible completions path. Help and harness import this."""
+"""Completions path. Ollama uses native /api/chat so options reach the daemon."""
 
 from __future__ import annotations
 
 import json
+import logging
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator, Iterator
 from typing import Any
 
 from app.common.http import client
@@ -29,7 +30,28 @@ from app.runtime.models import (
     TestLlmRequest,
     ToolCall,
 )
+from app.runtime.ollama import model_block_count
 from app.runtime.urls import completions_url, settings_roots
+
+log = logging.getLogger("agentus.runtime")
+
+_LOAD_FAIL_MARKERS = (
+    "memory",
+    "vram",
+    "out of memory",
+    "oom",
+    "failed to load",
+    "unable to load",
+    "load model",
+    "model failed",
+    "cuda",
+    "hip error",
+    "ggml",
+    "runner",
+    "terminated",
+    "killed",
+    "insufficient",
+)
 
 
 def resolve_secret(req_secret: str | None, credential_id: str | None) -> str | None:
@@ -103,7 +125,36 @@ def _openai_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
     return out
 
 
+def _apply_gpu_max(req: CompletionRequest, options: dict[str, Any]) -> dict[str, Any]:
+    if "num_gpu" in options:
+        return options
+    layers = model_block_count(req.model, base_url=req.base_url)
+    options["num_gpu"] = layers if layers else 999
+    return options
+
+
+def _ollama_payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "model": req.model,
+        "messages": _openai_messages(req.messages),
+        "stream": stream,
+    }
+    options = dict(req.ollama_options or {})
+    if req.temperature is not None:
+        options["temperature"] = req.temperature
+    if req.max_tokens is not None:
+        options["num_predict"] = req.max_tokens
+    options = _apply_gpu_max(req, options)
+    if options:
+        body["options"] = options
+    if req.tools:
+        body["tools"] = req.tools
+    return body
+
+
 def _payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
+    if req.provider == "ollama":
+        return _ollama_payload(req, stream=stream)
     body: dict[str, Any] = {
         "model": req.model,
         "messages": _openai_messages(req.messages),
@@ -115,12 +166,77 @@ def _payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
         body["max_tokens"] = req.max_tokens
     if req.tools:
         body["tools"] = req.tools
-    if req.provider == "ollama" and req.ollama_options:
-        body["options"] = req.ollama_options
     if stream:
-        # OpenAI/Ollama omit `usage` on stream chunks unless this is set.
         body["stream_options"] = {"include_usage": True}
     return body
+
+
+def _payload_num_gpu(payload: dict[str, Any]) -> int | None:
+    options = payload.get("options")
+    if not isinstance(options, dict) or "num_gpu" not in options:
+        return None
+    try:
+        return int(options["num_gpu"])
+    except (TypeError, ValueError):
+        return None
+
+
+def _looks_like_load_fail(text: str) -> bool:
+    lowered = (text or "").lower()
+    return any(marker in lowered for marker in _LOAD_FAIL_MARKERS)
+
+
+def _can_retry_gpu(payload: dict[str, Any], status: int, text: str) -> bool:
+    gpu = _payload_num_gpu(payload)
+    if gpu is None or gpu <= 0:
+        return False
+    if status not in {200, 400, 500, 503}:
+        return False
+    return _looks_like_load_fail(text)
+
+
+def _retry_gpu_auto(req: CompletionRequest) -> CompletionRequest:
+    options = dict(req.ollama_options or {})
+    options["num_gpu"] = -1
+    return req.model_copy(update={"ollama_options": options})
+
+
+def _read_body(response: Any) -> str:
+    try:
+        data = response.read()
+        if isinstance(data, bytes):
+            return data.decode("utf-8", errors="replace")
+        return str(data or "")
+    except Exception:
+        try:
+            return str(response.text or "")
+        except Exception:
+            return ""
+
+
+def _chunk_error_text(chunk: dict[str, Any]) -> str:
+    raw = chunk.get("error")
+    if isinstance(raw, str):
+        return raw
+    if isinstance(raw, dict):
+        for key in ("message", "error", "detail"):
+            value = raw.get(key)
+            if isinstance(value, str) and value:
+                return value
+        try:
+            return json.dumps(raw)
+        except (TypeError, ValueError):
+            return str(raw)
+    return ""
+
+
+def _tool_arguments(raw: object) -> str:
+    if isinstance(raw, str):
+        return raw
+    try:
+        return json.dumps(raw or {})
+    except (TypeError, ValueError):
+        return "{}"
 
 
 def _parse_tool_calls(raw: object) -> list[ToolCall]:
@@ -131,14 +247,11 @@ def _parse_tool_calls(raw: object) -> list[ToolCall]:
         if not isinstance(item, dict):
             continue
         fn = item.get("function") if isinstance(item.get("function"), dict) else {}
-        arguments = fn.get("arguments")
-        if not isinstance(arguments, str):
-            arguments = json.dumps(arguments or {})
         calls.append(
             ToolCall(
                 id=str(item.get("id") or ""),
                 name=str(fn.get("name") or ""),
-                arguments=arguments,
+                arguments=_tool_arguments(fn.get("arguments")),
             )
         )
     return calls
@@ -184,40 +297,83 @@ def estimate_token_count(text: str) -> int:
     return max(1, (len(text) + 3) // 4)
 
 
+def _message_content(message: dict[str, Any]) -> str | None:
+    content = message.get("content")
+    if content is None:
+        return None
+    if isinstance(content, str):
+        return content
+    return str(content)
+
+
+def _result_from_body(body: object, req: CompletionRequest) -> CompletionResult:
+    if not isinstance(body, dict):
+        raise RuntimeApiError("runtime.badRequest")
+    if _chunk_error_text(body):
+        raise RuntimeApiError("runtime.badRequest")
+    choices = body.get("choices")
+    if isinstance(choices, list) and choices:
+        first = choices[0] if isinstance(choices[0], dict) else {}
+        message = first.get("message") if isinstance(first.get("message"), dict) else {}
+        finish = first.get("finish_reason") if isinstance(first.get("finish_reason"), str) else None
+        return CompletionResult(
+            content=_message_content(message) if message else None,
+            tool_calls=_parse_tool_calls(message.get("tool_calls")),
+            finish_reason=finish,
+            usage=_parse_usage(body.get("usage")) or _parse_usage(body),
+            model=str(body.get("model") or req.model),
+        )
+    message = body.get("message") if isinstance(body.get("message"), dict) else None
+    if message is None:
+        raise RuntimeApiError("runtime.badRequest")
+    finish = body.get("done_reason") if isinstance(body.get("done_reason"), str) else None
+    return CompletionResult(
+        content=_message_content(message),
+        tool_calls=_parse_tool_calls(message.get("tool_calls")),
+        finish_reason=finish,
+        usage=_parse_usage(body.get("usage")) or _parse_usage(body),
+        model=str(body.get("model") or req.model),
+    )
+
+
 def complete(req: CompletionRequest) -> CompletionResult:
     secret = _auth_secret(req.provider, req.secret, req.credential_id)
     url = _endpoint(req.provider, req.base_url)
     headers = request_headers(req.provider, secret)
-    try:
-        with client(timeout_sec=req.timeout_sec) as http:
-            response = http.post(url, json=_payload(req, stream=False), headers=headers)
-        raise_for_status(response)
-        body = response_json(response)
-    except RuntimeApiError:
-        raise
-    except Exception as exc:
-        if is_transport_error(exc):
-            raise_transport(exc)
-        raise
-    if not isinstance(body, dict):
-        raise RuntimeApiError("runtime.badRequest")
-    choices = body.get("choices")
-    if not isinstance(choices, list) or not choices:
-        raise RuntimeApiError("runtime.badRequest")
-    first = choices[0] if isinstance(choices[0], dict) else {}
-    message = first.get("message") if isinstance(first.get("message"), dict) else {}
-    content = message.get("content")
-    if content is not None and not isinstance(content, str):
-        content = str(content)
-    return CompletionResult(
-        content=content,
-        tool_calls=_parse_tool_calls(message.get("tool_calls")),
-        finish_reason=first.get("finish_reason")
-        if isinstance(first.get("finish_reason"), str)
-        else None,
-        usage=_parse_usage(body.get("usage")) or _parse_usage(body),
-        model=str(body.get("model") or req.model),
-    )
+    current = req
+    last_status = 0
+    last_text = ""
+    for attempt in range(2):
+        payload = _payload(current, stream=False)
+        try:
+            with client(timeout_sec=req.timeout_sec) as http:
+                response = http.post(url, json=payload, headers=headers)
+            last_status = response.status_code
+            if response.status_code != 200:
+                last_text = response.text or ""
+                if attempt == 0 and _can_retry_gpu(payload, response.status_code, last_text):
+                    log.info("ollama gpu max failed, retrying with auto model=%s", req.model)
+                    current = _retry_gpu_auto(current)
+                    continue
+                raise_for_status(response)
+            body = response_json(response)
+        except RuntimeApiError:
+            raise
+        except Exception as exc:
+            if is_transport_error(exc):
+                raise_transport(exc)
+            raise
+        err_text = _chunk_error_text(body) if isinstance(body, dict) else ""
+        if err_text:
+            last_text = err_text
+            last_status = last_status or 500
+            if attempt == 0 and _can_retry_gpu(payload, last_status, last_text):
+                log.info("ollama gpu max failed, retrying with auto model=%s", req.model)
+                current = _retry_gpu_auto(current)
+                continue
+            raise RuntimeApiError("runtime.badRequest")
+        return _result_from_body(body, current)
+    raise RuntimeApiError(map_http_status(last_status or 500), status=last_status or None)
 
 
 def _accumulate_tool_delta(
@@ -235,12 +391,69 @@ def _accumulate_tool_delta(
         fn = item.get("function") if isinstance(item.get("function"), dict) else {}
         if fn.get("name"):
             slot["name"] = str(fn["name"])
-        if fn.get("arguments"):
-            slot["arguments"] += str(fn["arguments"])
+        if "arguments" in fn and fn["arguments"] is not None:
+            raw_args = fn["arguments"]
+            if isinstance(raw_args, str):
+                slot["arguments"] += raw_args
+            else:
+                slot["arguments"] = _tool_arguments(raw_args)
     return [
         ToolCall(id=slot["id"], name=slot["name"], arguments=slot["arguments"])
         for _, slot in sorted(acc.items())
     ]
+
+
+def _emit_openai_chunk(
+    chunk: dict[str, Any], acc: dict[int, dict[str, str]]
+) -> tuple[list[StreamEvent], str | None]:
+    events: list[StreamEvent] = []
+    finish: str | None = None
+    choices = chunk.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return events, finish
+    first = choices[0] if isinstance(choices[0], dict) else {}
+    if isinstance(first.get("finish_reason"), str):
+        finish = first["finish_reason"]
+    delta = first.get("delta") if isinstance(first.get("delta"), dict) else {}
+    piece = delta.get("content")
+    reasoning = _delta_reasoning(delta)
+    if (isinstance(piece, str) and piece) or reasoning:
+        events.append(
+            StreamEvent(
+                kind="delta",
+                text=piece if isinstance(piece, str) and piece else None,
+                reasoning=reasoning or None,
+            )
+        )
+    if delta.get("tool_calls"):
+        calls = _accumulate_tool_delta(acc, delta.get("tool_calls"))
+        events.append(StreamEvent(kind="tool_call_delta", tool_calls=calls))
+    return events, finish
+
+
+def _emit_native_chunk(
+    chunk: dict[str, Any], acc: dict[int, dict[str, str]]
+) -> tuple[list[StreamEvent], str | None]:
+    events: list[StreamEvent] = []
+    finish: str | None = None
+    message = chunk.get("message") if isinstance(chunk.get("message"), dict) else None
+    if message is not None:
+        piece = message.get("content")
+        reasoning = _delta_reasoning(message)
+        if (isinstance(piece, str) and piece) or reasoning:
+            events.append(
+                StreamEvent(
+                    kind="delta",
+                    text=piece if isinstance(piece, str) and piece else None,
+                    reasoning=reasoning or None,
+                )
+            )
+        if message.get("tool_calls"):
+            calls = _accumulate_tool_delta(acc, message.get("tool_calls"))
+            events.append(StreamEvent(kind="tool_call_delta", tool_calls=calls))
+    if chunk.get("done") is True:
+        finish = chunk.get("done_reason") if isinstance(chunk.get("done_reason"), str) else "stop"
+    return events, finish
 
 
 def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
@@ -251,23 +464,39 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
     except RuntimeApiError as exc:
         yield StreamEvent(kind="error", error_key=exc.error_key)
         return
+    current = req
+    for attempt in range(2):
+        payload = _payload(current, stream=True)
+        outcome = yield from _stream_once(url, headers, payload, current)
+        if outcome == "retry" and attempt == 0:
+            log.info("ollama gpu max failed, retrying with auto model=%s", req.model)
+            current = _retry_gpu_auto(current)
+            continue
+        return
+
+
+def _stream_once(
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+    req: CompletionRequest,
+) -> Generator[StreamEvent, None, str]:
     acc: dict[int, dict[str, str]] = {}
     usage: CompletionUsage | None = None
     finish: str | None = None
+    emitted = False
     try:
         with client(timeout_sec=req.timeout_sec) as http:
-            with http.stream(
-                "POST",
-                url,
-                json=_payload(req, stream=True),
-                headers=headers,
-            ) as response:
+            with http.stream("POST", url, json=payload, headers=headers) as response:
                 if response.status_code != 200:
+                    err_text = _read_body(response)
+                    if _can_retry_gpu(payload, response.status_code, err_text):
+                        return "retry"
                     yield StreamEvent(
                         kind="error",
                         error_key=map_http_status(response.status_code),
                     )
-                    return
+                    return "done"
                 for line in response.iter_lines():
                     text = line.decode("utf-8") if isinstance(line, bytes) else str(line)
                     text = text.strip()
@@ -286,41 +515,41 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
                     except ValueError:
                         if text.startswith("data:"):
                             yield StreamEvent(kind="error", error_key="runtime.badRequest")
-                            return
+                            return "done"
                         continue
                     if not isinstance(chunk, dict):
                         continue
+                    err_text = _chunk_error_text(chunk)
+                    if err_text:
+                        if not emitted and _can_retry_gpu(payload, 500, err_text):
+                            return "retry"
+                        yield StreamEvent(kind="error", error_key="runtime.badRequest")
+                        return "done"
                     chunk_usage = _parse_usage(chunk.get("usage")) or _parse_usage(chunk)
                     if _usage_nonzero(chunk_usage):
                         usage = chunk_usage
+                        emitted = True
                         yield StreamEvent(kind="usage", usage=usage)
-                    choices = chunk.get("choices")
-                    if not isinstance(choices, list) or not choices:
-                        continue
-                    first = choices[0] if isinstance(choices[0], dict) else {}
-                    if isinstance(first.get("finish_reason"), str):
-                        finish = first["finish_reason"]
-                    delta = first.get("delta") if isinstance(first.get("delta"), dict) else {}
-                    piece = delta.get("content")
-                    reasoning = _delta_reasoning(delta)
-                    if (isinstance(piece, str) and piece) or reasoning:
-                        yield StreamEvent(
-                            kind="delta",
-                            text=piece if isinstance(piece, str) and piece else None,
-                            reasoning=reasoning or None,
-                        )
-                    if delta.get("tool_calls"):
-                        calls = _accumulate_tool_delta(acc, delta.get("tool_calls"))
-                        yield StreamEvent(kind="tool_call_delta", tool_calls=calls)
+                    openai_events, openai_finish = _emit_openai_chunk(chunk, acc)
+                    native_events, native_finish = ([], None)
+                    if not openai_events and openai_finish is None:
+                        native_events, native_finish = _emit_native_chunk(chunk, acc)
+                    for event in openai_events or native_events:
+                        emitted = True
+                        yield event
+                    if openai_finish:
+                        finish = openai_finish
+                    elif native_finish:
+                        finish = native_finish
     except RuntimeApiError as exc:
         yield StreamEvent(kind="error", error_key=exc.error_key)
-        return
+        return "done"
     except Exception as exc:
         if is_timeout_error(exc) or is_transport_error(exc):
             yield StreamEvent(kind="error", error_key=transport_error_key(exc))
-            return
+            return "done"
         yield StreamEvent(kind="error", error_key="runtime.badRequest")
-        return
+        return "done"
     yield StreamEvent(
         kind="done",
         finish_reason=finish,
@@ -331,6 +560,7 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
         or None,
         usage=usage,
     )
+    return "done"
 
 
 def complete_live(

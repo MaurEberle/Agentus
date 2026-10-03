@@ -683,7 +683,14 @@
         "numCtx": "上下文长度",
         "numCtxHint": "上限来自所选模型。",
         "numCtxLoading": "正在加载模型上限…",
-        "numCtxUnavailable": "此模型没有可用的长度信息。"
+        "numCtxUnavailable": "此模型没有可用的长度信息。",
+        "numThread": "CPU 线程",
+        "numThreadHint": "默认使用物理核心数。",
+        "numThreadLoading": "正在读取 CPU 核心…",
+        "numThreadUnavailable": "无法取得 CPU 线程数。",
+        "numGpu": "GPU 卸载",
+        "numGpuHint": "默认为 100%。Ollama 收到层数。加载失败则使用自动。",
+        "numGpuLayers": "{{offload}} / {{total}} 层"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",

@@ -624,6 +624,31 @@ def test_num_ctx_wish_is_sent_to_ollama(monkeypatch, api_env) -> None:
     assert stored["memory"]["raised"]["llama3.2:1b"] == 8192
 
 
+def test_num_thread_is_sent_to_ollama(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        options.append(req.ollama_options)
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numCtx"] = 8192
+            node["data"]["numThread"] = 6
+            node["data"]["numGpuPercent"] = 50
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 47)
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] == {"num_ctx": 8192, "num_thread": 6, "num_gpu": 24}
+
+
 def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None:
     from app.run.controller import get_controller
     from tests.run.test_validate import _orchestrator_doc

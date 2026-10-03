@@ -1,4 +1,4 @@
-"""Native Ollama: tags, ps, generate keep_alive. Not /api/chat."""
+"""Native Ollama: tags, ps, show, generate keep_alive, chat URL via completions."""
 
 from __future__ import annotations
 
@@ -16,10 +16,81 @@ from app.runtime.models import OllamaModel, PingResult
 from app.runtime.urls import ollama_native_root, settings_roots
 
 
+_block_counts: dict[str, int] = {}
+
+
 def _root(base_url: str | None) -> str:
     if base_url:
         return ollama_native_root(base_url)
     return settings_roots()[0]
+
+
+def _positive_layer(value: object) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, float) and value > 0:
+        return int(value)
+    return None
+
+
+def parse_block_count(payload: object) -> int | None:
+    """Transformer layers: ``{architecture}.block_count``, never ``leading_dense_block_count``."""
+    if not isinstance(payload, dict):
+        return None
+    info = payload.get("model_info")
+    if not isinstance(info, dict):
+        return None
+    arch = info.get("general.architecture")
+    if isinstance(arch, str) and arch.strip():
+        exact = _positive_layer(info.get(f"{arch.strip()}.block_count"))
+        if exact:
+            return exact
+    best: int | None = None
+    for key, value in info.items():
+        name = str(key)
+        if not name.endswith(".block_count"):
+            continue
+        stem = name[: -len(".block_count")]
+        if "." in stem:
+            continue
+        layer = _positive_layer(value)
+        if layer:
+            best = layer if best is None else max(best, layer)
+    return best
+
+
+def gpu_layers_for_percent(percent: int, block_count: int | None) -> int:
+    """Map 10–100 % offload to Ollama ``num_gpu`` (layer count). Unknown size → 999 (max)."""
+    pct = max(10, min(100, int(percent)))
+    if not isinstance(block_count, int) or block_count < 1:
+        return 999
+    if pct >= 100:
+        return block_count
+    return max(1, min(block_count, (block_count * pct + 50) // 100))
+
+
+def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:
+    name = (tag or "").strip()
+    if not name:
+        return None
+    key = f"{_root(base_url)}|{name}"
+    cached = _block_counts.get(key)
+    if cached:
+        return cached
+    url = f"{_root(base_url)}/api/show"
+    try:
+        with client(timeout_sec=5.0) as http:
+            response = http.post(url, json={"model": name})
+        raise_for_status(response)
+        payload = response_json(response)
+    except Exception:
+        return None
+    count = parse_block_count(payload)
+    if count:
+        _block_counts[key] = count
+    return count
 
 
 def ping_ollama(*, base_url: str | None = None, timeout_sec: float = 3.0) -> PingResult:

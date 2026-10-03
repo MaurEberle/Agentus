@@ -683,7 +683,14 @@
         "numCtx": "Longitud de contexto",
         "numCtxHint": "Los límites vienen del modelo elegido.",
         "numCtxLoading": "Cargando límites del modelo…",
-        "numCtxUnavailable": "Este modelo no informa límites de longitud."
+        "numCtxUnavailable": "Este modelo no informa límites de longitud.",
+        "numThread": "Hilos de CPU",
+        "numThreadHint": "El valor por defecto es el número de núcleos físicos.",
+        "numThreadLoading": "Leyendo núcleos de CPU…",
+        "numThreadUnavailable": "No hay un recuento de hilos de CPU.",
+        "numGpu": "Offload GPU",
+        "numGpuHint": "El valor por defecto es 100 %. Ollama recibe el número de capas. Auto si falla la carga.",
+        "numGpuLayers": "{{offload}} de {{total}} capas"
       },
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",

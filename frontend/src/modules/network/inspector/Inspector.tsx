@@ -16,7 +16,7 @@ import {
   reindexNetworkKnowledge,
   testLlmConnection,
 } from '@/modules/network/api';
-import { useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
+import { useHostResourcesQuery, useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
 import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
@@ -269,6 +269,117 @@ function ContextWindowField({ node, readOnly }: { node: GraphNode; readOnly: boo
   );
 }
 
+function snapGpuPercent(value: number): number {
+  if (!Number.isFinite(value)) return 100;
+  return Math.min(100, Math.max(10, Math.round(value / 10) * 10));
+}
+
+function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const provider = String(node.data.provider ?? 'ollama');
+  const model = String(node.data.model ?? '');
+  const stats = useModelStatsQuery({
+    provider: provider as LlmProvider,
+    model,
+    credentialId: String(node.data.credentialId ?? '') || undefined,
+    baseUrl: String(node.data.baseUrl ?? '') || undefined,
+    enabled: Boolean(model),
+  });
+  const layers = stats.data?.gpuLayers ?? null;
+  const current = Number(node.data.numGpuPercent);
+  const value = snapGpuPercent(current);
+
+  useEffect(() => {
+    if (readOnly) return;
+    if (node.data.numGpuPercent === value && node.data.numGpu === undefined) return;
+    editorUpdateNodeData(node.id, { numGpuPercent: value, numGpu: undefined });
+  }, [node.data.numGpu, node.data.numGpuPercent, node.id, readOnly, value]);
+
+  const offload =
+    layers == null ? null : value >= 100 ? layers : Math.max(1, Math.min(layers, Math.floor((layers * value + 50) / 100)));
+
+  return (
+    <Field label={t('network.inspector.llm.numGpu')}>
+      <input
+        type="range"
+        min={10}
+        max={100}
+        step={10}
+        value={value}
+        disabled={readOnly}
+        className="w-full accent-primary"
+        onChange={(event) =>
+          editorUpdateNodeData(node.id, { numGpuPercent: Number(event.target.value), numGpu: undefined })
+        }
+      />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>10%</span>
+        <span className="font-medium text-foreground">{value}%</span>
+        <span>100%</span>
+      </div>
+      {offload != null && layers != null ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.numGpuLayers', { offload, total: layers })}
+        </p>
+      ) : null}
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuHint')}</p>
+    </Field>
+  );
+}
+
+function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const resources = useHostResourcesQuery({ live: false });
+  const threads = resources.data?.cpuThreads ?? resources.data?.cpuCores ?? null;
+  const cores = resources.data?.cpuCores ?? threads;
+  const current = Number(node.data.numThread);
+
+  useEffect(() => {
+    if (readOnly || threads == null || cores == null) return;
+    if (!Number.isFinite(current) || current < 1 || current > threads) {
+      editorUpdateNodeData(node.id, { numThread: cores });
+    }
+  }, [cores, current, node.id, readOnly, threads]);
+
+  if (resources.isPending && !resources.data) {
+    return (
+      <Field label={t('network.inspector.llm.numThread')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadLoading')}</p>
+      </Field>
+    );
+  }
+  if (threads == null || cores == null) {
+    return (
+      <Field label={t('network.inspector.llm.numThread')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadUnavailable')}</p>
+      </Field>
+    );
+  }
+
+  const value = Number.isFinite(current) ? Math.min(threads, Math.max(1, current)) : cores;
+
+  return (
+    <Field label={t('network.inspector.llm.numThread')}>
+      <input
+        type="range"
+        min={1}
+        max={threads}
+        step={1}
+        value={value}
+        disabled={readOnly}
+        className="w-full accent-primary"
+        onChange={(event) => editorUpdateNodeData(node.id, { numThread: Number(event.target.value) })}
+      />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>1</span>
+        <span className="font-medium text-foreground">{value}</span>
+        <span>{threads}</span>
+      </div>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadHint')}</p>
+    </Field>
+  );
+}
+
 function DisplayNameField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   return (
@@ -341,6 +452,11 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     if (next !== provider) {
       patch.model = '';
       patch.numCtx = undefined;
+    }
+    if (next !== 'ollama') {
+      patch.numThread = undefined;
+      patch.numGpu = undefined;
+      patch.numGpuPercent = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -437,13 +553,21 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
             modelLocked ? t('network.inspector.llm.pickCredentialFirst') : t('network.inspector.llm.model')
           }
           noModelsLabel={t('network.inspector.llm.noModels')}
-          onChange={(value) => editorUpdateNodeData(node.id, { model: value, numCtx: undefined })}
+          onChange={(value) =>
+            editorUpdateNodeData(node.id, { model: value, numCtx: undefined, numGpu: undefined, numGpuPercent: undefined })
+          }
         />
         {catalogFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
         ) : null}
       </Field>
       {model && !modelLocked ? <ContextWindowField node={node} readOnly={readOnly} /> : null}
+      {provider === 'ollama' && model && !modelLocked ? (
+        <>
+          <CpuThreadField node={node} readOnly={readOnly} />
+          <GpuOffloadField node={node} readOnly={readOnly} />
+        </>
+      ) : null}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
         <Button
           type="button"

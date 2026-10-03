@@ -93,7 +93,7 @@ def test_xai_models_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_test_llm_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path.endswith("/chat/completions"):
+        if request.url.path.endswith("/api/chat") or request.url.path.endswith("/chat/completions"):
             return httpx.Response(
                 200,
                 json={
@@ -101,6 +101,8 @@ def test_test_llm_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> Non
                     "choices": [{"message": {"role": "assistant", "content": "ok"}}],
                 },
             )
+        if request.url.path.endswith("/api/show"):
+            return httpx.Response(200, json={"model_info": {"llama.block_count": 16}})
         return httpx.Response(200, json={"models": []})
 
     install_transport(monkeypatch, handler)
@@ -117,12 +119,14 @@ def test_model_stats_ollama(client: TestClient, monkeypatch: pytest.MonkeyPatch)
         "app.http.routers.runtime.get_model_stats",
         lambda provider, model, credential_id=None, base_url=None: (2048, 32768, []),
     )
+    monkeypatch.setattr("app.http.routers.runtime.model_block_count", lambda *a, **k: 16)
     response = client.get("/api/runtime/model-stats", params={"provider": "ollama", "model": "llama3.2:1b"})
     assert response.status_code == 200
     body = response.json()
     assert body["contextMin"] == 2048
     assert body["contextMax"] == 32768
     assert body.get("steps") in ([], None)
+    assert body["gpuLayers"] == 16
 
 
 def test_model_stats_cloud_prefix(client: TestClient) -> None:
@@ -134,3 +138,4 @@ def test_model_stats_cloud_prefix(client: TestClient) -> None:
     body = response.json()
     assert body["contextMax"] == 500000
     assert 500000 in body["steps"]
+    assert "gpuLayers" not in body

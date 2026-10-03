@@ -47,6 +47,8 @@ def test_resource_snapshot_serializes_gpu() -> None:
     snap = ResourceSnapshot(
         ts="t",
         cpu_percent=1.0,
+        cpu_cores=6,
+        cpu_threads=12,
         ram_used_bytes=1,
         ram_total_bytes=2,
         gpus=[
@@ -62,3 +64,5 @@ def test_resource_snapshot_serializes_gpu() -> None:
     dumped = snap.model_dump(by_alias=True)
     assert dumped["gpus"][0]["name"] == "AMD Radeon RX 7900 XTX"
     assert dumped["gpus"][0]["utilPercent"] == 12.5
+    assert dumped["cpuCores"] == 6
+    assert dumped["cpuThreads"] == 12
