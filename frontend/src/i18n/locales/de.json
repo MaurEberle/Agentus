@@ -749,7 +749,15 @@
         "numThreadUnavailable": "Die CPU-Thread-Zahl ist nicht verfügbar.",
         "numGpu": "GPU-Offload",
         "numGpuHint": "Standard ist 100 %. Ollama erhält die Layerzahl. Bei Ladefehler Auto.",
-        "numGpuLayers": "{{offload}} von {{total}} Layern"
+        "numGpuLayers": "{{offload}} von {{total}} Layern",
+        "vram": "GPU-Speicher",
+        "vramLoading": "Speicherbedarf wird geschätzt…",
+        "vramNeed": "{{need}} von {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Gewichte {{weights}} · Kontext {{kv}} · Reserve {{overhead}}",
+        "vramOver": "Passt nicht in den GPU-Speicher. Kontext oder Offload verringern, sonst rechnet die CPU mit.",
+        "vramTight": "Knapp. Ein zweites Modell oder ein voller Prompt kann überlaufen.",
+        "vramHint": "Schätzung: Ollama legt den KV-Cache für die volle Kontextlänge an."
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",

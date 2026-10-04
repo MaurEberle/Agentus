@@ -21,6 +21,9 @@ import type { GraphNode, ValidationIssue } from '@/modules/network/model/documen
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
+import { cn } from '@/lib/utils';
+import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
+import { estimateVramParts, offloadLayers, snapGpuPercent } from '@/modules/network/inspector/vram';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -269,11 +272,6 @@ function ContextWindowField({ node, readOnly }: { node: GraphNode; readOnly: boo
   );
 }
 
-function snapGpuPercent(value: number): number {
-  if (!Number.isFinite(value)) return 100;
-  return Math.min(100, Math.max(10, Math.round(value / 10) * 10));
-}
-
 function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const provider = String(node.data.provider ?? 'ollama');
@@ -295,8 +293,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     editorUpdateNodeData(node.id, { numGpuPercent: value, numGpu: undefined });
   }, [node.data.numGpu, node.data.numGpuPercent, node.id, readOnly, value]);
 
-  const offload =
-    layers == null ? null : value >= 100 ? layers : Math.max(1, Math.min(layers, Math.floor((layers * value + 50) / 100)));
+  const offload = layers == null ? null : offloadLayers(value, layers);
 
   return (
     <Field label={t('network.inspector.llm.numGpu')}>
@@ -323,6 +320,94 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
         </p>
       ) : null}
       <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuHint')}</p>
+    </Field>
+  );
+}
+
+function VramNeedField({ node }: { node: GraphNode }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
+  const provider = String(node.data.provider ?? 'ollama');
+  const model = String(node.data.model ?? '');
+  const stats = useModelStatsQuery({
+    provider: provider as LlmProvider,
+    model,
+    credentialId: String(node.data.credentialId ?? '') || undefined,
+    baseUrl: String(node.data.baseUrl ?? '') || undefined,
+    enabled: Boolean(model),
+  });
+  const resources = useHostResourcesQuery({ live: false });
+  const ctxRaw = Number(node.data.numCtx);
+  const ctx = Number.isFinite(ctxRaw) && ctxRaw > 0 ? ctxRaw : (stats.data?.contextMax ?? 0);
+  const parts = estimateVramParts({
+    weightBytes: stats.data?.weightBytes,
+    kvBytesPerToken: stats.data?.kvBytesPerToken,
+    overheadBytes: stats.data?.overheadBytes,
+    gpuLayers: stats.data?.gpuLayers,
+    numCtx: ctx,
+    numGpuPercent: Number(node.data.numGpuPercent),
+  });
+  const gpuTotal = resources.data?.gpus?.[0]?.vramTotalBytes ?? 0;
+  const percent = parts && gpuTotal > 0 ? (parts.total / gpuTotal) * 100 : 0;
+  const over = Boolean(parts && gpuTotal > 0 && parts.total > gpuTotal);
+  const tight = Boolean(parts && gpuTotal > 0 && !over && percent >= 85);
+  const tone = meterTone(Math.min(100, percent), Boolean(parts && gpuTotal > 0));
+
+  if (stats.isPending && !stats.data) {
+    return (
+      <Field label={t('network.inspector.llm.vram')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramLoading')}</p>
+      </Field>
+    );
+  }
+  if (!parts) return null;
+
+  return (
+    <Field label={t('network.inspector.llm.vram')}>
+      {gpuTotal > 0 ? (
+        <div
+          className="h-2 overflow-hidden rounded-full bg-muted"
+          role="meter"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(Math.min(100, percent))}
+          aria-label={t('network.inspector.llm.vram')}
+        >
+          <div
+            className={cn(
+              'h-full rounded-full',
+              tone === 'off' && 'bg-muted-foreground/30',
+              tone === 'normal' && 'bg-primary',
+              tone === 'warn' && 'bg-warning',
+              tone === 'hot' && 'bg-destructive',
+            )}
+            style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+          />
+        </div>
+      ) : null}
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className={cn('tabular-nums', over && 'font-medium text-destructive', tight && 'font-medium text-warning')}>
+          {gpuTotal > 0
+            ? t('network.inspector.llm.vramNeed', {
+                need: formatBytes(parts.total, locale),
+                total: formatBytes(gpuTotal, locale),
+              })
+            : t('network.inspector.llm.vramNeedOnly', { need: formatBytes(parts.total, locale) })}
+        </span>
+        {gpuTotal > 0 ? (
+          <span className="tabular-nums text-muted-foreground">{formatPercent(percent, locale)}</span>
+        ) : null}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {t('network.inspector.llm.vramParts', {
+          weights: formatBytes(parts.weights, locale),
+          kv: formatBytes(parts.kv, locale),
+          overhead: formatBytes(parts.overhead, locale),
+        })}
+      </p>
+      {over ? <p className="text-xs text-destructive">{t('network.inspector.llm.vramOver')}</p> : null}
+      {tight ? <p className="text-xs text-warning">{t('network.inspector.llm.vramTight')}</p> : null}
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramHint')}</p>
     </Field>
   );
 }
@@ -566,6 +651,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         <>
           <CpuThreadField node={node} readOnly={readOnly} />
           <GpuOffloadField node={node} readOnly={readOnly} />
+          <VramNeedField node={node} />
         </>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">

@@ -695,7 +695,15 @@
         "numThreadUnavailable": "无法取得 CPU 线程数。",
         "numGpu": "GPU 卸载",
         "numGpuHint": "默认为 100%。Ollama 收到层数。加载失败则使用自动。",
-        "numGpuLayers": "{{offload}} / {{total}} 层"
+        "numGpuLayers": "{{offload}} / {{total}} 层",
+        "vram": "GPU 显存",
+        "vramLoading": "正在估算显存需求…",
+        "vramNeed": "{{need}} / {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "权重 {{weights}} · 上下文 {{kv}} · 预留 {{overhead}}",
+        "vramOver": "超出 GPU 显存。降低上下文或卸载比例，否则会落到 CPU。",
+        "vramTight": "很紧。第二个模型或满上下文可能溢出。",
+        "vramHint": "估算：Ollama 会按完整上下文长度预留 KV 缓存。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",

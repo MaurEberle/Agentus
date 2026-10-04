@@ -120,6 +120,14 @@ def test_model_stats_ollama(client: TestClient, monkeypatch: pytest.MonkeyPatch)
         lambda provider, model, credential_id=None, base_url=None: (2048, 32768, []),
     )
     monkeypatch.setattr("app.http.routers.runtime.model_block_count", lambda *a, **k: 16)
+
+    class _Profile:
+        layers = 16
+        weight_bytes = 1_321_098_329
+        kv_bytes_per_token = 32768
+        overhead_bytes = 288 * 1024 * 1024
+
+    monkeypatch.setattr("app.http.routers.runtime.vram_profile", lambda *a, **k: _Profile())
     response = client.get("/api/runtime/model-stats", params={"provider": "ollama", "model": "llama3.2:1b"})
     assert response.status_code == 200
     body = response.json()
@@ -127,6 +135,9 @@ def test_model_stats_ollama(client: TestClient, monkeypatch: pytest.MonkeyPatch)
     assert body["contextMax"] == 32768
     assert body.get("steps") in ([], None)
     assert body["gpuLayers"] == 16
+    assert body["weightBytes"] == 1_321_098_329
+    assert body["kvBytesPerToken"] == 32768
+    assert body["overheadBytes"] == 288 * 1024 * 1024
 
 
 def test_model_stats_cloud_prefix(client: TestClient) -> None:

@@ -695,7 +695,15 @@
         "numThreadUnavailable": "Le nombre de threads CPU n’est pas disponible.",
         "numGpu": "Offload GPU",
         "numGpuHint": "La valeur par défaut est 100 %. Ollama reçoit le nombre de couches. Auto si le chargement échoue.",
-        "numGpuLayers": "{{offload}} sur {{total}} couches"
+        "numGpuLayers": "{{offload}} sur {{total}} couches",
+        "vram": "Mémoire GPU",
+        "vramLoading": "Estimation de la mémoire…",
+        "vramNeed": "{{need}} sur {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Poids {{weights}} · contexte {{kv}} · réserve {{overhead}}",
+        "vramOver": "Ne tient pas dans la mémoire GPU. Réduis le contexte ou l’offload, sinon le CPU calcule.",
+        "vramTight": "Serré. Un second modèle ou un prompt plein peut déborder.",
+        "vramHint": "Estimation : Ollama réserve le cache KV pour toute la longueur de contexte."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",

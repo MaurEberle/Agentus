@@ -695,7 +695,15 @@
         "numThreadUnavailable": "CPU iş parçacığı sayısı yok.",
         "numGpu": "GPU offload",
         "numGpuHint": "Varsayılan %100. Ollama katman sayısını alır. Yükleme başarısızsa Auto.",
-        "numGpuLayers": "{{offload}} / {{total}} katman"
+        "numGpuLayers": "{{offload}} / {{total}} katman",
+        "vram": "GPU belleği",
+        "vramLoading": "Bellek ihtiyacı tahmin ediliyor…",
+        "vramNeed": "{{need}} / {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Ağırlık {{weights}} · bağlam {{kv}} · yedek {{overhead}}",
+        "vramOver": "GPU belleğine sığmıyor. Bağlamı veya offload’u düşür, yoksa CPU hesaplar.",
+        "vramTight": "Sıkışık. İkinci bir model veya dolu bir istem taşabilir.",
+        "vramHint": "Tahmin: Ollama KV önbelleğini tam bağlam uzunluğu için ayırır."
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",

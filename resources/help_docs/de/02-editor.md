@@ -54,7 +54,7 @@ Kein Knoten gewählt: Name, Beschreibung, Tags, Statistik, Validierungsliste des
 
 Knoten gewählt:
 
-- **LLM:** Provider, Modell (Liste von der Runtime), Zugang für Cloud, Kontextlänge nach Modellgrenzen (Slider lokal, Auswahl Cloud), CPU-Threads pro Knoten (Standard: physische Kerne), GPU-Offload 10–100 % pro Knoten (Standard: 100 %, Ollama erhält die Layerzahl, bei Ladefehler Auto), Ping, erweitert Temperature / max. Tokens. Cloud ohne Zugang ist ungültig.
+- **LLM:** Provider, Modell (Liste von der Runtime), Zugang für Cloud, Kontextlänge nach Modellgrenzen (Slider lokal, Auswahl Cloud), CPU-Threads pro Knoten (Standard: physische Kerne), GPU-Offload 10–100 % pro Knoten (Standard: 100 %, Ollama erhält die Layerzahl, bei Ladefehler Auto), geschätzter GPU-Speicher aus Kontext und Offload (Warnung, wenn er nicht auf die Karte passt), Ping, erweitert Temperature / max. Tokens. Cloud ohne Zugang ist ungültig.
 - **Agent:** Systemprompt und Anzeigename. Hängt der Agent an einem Kanal, erklärt der Inspector, dass Aufträge vom Orchestrator kommen.
 - **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. Dateizugriff: Wurzelordner, nicht die Laufwerkswurzel; der Agent arbeitet nur darunter, Schreiben und Löschen sind Schalter.
 - **MCP:** aktiver Server aus **Einstellungen → MCP-Server**. Standard alle Tools dieses Servers; nach einer Probe kannst du eine Teilmenge wählen. Zugänge gehören in die Einstellungen. Der Wurzelordner für Dateisystem und Excel steht am Knoten; Git behält den Ordner in den Einstellungen.

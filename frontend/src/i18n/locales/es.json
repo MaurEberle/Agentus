@@ -695,7 +695,15 @@
         "numThreadUnavailable": "No hay un recuento de hilos de CPU.",
         "numGpu": "Offload GPU",
         "numGpuHint": "El valor por defecto es 100 %. Ollama recibe el número de capas. Auto si falla la carga.",
-        "numGpuLayers": "{{offload}} de {{total}} capas"
+        "numGpuLayers": "{{offload}} de {{total}} capas",
+        "vram": "Memoria GPU",
+        "vramLoading": "Estimando la memoria necesaria…",
+        "vramNeed": "{{need}} de {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Pesos {{weights}} · contexto {{kv}} · reserva {{overhead}}",
+        "vramOver": "No cabe en la memoria GPU. Baja el contexto o el offload; si no, calculará la CPU.",
+        "vramTight": "Justo. Un segundo modelo o un prompt lleno puede desbordar.",
+        "vramHint": "Estimación: Ollama reserva la caché KV para toda la longitud de contexto."
       },
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",

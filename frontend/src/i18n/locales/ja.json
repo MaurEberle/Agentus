@@ -695,7 +695,15 @@
         "numThreadUnavailable": "CPU スレッド数を取得できません。",
         "numGpu": "GPU オフロード",
         "numGpuHint": "既定は 100%。Ollama にはレイヤー数が渡されます。読み込みに失敗したら Auto。",
-        "numGpuLayers": "{{offload}} / {{total}} レイヤー"
+        "numGpuLayers": "{{offload}} / {{total}} レイヤー",
+        "vram": "GPU メモリ",
+        "vramLoading": "メモリ見積もり中…",
+        "vramNeed": "{{need}} / {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "重み {{weights}} · コンテキスト {{kv}} · 予備 {{overhead}}",
+        "vramOver": "GPU メモリに収まりません。コンテキストかオフロードを下げないと CPU が計算します。",
+        "vramTight": "余裕がありません。別モデルや満杯のプロンプトで溢れることがあります。",
+        "vramHint": "見積もり: Ollama はコンテキスト長全体分の KV キャッシュを確保します。"
       },
       "agent": {
         "hint": "LLM、ツール、知識はエッジから届く。オーケストレーターがなければメッセージがエージェントを起動する。",

@@ -111,4 +111,7 @@ class RuntimeModelStats(ApiModel):
     context_max: int | None = Field(default=None, alias="contextMax")
     steps: list[int] = Field(default_factory=list)
     gpu_layers: int | None = Field(default=None, alias="gpuLayers")
+    weight_bytes: int | None = Field(default=None, alias="weightBytes")
+    kv_bytes_per_token: int | None = Field(default=None, alias="kvBytesPerToken")
+    overhead_bytes: int | None = Field(default=None, alias="overheadBytes")
     message_key: str | None = Field(default=None, alias="messageKey")

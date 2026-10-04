@@ -21,6 +21,7 @@ from app.runtime.models import (
 from app.run.models import ResourceSnapshot
 from app.run.resources import latest as latest_resources
 from app.runtime.ollama import list_ollama_models, model_block_count, ping_ollama
+from app.runtime.vram_est import vram_profile
 
 router = APIRouter()
 
@@ -69,11 +70,17 @@ def runtime_model_stats(
     except RuntimeApiError as exc:
         return RuntimeModelStats(message_key=exc.error_key)
     gpu_layers = model_block_count(tag, base_url=base_url) if provider == "ollama" else None
+    profile = vram_profile(tag, base_url=base_url) if provider == "ollama" else None
+    if profile and profile.layers:
+        gpu_layers = profile.layers
     return RuntimeModelStats(
         context_min=minimum,
         context_max=maximum,
         steps=steps,
         gpu_layers=gpu_layers,
+        weight_bytes=profile.weight_bytes if profile else None,
+        kv_bytes_per_token=profile.kv_bytes_per_token if profile else None,
+        overhead_bytes=profile.overhead_bytes if profile else None,
     )
 
 

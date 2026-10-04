@@ -54,7 +54,7 @@ Düğüm seçili değil: **açık** ağın adı, açıklaması, etiketleri, ista
 
 Düğüm seçili:
 
-- **LLM:** sağlayıcı, model (çalışma zamanı listesi), bulut kimlik bilgisi, model sınırlarına göre bağlam uzunluğu (yerelde kaydırıcı, bulutta liste), düğüm başına CPU iş parçacığı (varsayılan: fiziksel çekirdekler), düğüm başına GPU offload %10–100 (varsayılan: %100, Ollama katman sayısını alır, yükleme başarısızsa Auto), ping, gelişmiş sıcaklık / en fazla belirteç. Kimlik bilgisi olmadan bulut geçersizdir.
+- **LLM:** sağlayıcı, model (çalışma zamanı listesi), bulut kimlik bilgisi, model sınırlarına göre bağlam uzunluğu (yerelde kaydırıcı, bulutta liste), düğüm başına CPU iş parçacığı (varsayılan: fiziksel çekirdekler), düğüm başına GPU offload %10–100 (varsayılan: %100, Ollama katman sayısını alır, yükleme başarısızsa Auto), bağlam ve offload’dan tahmini GPU belleği (karta sığmazsa uyarı), ping, gelişmiş sıcaklık / en fazla belirteç. Kimlik bilgisi olmadan bulut geçersizdir.
 - **Ajan:** sistem istemi ve görünen ad. Ajan bir kanaldaysa denetçi görevlerin orkestratörden geldiğini açıklar.
 - **Araç:** tür. HTTP: yöntem ve URL, isteğe bağlı kimlik bilgisi. Web araması: web araması türünde kimlik bilgisi. Dosya erişimi: kök klasör, sürücü kökü değil; ajan yalnız onun altında çalışır, yazma ve silme anahtardır.
 - **MCP:** **Ayarlar → MCP sunucuları**ndaki etkin sunucu. Varsayılan tüm araçlar; yoklamadan sonra alt küme seçebilirsiniz. Kimlik Ayarlar’dadır. Dosya sistemi ve Excel kök klasörü düğümdedir; Git klasörü Ayarlar’da kalır.

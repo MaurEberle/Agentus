@@ -695,7 +695,15 @@
         "numThreadUnavailable": "عدد خيوط المعالج غير متاح.",
         "numGpu": "تفريغ GPU",
         "numGpuHint": "القيمة الافتراضية 100٪. يتلقى Ollama عدد الطبقات. Auto إذا فشل التحميل.",
-        "numGpuLayers": "{{offload}} من {{total}} طبقة"
+        "numGpuLayers": "{{offload}} من {{total}} طبقة",
+        "vram": "ذاكرة GPU",
+        "vramLoading": "جاري تقدير الذاكرة…",
+        "vramNeed": "{{need}} من {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "الأوزان {{weights}} · السياق {{kv}} · احتياطي {{overhead}}",
+        "vramOver": "لا تتسع لذاكرة GPU. خفّض السياق أو التفريغ وإلا تحسب المعالج.",
+        "vramTight": "ضيق. نموذج ثانٍ أو موجّه ممتلئ قد يفيض.",
+        "vramHint": "تقدير: يخصّص Ollama ذاكرة KV لطول السياق كاملًا."
       },
       "agent": {
         "hint": "LLM والأدوات والمعرفة تصل عبر الحواف. بلا منسّق تبدأ الرسالة الوكيل.",

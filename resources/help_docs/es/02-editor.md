@@ -54,7 +54,7 @@ Ningún nodo elegido: nombre, descripción, etiquetas, estadísticas, lista de v
 
 Nodo elegido:
 
-- **LLM:** proveedor, modelo (lista del runtime), credencial para la nube, longitud de contexto según el modelo (deslizador local, lista en la nube), hilos de CPU por nodo (por defecto: núcleos físicos), offload GPU 10–100 % por nodo (por defecto: 100 %, Ollama recibe el número de capas, Auto si falla la carga), ping, avanzado temperatura / máx. tokens. Nube sin credencial es inválida.
+- **LLM:** proveedor, modelo (lista del runtime), credencial para la nube, longitud de contexto según el modelo (deslizador local, lista en la nube), hilos de CPU por nodo (por defecto: núcleos físicos), offload GPU 10–100 % por nodo (por defecto: 100 %, Ollama recibe el número de capas, Auto si falla la carga), memoria GPU estimada según contexto y offload (aviso si no cabe en la tarjeta), ping, avanzado temperatura / máx. tokens. Nube sin credencial es inválida.
 - **Agente:** prompt de sistema y nombre visible. Si el agente está en un canal, el inspector explica que los encargos vienen del orquestador.
 - **Herramienta:** tipo. HTTP: método y URL, credencial opcional. Búsqueda web: credencial de tipo búsqueda web. Acceso a archivos: carpeta raíz, no la raíz de la unidad; el agente solo trabaja debajo, y escribir y borrar son interruptores.
 - **MCP:** servidor activo en **Ajustes → Servidores MCP**. Por defecto todas las herramientas; tras una prueba puedes elegir un subconjunto. Las credenciales van en Ajustes. La carpeta raíz de sistema de archivos y Excel está en el nodo; Git conserva la carpeta en Ajustes.

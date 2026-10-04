@@ -749,7 +749,15 @@
         "numThreadUnavailable": "CPU thread count is not available.",
         "numGpu": "GPU offload",
         "numGpuHint": "Default is 100%. Ollama receives the layer count. Auto if loading fails.",
-        "numGpuLayers": "{{offload}} of {{total}} layers"
+        "numGpuLayers": "{{offload}} of {{total}} layers",
+        "vram": "GPU memory",
+        "vramLoading": "Estimating memory need…",
+        "vramNeed": "{{need}} of {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Weights {{weights}} · context {{kv}} · reserve {{overhead}}",
+        "vramOver": "Does not fit in GPU memory. Lower context or offload, or the CPU will do the work.",
+        "vramTight": "Tight. A second model or a full prompt may spill.",
+        "vramHint": "Estimate: Ollama allocates the KV cache for the full context length."
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
