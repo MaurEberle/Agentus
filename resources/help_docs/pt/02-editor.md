@@ -54,7 +54,7 @@ Nenhum nó escolhido: nome, descrição, etiquetas, estatísticas, lista de vali
 
 Nó escolhido:
 
-- **LLM:** fornecedor, modelo (lista do runtime), credencial na nuvem, comprimento de contexto segundo o modelo (slider local, lista na nuvem), threads da CPU por nó (padrão: núcleos físicos), offload GPU 10–100 % por nó (padrão: 100 %, o Ollama recebe a contagem de camadas, Auto se o carregamento falhar), memória GPU estimada a partir do contexto e do offload (aviso se não couber na placa), ping, avançado temperatura / máx. tokens. Nuvem sem credencial é inválida.
+- **LLM:** fornecedor, modelo (lista do runtime), credencial na nuvem, comprimento de contexto segundo o modelo (slider local, lista na nuvem), threads da CPU por nó (padrão: núcleos físicos), offload GPU um passo por camada (padrão: todas as camadas, Auto se o carregamento falhar), memória GPU estimada a partir do contexto e do offload (aviso se não couber na placa), ping, avançado temperatura / máx. tokens. Nuvem sem credencial é inválida.
 - **Agente:** prompt de sistema e nome visível. Se o agente está num canal, o inspetor explica que as tarefas vêm do orquestrador.
 - **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. Acesso a ficheiros: pasta raiz, não a raiz da unidade; o agente só trabalha por baixo, e escrever e apagar são interruptores.
 - **MCP:** servidor ativo em **Definições → Servidores MCP**. Predefinição todas as ferramentas; após uma sonda podes escolher um subconjunto. As credenciais ficam nas Definições. A pasta raiz de sistema de ficheiros e Excel está no nó; o Git mantém a pasta nas Definições.

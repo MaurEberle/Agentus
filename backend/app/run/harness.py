@@ -762,7 +762,13 @@ def _ollama_options(llm, choice) -> dict | None:
         options["num_ctx"] = choice.num_ctx
     if isinstance(llm.num_thread, int) and llm.num_thread > 0:
         options["num_thread"] = llm.num_thread
-    if isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0:
+    if isinstance(llm.num_gpu, int) and llm.num_gpu > 0:
+        from app.runtime.ollama import clamp_gpu_layers, model_block_count
+
+        options["num_gpu"] = clamp_gpu_layers(
+            llm.num_gpu, model_block_count(llm.model, base_url=llm.base_url)
+        )
+    elif isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0:
         from app.runtime.ollama import gpu_layers_for_percent, model_block_count
 
         options["num_gpu"] = gpu_layers_for_percent(

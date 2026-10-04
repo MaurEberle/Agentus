@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.runtime.ollama import (
+    clamp_gpu_layers,
     gpu_layers_for_percent,
     list_ollama_models,
     parse_block_count,
@@ -134,12 +135,18 @@ def estimate_vram_bytes(
     profile: VramProfile,
     *,
     num_ctx: int,
-    num_gpu_percent: int,
+    num_gpu: int | None = None,
+    num_gpu_percent: int | None = None,
 ) -> int:
     """GPU bytes for this context and offload. KV is reserved for the full window."""
     layers = profile.layers
     if layers:
-        on = gpu_layers_for_percent(num_gpu_percent, layers)
+        if isinstance(num_gpu, int) and num_gpu > 0:
+            on = clamp_gpu_layers(num_gpu, layers)
+        elif isinstance(num_gpu_percent, int) and num_gpu_percent > 0:
+            on = gpu_layers_for_percent(num_gpu_percent, layers)
+        else:
+            on = layers
         frac = on / layers
     else:
         frac = 1.0

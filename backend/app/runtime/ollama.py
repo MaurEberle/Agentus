@@ -73,6 +73,14 @@ def gpu_layers_for_percent(percent: int, block_count: int | None) -> int:
     return max(1, min(block_count, (block_count * pct + 50) // 100))
 
 
+def clamp_gpu_layers(count: int, block_count: int | None) -> int:
+    """Keep a layer offload on ``1..block_count``. Unknown size keeps the count."""
+    n = max(1, int(count))
+    if isinstance(block_count, int) and block_count > 0:
+        return min(n, block_count)
+    return n
+
+
 def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:
     name = (tag or "").strip()
     if not name:

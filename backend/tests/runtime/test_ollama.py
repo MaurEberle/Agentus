@@ -7,6 +7,7 @@ import pytest
 
 from app.runtime.errors import RuntimeTransportError
 from app.runtime.ollama import (
+    clamp_gpu_layers,
     ensure_loaded,
     gpu_layers_for_percent,
     keep_only,
@@ -180,6 +181,12 @@ def test_gpu_layers_for_percent() -> None:
     assert gpu_layers_for_percent(10, 16) == 2
     assert gpu_layers_for_percent(100, None) == 999
     assert gpu_layers_for_percent(50, None) == 999
+    assert clamp_gpu_layers(24, 47) == 24
+    assert clamp_gpu_layers(99, 47) == 47
+    assert clamp_gpu_layers(0, 47) == 1
+    assert clamp_gpu_layers(8, None) == 8
+    assert clamp_gpu_layers(60, 60) == 60
+    assert clamp_gpu_layers(35, 35) == 35
 
 
 def test_model_block_count_caches(monkeypatch: pytest.MonkeyPatch) -> None:

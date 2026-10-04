@@ -72,6 +72,10 @@ def test_llama_gqa_kv() -> None:
     half = estimate_vram_bytes(profile, num_ctx=8192, num_gpu_percent=50)
     full = estimate_vram_bytes(profile, num_ctx=8192, num_gpu_percent=100)
     assert 0 < half < full
+    by_layer = estimate_vram_bytes(profile, num_ctx=8192, num_gpu=8)
+    assert by_layer == half
+    one = estimate_vram_bytes(profile, num_ctx=8192, num_gpu=1)
+    assert 0 < one < by_layer
 
 
 def test_parse_without_attention_still_has_weights() -> None:

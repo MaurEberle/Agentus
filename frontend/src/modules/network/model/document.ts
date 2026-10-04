@@ -53,6 +53,7 @@ export type LlmNodeData = {
   numCtx?: number;
   numThread?: number;
   numGpuPercent?: number;
+  numGpuLayers?: number;
 };
 
 export type AgentNodeData = {

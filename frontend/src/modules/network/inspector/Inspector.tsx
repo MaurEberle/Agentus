@@ -23,7 +23,7 @@ import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
-import { estimateVramParts, offloadLayers, snapGpuPercent } from '@/modules/network/inspector/vram';
+import { estimateVramParts, resolveGpuLayers } from '@/modules/network/inspector/vram';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -283,42 +283,64 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     baseUrl: String(node.data.baseUrl ?? '') || undefined,
     enabled: Boolean(model),
   });
-  const layers = stats.data?.gpuLayers ?? null;
-  const current = Number(node.data.numGpuPercent);
-  const value = snapGpuPercent(current);
+  const layers = stats.data?.gpuLayers && stats.data.gpuLayers > 0 ? stats.data.gpuLayers : null;
+  const value =
+    layers == null
+      ? 1
+      : resolveGpuLayers(Number(node.data.numGpuLayers), Number(node.data.numGpuPercent), layers);
 
   useEffect(() => {
-    if (readOnly) return;
-    if (node.data.numGpuPercent === value && node.data.numGpu === undefined) return;
-    editorUpdateNodeData(node.id, { numGpuPercent: value, numGpu: undefined });
-  }, [node.data.numGpu, node.data.numGpuPercent, node.id, readOnly, value]);
+    if (readOnly || layers == null) return;
+    if (
+      node.data.numGpuLayers === value &&
+      node.data.numGpuPercent === undefined &&
+      node.data.numGpu === undefined
+    ) {
+      return;
+    }
+    editorUpdateNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
+  }, [layers, node.data.numGpu, node.data.numGpuLayers, node.data.numGpuPercent, node.id, readOnly, value]);
 
-  const offload = layers == null ? null : offloadLayers(value, layers);
+  if (stats.isPending && !stats.data) {
+    return (
+      <Field label={t('network.inspector.llm.numGpu')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuLoading')}</p>
+      </Field>
+    );
+  }
+  if (layers == null) {
+    return (
+      <Field label={t('network.inspector.llm.numGpu')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuUnavailable')}</p>
+      </Field>
+    );
+  }
 
   return (
     <Field label={t('network.inspector.llm.numGpu')}>
       <input
         type="range"
-        min={10}
-        max={100}
-        step={10}
+        min={1}
+        max={layers}
+        step={1}
         value={value}
         disabled={readOnly}
         className="w-full accent-primary"
         onChange={(event) =>
-          editorUpdateNodeData(node.id, { numGpuPercent: Number(event.target.value), numGpu: undefined })
+          editorUpdateNodeData(node.id, {
+            numGpuLayers: Number(event.target.value),
+            numGpuPercent: undefined,
+            numGpu: undefined,
+          })
         }
       />
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>10%</span>
-        <span className="font-medium text-foreground">{value}%</span>
-        <span>100%</span>
+        <span>1</span>
+        <span className="font-medium text-foreground">
+          {t('network.inspector.llm.numGpuLayers', { offload: value, total: layers })}
+        </span>
+        <span>{layers}</span>
       </div>
-      {offload != null && layers != null ? (
-        <p className="text-xs text-muted-foreground">
-          {t('network.inspector.llm.numGpuLayers', { offload, total: layers })}
-        </p>
-      ) : null}
       <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuHint')}</p>
     </Field>
   );
@@ -345,6 +367,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
     overheadBytes: stats.data?.overheadBytes,
     gpuLayers: stats.data?.gpuLayers,
     numCtx: ctx,
+    numGpuLayers: Number(node.data.numGpuLayers),
     numGpuPercent: Number(node.data.numGpuPercent),
   });
   const gpuTotal = resources.data?.gpus?.[0]?.vramTotalBytes ?? 0;
@@ -542,6 +565,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numThread = undefined;
       patch.numGpu = undefined;
       patch.numGpuPercent = undefined;
+      patch.numGpuLayers = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -639,7 +663,13 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           }
           noModelsLabel={t('network.inspector.llm.noModels')}
           onChange={(value) =>
-            editorUpdateNodeData(node.id, { model: value, numCtx: undefined, numGpu: undefined, numGpuPercent: undefined })
+            editorUpdateNodeData(node.id, {
+              model: value,
+              numCtx: undefined,
+              numGpu: undefined,
+              numGpuPercent: undefined,
+              numGpuLayers: undefined,
+            })
           }
         />
         {catalogFailed ? (

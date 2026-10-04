@@ -54,7 +54,7 @@ No node selected: name, description, tags, stats, validation list of the **open*
 
 Node selected:
 
-- **LLM:** provider, model (list from runtime), credential for cloud, context length from model limits (slider locally, dropdown in the cloud), CPU threads per node (default: physical cores), GPU offload 10–100% per node (default: 100%, Ollama receives the layer count, Auto if loading fails), estimated GPU memory from context and offload (warning if it does not fit the card), ping, advanced temperature / max tokens. Cloud without a credential is invalid.
+- **LLM:** provider, model (list from runtime), credential for cloud, context length from model limits (slider locally, dropdown in the cloud), CPU threads per node (default: physical cores), GPU offload one step per layer (default: all layers, Auto if loading fails), estimated GPU memory from context and offload (warning if it does not fit the card), ping, advanced temperature / max tokens. Cloud without a credential is invalid.
 - **Agent:** system prompt and display name. If the agent is on a channel, the inspector explains that tasks come from the orchestrator.
 - **Tool:** kind. HTTP: method and URL, optional credential. Web search: a web-search credential. File access: a root folder, not a drive root; the agent works only under it, and write and delete are switches.
 - **MCP:** an enabled server from **Settings → MCP servers**. Default is all tools on that server; after a probe you can pick a subset. Credentials belong in Settings. The root folder for Filesystem and Excel is on the node; Git keeps its folder in Settings.
