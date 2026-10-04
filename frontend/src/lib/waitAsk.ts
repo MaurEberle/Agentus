@@ -6,7 +6,7 @@ import { useAppStore, type WaitAsk } from '@/store';
 export const WAIT_ASK_ACTION = 'open-run-chat';
 
 let openChat: (() => void) | null = null;
-let monitoringTab: 'chat' | 'log' = 'log';
+let monitoringTab: 'chat' | 'log' = 'chat';
 
 export function registerWaitAskOpen(fn: (() => void) | null) {
   openChat = fn;

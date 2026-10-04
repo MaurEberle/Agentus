@@ -91,7 +91,7 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   chatGenerating: false,
   adapterErrorKey: null,
   lastErrorMessage: null,
-  tab: 'log',
+  tab: 'chat',
   logLevelMin: 'info',
   logQuery: '',
   logNodeId: null,

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
+import { hintMonitoringTab } from '@/lib/waitAsk';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 import { setDevScenario, useLiveMonitoring } from '@/modules/monitoring/live/adapter';
@@ -51,6 +52,10 @@ export function MonitoringModule() {
   useEffect(() => {
     if (!chat && tab === 'chat') setTab('log');
   }, [chat, setTab, tab]);
+
+  useEffect(() => {
+    hintMonitoringTab(tab);
+  }, [tab]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -99,7 +104,7 @@ export function MonitoringModule() {
           {resources || !run.archived ? <ResourcesPanel resources={resources} dimmed={dimmed} /> : null}
           <div className="flex w-full min-w-0 flex-col">
             <Card className={moduleCardClass} style={{ height: panes.chatH }}>
-              <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.log')}>
+              <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.chat')}>
                 {chat ? (
                   <TabButton
                     active={tab === 'chat'}
@@ -191,8 +196,10 @@ function TabButton({
       aria-selected={active}
       aria-label={waiting && waitingLabel ? `${children}. ${waitingLabel}` : undefined}
       className={cn(
-        'rounded-t-md px-3 py-2 text-sm font-medium',
-        active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+        '-mb-px border-b-2 px-3 py-2 text-sm transition-colors',
+        active
+          ? 'border-primary font-semibold text-foreground'
+          : 'border-transparent font-medium text-muted-foreground hover:text-foreground',
       )}
       onClick={onClick}
     >
