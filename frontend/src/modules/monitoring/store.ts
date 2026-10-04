@@ -119,17 +119,23 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   clearLogFilter: () => set({ logNodeId: null }),
 }));
 
+function tabForNewRun(run: RunSnapshot | null): MonitoringTab {
+  return hasChatInput(run?.graph) ? 'chat' : 'log';
+}
+
 function tabForRun(run: RunSnapshot | null, preferred: MonitoringTab): MonitoringTab {
   if (preferred === 'chat' && hasChatInput(run?.graph)) return 'chat';
   return 'log';
 }
 
-function resetForRun(run: RunSnapshot | null): Partial<MonitoringState> {
+function resetForRun(run: RunSnapshot | null, mode: 'start' | 'keep'): Partial<MonitoringState> {
+  const tab = mode === 'start' ? tabForNewRun(run) : tabForRun(run, useMonitoringStore.getState().tab);
+  hintMonitoringTab(tab);
   return {
     logs: [],
     chatMessages: run?.chat?.messages ?? [],
     chatGenerating: Boolean(run?.chat?.generating),
-    tab: tabForRun(run, useMonitoringStore.getState().tab),
+    tab,
     logQuery: '',
     logNodeId: null,
     logErrorsOnly: false,
@@ -156,7 +162,7 @@ export async function hydrateLastRun() {
       run: loaded.run,
       logs: loaded.logs,
       lastErrorMessage: loaded.run.errorMessage ?? now.lastErrorMessage,
-      ...resetForRun(loaded.run),
+      ...resetForRun(loaded.run, 'keep'),
       chatMessages: loaded.run.chat?.messages ?? [],
       chatGenerating: false,
     });
@@ -175,6 +181,11 @@ export function hydrateMonitoring(snapshot: {
   store.setRunId(snapshot.run?.runId ?? store.runId);
   lastService = snapshot.serviceStatus;
   applyWaitAsk(snapshot.run?.archived ? null : snapshot.run?.waitAsk ?? null);
+  const live = snapshot.serviceStatus === 'running' || snapshot.serviceStatus === 'starting';
+  const tab = live
+    ? tabForNewRun(snapshot.run)
+    : tabForRun(snapshot.run, useMonitoringStore.getState().tab);
+  hintMonitoringTab(tab);
   useMonitoringStore.setState({
     run: snapshot.run,
     resources: snapshot.resources,
@@ -183,7 +194,7 @@ export function hydrateMonitoring(snapshot: {
     chatGenerating: Boolean(snapshot.run?.chat?.generating),
     adapterErrorKey: null,
     lastErrorMessage: snapshot.run?.errorMessage ?? null,
-    tab: tabForRun(snapshot.run, useMonitoringStore.getState().tab),
+    tab,
   });
 }
 
@@ -299,7 +310,7 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
     useMonitoringStore.setState({
       run: merged,
       lastErrorMessage: merged.errorMessage ?? current.lastErrorMessage,
-      ...(isNew ? resetForRun(merged) : null),
+      ...(isNew ? resetForRun(merged, 'start') : null),
       chatMessages,
       chatGenerating,
     });

@@ -33,7 +33,7 @@ Sohbet ve günlük, ağ ve etkinliğin üstündedir. Pencere büyüyünce üç k
 
 ## Ağ sohbeti (izleme)
 
-**Sohbet** sekmesi (grafikte sohbet girişi varsa varsayılan): çalışan grafiğin konuşması. Yalnızca çalıştırma sürerken etkin. Orkestratör yoksa sohbet ilk satırı bekler ve zincire verir. Orkestratör varken yalnız onunla konuşursun. Çalıştırma yalnız bir soruda bekler. Ajan metinleri ve iç komutlar burada görünmez. Bir soru zilde ve başlıkta görünür; pencere arka plandaysa görev çubuğu simgesi yanıp söner.
+**Sohbet** sekmesi (çalıştırma başlayınca, grafikte sohbet girişi varsa): çalışan grafiğin konuşması. Yalnızca çalıştırma sürerken etkin. Orkestratör yoksa sohbet ilk satırı bekler ve zincire verir. Orkestratör varken yalnız onunla konuşursun. Çalıştırma yalnız bir soruda bekler. Ajan metinleri ve iç komutlar burada görünmez. Bir soru zilde ve başlıkta görünür; pencere arka plandaysa görev çubuğu simgesi yanıp söner.
 
 Bu **yardım baloncuğu değildir**. Geçmiş ve araçlar ağındır.
 

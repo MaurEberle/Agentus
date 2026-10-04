@@ -33,7 +33,7 @@ Chat y registro están encima de la red y la actividad. Las tres tarjetas mantie
 
 ## Chat de red (supervisión)
 
-Pestaña **Chat** (predeterminada si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano.
+Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano.
 
 Esto **no** es la burbuja de ayuda. Historial y herramientas son los de la red.
 

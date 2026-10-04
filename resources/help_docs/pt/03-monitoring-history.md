@@ -33,7 +33,7 @@ Chat e registo ficam acima da rede e da atividade. Os três cartões mantêm a a
 
 ## Chat da rede (monitorização)
 
-Separador **Chat** (predefinição se o grafo tiver entrada de chat): conversa do grafo em execução. Só ativo enquanto a execução corre. Sem orquestrador o chat espera a primeira linha e passa-a à cadeia. Com orquestrador falas só com ele. A execução espera só numa pergunta. Os textos dos agentes e as ordens internas não aparecem aqui. Uma pergunta aparece no sino e no cabeçalho; o ícone da barra de tarefas pisca se a janela estiver em segundo plano.
+Separador **Chat** (ao iniciar uma execução, se o grafo tiver entrada de chat): conversa do grafo em execução. Só ativo enquanto a execução corre. Sem orquestrador o chat espera a primeira linha e passa-a à cadeia. Com orquestrador falas só com ele. A execução espera só numa pergunta. Os textos dos agentes e as ordens internas não aparecem aqui. Uma pergunta aparece no sino e no cabeçalho; o ícone da barra de tarefas pisca se a janela estiver em segundo plano.
 
 Isto **não** é a bolha de ajuda. Histórico e ferramentas são os da rede.
 

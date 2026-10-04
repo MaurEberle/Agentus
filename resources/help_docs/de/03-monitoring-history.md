@@ -33,7 +33,7 @@ Chat und Log stehen über Netz und Aktivität. Die drei Karten behalten ihre Hö
 
 ## Netz-Chat (Monitoring)
 
-Tab **Chat** (Standard, wenn der Graph einen Chat-Eingang hat): Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht. Bei einer Rückfrage erscheinen ein Hinweis in der Glocke und in der Kopfzeile; das Taskleisten-Symbol blinkt, wenn das Fenster im Hintergrund liegt.
+Tab **Chat** (beim Start eines Laufs, wenn der Graph einen Chat-Eingang hat): Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht. Bei einer Rückfrage erscheinen ein Hinweis in der Glocke und in der Kopfzeile; das Taskleisten-Symbol blinkt, wenn das Fenster im Hintergrund liegt.
 
 Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 
