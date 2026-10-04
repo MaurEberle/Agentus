@@ -62,8 +62,11 @@ _TOOL_ANSWER = (
     "Call a tool only if you still need data you do not have."
 )
 _FINISH_FILES_NOTE = (
-    "A tool agent made no successful write or delete. Check with a tool or call that agent again. "
-    "Finish only when the files exist."
+    "A coding agent made no successful write or delete and returned no text. "
+    "Check with a tool or call that agent again. Finish only when the files exist."
+)
+_REPLY_DECIDE_NOTE = (
+    "A reply already went to the chat. Call an agent, ask, or finish. Do not reply again."
 )
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
 from app.tools.catalog import openai_tools_for_kinds
@@ -921,14 +924,11 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp)
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
+    spoke = False
     while not ctrl.stop_event.is_set():
-        steps += 1
-        if steps > MAX_ORCHESTRATOR_STEPS:
-            _store_memory(ctrl, memory)
-            return _fail_step_limit(ctrl, orch.node_id)
         offered = tool_schemas if memory.allow_own_tools else []
         system = orchestrator_instructions(orch.system_prompt, roster, _function_names(offered))
-        action = _orchestrator_action(ctrl, compiled, system, memory, offered)
+        action = _orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
         memory.clear_anomaly()
         _store_memory(ctrl, memory)
         if action is None:
@@ -945,17 +945,35 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             return "failed"
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
+        emit_log(
+            "info",
+            "run.orchestrator.action",
+            node_id=orch.node_id,
+            payload={"action": kind, "agent": action.get("agent") or ""},
+        )
         if kind == "ask":
+            spoke = False
+            if steps >= MAX_ORCHESTRATOR_STEPS:
+                _store_memory(ctrl, memory)
+                return _fail_step_limit(ctrl, orch.node_id)
             _speak(ctrl, compiled, memory, "ask", text or "…", wait=True)
             reply = _queue_get(ctrl)
             if not reply or ctrl.stop_event.is_set():
                 return "cancelled"
             memory.add_user(reply)
             _clear_human_wait(ctrl, compiled)
+            steps += 1
             continue
         if kind == "call":
-            if _orchestrator_call(ctrl, compiled, memory, names, action, user_text) == "cancelled":
+            spoke = False
+            if steps >= MAX_ORCHESTRATOR_STEPS:
+                _store_memory(ctrl, memory)
+                return _fail_step_limit(ctrl, orch.node_id)
+            outcome = _orchestrator_call(ctrl, compiled, memory, names, action, user_text)
+            if outcome == "cancelled":
                 return "cancelled"
+            if outcome == "ran":
+                steps += 1
             continue
         if kind == "finish":
             if _tool_work_unverified(memory) and not memory.finish_warned:
@@ -971,6 +989,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         if text.strip():
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
+        spoke = True
         continue
     _store_memory(ctrl, memory)
     return "cancelled"
@@ -988,17 +1007,17 @@ def _orchestrator_call(
     agent_id = match_agent(token, names)
     task = (action.get("task") or "").strip() or memory.last_user() or user_text
     if agent_id is None or agent_id not in compiled.agents:
-        memory.add_note(f"Unknown agent: {token}. Use an id from the roster.")
-        return "continue"
+        memory.add_note(_unknown_agent_note(token, names))
+        return "skipped"
     agent = compiled.agents[agent_id]
     has_tools = bool(agent.tool_kinds or agent.mcp)
     source = memory.resolve_source(action.get("source") or "", names)
     if source.ambiguous:
         memory.add_note("Source is ambiguous. Set source to one id: " + ", ".join(source.ambiguous))
-        return "continue"
+        return "skipped"
     if source.missing:
         memory.add_note(f"Unknown source: {source.missing}.")
-        return "continue"
+        return "skipped"
     if source.auto:
         emit_log("info", "run.memory.source", node_id=agent_id)
     name = dict(names).get(agent_id, agent_id)
@@ -1023,10 +1042,10 @@ def _orchestrator_call(
             reuse=continued,
         )
         if text is None:
-            return "cancelled" if ctrl.stop_event.is_set() else "continue"
+            return "cancelled" if ctrl.stop_event.is_set() else "ran"
         if record.error == "prompt does not fit":
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
         if record.error:
             if record.tool_ok and not continued:
                 continued = True
@@ -1043,19 +1062,25 @@ def _orchestrator_call(
                 record.error = ""
                 continue
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
         visible = visible_text(text or "")
         if text and not visible:
             memory.reject(text, "empty")
+        wrote = any(fact.ok and fact.action in {"write", "delete"} for fact in record.files)
         if not visible and not record.tool_ok:
             record.error = "empty result"
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
         record.text = visible
         if has_tools and not record.tool_ok:
             record.error = "no tool used"
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
+        if not visible and not wrote:
+            record.error = "empty result"
+            emit_log("warn", "run.agent.empty", node_id=agent_id)
+            memory.set_anomaly(record)
+            return "ran"
         record.finished = True
         if any(not fact.ok for fact in record.files):
             record.error = "tool failed"
@@ -1063,7 +1088,7 @@ def _orchestrator_call(
         else:
             _publish_progress(ctrl, name, record)
             memory.add_note(f"Status already shown to the user: {name} finished.")
-        return "continue"
+        return "ran"
     return "cancelled"
 
 
@@ -1071,11 +1096,24 @@ def _tool_work_unverified(memory: RunMemory) -> bool:
     called = [rec for rec in memory.records if rec.has_tools]
     if not called:
         return False
-    return not any(
+    if any(
         fact.ok and fact.action in {"write", "delete"}
         for rec in called
         for fact in rec.files
-    )
+    ):
+        return False
+    return any(rec.finished and not (rec.text or "").strip() for rec in called)
+
+
+def _unknown_agent_note(token: str, names: list[tuple[str, str]]) -> str:
+    roster = ", ".join(f"{name} ({agent_id})" for agent_id, name in names)
+    return f"Unknown agent: {token}. Use a name or id from the roster: {roster}."
+
+
+def _source_repair_note(source) -> str:
+    if source.ambiguous:
+        return "Source is ambiguous. Set source to one id: " + ", ".join(source.ambiguous)
+    return f"Unknown source: {source.missing}."
 
 
 def _finish_targets(ctrl: RunController, compiled: CompiledGraph, orch, text: str) -> None:
@@ -1151,6 +1189,9 @@ def _orchestrator_action(
     system: str,
     memory: RunMemory,
     tools: list[dict],
+    names: list[tuple[str, str]],
+    *,
+    block_reply: bool,
 ) -> dict[str, str] | None:
     orch = compiled.orchestrator
     if orch is None:
@@ -1339,7 +1380,50 @@ def _orchestrator_action(
                 messages.append(LlmMessage(role="user", content=_REPAIR_NOTE))
                 continue
             return {"action": "unreadable"}
-        return parse_orchestrator_action(raw)
+        parsed = parse_orchestrator_action(raw)
+        kind = parsed.get("action") or "reply"
+        if kind == "reply" and block_reply:
+            repairs += 1
+            emit_log("info", "run.orchestrator.repair", node_id=orch.node_id, payload={"reason": "reply"})
+            if repairs <= MAX_CONTROL_REPAIRS:
+                memory.add_note(_REPLY_DECIDE_NOTE)
+                messages.append(LlmMessage(role="user", content=_REPLY_DECIDE_NOTE))
+                continue
+            return {"action": "unreadable"}
+        if kind == "call":
+            token = parsed.get("agent") or ""
+            agent_id = match_agent(token, names)
+            if agent_id is None:
+                repairs += 1
+                emit_log(
+                    "warn",
+                    "run.orchestrator.unknownAgent",
+                    node_id=orch.node_id,
+                    payload={"token": token},
+                )
+                if repairs <= MAX_CONTROL_REPAIRS:
+                    note = _unknown_agent_note(token, names)
+                    memory.add_note(note)
+                    messages.append(LlmMessage(role="user", content=note))
+                    continue
+                return {"action": "unreadable"}
+            source = memory.resolve_source(parsed.get("source") or "", names)
+            if source.missing or source.ambiguous:
+                repairs += 1
+                emit_log(
+                    "warn",
+                    "run.orchestrator.unknownSource",
+                    node_id=orch.node_id,
+                    payload={"source": parsed.get("source") or ""},
+                )
+                if repairs <= MAX_CONTROL_REPAIRS:
+                    note = _source_repair_note(source)
+                    memory.add_note(note)
+                    messages.append(LlmMessage(role="user", content=note))
+                    continue
+                return {"action": "unreadable"}
+            parsed["agent"] = agent_id
+        return parsed
     return None
 
 

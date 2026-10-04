@@ -36,21 +36,28 @@ def test_preferred_8k_is_sent_for_a_small_prompt() -> None:
     assert choice.fits is True
 
 
-def test_preferred_is_a_cap_not_a_floor() -> None:
+def test_preferred_is_the_working_size() -> None:
     choice = _choice(need=1000, preferred=20000)
-    assert choice.num_ctx == 8192
+    assert choice.num_ctx == 20000
+    assert choice.context_max == 20000
     assert choice.fits is True
 
 
-def test_huge_preferred_uses_the_smallest_fitting_step() -> None:
+def test_huge_preferred_is_sent() -> None:
     choice = _choice(need=2000, preferred=1_024_000, architecture_max=1_024_000)
-    assert choice.num_ctx == 8192
-    assert choice.context_max == 8192
+    assert choice.num_ctx == 1_024_000
+    assert choice.context_max == 1_024_000
     assert choice.fits is True
 
 
-def test_need_above_preferred_does_not_fit() -> None:
+def test_need_above_preferred_steps_up() -> None:
     choice = _choice(need=9000, preferred=8192)
+    assert choice.fits is True
+    assert choice.num_ctx == 16384
+
+
+def test_need_above_architecture_and_preferred_does_not_fit() -> None:
+    choice = _choice(need=9000, preferred=8192, architecture_max=8192)
     assert choice.fits is False
     assert choice.num_ctx is None
 
@@ -108,16 +115,22 @@ def test_prompt_need_thinking_reserves_8k() -> None:
     assert prompt_need(messages, 16384, thinking=True) == 1 + 16384
 
 
-def test_thinking_raises_8k_window_to_16k() -> None:
-    choice = _choice(need=1000, preferred=262144, architecture_max=262144, thinking=True)
+def test_thinking_without_a_wish_starts_at_16k() -> None:
+    choice = _choice(need=1000, thinking=True)
     assert choice.fits is True
     assert choice.num_ctx == 16384
-    assert choice.context_max == 16384
+
+
+def test_thinking_keeps_the_node_window() -> None:
+    choice = _choice(need=1000, preferred=262144, architecture_max=262144, thinking=True)
+    assert choice.fits is True
+    assert choice.num_ctx == 262144
+    assert choice.context_max == 262144
 
 
 def test_thinking_keeps_a_larger_window() -> None:
     choice = _choice(need=20000, preferred=262144, architecture_max=262144, thinking=True)
-    assert choice.num_ctx == 32768
+    assert choice.num_ctx == 262144
 
 
 def test_thinking_respects_an_8k_cap() -> None:

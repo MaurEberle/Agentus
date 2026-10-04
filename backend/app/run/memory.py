@@ -158,9 +158,9 @@ class RunMemory:
             messages.append(LlmMessage(role=role, content=turn.text))
         if self.records:
             messages.append(LlmMessage(role="user", content="\n".join(self._status(rec) for rec in self.records)))
-        last = self._last_result()
-        if last:
-            messages.append(LlmMessage(role="user", content=last))
+        results = self._results_block()
+        if results:
+            messages.append(LlmMessage(role="user", content=results))
         own = self._own_block()
         if own:
             messages.append(LlmMessage(role="user", content="Your tools:\n" + own))
@@ -259,15 +259,14 @@ class RunMemory:
     def _writers(self) -> list[tuple[str, str, str]]:
         found: dict[str, tuple[str, str, str]] = {}
         for rec in self.records:
-            if rec.has_tools or not rec.text:
-                continue
-            found[rec.agent_id] = (rec.agent_id, rec.name, rec.text)
+            if rec.finished and rec.text:
+                found[rec.agent_id] = (rec.agent_id, rec.name, rec.text)
         return list(found.values())
 
     def _text_of(self, agent_id: str) -> str:
         text = ""
         for rec in self.records:
-            if rec.agent_id == agent_id and not rec.has_tools and rec.text:
+            if rec.agent_id == agent_id and rec.text:
                 text = rec.text
         return text
 
@@ -287,12 +286,21 @@ class RunMemory:
         return "\n".join(lines[-_FILES_SHOWN:])
 
     def _last_result(self) -> str:
-        if not self.records:
-            return ""
-        rec = self.records[-1]
-        if not rec.finished or not rec.text:
-            return ""
-        return f"Result from {rec.name} ({rec.agent_id}):\n{rec.text}"
+        return self._results_block()
+
+    def _results_block(self) -> str:
+        latest: dict[str, AgentRecord] = {}
+        order: list[str] = []
+        for rec in self.records:
+            if rec.finished and rec.text:
+                if rec.agent_id not in latest:
+                    order.append(rec.agent_id)
+                latest[rec.agent_id] = rec
+        parts: list[str] = []
+        for agent_id in order:
+            rec = latest[agent_id]
+            parts.append(f"Result from {rec.name} ({rec.agent_id}):\n{rec.text}")
+        return "\n\n".join(parts)
 
     def _status(self, rec: AgentRecord) -> str:
         state = "finished" if rec.finished and not rec.error else "not finished"

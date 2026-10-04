@@ -43,11 +43,12 @@ After a call you see a status line (name, id, finished, character count, file li
 The run keeps the full course in memory. That course is not in this prompt. Older results stay in memory.
 When an agent fails, the runtime adds one anomaly excerpt for that agent only. The following step does not keep it.
 Call one agent at a time, wait for the result, then decide again. You may call the same agent later with a new task.
+Call by the name or id in the roster below.
 The task field is a short instruction of a few sentences. Do not paste an agent result into it.
-To give an agent's result to another agent, set source to that agent's id. You write the id, not the text. A text agent needs the source as well as a tool agent.
-If a missing detail would change the task, ask. The run waits only on ask.
-You may answer yourself when no agent is needed. A reply is shown in the chat and the run continues. Domain work belongs to the agents.
-A status line without a successful write or delete means no file was written or deleted. A tool agent that returns text without a file line did not write. Call it again or check with your own tools before finish.
+To give an agent's result to another agent, set source to that agent's id or name. You write the id, not the text. The runtime attaches the stored text, including from an agent that has tools.
+If a missing detail would change the task, ask and wait. Do not write that you might ask. If the task is clear, call.
+A reply is shown in the chat. After a reply, the next JSON must be call, ask, or finish. Do not announce a call in a reply; emit the call object. Domain work belongs to the agents.
+A status line without a successful write or delete means no file was written or deleted. An agent that returned text completed that text. File work belongs to agents that write or delete. Before finish, those files must exist.
 Write ask, reply, and finish text in the user's language.
 Use ask for a question that needs an answer. Use reply to speak without waiting. Use finish only when the task is done and the run should stop.
 {tool_block}Reply with one JSON object and no other text. Do not describe the call in a sentence:
@@ -187,12 +188,66 @@ def _action(action: str, text: str, agent: str, task: str, source: str = "") -> 
     return {"action": action, "text": text, "agent": agent, "task": task, "source": source}
 
 
+_ROLE_NOISE = frozenset(
+    {
+        "coder",
+        "manager",
+        "agent",
+        "dev",
+        "developer",
+        "writer",
+        "bot",
+        "node",
+        "role",
+        "specialist",
+        "engineer",
+        "assistant",
+    }
+)
+
+
 def match_agent(token: str, agents: list[tuple[str, str]]) -> str | None:
     raw = token.strip()
     if not raw:
         return None
     folded = raw.casefold()
+    exact: list[str] = []
     for agent_id, name in agents:
         if folded == agent_id.casefold() or (name and folded == name.casefold()):
-            return agent_id
+            exact.append(agent_id)
+    uniq = list(dict.fromkeys(exact))
+    if len(uniq) == 1:
+        return uniq[0]
+    if uniq:
+        return None
+    simplified = _role_key(folded)
+    hits: list[str] = []
+    for agent_id, name in agents:
+        nid = agent_id.casefold()
+        nname = (name or "").casefold()
+        keys = {_role_key(nid), _role_key(nname), nid, nname}
+        if simplified and simplified in keys:
+            hits.append(agent_id)
+            continue
+        if _alias_hit(folded, simplified, nname):
+            hits.append(agent_id)
+    uniq = list(dict.fromkeys(hits))
+    if len(uniq) == 1:
+        return uniq[0]
     return None
+
+
+def _role_key(text: str) -> str:
+    parts = [part for part in re.split(r"[^a-z0-9]+", text.casefold()) if part and part not in _ROLE_NOISE]
+    return " ".join(parts)
+
+
+def _alias_hit(folded: str, simplified: str, name: str) -> bool:
+    if not name or len(name) < 4:
+        return False
+    words = [part for part in re.split(r"[^a-z0-9]+", folded) if part]
+    if name in words:
+        return True
+    if simplified and len(simplified) >= 4 and (name.startswith(simplified) or simplified.startswith(name)):
+        return True
+    return False

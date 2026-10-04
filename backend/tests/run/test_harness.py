@@ -358,18 +358,24 @@ def test_three_prose_calls_fail_without_asking(monkeypatch, api_env) -> None:
 
 def test_orchestrator_step_limit_is_stored(monkeypatch, api_env) -> None:
     monkeypatch.setattr("app.run.harness.MAX_ORCHESTRATOR_STEPS", 2)
+    orch_n = {"n": 0}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
-        return CompletionResult(
-            content='{"action":"reply","text":"weiter"}',
-            model=req.model,
-            finish_reason="stop",
-        )
+        system = req.messages[0].content or ""
+        if "You orchestrate" in system:
+            orch_n["n"] += 1
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
 
     stored = _drive(monkeypatch, _complete)
     assert stored["outcome"] == "failed"
     assert stored["error_message"] == "run.stepLimit"
     assert stored["error_class"] == "orchestrator"
+    assert orch_n["n"] == 3
 
 
 def test_orchestrator_prompt_contains_the_last_agent_result(monkeypatch, api_env) -> None:
@@ -1114,3 +1120,125 @@ def test_second_agent_keeps_only_its_ollama_model(monkeypatch, api_env) -> None:
     assert saver_keeps
     assert all("saver" not in item for item in writer_keeps)
     assert all("writer" not in item for item in saver_keeps)
+
+
+def test_orchestrator_calls_a_role_alias(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "ag":
+            node["data"]["displayName"] = "Senior"
+    started = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" in system:
+            blob = "\n".join(message.content or "" for message in req.messages)
+            if "Result from Senior" in blob or "characters:" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Senior-Coder","task":"scaffold"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        started["n"] += 1
+        return CompletionResult(content="scaffold ok", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert started["n"] == 1
+    assert stored["memory"]["calls"][0]["name"] == "Senior"
+
+
+def test_orchestrator_second_reply_must_call(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+
+    orch_n = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" not in system:
+            return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+        blob = "\n".join(message.content or "" for message in req.messages)
+        orch_n["n"] += 1
+        if "Result from Schreiber" in blob or "characters:" in blob:
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if orch_n["n"] == 1:
+            return CompletionResult(
+                content='{"action":"reply","text":"Ich starte Senior."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if orch_n["n"] == 2:
+            return CompletionResult(
+                content='{"action":"reply","text":"Senior startet T1."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        return CompletionResult(
+            content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Ich starte Senior." in texts
+    assert "Senior startet T1." not in texts
+    assert "Fertig." in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.orchestrator.action" in messages
+
+
+def test_empty_tool_agent_result_is_an_anomaly(monkeypatch, api_env) -> None:
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        return ExecuteResult(ok=True, result={"path": ".", "entries": []})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            if "empty result" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"architektur"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if req.tools:
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(id="c1", name="file_access", arguments='{"action":"list","path":"."}')
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
+    assert stored["outcome"] == "succeeded"
+    assert stored["memory"]["calls"][0]["error"] == "empty result"
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "Schreiber is done." not in texts
+    assert "Fertig." in texts

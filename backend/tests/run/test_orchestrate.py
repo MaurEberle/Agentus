@@ -70,10 +70,10 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "not in this prompt" in text
     assert "status line" in text
     assert "result of that call" in text
-    assert "text agent needs the source" in text
-    assert "did not write" in text
-    assert "waits only on ask" in text
+    assert "stored text" in text
+    assert "Do not write that you might ask" in text
     assert "without waiting" in text
+    assert "Do not announce a call" in text
 
 
 def test_instructions_mention_connected_tools() -> None:
@@ -91,3 +91,18 @@ def test_match_agent_by_id_or_name() -> None:
     assert match_agent("ag", roster) == "ag"
     assert match_agent("schreiber", roster) == "ag"
     assert match_agent("nein", roster) is None
+
+
+def test_match_agent_role_alias() -> None:
+    roster = [
+        ("agent-senior", "Senior"),
+        ("agent-repo", "Repository"),
+        ("agent-arch", "Architekt"),
+        ("agent-pm", "Prompt-Manager"),
+    ]
+    assert match_agent("Senior-Coder", roster) == "agent-senior"
+    assert match_agent("senior coder", roster) == "agent-senior"
+    assert match_agent("Repo-Manager", roster) == "agent-repo"
+    assert match_agent("Architekt", roster) == "agent-arch"
+    assert match_agent("Prompt-Manager", roster) == "agent-pm"
+    assert match_agent("T1", roster) is None

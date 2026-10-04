@@ -58,11 +58,11 @@ def choose_window(
     provider: str,
     thinking: bool = False,
 ) -> WindowChoice:
-    """Pick the smallest step that holds ``need``.
+    """Pick the smallest window that holds ``need`` and honors the node wish.
 
-    ``preferred`` (node numCtx) is a maximum, not a reserved floor. Ollama
-    keeps a raised window for the rest of the run. A prompt above 8192 never
-    stays on an 8192 window. Thinking models start at 16384 when the cap
+    ``preferred`` (node numCtx) is the working size: at least this large, never
+    above the model architecture. The ladder steps up and does not step down.
+    Thinking models start at 16384 when no larger wish is set and the cap
     allows. Cloud providers are not sent ``num_ctx``.
     """
     if provider != "ollama":
@@ -71,14 +71,23 @@ def choose_window(
             return WindowChoice(num_ctx=None, context_max=None, fits=True)
         return WindowChoice(num_ctx=None, context_max=cap, fits=need <= cap)
 
-    cap = architecture_max if isinstance(architecture_max, int) and architecture_max > 0 else _LADDER[-1]
-    if isinstance(preferred, int) and preferred > 0:
-        cap = min(cap, preferred)
+    wish = preferred if isinstance(preferred, int) and preferred > 0 else None
+    if isinstance(architecture_max, int) and architecture_max > 0:
+        cap = architecture_max
+    elif wish is not None:
+        cap = max(wish, _LADDER[-1])
+    else:
+        cap = _LADDER[-1]
+    if wish is not None:
+        wish = min(wish, cap)
     steps = [step for step in _LADDER if step <= cap]
     if cap not in steps:
         steps.append(cap)
         steps.sort()
-    floor = 0
+    if wish is not None and wish not in steps:
+        steps.append(wish)
+        steps.sort()
+    floor = wish or 0
     if isinstance(raised, int) and raised > floor:
         floor = raised
     sticky = max(raised or 0, loaded or 0)
@@ -91,9 +100,9 @@ def choose_window(
         return WindowChoice(num_ctx=None, context_max=loaded or raised, fits=False)
     if sticky >= need and sticky >= floor and sticky > chosen:
         chosen = sticky
-    if thinking:
+    if thinking and (wish is None or wish >= THINKING_MIN_CTX) and chosen < THINKING_MIN_CTX:
         bumped = [step for step in steps if step >= THINKING_MIN_CTX]
-        if bumped and chosen < THINKING_MIN_CTX:
+        if bumped:
             chosen = min(bumped)
     if need > _SMALL and chosen <= _SMALL:
         return WindowChoice(num_ctx=None, context_max=chosen, fits=False)
