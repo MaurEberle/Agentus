@@ -27,7 +27,7 @@ Se houver conhecimento num agente, o início já mostra a execução durante a i
 
 **Atividade:** nós atuais, progresso «passo x de y», tokens entrada/saída, janela de contexto opcional.
 
-Chat e registo ficam acima da rede e da atividade. Os três cartões mantêm a altura quando a janela cresce; arrasta-se o bordo para redimensionar.
+Chat e registo ficam acima da rede e da atividade. Os três cartões mantêm a altura quando a janela cresce; arrasta-se o bordo para redimensionar. Os tamanhos ficam guardados depois de fechar a aplicação.
 
 **Recursos do anfitrião:** CPU, RAM, GPU/VRAM **deste PC**, não só da app. Sem GPU local (típico em execuções na nuvem) aparece um aviso, não um erro.
 

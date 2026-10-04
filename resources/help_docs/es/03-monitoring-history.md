@@ -27,7 +27,7 @@ Si hay conocimiento en un agente, el inicio ya muestra la ejecución mientras se
 
 **Actividad:** nodos actuales, progreso «paso x de y», tokens entrada/salida, ventana de contexto opcional.
 
-Chat y registro están encima de la red y la actividad. Las tres tarjetas mantienen su altura al agrandar la ventana; se arrastra el borde para cambiar el tamaño.
+Chat y registro están encima de la red y la actividad. Las tres tarjetas mantienen su altura al agrandar la ventana; se arrastra el borde para cambiar el tamaño. Los tamaños se conservan al cerrar la aplicación.
 
 **Recursos del anfitrión:** CPU, RAM, GPU/VRAM **de este PC**, no solo de la app. Sin GPU local (típico en ejecuciones en la nube) aparece un aviso, no un error.
 

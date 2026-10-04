@@ -27,7 +27,7 @@ Bir ajana bilgi bağlıysa başlangıç, dizin oluşurken çalıştırmayı gös
 
 **Etkinlik:** geçerli düğümler, «adım x / y» ilerleme, giriş/çıkış belirteçleri, isteğe bağlı bağlam penceresi.
 
-Sohbet ve günlük, ağ ve etkinliğin üstündedir. Pencere büyüyünce üç kart yüksekliğini korur; kenardan sürükleyerek boyut değişir.
+Sohbet ve günlük, ağ ve etkinliğin üstündedir. Pencere büyüyünce üç kart yüksekliğini korur; kenardan sürükleyerek boyut değişir. Ayarlanan boyutlar uygulama kapanınca da kalır.
 
 **Ana bilgisayar kaynakları:** **bu PC’nin** CPU, RAM, GPU/VRAM değerleri, yalnızca uygulama değil. Yerel GPU yoksa (bulut çalıştırmalarında tipik) bir uyarı çıkar, hata değil.
 
