@@ -1445,6 +1445,7 @@
       "orchestrator": {
         "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
         "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
+        "defer": "Nächster Schritt nach der Chat-Nachricht war unlesbar; der Lauf geht weiter.",
         "window": "Der Prompt passt in kein Kontextfenster."
       }
     },

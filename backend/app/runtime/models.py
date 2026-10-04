@@ -55,6 +55,7 @@ class CompletionRequest(ApiModel):
 
 class CompletionResult(ApiModel):
     content: str | None = None
+    reasoning: str | None = None
     tool_calls: list[ToolCall] = Field(default_factory=list, alias="toolCalls")
     finish_reason: str | None = Field(default=None, alias="finishReason")
     usage: CompletionUsage | None = None

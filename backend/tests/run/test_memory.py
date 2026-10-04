@@ -187,3 +187,29 @@ def test_continuation_skips_tool_arguments() -> None:
     assert reused["result"]["bytes"] == 12
     assert reused_file_result(record, "write", "other.txt") is None
     assert reused_file_result(record, "delete", "out.txt") is None
+
+
+def test_file_fact_records_mcp_write() -> None:
+    fact = file_fact(
+        "write_file",
+        {"path": "src/types.ts", "content": "export type X = 1"},
+        {"ok": True},
+        ok=True,
+    )
+    assert fact is not None
+    assert fact.tool == "write_file"
+    assert fact.action == "write"
+    assert fact.path == "src/types.ts"
+    prefixed = file_fact(
+        "mcp__5699a070_5cfc_4c59_ab23_c8d72ff4e014__write_file",
+        {"path": "src/engine.ts"},
+        {},
+        ok=True,
+    )
+    assert prefixed is not None
+    assert prefixed.action == "write"
+    assert prefixed.path == "src/engine.ts"
+    listed = file_fact("directory_tree", {"path": "."}, {}, ok=True)
+    assert listed is not None
+    assert listed.action == "list"
+    assert file_fact("calculator", {}, {"result": 1}, ok=True) is None

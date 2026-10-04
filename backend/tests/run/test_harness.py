@@ -337,23 +337,126 @@ def test_agent_timeout_lets_the_orchestrator_finish(monkeypatch, api_env) -> Non
     assert "is done" not in "\n".join(texts)
 
 
-def test_three_prose_calls_fail_without_asking(monkeypatch, api_env) -> None:
-    prose = 'Call agent-7fef4344 with the full German story under the title "Der Tiger auf dem Bauernhof".'
+def test_three_unreadable_jsons_fail_without_asking(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+
+    garbage = "{nicht-json CALL Senior"
     prompts: list[str] = []
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         prompts.append("\n".join(message.content or "" for message in req.messages))
-        return CompletionResult(content=prose, model=req.model, finish_reason="stop")
+        return CompletionResult(content=garbage, model=req.model, finish_reason="stop")
 
     stored = _drive(monkeypatch, _complete)
     assert stored["outcome"] == "failed"
     assert stored["error_message"] == "run.orchestrator.unreadable"
     texts = [item["content"] for item in (stored["chat"] or [])]
-    assert prose not in "\n".join(texts)
-    assert all(prose not in item for item in prompts)
+    assert garbage not in "\n".join(texts)
+    assert all(garbage not in item for item in prompts)
     rejected = (stored["memory"] or {}).get("rejected") or []
     assert len(rejected) == 3
     assert all(item["reason"] == "unreadable" for item in rejected)
+    repairs = [row for row in list_logs(stored["id"]) if row["message"] == "run.orchestrator.repair"]
+    assert len(repairs) == 3
+    payload = repairs[0].get("payload") or {}
+    assert payload.get("reason") == "unreadable"
+    assert garbage in (payload.get("body") or "")
+
+
+def test_prose_call_runs_the_agent(monkeypatch, api_env) -> None:
+    seen: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" in system:
+            seen.append("orch")
+            if seen.count("orch") == 1:
+                return CompletionResult(
+                    content='Call Schreiber with the full German story under the title "Der Tiger".',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        seen.append("agent")
+        joined = "\n".join(message.content or "" for message in req.messages)
+        assert "Tiger" in joined
+        return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    assert seen.count("agent") == 1
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Call Schreiber" not in "\n".join(texts)
+    assert "Fertig." in texts
+    assert "Schreiber is done." in texts
+
+
+def test_unreadable_after_reply_does_not_fail_the_run(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+
+    orch_n = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" not in system:
+            return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+        orch_n["n"] += 1
+        if orch_n["n"] == 1:
+            return CompletionResult(
+                content='{"action":"reply","text":"Scaffold steht."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if orch_n["n"] <= 4:
+            return CompletionResult(content="{nicht-json", model=req.model, finish_reason="stop")
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Scaffold steht." in texts
+    assert "Fertig." in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.orchestrator.defer" in messages
+    assert "run.orchestrator.unreadable" not in messages
+
+
+def test_reasoning_only_json_calls_the_agent(monkeypatch, api_env) -> None:
+    seen: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" in system:
+            seen.append("orch")
+            if seen.count("orch") == 1:
+                return CompletionResult(
+                    content=None,
+                    reasoning='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        seen.append("agent")
+        return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    assert seen.count("agent") == 1
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+    assert "Schreiber is done." in texts
 
 
 def test_orchestrator_step_limit_is_stored(monkeypatch, api_env) -> None:

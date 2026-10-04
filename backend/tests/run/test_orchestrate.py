@@ -1,4 +1,10 @@
-from app.run.orchestrate import match_agent, orchestrator_instructions, parse_orchestrator_action, reject_reason
+from app.run.orchestrate import (
+    control_source,
+    match_agent,
+    orchestrator_instructions,
+    parse_orchestrator_action,
+    reject_reason,
+)
 
 
 def test_parse_actions() -> None:
@@ -14,6 +20,13 @@ def test_parse_actions() -> None:
     assert parsed["action"] == "call"
     assert parsed["agent"] == "ag"
     assert parsed["task"] == "schreib"
+
+
+def test_control_source_falls_back_to_reasoning() -> None:
+    json_call = '{"action":"call","agent":"ag","task":"schreib"}'
+    assert control_source("", json_call) == json_call
+    assert control_source("Hallo", json_call) == "Hallo"
+    assert control_source("<think>nur nachdenken</think>", json_call) == json_call
 
 
 def test_plain_text_is_a_reply() -> None:
@@ -37,16 +50,43 @@ def test_truncated_call_json_still_calls() -> None:
     assert parsed["task"] == "Schreibe eine freundliche Kindergeschichte."
 
 
-def test_prose_call_is_not_a_call() -> None:
+def test_prose_call_is_a_call() -> None:
     raw = 'Call agent-7fef4344 with the full German story under the title "Der Tiger auf dem Bauernhof".'
     parsed = parse_orchestrator_action(raw)
-    assert parsed["action"] == "reply"
-    assert reject_reason(raw) == "unreadable"
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "agent-7fef4344"
+    assert "Tiger auf dem Bauernhof" in parsed["task"]
+    assert reject_reason(raw) is None
 
 
-def test_think_only_control_is_empty() -> None:
+def test_prose_call_with_comma_is_a_call() -> None:
+    raw = "Call Senior, implement the expression engine."
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "Senior"
+    assert parsed["task"] == "implement the expression engine."
+    assert reject_reason(raw) is None
+
+
+def test_think_only_prose_stays_empty() -> None:
+    assert reject_reason("<think>I should call Senior next.</think>") == "empty"
+
+
+def test_think_only_json_is_a_call() -> None:
     raw = '<think>{"action":"call","agent":"ag","task":"schreib"}</think>'
-    assert reject_reason(raw) == "empty"
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "ag"
+    assert parsed["task"] == "schreib"
+    assert reject_reason(raw) is None
+
+
+def test_visible_reply_beats_hidden_call() -> None:
+    raw = 'Scaffold steht.<think>{"action":"call","agent":"ag","task":"schreib"}</think>'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+    assert "Scaffold steht." in parsed["text"]
+    assert reject_reason(raw) is None
 
 
 def test_empty_ask_is_rejected() -> None:

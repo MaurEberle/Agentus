@@ -1445,6 +1445,7 @@
       "orchestrator": {
         "repair": "Control message was unreadable, trying again.",
         "unreadable": "The orchestrator did not produce a readable next step.",
+        "defer": "The next step after the chat reply was unreadable; the run continues.",
         "window": "The prompt does not fit any context window."
       }
     },

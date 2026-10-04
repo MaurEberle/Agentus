@@ -297,7 +297,27 @@ def test_complete_live_aggregates_stream(monkeypatch: pytest.MonkeyPatch) -> Non
         CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
     )
     assert result.content == "Hello"
+    assert result.reasoning is None
     assert result.finish_reason == "stop"
+
+
+def test_complete_live_keeps_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'data: {"choices":[{"delta":{"reasoning":"{\\"action\\":"}}]}\n\n'
+        b'data: {"choices":[{"delta":{"reasoning":"\\"call\\"}"}}]}\n\n'
+        b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        b"data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+    )
+    assert result.content is None
+    assert result.reasoning == '{"action":"call"}'
 
 
 def test_estimate_token_count() -> None:

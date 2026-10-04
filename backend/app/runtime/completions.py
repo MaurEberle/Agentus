@@ -715,6 +715,7 @@ def complete_live(
         on_progress(out, out / elapsed)
     return CompletionResult(
         content="".join(texts) or None,
+        reasoning="".join(reasons) or None,
         tool_calls=tool_calls,
         finish_reason=finish,
         usage=usage if _usage_nonzero(usage) else None,

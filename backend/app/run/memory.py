@@ -334,21 +334,75 @@ def reused_file_result(record: AgentRecord, action: str, path: str) -> dict | No
     return None
 
 
-def file_fact(name: str, args: dict, result: object, *, ok: bool) -> FileFact | None:
-    if name != "file_access":
-        return None
-    action = str(args.get("action") or "").strip().lower()
-    path = str(args.get("path") or "")
-    size: int | None = None
-    if isinstance(result, dict):
+_MCP_FILE_ACTIONS = {
+    "write_file": "write",
+    "edit_file": "write",
+    "create_or_update_file": "write",
+    "push_files": "write",
+    "create_directory": "mkdir",
+    "read_file": "read",
+    "read_text_file": "read",
+    "read_media_file": "read",
+    "read_multiple_files": "read",
+    "get_file_contents": "read",
+    "list_directory": "list",
+    "list_directory_with_sizes": "list",
+    "directory_tree": "list",
+    "search_files": "list",
+    "get_file_info": "stat",
+    "list_allowed_directories": "list",
+}
+
+
+def _leaf_tool(name: str) -> str:
+    raw = name or ""
+    if raw.startswith("mcp__") and "__" in raw[5:]:
+        return raw.rsplit("__", 1)[-1]
+    return raw
+
+
+def _fact_path(args: dict, result: object) -> str:
+    path = str(args.get("path") or args.get("destination") or "")
+    if not path:
+        paths = args.get("paths")
+        if isinstance(paths, list) and paths:
+            path = str(paths[0] or "")
+    if not path:
+        files = args.get("files")
+        if isinstance(files, list) and files and isinstance(files[0], dict):
+            path = str(files[0].get("path") or "")
+    if not path and isinstance(result, dict):
         inner = result.get("result") if isinstance(result.get("result"), dict) else result
-        if isinstance(inner, dict):
-            if inner.get("path"):
+        if isinstance(inner, dict) and inner.get("path"):
+            path = str(inner.get("path"))
+    return path
+
+
+def _fact_size(result: object) -> int | None:
+    if not isinstance(result, dict):
+        return None
+    inner = result.get("result") if isinstance(result.get("result"), dict) else result
+    if not isinstance(inner, dict):
+        return None
+    raw_size = inner.get("bytes", inner.get("size"))
+    return raw_size if isinstance(raw_size, int) else None
+
+
+def file_fact(name: str, args: dict, result: object, *, ok: bool) -> FileFact | None:
+    leaf = _leaf_tool(name)
+    if leaf == "file_access":
+        action = str(args.get("action") or "").strip().lower()
+        path = str(args.get("path") or "")
+        size = _fact_size(result)
+        if isinstance(result, dict):
+            inner = result.get("result") if isinstance(result.get("result"), dict) else result
+            if isinstance(inner, dict) and inner.get("path"):
                 path = str(inner.get("path"))
-            raw_size = inner.get("bytes", inner.get("size"))
-            if isinstance(raw_size, int):
-                size = raw_size
-    return FileFact(tool=name, action=action, path=path, ok=ok, size=size)
+        return FileFact(tool=leaf, action=action, path=path, ok=ok, size=size)
+    action = _MCP_FILE_ACTIONS.get(leaf)
+    if action is None:
+        return None
+    return FileFact(tool=leaf, action=action, path=_fact_path(args, result), ok=ok, size=_fact_size(result))
 
 
 def visible_text(raw: str) -> str:

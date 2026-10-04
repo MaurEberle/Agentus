@@ -1391,6 +1391,7 @@
       "orchestrator": {
         "repair": "La orden no se pudo leer, nuevo intento.",
         "unreadable": "El orquestador no entregó un paso legible.",
+        "defer": "El siguiente paso tras el mensaje de chat era ilegible; la ejecución continúa.",
         "window": "El prompt no cabe en ninguna ventana de contexto."
       }
     },

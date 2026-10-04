@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-from app.help.visible import strip_think
+from app.help.visible import strip_think, think_inner
 
 _ACTIONS = {"ask", "call", "reply", "finish"}
 _ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish)"')
@@ -66,6 +66,17 @@ Agents:
     return protocol
 
 
+def control_source(content: str, reasoning: str = "") -> str:
+    """Visible text wins. Empty visible falls back to think JSON, then provider reasoning."""
+    raw = content or ""
+    if strip_think(raw).strip():
+        return raw
+    inner = think_inner(raw).strip()
+    if inner and looks_like_control(inner):
+        return raw
+    return (reasoning or "").strip()
+
+
 def parse_orchestrator_action(raw: str) -> dict[str, str]:
     text = _prepare(raw)
     parsed = _parse_json_object(text)
@@ -74,6 +85,9 @@ def parse_orchestrator_action(raw: str) -> dict[str, str]:
     salvaged = _salvage(text)
     if salvaged is not None:
         return salvaged
+    prose = _salvage_prose_call(text)
+    if prose is not None:
+        return prose
     return {"action": "reply", "text": text, "agent": "", "task": "", "source": ""}
 
 
@@ -106,7 +120,13 @@ def looks_like_control(text: str) -> bool:
 
 
 def _prepare(raw: str) -> str:
-    text = strip_think(raw or "").strip()
+    source = raw or ""
+    visible = strip_think(source).strip()
+    if visible:
+        text = visible
+    else:
+        inner = think_inner(source).strip()
+        text = inner if inner and looks_like_control(inner) else ""
     if text.startswith("```"):
         lines = text.splitlines()[1:]
         if lines and lines[-1].strip().startswith("```"):
@@ -133,6 +153,33 @@ def _parse_json_object(text: str) -> dict[str, str] | None:
             str(value.get("source") or ""),
         )
     return None
+
+
+_PROSE_CALL = re.compile(
+    r"^call\s+([^\s,.:;]+)(?:\s+with\s+|\s+to\s+|,\s*|:\s*|\s+[—–-]\s+|\s+)(.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+_PROSE_CALL_BARE = re.compile(r"^call\s+([^\s,.:;]+)\s*$", re.IGNORECASE)
+
+
+def _salvage_prose_call(text: str) -> dict[str, str] | None:
+    folded = (text or "").strip()
+    if not folded.lower().startswith("call "):
+        return None
+    match = _PROSE_CALL.match(folded)
+    if match:
+        agent = match.group(1).strip().strip("\"'`")
+        task = match.group(2).strip()
+        if agent and len(task) <= _MAX_SALVAGED_TASK:
+            return _action("call", "", agent, task, "")
+        return None
+    match = _PROSE_CALL_BARE.match(folded)
+    if not match:
+        return None
+    agent = match.group(1).strip().strip("\"'`")
+    if not agent:
+        return None
+    return _action("call", "", agent, "", "")
 
 
 def _salvage(text: str) -> dict[str, str] | None:

@@ -1,4 +1,4 @@
-from app.help.visible import ThinkStripper, strip_think
+from app.help.visible import ThinkStripper, strip_think, think_inner
 
 
 def test_closed_block_is_removed() -> None:
@@ -30,3 +30,9 @@ def test_dangling_tag_start_is_not_shown() -> None:
 
 def test_text_around_a_block_stays() -> None:
     assert strip_think("Siehe <think>x</think> die Fläche.") == "Siehe  die Fläche."
+
+
+def test_think_inner_returns_hidden_json() -> None:
+    raw = '<think>{"action":"call","agent":"ag","task":"schreib"}</think>'
+    assert think_inner(raw) == '{"action":"call","agent":"ag","task":"schreib"}'
+    assert think_inner("sichtbar") == ""

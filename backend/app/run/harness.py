@@ -35,6 +35,7 @@ from app.run.memory import (
     visible_text,
 )
 from app.run.orchestrate import (
+    control_source,
     match_agent,
     orchestrator_instructions,
     parse_orchestrator_action,
@@ -68,7 +69,34 @@ _FINISH_FILES_NOTE = (
 _REPLY_DECIDE_NOTE = (
     "A reply already went to the chat. Call an agent, ask, or finish. Do not reply again."
 )
+_REPAIR_BODY_CAP = 400
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
+
+
+def _control_raw(result: CompletionResult) -> str:
+    return control_source(result.content or "", result.reasoning or "")
+
+
+def _repair_payload(reason: str, raw: str) -> dict[str, str]:
+    body = (raw or "").strip()
+    if len(body) > _REPAIR_BODY_CAP:
+        body = body[:_REPAIR_BODY_CAP]
+    return {"reason": reason, "body": body}
+
+
+def _log_repair(node_id: str, reason: str, raw: str) -> None:
+    emit_log(
+        "info",
+        "run.orchestrator.repair",
+        node_id=node_id,
+        payload=_repair_payload(reason, raw),
+    )
+
+
+def _give_up(block_reply: bool) -> dict[str, str]:
+    return {"action": "defer" if block_reply else "unreadable"}
+
+
 from app.tools.catalog import openai_tools_for_kinds
 from app.tools import execute as tools_execute
 
@@ -286,11 +314,17 @@ def _dispatch_tool(
     tool_node_id = owner_id
     args = _parse_args(call_arguments)
     mapped = map_openai_tool_name(call_name)
+    leaf = mapped[1] if mapped else call_name
     reused = None
-    if reuse and record is not None and call_name == "file_access":
-        reused = reused_file_result(
-            record, str(args.get("action") or ""), str(args.get("path") or "")
-        )
+    if reuse and record is not None:
+        if leaf == "file_access" or call_name == "file_access":
+            reused = reused_file_result(
+                record, str(args.get("action") or ""), str(args.get("path") or "")
+            )
+        else:
+            preview = file_fact(leaf, args, {}, ok=True)
+            if preview is not None and preview.path:
+                reused = reused_file_result(record, preview.action, preview.path)
     if reused is not None:
         tool_result = reused
     elif mapped and mcp:
@@ -359,7 +393,7 @@ def _dispatch_tool(
         node_id=tool_node_id,
         payload=payload,
     )
-    fact = None if reused is not None else file_fact(call_name, args, tool_result, ok=ok_tool)
+    fact = None if reused is not None else file_fact(leaf, args, tool_result, ok=ok_tool)
     masked = format_tool_result(mask_obj(tool_result))
     if record is not None:
         record_tool(
@@ -958,6 +992,13 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             emit_log("error", "run.orchestrator.unreadable", node_id=orch.node_id)
             _set_node(ctrl, orch.node_id, "error", error="run.orchestrator.unreadable")
             return "failed"
+        if action.get("action") == "defer":
+            emit_log("warn", "run.orchestrator.defer", node_id=orch.node_id)
+            if steps >= MAX_ORCHESTRATOR_STEPS:
+                _store_memory(ctrl, memory)
+                return _fail_step_limit(ctrl, orch.node_id)
+            steps += 1
+            continue
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
         emit_log(
@@ -1378,36 +1419,36 @@ def _orchestrator_action(
         if result.tool_calls:
             offered = []
             memory.allow_own_tools = False
-            raw = result.content or ""
+            raw = _control_raw(result)
             if not raw.strip():
                 repairs += 1
-                emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
+                _log_repair(orch.node_id, "empty", raw)
                 if repairs <= MAX_CONTROL_REPAIRS:
                     memory.add_note(_TOOL_DECIDE_NOTE)
                     messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
                     continue
-                return {"action": "unreadable"}
-        raw = result.content or ""
+                return _give_up(block_reply)
+        raw = _control_raw(result)
         reason = reject_reason(raw)
         if reason:
             memory.reject(raw, reason)
             repairs += 1
-            emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
+            _log_repair(orch.node_id, reason, raw)
             if repairs <= MAX_CONTROL_REPAIRS:
                 memory.add_note(_REPAIR_NOTE)
                 messages.append(LlmMessage(role="user", content=_REPAIR_NOTE))
                 continue
-            return {"action": "unreadable"}
+            return _give_up(block_reply)
         parsed = parse_orchestrator_action(raw)
         kind = parsed.get("action") or "reply"
         if kind == "reply" and block_reply:
             repairs += 1
-            emit_log("info", "run.orchestrator.repair", node_id=orch.node_id, payload={"reason": "reply"})
+            _log_repair(orch.node_id, "reply", raw)
             if repairs <= MAX_CONTROL_REPAIRS:
                 memory.add_note(_REPLY_DECIDE_NOTE)
                 messages.append(LlmMessage(role="user", content=_REPLY_DECIDE_NOTE))
                 continue
-            return {"action": "unreadable"}
+            return _give_up(block_reply)
         if kind == "call":
             token = parsed.get("agent") or ""
             agent_id = match_agent(token, names)
@@ -1424,7 +1465,7 @@ def _orchestrator_action(
                     memory.add_note(note)
                     messages.append(LlmMessage(role="user", content=note))
                     continue
-                return {"action": "unreadable"}
+                return _give_up(block_reply)
             source = memory.resolve_source(parsed.get("source") or "", names)
             if source.missing or source.ambiguous:
                 repairs += 1
@@ -1439,7 +1480,7 @@ def _orchestrator_action(
                     memory.add_note(note)
                     messages.append(LlmMessage(role="user", content=note))
                     continue
-                return {"action": "unreadable"}
+                return _give_up(block_reply)
             parsed["agent"] = agent_id
         return parsed
     return None

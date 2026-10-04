@@ -1391,6 +1391,7 @@
       "orchestrator": {
         "repair": "Commande illisible, nouvel essai.",
         "unreadable": "L’orchestrateur n’a pas fourni d’étape lisible.",
+        "defer": "L’étape suivante après le message de chat était illisible ; l’exécution continue.",
         "window": "L’invite ne tient dans aucune fenêtre de contexte."
       }
     },

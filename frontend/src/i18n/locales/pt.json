@@ -1391,6 +1391,7 @@
       "orchestrator": {
         "repair": "Comando ilegível, nova tentativa.",
         "unreadable": "O orquestrador não entregou um passo legível.",
+        "defer": "O passo seguinte após a mensagem no chat era ilegível; a execução continua.",
         "window": "O prompt não cabe em nenhuma janela de contexto."
       }
     },

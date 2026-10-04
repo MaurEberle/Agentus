@@ -1391,6 +1391,7 @@
       "orchestrator": {
         "repair": "Komut okunamadı, yeniden deneniyor.",
         "unreadable": "Orkestratör okunabilir bir sonraki adım üretmedi.",
+        "defer": "Sohbet iletisinden sonraki adım okunamadı; çalışma devam ediyor.",
         "window": "İstem hiçbir bağlam penceresine sığmıyor."
       }
     },
