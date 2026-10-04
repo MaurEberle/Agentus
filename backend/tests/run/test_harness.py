@@ -1204,6 +1204,8 @@ def test_empty_tool_agent_result_is_an_anomaly(monkeypatch, api_env) -> None:
     from app.runtime.models import ToolCall
     from app.tools.models import ExecuteResult
 
+    agent_n = {"n": 0}
+
     def _execute(kind, *, config, args, secret=None):
         del kind, config, args, secret
         return ExecuteResult(ok=True, result={"path": ".", "entries": []})
@@ -1225,7 +1227,8 @@ def test_empty_tool_agent_result_is_an_anomaly(monkeypatch, api_env) -> None:
                 model=req.model,
                 finish_reason="stop",
             )
-        if req.tools:
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
             return CompletionResult(
                 content=None,
                 tool_calls=[
@@ -1242,3 +1245,118 @@ def test_empty_tool_agent_result_is_an_anomaly(monkeypatch, api_env) -> None:
     texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
     assert "Schreiber is done." not in texts
     assert "Fertig." in texts
+
+
+def test_agent_keeps_going_after_many_successful_tools(monkeypatch, api_env) -> None:
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": f"f{executed['n']}.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            if "f9.txt" in blob or "characters:" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_n["n"] += 1
+        if agent_n["n"] <= 9:
+            n = agent_n["n"]
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id=f"c{n}",
+                        name="file_access",
+                        arguments=f'{{"action":"write","path":"f{n}.txt","content":"x"}}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="ok", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 9
+    assert stored["memory"]["calls"][0]["error"] == ""
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "Fertig." in texts
+
+
+def test_agent_stops_after_ten_failed_tools(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+    prompts: list[str] = []
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=False, result="denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            prompts.append(blob)
+            if "too many tool failures" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_n["n"] += 1
+        assert agent_n["n"] == 1
+        return CompletionResult(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"c{i}",
+                    name="file_access",
+                    arguments=f'{{"action":"write","path":"f{i}.txt","content":"x"}}',
+                )
+                for i in range(10)
+            ],
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 10
+    assert agent_n["n"] == 1
+    assert stored["memory"]["calls"][0]["error"] == "too many tool failures"
+    assert any("too many tool failures" in item for item in prompts)
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "Schreiber is done." not in texts
+    assert "Fertig." in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.agent.toolFailures" in messages

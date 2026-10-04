@@ -1360,7 +1360,8 @@
       },
       "agent": {
         "start": "Ajan başladı",
-        "done": "Ajan bitti"
+        "done": "Ajan bitti",
+        "toolFailures": "Ajan {{failed}} başarısız araç çağrısından sonra durdu"
       },
       "knowledge": "Bilgi araması ({{count}} sonuç)",
       "knowledgeIndex": {

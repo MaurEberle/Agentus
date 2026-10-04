@@ -1360,7 +1360,8 @@
       },
       "agent": {
         "start": "エージェントを開始しました",
-        "done": "エージェントが完了しました"
+        "done": "エージェントが完了しました",
+        "toolFailures": "エージェントは失敗したツール呼び出し {{failed}} 回で停止しました"
       },
       "knowledge": "知識検索（{{count}} 件）",
       "knowledgeIndex": {

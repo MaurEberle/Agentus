@@ -1360,7 +1360,8 @@
       },
       "agent": {
         "start": "智能体已启动",
-        "done": "智能体已完成"
+        "done": "智能体已完成",
+        "toolFailures": "智能体在 {{failed}} 次失败的工具调用后已停止"
       },
       "knowledge": "知识搜索（{{count}} 条结果）",
       "knowledgeIndex": {

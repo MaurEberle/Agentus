@@ -1,6 +1,7 @@
 MAX_AGENT_INVOCATIONS = 32
 MAX_ORCHESTRATOR_STEPS = 24
-MAX_TOOL_ROUNDS = 8
+# Failed tool calls in one agent invocation. Successful calls are unbounded.
+MAX_FAILED_TOOL_CALLS = 10
 # Orchestrator checks files; it does not spend the run on tools instead of agents.
 MAX_ORCHESTRATOR_TOOL_ROUNDS = 2
 # Extra attempts after an unreadable orchestrator decision. Not part of the step cap.

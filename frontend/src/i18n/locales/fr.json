@@ -1360,7 +1360,8 @@
       },
       "agent": {
         "start": "Agent démarré",
-        "done": "Agent terminé"
+        "done": "Agent terminé",
+        "toolFailures": "Agent arrêté après {{failed}} appels d'outil en échec"
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
       "knowledgeIndex": {

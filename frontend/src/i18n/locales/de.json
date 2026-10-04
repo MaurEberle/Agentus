@@ -1414,7 +1414,8 @@
       },
       "agent": {
         "start": "Agent gestartet",
-        "done": "Agent fertig"
+        "done": "Agent fertig",
+        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen beendet"
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {

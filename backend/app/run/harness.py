@@ -18,10 +18,10 @@ from app.run.limits import (
     DEFAULT_TOP_K,
     MAX_AGENT_INVOCATIONS,
     MAX_CONTROL_REPAIRS,
+    MAX_FAILED_TOOL_CALLS,
     MAX_ORCHESTRATOR_STEPS,
     MAX_ORCHESTRATOR_TOOL_ROUNDS,
     MAX_SAME_RETRIES,
-    MAX_TOOL_ROUNDS,
     STREAM_IDLE_TIMEOUT_SEC,
 )
 from app.run.memory import (
@@ -235,7 +235,7 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
         if text is None:
             if ctrl.stop_event.is_set():
                 break
-            continue
+            return "failed" if ctrl.fail_message else "cancelled"
         for target in compiled.agents[node_id].outbound_message:
             pending.append((target, text))
     if ctrl.stop_event.is_set():
@@ -431,13 +431,13 @@ def _agent_turn(
     messages = [LlmMessage(role="system", content=system), *conversation]
     from app.runtime import completions as runtime_completions
 
-    rounds = 0
+    failed_tools = 0
     nudges = 0
     content = ""
     offered = tools
     tool_ok = bool(record is not None and record.tool_ok)
     llm_node_id = agent.llm.node_id or agent_id
-    while rounds <= MAX_TOOL_ROUNDS:
+    while not ctrl.stop_event.is_set():
         choice = _bind_window(agent.llm, messages, memory) if memory is not None else None
         if choice is not None and not choice.fits:
             if record is not None:
@@ -585,8 +585,7 @@ def _agent_turn(
                 "tokensOut": usage.completion_tokens if usage else None,
             },
         )
-        if result.tool_calls and rounds < MAX_TOOL_ROUNDS:
-            rounds += 1
+        if result.tool_calls:
             _set_node(ctrl, agent_id, "running", wait="tool")
             messages.append(
                 LlmMessage(
@@ -609,6 +608,8 @@ def _agent_turn(
                 )
                 if ok_call:
                     tool_ok = True
+                else:
+                    failed_tools += 1
                 messages.append(
                     LlmMessage(
                         role="tool",
@@ -619,8 +620,22 @@ def _agent_turn(
                 )
             if tool_ok:
                 _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
-            if rounds >= MAX_TOOL_ROUNDS:
-                offered = []
+            if failed_tools >= MAX_FAILED_TOOL_CALLS:
+                emit_log(
+                    "warn",
+                    "run.agent.toolFailures",
+                    node_id=agent_id,
+                    payload={"failed": failed_tools},
+                )
+                if record is not None:
+                    record.error = "too many tool failures"
+                    content = result.content or ""
+                    break
+                _set_node(ctrl, agent_id, "error", error="run.agent.toolFailures")
+                ctrl.fail_message = "run.agent.toolFailures"
+                ctrl.fail_class = "unknown"
+                ctrl.last_error_node_id = agent_id
+                return None
             continue
         content = result.content or ""
         if (
@@ -1044,6 +1059,9 @@ def _orchestrator_call(
         if text is None:
             return "cancelled" if ctrl.stop_event.is_set() else "ran"
         if record.error == "prompt does not fit":
+            memory.set_anomaly(record)
+            return "ran"
+        if record.error == "too many tool failures":
             memory.set_anomaly(record)
             return "ran"
         if record.error:
