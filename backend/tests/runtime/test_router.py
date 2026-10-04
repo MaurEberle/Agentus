@@ -125,7 +125,10 @@ def test_model_stats_ollama(client: TestClient, monkeypatch: pytest.MonkeyPatch)
         layers = 16
         weight_bytes = 1_321_098_329
         kv_bytes_per_token = 32768
+        kv_swa_bytes_per_token = None
+        swa_window = None
         overhead_bytes = 288 * 1024 * 1024
+        kv_layers = ()
 
     monkeypatch.setattr("app.http.routers.runtime.vram_profile", lambda *a, **k: _Profile())
     response = client.get("/api/runtime/model-stats", params={"provider": "ollama", "model": "llama3.2:1b"})

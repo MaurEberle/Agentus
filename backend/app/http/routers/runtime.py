@@ -12,6 +12,7 @@ from app.runtime.completions import test_llm
 from app.runtime.errors import RuntimeApiError
 from app.runtime.model_stats import get_model_stats
 from app.runtime.models import (
+    KvLayerOut,
     PingResult,
     RuntimeModelOut,
     RuntimeModelStats,
@@ -24,6 +25,26 @@ from app.runtime.ollama import list_ollama_models, model_block_count, ping_ollam
 from app.runtime.vram_est import vram_profile
 
 router = APIRouter()
+
+
+def _kv_layer_models(profile: object) -> list[KvLayerOut] | None:
+    rows = getattr(profile, "kv_layers", None) or ()
+    out: list[KvLayerOut] = []
+    saw = False
+    for layer in rows:
+        bpt = int(getattr(layer, "bytes_per_token", 0) or 0)
+        window = getattr(layer, "window", None)
+        fixed = int(getattr(layer, "fixed_bytes", 0) or 0)
+        out.append(
+            KvLayerOut(
+                bytes_per_token=bpt,
+                window=window if isinstance(window, int) and window > 0 else None,
+                fixed_bytes=fixed or None,
+            )
+        )
+        if bpt or fixed:
+            saw = True
+    return out if saw else None
 
 
 @router.post("/runtime/ping", response_model=PingResult, response_model_exclude_none=True)
@@ -80,7 +101,10 @@ def runtime_model_stats(
         gpu_layers=gpu_layers,
         weight_bytes=profile.weight_bytes if profile else None,
         kv_bytes_per_token=profile.kv_bytes_per_token if profile else None,
+        kv_swa_bytes_per_token=profile.kv_swa_bytes_per_token if profile else None,
+        swa_window=profile.swa_window if profile else None,
         overhead_bytes=profile.overhead_bytes if profile else None,
+        kv_layers=_kv_layer_models(profile) if profile else None,
     )
 
 

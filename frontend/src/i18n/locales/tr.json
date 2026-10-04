@@ -705,7 +705,10 @@
         "vramParts": "Ağırlık {{weights}} · bağlam {{kv}} · yedek {{overhead}}",
         "vramOver": "GPU belleğine sığmıyor. Bağlamı veya offload’u düşür, yoksa CPU hesaplar.",
         "vramTight": "Sıkışık. İkinci bir model veya dolu bir istem taşabilir.",
-        "vramHint": "Tahmin: Ollama KV önbelleğini tam bağlam uzunluğu için ayırır."
+        "vramFormula": "GPU: {{total}} katmanın son {{on}}. {{full}} × {{perToken}} B/jeton × {{ctx}} jeton.",
+        "vramFormulaMixed": "GPU: {{total}} katmanın son {{on}}. {{full}} küresel katman × {{ctx}} jeton.",
+        "vramFormulaSwa": "GPU: {{total}} katmanın son {{on}}. {{full}} küresel × {{ctx}} jeton, {{swa}} kayar pencere × pencere {{window}}.",
+        "vramHint": "Model verisinden katman katman tahmin. GPU son N katmanı alır. Tam dikkat: tüm bağlam. Kayar pencere: yalnızca penceresi. KV önbelleği f16."
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",

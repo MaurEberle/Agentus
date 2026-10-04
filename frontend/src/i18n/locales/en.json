@@ -759,7 +759,10 @@
         "vramParts": "Weights {{weights}} · context {{kv}} · reserve {{overhead}}",
         "vramOver": "Does not fit in GPU memory. Lower context or offload, or the CPU will do the work.",
         "vramTight": "Tight. A second model or a full prompt may spill.",
-        "vramHint": "Estimate: Ollama allocates the KV cache for the full context length."
+        "vramFormula": "GPU: last {{on}} of {{total}} layers. {{full}} × {{perToken}} B/token × {{ctx}} tokens.",
+        "vramFormulaMixed": "GPU: last {{on}} of {{total}} layers. {{full}} global layers × {{ctx}} tokens.",
+        "vramFormulaSwa": "GPU: last {{on}} of {{total}} layers. {{full}} global × {{ctx}} tokens, {{swa}} sliding-window × window {{window}}.",
+        "vramHint": "Per-layer estimate from model data. The GPU takes the last N layers. Full attention uses the whole context. Sliding-window layers stay at their window. KV cache is f16."
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",

@@ -705,7 +705,10 @@
         "vramParts": "Poids {{weights}} · contexte {{kv}} · réserve {{overhead}}",
         "vramOver": "Ne tient pas dans la mémoire GPU. Réduis le contexte ou l’offload, sinon le CPU calcule.",
         "vramTight": "Serré. Un second modèle ou un prompt plein peut déborder.",
-        "vramHint": "Estimation : Ollama réserve le cache KV pour toute la longueur de contexte."
+        "vramFormula": "GPU : {{on}} dernières couches sur {{total}}. {{full}} × {{perToken}} o/jeton × {{ctx}} jetons.",
+        "vramFormulaMixed": "GPU : {{on}} dernières couches sur {{total}}. {{full}} couches globales × {{ctx}} jetons.",
+        "vramFormulaSwa": "GPU : {{on}} dernières couches sur {{total}}. {{full}} globales × {{ctx}} jetons, {{swa}} fenêtre glissante × fenêtre {{window}}.",
+        "vramHint": "Estimation couche par couche d’après le modèle. Le GPU prend les N dernières couches. Attention complète : tout le contexte. Fenêtre glissante : seulement sa fenêtre. Cache KV en f16."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",

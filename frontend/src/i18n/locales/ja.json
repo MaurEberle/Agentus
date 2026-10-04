@@ -705,7 +705,10 @@
         "vramParts": "重み {{weights}} · コンテキスト {{kv}} · 予備 {{overhead}}",
         "vramOver": "GPU メモリに収まりません。コンテキストかオフロードを下げないと CPU が計算します。",
         "vramTight": "余裕がありません。別モデルや満杯のプロンプトで溢れることがあります。",
-        "vramHint": "見積もり: Ollama はコンテキスト長全体分の KV キャッシュを確保します。"
+        "vramFormula": "GPU: 最後 {{on}} / {{total}} 層。{{full}} × {{perToken}} B/トークン × {{ctx}} トークン。",
+        "vramFormulaMixed": "GPU: 最後 {{on}} / {{total}} 層。グローバル {{full}} 層 × {{ctx}} トークン。",
+        "vramFormulaSwa": "GPU: 最後 {{on}} / {{total}} 層。グローバル {{full}} × {{ctx}} トークン、スライディング {{swa}} × 窓 {{window}}。",
+        "vramHint": "モデルデータから層ごとに見積もります。GPU は末尾の N 層です。フルアテンションはコンテキスト全体。スライディングウィンドウ層はその窓だけ。KV キャッシュは f16 です。"
       },
       "agent": {
         "hint": "LLM、ツール、知識はエッジから届く。オーケストレーターがなければメッセージがエージェントを起動する。",

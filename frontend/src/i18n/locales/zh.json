@@ -705,7 +705,10 @@
         "vramParts": "权重 {{weights}} · 上下文 {{kv}} · 预留 {{overhead}}",
         "vramOver": "超出 GPU 显存。降低上下文或卸载比例，否则会落到 CPU。",
         "vramTight": "很紧。第二个模型或满上下文可能溢出。",
-        "vramHint": "估算：Ollama 会按完整上下文长度预留 KV 缓存。"
+        "vramFormula": "GPU：最后 {{on}} / {{total}} 层。{{full}} × {{perToken}} 字节/token × {{ctx}} token。",
+        "vramFormulaMixed": "GPU：最后 {{on}} / {{total}} 层。{{full}} 个全局层 × {{ctx}} token。",
+        "vramFormulaSwa": "GPU：最后 {{on}} / {{total}} 层。{{full}} 个全局 × {{ctx}} token，{{swa}} 个滑动窗口 × 窗口 {{window}}。",
+        "vramHint": "按层根据模型数据估算。GPU 使用最后 N 层。全局注意力使用完整上下文；滑动窗口层只用其窗口。KV 缓存为 f16。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",

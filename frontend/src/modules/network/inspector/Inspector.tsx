@@ -364,12 +364,42 @@ function VramNeedField({ node }: { node: GraphNode }) {
   const parts = estimateVramParts({
     weightBytes: stats.data?.weightBytes,
     kvBytesPerToken: stats.data?.kvBytesPerToken,
+    kvSwaBytesPerToken: stats.data?.kvSwaBytesPerToken,
+    swaWindow: stats.data?.swaWindow,
     overheadBytes: stats.data?.overheadBytes,
     gpuLayers: stats.data?.gpuLayers,
+    kvLayers: stats.data?.kvLayers,
     numCtx: ctx,
     numGpuLayers: Number(node.data.numGpuLayers),
     numGpuPercent: Number(node.data.numGpuPercent),
   });
+  const count = (value: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+  const formula =
+    parts && (parts.fullLayers > 0 || parts.swaLayers > 0)
+      ? parts.swaLayers > 0
+        ? t('network.inspector.llm.vramFormulaSwa', {
+            on: parts.gpuOn,
+            total: parts.gpuTotal,
+            full: parts.fullLayers,
+            swa: parts.swaLayers,
+            ctx: count(ctx),
+            window: count(parts.swaWindow),
+          })
+        : parts.fullBytesPerToken > 0
+          ? t('network.inspector.llm.vramFormula', {
+              on: parts.gpuOn,
+              total: parts.gpuTotal,
+              full: parts.fullLayers,
+              perToken: count(parts.fullBytesPerToken),
+              ctx: count(ctx),
+            })
+          : t('network.inspector.llm.vramFormulaMixed', {
+              on: parts.gpuOn,
+              total: parts.gpuTotal,
+              full: parts.fullLayers,
+              ctx: count(ctx),
+            })
+      : null;
   const gpuTotal = resources.data?.gpus?.[0]?.vramTotalBytes ?? 0;
   const percent = parts && gpuTotal > 0 ? (parts.total / gpuTotal) * 100 : 0;
   const over = Boolean(parts && gpuTotal > 0 && parts.total > gpuTotal);
@@ -428,6 +458,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
           overhead: formatBytes(parts.overhead, locale),
         })}
       </p>
+      {formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
       {over ? <p className="text-xs text-destructive">{t('network.inspector.llm.vramOver')}</p> : null}
       {tight ? <p className="text-xs text-warning">{t('network.inspector.llm.vramTight')}</p> : null}
       <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramHint')}</p>

@@ -106,6 +106,12 @@ class RuntimeModelsResponse(ApiModel):
     message_key: str | None = Field(default=None, alias="messageKey")
 
 
+class KvLayerOut(ApiModel):
+    bytes_per_token: int = Field(default=0, alias="bytesPerToken")
+    window: int | None = None
+    fixed_bytes: int | None = Field(default=None, alias="fixedBytes")
+
+
 class RuntimeModelStats(ApiModel):
     context_min: int | None = Field(default=None, alias="contextMin")
     context_max: int | None = Field(default=None, alias="contextMax")
@@ -113,5 +119,8 @@ class RuntimeModelStats(ApiModel):
     gpu_layers: int | None = Field(default=None, alias="gpuLayers")
     weight_bytes: int | None = Field(default=None, alias="weightBytes")
     kv_bytes_per_token: int | None = Field(default=None, alias="kvBytesPerToken")
+    kv_swa_bytes_per_token: int | None = Field(default=None, alias="kvSwaBytesPerToken")
+    swa_window: int | None = Field(default=None, alias="swaWindow")
     overhead_bytes: int | None = Field(default=None, alias="overheadBytes")
+    kv_layers: list[KvLayerOut] | None = Field(default=None, alias="kvLayers")
     message_key: str | None = Field(default=None, alias="messageKey")
