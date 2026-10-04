@@ -1142,6 +1142,12 @@
       "chat": "Chat",
       "log": "Log"
     },
+    "resize": {
+      "chatHeight": "Resize chat and log height",
+      "graphHeight": "Resize network height",
+      "activityHeight": "Resize activity height",
+      "splitWidth": "Resize network and activity width"
+    },
     "chat": {
       "placeholder": "Message…",
       "send": "Send",

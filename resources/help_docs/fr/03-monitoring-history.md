@@ -27,6 +27,8 @@ Si des connaissances sont reliées à un agent, le démarrage montre déjà l’
 
 **Activité :** nœuds actuels, progression « étape x sur y », jetons entrée/sortie, fenêtre de contexte optionnelle.
 
+Chat et journal sont au-dessus du réseau et de l’activité. Les trois cartes gardent leur hauteur si la fenêtre grandit ; on change la taille en tirant le bord.
+
 **Ressources de l’hôte :** CPU, RAM, GPU/VRAM **de ce PC**, pas seulement de l’app. Sans GPU local (typique des exécutions cloud) : un avis, pas une erreur.
 
 ## Chat réseau (supervision)

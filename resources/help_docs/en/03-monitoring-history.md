@@ -27,6 +27,8 @@ If knowledge hangs off an agent, start already shows the run while indexing: the
 
 **Activity:** current nodes, progress “step x of y”, tokens in/out, optional context window.
 
+Chat and log sit above the network and activity. The three cards keep their height when the window grows; drag the edges between them to resize.
+
 **Host resources:** CPU, RAM, GPU/VRAM of **this PC**, not only the app process. No local GPU (typical for cloud runs) is a hint, not an error.
 
 ## Run chat (monitoring)

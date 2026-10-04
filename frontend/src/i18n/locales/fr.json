@@ -1088,6 +1088,12 @@
       "chat": "Chat",
       "log": "Journal"
     },
+    "resize": {
+      "chatHeight": "Modifier la hauteur du chat et du journal",
+      "graphHeight": "Modifier la hauteur du réseau",
+      "activityHeight": "Modifier la hauteur de l’activité",
+      "splitWidth": "Modifier la largeur du réseau et de l’activité"
+    },
     "chat": {
       "placeholder": "Message…",
       "send": "Envoyer",

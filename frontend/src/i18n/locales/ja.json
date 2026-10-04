@@ -1088,6 +1088,12 @@
       "chat": "チャット",
       "log": "ログ"
     },
+    "resize": {
+      "chatHeight": "チャットとログの高さを変更",
+      "graphHeight": "ネットワークの高さを変更",
+      "activityHeight": "アクティビティの高さを変更",
+      "splitWidth": "ネットワークとアクティビティの幅を変更"
+    },
     "chat": {
       "placeholder": "メッセージ…",
       "send": "送信",

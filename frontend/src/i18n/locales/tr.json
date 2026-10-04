@@ -1088,6 +1088,12 @@
       "chat": "Sohbet",
       "log": "Günlük"
     },
+    "resize": {
+      "chatHeight": "Sohbet ve günlük yüksekliğini değiştir",
+      "graphHeight": "Ağ yüksekliğini değiştir",
+      "activityHeight": "Etkinlik yüksekliğini değiştir",
+      "splitWidth": "Ağ ve etkinlik genişliğini değiştir"
+    },
     "chat": {
       "placeholder": "İleti…",
       "send": "Gönder",

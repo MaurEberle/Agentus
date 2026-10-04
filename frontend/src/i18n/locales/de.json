@@ -1142,6 +1142,12 @@
       "chat": "Chat",
       "log": "Log"
     },
+    "resize": {
+      "chatHeight": "Höhe von Chat und Log ändern",
+      "graphHeight": "Höhe des Netzes ändern",
+      "activityHeight": "Höhe der Aktivität ändern",
+      "splitWidth": "Breite von Netz und Aktivität ändern"
+    },
     "chat": {
       "placeholder": "Nachricht…",
       "send": "Senden",

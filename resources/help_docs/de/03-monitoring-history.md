@@ -27,6 +27,8 @@ Hängt Wissen an einem Agenten, zeigt der Start den Lauf schon während der Indi
 
 **Aktivität:** aktuelle Knoten, Fortschritt „Schritt x von y“, Token ein/aus, optional Kontextfenster.
 
+Chat und Log stehen über Netz und Aktivität. Die drei Karten behalten ihre Höhe, wenn das Fenster größer wird; am Rand dazwischen lässt sich die Größe ziehen.
+
 **Host-Ressourcen:** CPU, RAM, GPU/VRAM **dieses PCs**, nicht nur der App. Ohne lokale GPU (typisch bei Cloud-Läufen) erscheint ein Hinweis, kein Fehler.
 
 ## Netz-Chat (Monitoring)

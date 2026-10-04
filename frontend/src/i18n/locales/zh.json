@@ -1088,6 +1088,12 @@
       "chat": "聊天",
       "log": "日志"
     },
+    "resize": {
+      "chatHeight": "调整聊天和日志高度",
+      "graphHeight": "调整网络高度",
+      "activityHeight": "调整活动高度",
+      "splitWidth": "调整网络和活动宽度"
+    },
     "chat": {
       "placeholder": "消息…",
       "send": "发送",

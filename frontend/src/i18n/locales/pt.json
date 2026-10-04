@@ -1088,6 +1088,12 @@
       "chat": "Chat",
       "log": "Registo"
     },
+    "resize": {
+      "chatHeight": "Alterar a altura do chat e do registo",
+      "graphHeight": "Alterar a altura da rede",
+      "activityHeight": "Alterar a altura da atividade",
+      "splitWidth": "Alterar a largura da rede e da atividade"
+    },
     "chat": {
       "placeholder": "Mensagem…",
       "send": "Enviar",
