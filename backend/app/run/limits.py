@@ -1,5 +1,10 @@
 MAX_AGENT_INVOCATIONS = 32
+# Agent dispatches (call). think / reply / ask / repair do not count.
 MAX_ORCHESTRATOR_STEPS = 24
+# Consecutive think turns without call/ask/finish. Runaway guard, not a work budget.
+MAX_ORCHESTRATOR_THINKS = 64
+# Consecutive think turns in one agent invocation without a tool call or result.
+MAX_AGENT_THINKS = 64
 # Failed tool calls in one agent invocation. Successful calls are unbounded.
 MAX_FAILED_TOOL_CALLS = 10
 # Orchestrator checks files; it does not spend the run on tools instead of agents.

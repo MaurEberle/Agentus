@@ -55,12 +55,12 @@ No node selected: name, description, tags, stats, validation list of the **open*
 Node selected:
 
 - **LLM:** provider, model (list from runtime), credential for cloud, context length from model limits (slider locally, dropdown in the cloud), CPU threads per node (default: physical cores), GPU offload one step per layer (default: all layers, Auto if loading fails), estimated GPU memory from context and offload (last N layers on the GPU; full attention over the whole context, sliding-window layers only for their window; warning if it does not fit the card), ping, advanced temperature / max tokens. Cloud without a credential is invalid.
-- **Agent:** system prompt and display name. If the agent is on a channel, the inspector explains that tasks come from the orchestrator.
+- **Agent:** system prompt and display name. If the agent is on a channel, the inspector explains that tasks come from the orchestrator. It may think internally before writing or calling a tool; think is not shown in the chat.
 - **Tool:** kind. HTTP: method and URL, optional credential. Web search: a web-search credential. File access: a root folder, not a drive root; the agent works only under it, and write and delete are switches.
 - **MCP:** an enabled server from **Settings → MCP servers**. Default is all tools on that server; after a probe you can pick a subset. Credentials belong in Settings. The root folder for Filesystem and Excel is on the node; Git keeps its folder in Settings.
 - **Knowledge:** source folder (folder picker), embedding provider (Ollama, OpenAI, or Gemini) and embedding model, topK, score threshold, **Reindex**. The folder may sit anywhere except a drive or system root and the help corpus. Indexed types: Markdown, text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV, and source code. Images and legacy .doc/.xls are skipped. Cloud embeddings need a credential. The index belongs to this network, not to help.
 - **Chat:** placeholder, start text, “input required”.
-- **Orchestrator:** system prompt. The model chooses a follow-up, one agent task on that agent’s channel, a reply, or finish. The agents are the channels, not a second list. It calls connected tools itself. Only a follow-up question waits for you.
+- **Orchestrator:** system prompt. The model chooses think, a follow-up, one agent task on that agent’s channel, a reply, or finish. Think is not shown in the chat and does not count against the step limit; only agent calls count. The agents are the channels, not a second list. It calls connected tools itself. Only a follow-up question waits for you.
 - **Router:** named branches (name + condition) and default.
 
 Secrets do **not** belong in inspector text or graph export — only the choice of a credential.

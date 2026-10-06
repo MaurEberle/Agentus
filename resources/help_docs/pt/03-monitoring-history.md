@@ -21,7 +21,7 @@ Sem execução ativa a página mostra a **última execução guardada** para lei
 
 Cabeçalho: ID da execução, hora de início, duração, passo aproximado, LLM ativos (local vs nuvem).
 
-**Rede (só leitura):** o mesmo grafo, cores de nó segundo o estado (inativo, à espera, a correr, pronto, erro). Um clique num nó filtra registo/atividade e abre o detalhe (função, estado, espera LLM/ferramenta/entrada/índice, última mensagem, tokens). Sem editar, sem segundo editor.
+**Rede (só leitura):** o mesmo grafo, cores de nó segundo o estado (inativo, à espera, a correr, pronto, erro). Um clique num nó filtra registo/atividade e abre o detalhe (função, estado, espera LLM/ferramenta/entrada/índice/pensar, última mensagem, tokens). Sem editar, sem segundo editor.
 
 Se houver conhecimento num agente, o início já mostra a execução durante a indexação: o nó de conhecimento corre com motivo de espera **índice**, o registo nomeia a leitura e os embeddings, e o cabeçalho e o painel mostram o mesmo nome. Um índice já atual é saltado e só anotado como atual.
 

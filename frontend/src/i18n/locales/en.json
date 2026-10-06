@@ -1121,7 +1121,8 @@
       "tool": "Tool",
       "human": "Input",
       "index": "Index",
-      "knowledge": "Knowledge"
+      "knowledge": "Knowledge",
+      "thinking": "Thinking"
     },
     "activity": {
       "title": "Activity",
@@ -1434,7 +1435,9 @@
       "agent": {
         "start": "Agent started",
         "done": "Agent finished",
-        "toolFailures": "Agent stopped after {{failed}} failed tool calls"
+        "toolFailures": "Agent stopped after {{failed}} failed tool calls",
+        "think": "Agent is thinking (not a result).",
+        "thinkLimit": "Too many think turns without a result."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {
@@ -1465,6 +1468,8 @@
         "repair": "Control message was unreadable, trying again.",
         "unreadable": "The orchestrator did not produce a readable next step.",
         "defer": "The next step after the chat reply was unreadable; the run continues.",
+        "think": "Orchestrator is thinking (does not count as a step).",
+        "thinkLimit": "Too many think turns without a call.",
         "window": "The prompt does not fit any context window."
       }
     },

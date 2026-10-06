@@ -17,9 +17,11 @@ from app.run.limits import (
     DEFAULT_SCORE_MIN,
     DEFAULT_TOP_K,
     MAX_AGENT_INVOCATIONS,
+    MAX_AGENT_THINKS,
     MAX_CONTROL_REPAIRS,
     MAX_FAILED_TOOL_CALLS,
     MAX_ORCHESTRATOR_STEPS,
+    MAX_ORCHESTRATOR_THINKS,
     MAX_ORCHESTRATOR_TOOL_ROUNDS,
     MAX_SAME_RETRIES,
     STREAM_IDLE_TIMEOUT_SEC,
@@ -35,6 +37,7 @@ from app.run.memory import (
     visible_text,
 )
 from app.run.orchestrate import (
+    agent_think_text,
     control_source,
     match_agent,
     orchestrator_instructions,
@@ -56,8 +59,18 @@ _REPAIR_NOTE = (
     "Reply with one JSON object only. The task must be a short instruction. Do not paste an agent result."
 )
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
-_TOOL_USE_NOTE = "You have tools. Call a tool. A sentence without a tool call is discarded."
-_TOOL_REQUIRED = "You must call a tool with a tool call. A sentence without a tool call is discarded."
+_AGENT_THINK = (
+    "You may think first with {\"action\":\"think\",\"text\":\"...\"} or a think block. "
+    "Think is not the result and is not shown to the user. After think, call a tool if you have tools, "
+    "or write the visible result."
+)
+_TOOL_USE_NOTE = (
+    "You have tools. Call a tool, or think first. A final sentence without a tool call is discarded."
+)
+_TOOL_REQUIRED = (
+    "You must call a tool with a tool call. You may think first. "
+    "A final sentence without a tool call is discarded."
+)
 _TOOL_ANSWER = (
     "You already have tool results. Answer the user from those results. "
     "Call a tool only if you still need data you do not have."
@@ -65,9 +78,6 @@ _TOOL_ANSWER = (
 _FINISH_FILES_NOTE = (
     "A coding agent made no successful write or delete and returned no text. "
     "Check with a tool or call that agent again. Finish only when the files exist."
-)
-_REPLY_DECIDE_NOTE = (
-    "A reply already went to the chat. Call an agent, ask, or finish. Do not reply again."
 )
 _REPAIR_BODY_CAP = 400
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
@@ -94,7 +104,7 @@ def _log_repair(node_id: str, reason: str, raw: str) -> None:
 
 
 def _give_up(block_reply: bool) -> dict[str, str]:
-    return {"action": "defer" if block_reply else "unreadable"}
+    return {"action": "think" if block_reply else "unreadable"}
 
 
 from app.tools.catalog import openai_tools_for_kinds
@@ -214,6 +224,15 @@ def _fail_step_limit(ctrl: RunController, node_id: str) -> str:
     ctrl.fail_class = "orchestrator"
     ctrl.last_error_node_id = node_id
     _set_node(ctrl, node_id, "error", error="run.stepLimit")
+    return "failed"
+
+
+def _fail_think_limit(ctrl: RunController, node_id: str) -> str:
+    emit_log("error", "run.orchestrator.thinkLimit", node_id=node_id)
+    ctrl.fail_message = "run.orchestrator.thinkLimit"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error="run.orchestrator.thinkLimit")
     return "failed"
 
 
@@ -455,6 +474,7 @@ def _agent_turn(
         )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
+    system = system + "\n\n" + _AGENT_THINK
     tools = _tool_schemas(agent.tool_kinds, agent.mcp)
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
@@ -467,6 +487,7 @@ def _agent_turn(
 
     failed_tools = 0
     nudges = 0
+    thinks = 0
     content = ""
     offered = tools
     tool_ok = bool(record is not None and record.tool_ok)
@@ -620,6 +641,7 @@ def _agent_turn(
             },
         )
         if result.tool_calls:
+            thinks = 0
             _set_node(ctrl, agent_id, "running", wait="tool")
             messages.append(
                 LlmMessage(
@@ -670,6 +692,30 @@ def _agent_turn(
                 ctrl.fail_class = "unknown"
                 ctrl.last_error_node_id = agent_id
                 return None
+            continue
+        think_body = agent_think_text(result.content or "", result.reasoning or "")
+        if think_body is not None:
+            thinks += 1
+            emit_log(
+                "info",
+                "run.agent.think",
+                node_id=agent_id,
+                payload={"text": think_body[:400]},
+            )
+            _set_node(ctrl, agent_id, "running", wait="thinking")
+            if thinks >= MAX_AGENT_THINKS:
+                emit_log("warn", "run.agent.thinkLimit", node_id=agent_id, payload={"thinks": thinks})
+                if record is not None:
+                    record.error = "too many thinks"
+                    content = ""
+                    break
+                _set_node(ctrl, agent_id, "error", error="run.agent.thinkLimit")
+                ctrl.fail_message = "run.agent.thinkLimit"
+                ctrl.fail_class = "unknown"
+                ctrl.last_error_node_id = agent_id
+                return None
+            stored = (result.content or "").strip() or '{"action":"think"}'
+            messages.append(LlmMessage(role="assistant", content=stored))
             continue
         content = result.content or ""
         if (
@@ -979,6 +1025,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp)
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
+    thinks = 0
     spoke = False
     while not ctrl.stop_event.is_set():
         offered = tool_schemas if memory.allow_own_tools else []
@@ -998,12 +1045,19 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             emit_log("error", "run.orchestrator.unreadable", node_id=orch.node_id)
             _set_node(ctrl, orch.node_id, "error", error="run.orchestrator.unreadable")
             return "failed"
-        if action.get("action") == "defer":
-            emit_log("warn", "run.orchestrator.defer", node_id=orch.node_id)
-            if steps >= MAX_ORCHESTRATOR_STEPS:
+        if action.get("action") in {"think", "defer"}:
+            body = (action.get("text") or "").strip()
+            emit_log(
+                "info",
+                "run.orchestrator.think",
+                node_id=orch.node_id,
+                payload={"text": body[:400]},
+            )
+            _set_node(ctrl, orch.node_id, "running", wait="thinking")
+            thinks += 1
+            if thinks >= MAX_ORCHESTRATOR_THINKS:
                 _store_memory(ctrl, memory)
-                return _fail_step_limit(ctrl, orch.node_id)
-            steps += 1
+                return _fail_think_limit(ctrl, orch.node_id)
             continue
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
@@ -1015,19 +1069,17 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         )
         if kind == "ask":
             spoke = False
-            if steps >= MAX_ORCHESTRATOR_STEPS:
-                _store_memory(ctrl, memory)
-                return _fail_step_limit(ctrl, orch.node_id)
+            thinks = 0
             _speak(ctrl, compiled, memory, "ask", text or "…", wait=True)
             reply = _queue_get(ctrl)
             if not reply or ctrl.stop_event.is_set():
                 return "cancelled"
             memory.add_user(reply)
             _clear_human_wait(ctrl, compiled)
-            steps += 1
             continue
         if kind == "call":
             spoke = False
+            thinks = 0
             if steps >= MAX_ORCHESTRATOR_STEPS:
                 _store_memory(ctrl, memory)
                 return _fail_step_limit(ctrl, orch.node_id)
@@ -1052,6 +1104,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
         spoke = True
+        thinks = 0
         continue
     _store_memory(ctrl, memory)
     return "cancelled"
@@ -1109,6 +1162,9 @@ def _orchestrator_call(
             memory.set_anomaly(record)
             return "ran"
         if record.error == "too many tool failures":
+            memory.set_anomaly(record)
+            return "ran"
+        if record.error == "too many thinks":
             memory.set_anomaly(record)
             return "ran"
         if record.error:
@@ -1448,13 +1504,13 @@ def _orchestrator_action(
         parsed = parse_orchestrator_action(raw)
         kind = parsed.get("action") or "reply"
         if kind == "reply" and block_reply:
-            repairs += 1
-            _log_repair(orch.node_id, "reply", raw)
-            if repairs <= MAX_CONTROL_REPAIRS:
-                memory.add_note(_REPLY_DECIDE_NOTE)
-                messages.append(LlmMessage(role="user", content=_REPLY_DECIDE_NOTE))
-                continue
-            return _give_up(block_reply)
+            return {
+                "action": "think",
+                "text": parsed.get("text") or "",
+                "agent": "",
+                "task": "",
+                "source": "",
+            }
         if kind == "call":
             token = parsed.get("agent") or ""
             agent_id = match_agent(token, names)

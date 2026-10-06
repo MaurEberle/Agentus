@@ -1121,7 +1121,8 @@
       "tool": "Werkzeug",
       "human": "Eingabe",
       "index": "Index",
-      "knowledge": "Wissen"
+      "knowledge": "Wissen",
+      "thinking": "Denken"
     },
     "activity": {
       "title": "Aktivität",
@@ -1434,7 +1435,9 @@
       "agent": {
         "start": "Agent gestartet",
         "done": "Agent fertig",
-        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen beendet"
+        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen beendet",
+        "think": "Agent denkt (kein Ergebnis).",
+        "thinkLimit": "Zu viele Denkschritte ohne Ergebnis."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {
@@ -1465,6 +1468,8 @@
         "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
         "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
         "defer": "Nächster Schritt nach der Chat-Nachricht war unlesbar; der Lauf geht weiter.",
+        "think": "Orchestrator denkt (zählt nicht als Schritt).",
+        "thinkLimit": "Zu viele Denkschritte ohne Auftrag.",
         "window": "Der Prompt passt in kein Kontextfenster."
       }
     },

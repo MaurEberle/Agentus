@@ -21,7 +21,7 @@ Sin ejecución activa la página muestra la **última ejecución guardada** para
 
 Cabecera: ID de ejecución, hora de inicio, duración, paso aproximado, LLM activos (local frente a nube).
 
-**Red (solo lectura):** el mismo grafo, colores de nodo según estado (inactivo, en espera, en curso, listo, error). Un clic en un nodo filtra registro/actividad y abre el detalle (rol, estado, espera LLM/herramienta/entrada/índice, último mensaje, tokens). Sin editar, sin segundo editor.
+**Red (solo lectura):** el mismo grafo, colores de nodo según estado (inactivo, en espera, en curso, listo, error). Un clic en un nodo filtra registro/actividad y abre el detalle (rol, estado, espera LLM/herramienta/entrada/índice/pensando, último mensaje, tokens). Sin editar, sin segundo editor.
 
 Si hay conocimiento en un agente, el inicio ya muestra la ejecución mientras se indexa: el nodo de conocimiento corre con motivo de espera **índice**, el registro nombra la lectura y los embeddings, y el encabezado y el panel muestran el mismo nombre. Un índice ya actual se omite y solo se anota como actual.
 

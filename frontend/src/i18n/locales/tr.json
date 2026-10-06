@@ -1067,7 +1067,8 @@
       "tool": "Araç",
       "human": "Giriş",
       "index": "Dizin",
-      "knowledge": "Bilgi"
+      "knowledge": "Bilgi",
+      "thinking": "Düşünme"
     },
     "activity": {
       "title": "Etkinlik",
@@ -1380,7 +1381,9 @@
       "agent": {
         "start": "Ajan başladı",
         "done": "Ajan bitti",
-        "toolFailures": "Ajan {{failed}} başarısız araç çağrısından sonra durdu"
+        "toolFailures": "Ajan {{failed}} başarısız araç çağrısından sonra durdu",
+        "think": "Ajan düşünüyor (sonuç değil).",
+        "thinkLimit": "Sonuçsuz çok fazla düşünme adımı."
       },
       "knowledge": "Bilgi araması ({{count}} sonuç)",
       "knowledgeIndex": {
@@ -1411,6 +1414,8 @@
         "repair": "Komut okunamadı, yeniden deneniyor.",
         "unreadable": "Orkestratör okunabilir bir sonraki adım üretmedi.",
         "defer": "Sohbet iletisinden sonraki adım okunamadı; çalışma devam ediyor.",
+        "think": "Orkestratör düşünüyor (adım sayılmaz).",
+        "thinkLimit": "Çağrı olmadan çok fazla düşünme turu.",
         "window": "İstem hiçbir bağlam penceresine sığmıyor."
       }
     },

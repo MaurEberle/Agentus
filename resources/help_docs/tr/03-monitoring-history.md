@@ -21,7 +21,7 @@ Etkin çalıştırma yoksa sayfa **son kaydedilen çalıştırmayı** okumak iç
 
 Üst alan: çalıştırma kimliği, başlangıç saati, süre, kaba adım, etkin LLM’ler (yerel / bulut).
 
-**Ağ (yalnızca okuma):** aynı grafik, duruma göre düğüm renkleri (boşta, bekliyor, çalışıyor, bitti, hata). Bir düğüme tıklamak günlük/etkinliği süzgeçler ve ayrıntıyı açar (rol, durum, LLM/araç/giriş/dizin bekleniyor, son ileti, belirteç). Düzenleme yok, ikinci düzenleyici yok.
+**Ağ (yalnızca okuma):** aynı grafik, duruma göre düğüm renkleri (boşta, bekliyor, çalışıyor, bitti, hata). Bir düğüme tıklamak günlük/etkinliği süzgeçler ve ayrıntıyı açar (rol, durum, LLM/araç/giriş/dizin/düşünme bekleniyor, son ileti, belirteç). Düzenleme yok, ikinci düzenleyici yok.
 
 Bir ajana bilgi bağlıysa başlangıç, dizin oluşurken çalıştırmayı gösterir: bilgi düğümü bekleme nedeni **dizin** ile çalışır, günlük okumayı ve gömmeleri adlandırır, başlık ve kontrol paneli aynı adı gösterir. Zaten güncel bir dizin atlanır ve yalnızca güncel diye not edilir.
 

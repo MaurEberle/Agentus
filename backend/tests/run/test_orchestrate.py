@@ -1,4 +1,5 @@
 from app.run.orchestrate import (
+    agent_think_text,
     control_source,
     match_agent,
     orchestrator_instructions,
@@ -15,6 +16,14 @@ def test_parse_actions() -> None:
         "task": "",
         "source": "",
     }
+    assert parse_orchestrator_action('{"action":"think","text":"Senior als Nächstes."}') == {
+        "action": "think",
+        "text": "Senior als Nächstes.",
+        "agent": "",
+        "task": "",
+        "source": "",
+    }
+    assert reject_reason('{"action":"think","text":""}') is None
     fenced = '```json\n{"action":"call","agent":"ag","task":"schreib"}\n```'
     parsed = parse_orchestrator_action(fenced)
     assert parsed["action"] == "call"
@@ -114,6 +123,8 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "Do not write that you might ask" in text
     assert "without waiting" in text
     assert "Do not announce a call" in text
+    assert "Use think for internal planning" in text
+    assert '{"action":"think","text":"..."}' in text
 
 
 def test_instructions_mention_connected_tools() -> None:
@@ -131,6 +142,18 @@ def test_match_agent_by_id_or_name() -> None:
     assert match_agent("ag", roster) == "ag"
     assert match_agent("schreiber", roster) == "ag"
     assert match_agent("nein", roster) is None
+
+
+def test_agent_think_text() -> None:
+    assert agent_think_text('{"action":"think","text":"plan write"}') == "plan write"
+    assert agent_think_text('{"action":"think","text":""}') == "…"
+    assert agent_think_text("<think>planning the write</think>") == "planning the write"
+    assert agent_think_text("", "native reasoning") == "native reasoning"
+    assert agent_think_text("Ich habe gespeichert.") is None
+    assert agent_think_text("Ich habe gespeichert.", "hidden") is None
+    assert agent_think_text("<think>hidden</think>sichtbar") is None
+    assert agent_think_text("") is None
+    assert agent_think_text("   ") is None
 
 
 def test_match_agent_role_alias() -> None:

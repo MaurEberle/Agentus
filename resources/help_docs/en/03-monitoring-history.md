@@ -21,7 +21,7 @@ With no active run the page shows the **last saved run** for reading (graph, act
 
 Header: run id, start time, duration, rough step, active LLMs (local vs cloud).
 
-**Network (read-only):** the same graph, node colours by status (idle, waiting, running, done, error). Click a node to filter log/activity and open node detail (role, status, waiting on LLM/tool/input/index, last message, tokens). No editing, no second editor.
+**Network (read-only):** the same graph, node colours by status (idle, waiting, running, done, error). Click a node to filter log/activity and open node detail (role, status, waiting on LLM/tool/input/index/thinking, last message, tokens). No editing, no second editor.
 
 If knowledge hangs off an agent, start already shows the run while indexing: the knowledge node runs with wait reason **index**, the log names reading and embeddings, and the header and dashboard show the same name. An index that is already current is skipped and only noted as current.
 

@@ -21,7 +21,7 @@ Sans exécution active, la page montre la **dernière exécution enregistrée** 
 
 En-tête : ID d’exécution, heure de début, durée, étape approximative, LLM actifs (local vs cloud).
 
-**Réseau (lecture seule) :** le même graphe, couleurs de nœuds selon l’état (inactif, en attente, en cours, terminé, erreur). Un clic sur un nœud filtre journal/activité et ouvre le détail (rôle, statut, attente LLM/outil/saisie/index, dernier message, jetons). Pas d’édition, pas de second éditeur.
+**Réseau (lecture seule) :** le même graphe, couleurs de nœuds selon l’état (inactif, en attente, en cours, terminé, erreur). Un clic sur un nœud filtre journal/activité et ouvre le détail (rôle, statut, attente LLM/outil/saisie/index/réflexion, dernier message, jetons). Pas d’édition, pas de second éditeur.
 
 Si des connaissances sont reliées à un agent, le démarrage montre déjà l’exécution pendant l’indexation : le nœud tourne avec le motif d’attente **index**, le journal nomme la lecture et les embeddings, et l’en-tête comme le tableau de bord montrent le même nom. Un index déjà à jour est sauté et seulement noté comme actuel.
 

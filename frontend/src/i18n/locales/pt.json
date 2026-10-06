@@ -1067,7 +1067,8 @@
       "tool": "Ferramenta",
       "human": "Entrada",
       "index": "Índice",
-      "knowledge": "Conhecimento"
+      "knowledge": "Conhecimento",
+      "thinking": "A pensar"
     },
     "activity": {
       "title": "Atividade",
@@ -1380,7 +1381,9 @@
       "agent": {
         "start": "Agente iniciado",
         "done": "Agente concluído",
-        "toolFailures": "Agente interrompido após {{failed}} chamadas de ferramenta com falha"
+        "toolFailures": "Agente interrompido após {{failed}} chamadas de ferramenta com falha",
+        "think": "O agente está a pensar (não é um resultado).",
+        "thinkLimit": "Demasiados passos de pensamento sem resultado."
       },
       "knowledge": "Pesquisa de conhecimento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1411,6 +1414,8 @@
         "repair": "Comando ilegível, nova tentativa.",
         "unreadable": "O orquestrador não entregou um passo legível.",
         "defer": "O passo seguinte após a mensagem no chat era ilegível; a execução continua.",
+        "think": "O orquestrador está a pensar (não conta como passo).",
+        "thinkLimit": "Demasiados turnos de pensamento sem uma chamada.",
         "window": "O prompt não cabe em nenhuma janela de contexto."
       }
     },

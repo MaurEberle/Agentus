@@ -7,8 +7,8 @@ import re
 
 from app.help.visible import strip_think, think_inner
 
-_ACTIONS = {"ask", "call", "reply", "finish"}
-_ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish)"')
+_ACTIONS = {"ask", "call", "reply", "finish", "think"}
+_ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish|think)"')
 # A salvaged task longer than this is a pasted document with broken quotes, not an instruction.
 _MAX_SALVAGED_TASK = 500
 
@@ -47,11 +47,13 @@ Call by the name or id in the roster below.
 The task field is a short instruction of a few sentences. Do not paste an agent result into it.
 To give an agent's result to another agent, set source to that agent's id or name. You write the id, not the text. The runtime attaches the stored text, including from an agent that has tools.
 If a missing detail would change the task, ask and wait. Do not write that you might ask. If the task is clear, call.
-A reply is shown in the chat. After a reply, the next JSON must be call, ask, or finish. Do not announce a call in a reply; emit the call object. Domain work belongs to the agents.
+A reply is shown in the chat. After a reply, the next JSON must be think, call, ask, or finish. Do not reply again. Do not announce a call in a reply; emit the call object. Domain work belongs to the agents.
+Use think for internal planning. Think is not shown in the chat and does not count against the step limit. After think, emit call, ask, or finish.
 A status line without a successful write or delete means no file was written or deleted. An agent that returned text completed that text. File work belongs to agents that write or delete. Before finish, those files must exist.
-Write ask, reply, and finish text in the user's language.
+Write ask, reply, think, and finish text in the user's language.
 Use ask for a question that needs an answer. Use reply to speak without waiting. Use finish only when the task is done and the run should stop.
 {tool_block}Reply with one JSON object and no other text. Do not describe the call in a sentence:
+{{"action":"think","text":"..."}}
 {{"action":"ask","text":"..."}}
 {{"action":"call","agent":"<id or name>","task":"...","source":""}}
 {{"action":"reply","text":"..."}}
@@ -75,6 +77,23 @@ def control_source(content: str, reasoning: str = "") -> str:
     if inner and looks_like_control(inner):
         return raw
     return (reasoning or "").strip()
+
+
+def agent_think_text(content: str, reasoning: str = "") -> str | None:
+    """Internal planning for an agent turn. Visible prose is a result, not think."""
+    raw = content or ""
+    visible = strip_think(raw).strip()
+    blob = visible or think_inner(raw).strip() or (reasoning or "").strip()
+    if blob:
+        parsed = parse_orchestrator_action(blob)
+        if parsed.get("action") == "think":
+            return (parsed.get("text") or "").strip() or "…"
+    if visible:
+        return None
+    hidden = think_inner(raw).strip() or (reasoning or "").strip()
+    if hidden:
+        return hidden
+    return None
 
 
 def parse_orchestrator_action(raw: str) -> dict[str, str]:
@@ -103,6 +122,8 @@ def reject_reason(raw: str) -> str | None:
         return "unreadable"
     if kind in {"ask", "reply", "finish"} and not (action.get("text") or "").strip():
         return "empty"
+    if kind == "think":
+        return None
     if kind == "call" and not (action.get("agent") or "").strip():
         return "empty"
     return None

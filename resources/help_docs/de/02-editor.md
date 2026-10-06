@@ -55,12 +55,12 @@ Kein Knoten gewählt: Name, Beschreibung, Tags, Statistik, Validierungsliste des
 Knoten gewählt:
 
 - **LLM:** Provider, Modell (Liste von der Runtime), Zugang für Cloud, Kontextlänge nach Modellgrenzen (Slider lokal, Auswahl Cloud), CPU-Threads pro Knoten (Standard: physische Kerne), GPU-Offload pro Layer (Standard: alle Layer, bei Ladefehler Auto), geschätzter GPU-Speicher aus Kontext und Offload (letzte N Schichten auf der GPU; volle Attention über den ganzen Kontext, Sliding-Window-Schichten nur über ihr Fenster; Warnung, wenn er nicht auf die Karte passt), Ping, erweitert Temperature / max. Tokens. Cloud ohne Zugang ist ungültig.
-- **Agent:** Systemprompt und Anzeigename. Hängt der Agent an einem Kanal, erklärt der Inspector, dass Aufträge vom Orchestrator kommen.
+- **Agent:** Systemprompt und Anzeigename. Hängt der Agent an einem Kanal, erklärt der Inspector, dass Aufträge vom Orchestrator kommen. Vor dem Ergebnis darf er intern denken; das erscheint nicht im Chat.
 - **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Websuche: Zugang der Art Websuche. Dateizugriff: Wurzelordner, nicht die Laufwerkswurzel; der Agent arbeitet nur darunter, Schreiben und Löschen sind Schalter.
 - **MCP:** aktiver Server aus **Einstellungen → MCP-Server**. Standard alle Tools dieses Servers; nach einer Probe kannst du eine Teilmenge wählen. Zugänge gehören in die Einstellungen. Der Wurzelordner für Dateisystem und Excel steht am Knoten; Git behält den Ordner in den Einstellungen.
 - **Wissen:** Quellenordner (Ordnerwahl), Embedding-Provider (Ollama, OpenAI oder Gemini) und Embedding-Modell, topK, Score-Schwelle, **Index neu**. Der Ordner darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Gelesen werden Markdown, Text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV und Quellcode. Bilder und alte .doc/.xls nicht. Cloud-Embeddings brauchen einen Zugang. Der Index gehört zu diesem Netz, nicht zur Hilfe.
 - **Chat:** Platzhalter, Starttext, Schalter „Eingabe nötig“.
-- **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Die Agenten sind die Kanäle, keine zweite Liste. Angeschlossene Werkzeuge ruft er selbst auf. Nur die Rückfrage wartet auf den Nutzer.
+- **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Denken, Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Denken erscheint nicht im Chat und zählt nicht gegen das Schrittlimit; nur Agentenaufträge zählen. Die Agenten sind die Kanäle, keine zweite Liste. Angeschlossene Werkzeuge ruft er selbst auf. Nur die Rückfrage wartet auf den Nutzer.
 - **Router:** benannte Zweige (Name + Bedingung) und Standard.
 
 Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Export — nur die Wahl eines Zugangs.
