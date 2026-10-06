@@ -715,7 +715,7 @@ def _agent_turn(
                 ctrl.last_error_node_id = agent_id
                 return None
             stored = (result.content or "").strip() or '{"action":"think"}'
-            messages.append(LlmMessage(role="assistant", content=stored))
+            _store_think(messages, stored)
             continue
         content = result.content or ""
         if (
@@ -750,6 +750,15 @@ def _agent_turn(
             conversation.append(LlmMessage(role="assistant", content=text))
             content = text
     return content
+
+
+def _store_think(messages: list[LlmMessage], stored: str) -> None:
+    """Keep a single trailing assistant think. Gemma/Ollama reject two at the end."""
+    think = LlmMessage(role="assistant", content=stored)
+    if messages and messages[-1].role == "assistant" and not messages[-1].tool_calls:
+        messages[-1] = think
+        return
+    messages.append(think)
 
 
 def _set_system_note(messages: list[LlmMessage], old: str, new: str) -> None:

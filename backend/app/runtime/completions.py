@@ -191,6 +191,12 @@ def _ollama_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
             if name:
                 item["tool_name"] = name
         out.append(item)
+    while (
+        len(out) >= 2
+        and out[-1].get("role") == "assistant"
+        and out[-2].get("role") == "assistant"
+    ):
+        out.pop(-2)
     return out
 
 

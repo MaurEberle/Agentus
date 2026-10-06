@@ -1629,6 +1629,92 @@ def test_tool_agent_think_then_calls(monkeypatch, api_env) -> None:
     assert "run.agent.thinkLimit" not in messages
 
 
+def test_agent_two_thinks_then_calls(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+    trailing: list[int] = []
+
+    def _trailing_assistants(messages) -> int:
+        n = 0
+        for message in reversed(messages):
+            if message.role == "assistant":
+                n += 1
+                continue
+            break
+        return n
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 3})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            if "a.txt" in blob or "characters:" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            return CompletionResult(
+                content='{"action":"think","text":"first plan"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if agent_n["n"] == 2:
+            assert _trailing_assistants(req.messages) == 1
+            return CompletionResult(
+                content='{"action":"think","text":"second plan"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if agent_n["n"] == 3:
+            n = _trailing_assistants(req.messages)
+            trailing.append(n)
+            assert n == 1
+            think_msgs = [m.content for m in req.messages if m.role == "assistant"]
+            assert think_msgs[-1] == '{"action":"think","text":"second plan"}'
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="c1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="ok", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 1
+    assert agent_n["n"] == 4
+    assert trailing == [1]
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "first plan" not in texts
+    assert "second plan" not in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.think") == 2
+
+
 def test_agent_think_from_reasoning_then_calls(monkeypatch, api_env) -> None:
     from app.db.runs import list_logs
     from app.runtime.models import ToolCall

@@ -680,6 +680,18 @@ def _tool_followup_messages(*, call_id: str = "", tool_name: str | None = None) 
     ]
 
 
+def test_ollama_messages_keeps_one_trailing_assistant() -> None:
+    messages = _ollama_messages(
+        [
+            ChatMessage(role="user", content="speichere"),
+            ChatMessage(role="assistant", content='{"action":"think","text":"first"}'),
+            ChatMessage(role="assistant", content='{"action":"think","text":"second"}'),
+        ]
+    )
+    assert [item["role"] for item in messages] == ["user", "assistant"]
+    assert messages[-1]["content"] == '{"action":"think","text":"second"}'
+
+
 def test_ollama_tool_followup_uses_native_shape() -> None:
     messages = _ollama_messages(_tool_followup_messages())
     assistant = messages[1]
