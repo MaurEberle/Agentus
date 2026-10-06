@@ -1391,6 +1391,7 @@
         "start": "智能体已启动",
         "done": "智能体已完成",
         "toolFailures": "智能体在 {{failed}} 次失败的工具调用后已停止",
+        "toolJson": "已丢弃工具调用 {{name}}：JSON 参数不完整（第 {{attempt}}/{{max}} 次）。",
         "think": "智能体正在思考（不是结果）。",
         "thinkLimit": "思考轮次过多且没有结果。",
         "thinkLoop": "1 token 思考循环在 {{thinks}} 步后已停止。"

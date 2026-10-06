@@ -1391,6 +1391,7 @@
         "start": "Agent démarré",
         "done": "Agent terminé",
         "toolFailures": "Agent arrêté après {{failed}} appels d'outil en échec",
+        "toolJson": "Appel d’outil {{name}} ignoré : arguments JSON incomplets (essai {{attempt}}/{{max}}).",
         "think": "L’agent réfléchit (ce n’est pas un résultat).",
         "thinkLimit": "Trop d’étapes de réflexion sans résultat.",
         "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes."

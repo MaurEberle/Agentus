@@ -11,6 +11,8 @@ MAX_SHORT_THINKS = 5
 MAX_CLOSING_THINK_TOKENS = 16
 # Failed tool calls in one agent invocation. Successful calls are unbounded.
 MAX_FAILED_TOOL_CALLS = 10
+# Same truncated tool-call JSON from llama-server. Then it counts as one failed tool.
+MAX_TOOL_JSON_ATTEMPTS = 3
 # Orchestrator checks files; it does not spend the run on tools instead of agents.
 MAX_ORCHESTRATOR_TOOL_ROUNDS = 2
 # Extra attempts after an unreadable orchestrator decision. Not part of the step cap.

@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+import re
+
 import httpx
+
+_TRUNCATED_TOOL_MARKERS = (
+    "invalid tool call arguments",
+    "failed to parse tool call arguments",
+)
+_TRUNCATED_TOOL_NAME = re.compile(r'for "([^"]+)"')
 
 ERROR_DETAIL_MAX = 500
 
@@ -85,3 +93,18 @@ def response_json(response: httpx.Response) -> object:
 
 def is_transport_error(exc: BaseException) -> bool:
     return isinstance(exc, (httpx.TimeoutException, httpx.NetworkError))
+
+
+def truncated_tool_call_name(exc: BaseException) -> str | None:
+    """Tool name when llama-server rejected truncated tool-call JSON."""
+    if not isinstance(exc, RuntimeApiError):
+        return None
+    if exc.error_key != "runtime.badRequest":
+        return None
+    detail = exc.detail or ""
+    lowered = detail.lower()
+    if not any(marker in lowered for marker in _TRUNCATED_TOOL_MARKERS):
+        if "tool call" not in lowered or "unexpected end" not in lowered:
+            return None
+    match = _TRUNCATED_TOOL_NAME.search(detail)
+    return match.group(1) if match else "tool"

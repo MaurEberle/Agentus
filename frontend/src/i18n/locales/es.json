@@ -1391,6 +1391,7 @@
         "start": "Agente iniciado",
         "done": "Agente finalizado",
         "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas",
+        "toolJson": "Llamada a herramienta {{name}} descartada: argumentos JSON incompletos (intento {{attempt}}/{{max}}).",
         "think": "El agente está pensando (no es un resultado).",
         "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",
         "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos."

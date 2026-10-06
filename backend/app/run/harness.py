@@ -22,6 +22,7 @@ from app.run.limits import (
     MAX_SHORT_THINKS,
     MAX_CONTROL_REPAIRS,
     MAX_FAILED_TOOL_CALLS,
+    MAX_TOOL_JSON_ATTEMPTS,
     MAX_ORCHESTRATOR_STEPS,
     MAX_ORCHESTRATOR_THINKS,
     MAX_ORCHESTRATOR_TOOL_ROUNDS,
@@ -51,7 +52,7 @@ from app.mcp.payload import format_tool_result
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
 from app.run.models import ActivityDag, ActivityTokens, ChatMessage, NodeLlmInfo, NodeRuntime, NodeTokens
 from app.run.sse import publish
-from app.runtime.errors import RuntimeApiError
+from app.runtime.errors import RuntimeApiError, truncated_tool_call_name
 from app.runtime.completions import estimate_token_count
 from app.runtime.models import ChatMessage as LlmMessage
 from app.runtime.models import CompletionRequest, CompletionResult
@@ -80,6 +81,10 @@ _TOOL_ANSWER = (
 _TOOL_DONE = (
     "The file work succeeded. Write a short visible result for the next node. "
     "Do not think again."
+)
+_TOOL_JSON_NOTE = (
+    "The last tool call to {name} was discarded: its JSON arguments were truncated. "
+    "Call the tool again with complete JSON. Prefer a smaller write if the file is large."
 )
 _FINISH_FILES_NOTE = (
     "A coding agent made no successful write or delete and returned no text. "
@@ -443,6 +448,29 @@ def _dispatch_tool(
     return masked, fact, ok_tool
 
 
+def _agent_tool_failures_stop(
+    ctrl: RunController,
+    agent_id: str,
+    record: AgentRecord | None,
+    failed_tools: int,
+) -> bool:
+    """True: orchestrator anomaly (break). False: abort the linear turn."""
+    emit_log(
+        "warn",
+        "run.agent.toolFailures",
+        node_id=agent_id,
+        payload={"failed": failed_tools},
+    )
+    if record is not None:
+        record.error = "too many tool failures"
+        return True
+    _set_node(ctrl, agent_id, "error", error="run.agent.toolFailures")
+    ctrl.fail_message = "run.agent.toolFailures"
+    ctrl.fail_class = "unknown"
+    ctrl.last_error_node_id = agent_id
+    return False
+
+
 def _agent_turn(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -501,6 +529,7 @@ def _agent_turn(
     from app.runtime import completions as runtime_completions
 
     failed_tools = 0
+    json_attempts = 0
     nudges = 0
     thinks = 0
     short_thinks = 0
@@ -574,11 +603,68 @@ def _agent_turn(
                     ),
                 )
                 ok = True
+                json_attempts = 0
             except Exception as exc:
                 if isinstance(exc, RuntimeApiError) and (
                     exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
                 ):
                     return None
+                tool_name = truncated_tool_call_name(exc)
+                if tool_name is not None:
+                    json_attempts += 1
+                    insert_call(
+                        run_id=ctrl.run_id or "",
+                        provider=agent.llm.provider,
+                        model=agent.llm.model,
+                        ok=False,
+                        node_id=agent_id,
+                        node_name=node_label(compiled, agent_id),
+                        duration_ms=int((time.perf_counter() - started) * 1000),
+                        error_message="runtime.badRequest",
+                    )
+                    emit_log(
+                        "warn",
+                        "run.agent.toolJson",
+                        node_id=agent_id,
+                        payload={
+                            "name": tool_name,
+                            "attempt": json_attempts,
+                            "max": MAX_TOOL_JSON_ATTEMPTS,
+                            **(_runtime_error_payload(exc) or {}),
+                        },
+                    )
+                    messages.append(
+                        LlmMessage(
+                            role="user",
+                            content=_TOOL_JSON_NOTE.format(name=tool_name),
+                        )
+                    )
+                    if json_attempts < MAX_TOOL_JSON_ATTEMPTS:
+                        continue
+                    json_attempts = 0
+                    failed_tools += 1
+                    if record is not None:
+                        record_tool(
+                            record,
+                            ToolEvent(
+                                name=tool_name,
+                                arguments="",
+                                ok=False,
+                                result="truncated tool JSON",
+                            ),
+                            file_fact(
+                                tool_name,
+                                {},
+                                {"ok": False, "error": "truncated tool JSON"},
+                                ok=False,
+                            ),
+                        )
+                    if failed_tools >= MAX_FAILED_TOOL_CALLS:
+                        if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
+                            content = ""
+                            break
+                        return None
+                    continue
                 if memory is not None and record is not None:
                     key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"
                     record.error = key
@@ -708,20 +794,9 @@ def _agent_turn(
                 elif tool_ok:
                     _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
                 if failed_tools >= MAX_FAILED_TOOL_CALLS:
-                    emit_log(
-                        "warn",
-                        "run.agent.toolFailures",
-                        node_id=agent_id,
-                        payload={"failed": failed_tools},
-                    )
-                    if record is not None:
-                        record.error = "too many tool failures"
+                    if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
                         content = result.content or ""
                         break
-                    _set_node(ctrl, agent_id, "error", error="run.agent.toolFailures")
-                    ctrl.fail_message = "run.agent.toolFailures"
-                    ctrl.fail_class = "unknown"
-                    ctrl.last_error_node_id = agent_id
                     return None
                 continue
             think_body = agent_think_text(result.content or "", result.reasoning or "")

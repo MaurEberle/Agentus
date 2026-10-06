@@ -1391,6 +1391,7 @@
         "start": "Ajan başladı",
         "done": "Ajan bitti",
         "toolFailures": "Ajan {{failed}} başarısız araç çağrısından sonra durdu",
+        "toolJson": "{{name}} araç çağrısı atıldı: eksik JSON argümanları (deneme {{attempt}}/{{max}}).",
         "think": "Ajan düşünüyor (sonuç değil).",
         "thinkLimit": "Sonuçsuz çok fazla düşünme adımı.",
         "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu."

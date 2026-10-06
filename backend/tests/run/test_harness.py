@@ -2108,3 +2108,182 @@ def test_agent_think_keeps_llm_busy(monkeypatch, api_env) -> None:
         else:
             streak = 0
     assert longest >= 3
+
+
+_TRUNCATED_TOOL_JSON = (
+    'llama-server returned invalid tool call arguments for '
+    '"mcp__5699a070_5cfc_4c59_ab23_c8d72ff4e014__write_file": unexpected end of JSON input'
+)
+
+
+def test_linear_retries_truncated_tool_json_then_writes(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.errors import RuntimeApiError
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        agent_n["n"] += 1
+        if agent_n["n"] <= 2:
+            raise RuntimeApiError("runtime.badRequest", detail=_TRUNCATED_TOOL_JSON)
+        if not any(m.role == "tool" for m in req.messages):
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 1
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.toolJson") == 2
+    assert "run.failed" not in messages
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+
+
+def test_linear_truncated_tool_json_gives_up_after_three_then_writes(
+    monkeypatch, api_env
+) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.errors import RuntimeApiError
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+    write_blob = {"text": ""}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        blob = "\n".join(message.content or "" for message in req.messages)
+        agent_n["n"] += 1
+        if agent_n["n"] <= 3:
+            raise RuntimeApiError("runtime.badRequest", detail=_TRUNCATED_TOOL_JSON)
+        if not any(m.role == "tool" for m in req.messages):
+            write_blob["text"] = blob
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 1
+    assert "JSON arguments were truncated" in write_blob["text"]
+    payloads = [
+        row.get("payload") or {}
+        for row in list_logs(stored["id"])
+        if row["message"] == "run.agent.toolJson"
+    ]
+    assert [item.get("attempt") for item in payloads] == [1, 2, 3]
+    assert payloads[-1].get("max") == 3
+    assert payloads[-1].get("name") == "mcp__5699a070_5cfc_4c59_ab23_c8d72ff4e014__write_file"
+
+
+def test_linear_other_bad_request_still_fails_the_run(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.errors import RuntimeApiError
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        del req, should_abort, on_progress
+        raise RuntimeApiError("runtime.badRequest", detail="invalid model")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "runtime.badRequest"
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.agent.toolJson" not in messages
+    assert "run.failed" in messages
+
+
+def test_orchestrator_retries_truncated_tool_json(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.errors import RuntimeApiError
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" in system:
+            if agent_n["n"]:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            raise RuntimeApiError("runtime.badRequest", detail=_TRUNCATED_TOOL_JSON)
+        if not any(m.role == "tool" for m in req.messages):
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="ok", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 1
+    assert stored["memory"]["calls"][0]["error"] == ""
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.agent.toolJson" in messages
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
