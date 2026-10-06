@@ -49,6 +49,8 @@ Ribbon: Aktualisieren, Löschen ausgewählter Läufe, Logs exportieren, alte Ein
 
 **Ein Filter** steuert alles: Zeitraum (Heute, 7/30 Tage, von–bis), Netz, Modell, Suche (Lauf-ID, Netz, Fehler). KPIs, Diagramm „Läufe nach Tag“, häufigste Fehler, Tabs Historie / Pro Modell / Pro Netz und die Liste verwenden denselben Filter.
 
+Diagramm und Fehlerliste sowie Lauf-Liste und Detail lassen sich wie im Monitoring am Rand ziehen. Die eingestellten Größen bleiben nach dem Schließen der App erhalten.
+
 ## Ergebnisse eines Laufs
 
 | Ergebnis | Bedeutung |

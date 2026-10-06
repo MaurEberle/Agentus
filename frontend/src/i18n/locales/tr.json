@@ -1194,6 +1194,14 @@
   "history": {
     "title": "Geçmiş",
     "close": "Kapat",
+    "resize": {
+      "chartHeight": "Grafik yüksekliğini değiştir",
+      "errorsHeight": "Hata listesi yüksekliğini değiştir",
+      "statsWidth": "Grafik ve hata listesi genişliğini değiştir",
+      "listHeight": "Çalıştırma listesi yüksekliğini değiştir",
+      "detailHeight": "Ayrıntı yüksekliğini değiştir",
+      "listWidth": "Liste ve ayrıntı genişliğini değiştir"
+    },
     "copy": "Kopyala",
     "ribbon": {
       "refresh": "Yenile",

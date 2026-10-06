@@ -49,6 +49,8 @@ Faixa: Atualizar, apagar execuções selecionadas, exportar registos, limpar ent
 
 **Um filtro** controla tudo: período (hoje, 7/30 dias, de–até), rede, modelo, pesquisa (ID da execução, rede, erro). KPI, gráfico «execuções por dia», erros mais frequentes, separadores Histórico / Por modelo / Por rede e a lista usam o mesmo filtro.
 
+O gráfico e a lista de erros, bem como a lista de execuções e o detalhe, redimensionam-se ao arrastar a margem, como na Monitorização. Os tamanhos ficam guardados depois de fechar a aplicação.
+
 ## Resultados de uma execução
 
 | Resultado | Significado |

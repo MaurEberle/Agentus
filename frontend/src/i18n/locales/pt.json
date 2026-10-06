@@ -1194,6 +1194,14 @@
   "history": {
     "title": "Histórico",
     "close": "Fechar",
+    "resize": {
+      "chartHeight": "Alterar a altura do gráfico",
+      "errorsHeight": "Alterar a altura da lista de erros",
+      "statsWidth": "Alterar a largura do gráfico e dos erros",
+      "listHeight": "Alterar a altura da lista de execuções",
+      "detailHeight": "Alterar a altura do detalhe",
+      "listWidth": "Alterar a largura da lista e do detalhe"
+    },
     "copy": "Copiar",
     "ribbon": {
       "refresh": "Atualizar",

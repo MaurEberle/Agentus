@@ -49,6 +49,8 @@ Ribbon: refresh, delete selected runs, export logs, purge older than retention (
 
 **One filter** drives everything: range (today, 7/30 days, from–to), network, model, search (run id, network, error). KPIs, “runs by day” chart, top errors, tabs History / By model / By network, and the list all use that filter.
 
+The chart and error list, and the run list and detail, can be resized by dragging the edges, same as in Monitoring. The sizes you set are kept after you close the app.
+
 ## Run outcomes
 
 | Outcome | Meaning |

@@ -31,10 +31,12 @@ import {
   sameFilter,
 } from '@/modules/history/model/url';
 import { PAGE_SIZE, STATS_LIMIT, type ErrorTopRow, type HistoryFilter, type LogEvent } from '@/modules/history/model/types';
+import { useHistoryPanes } from '@/modules/history/panes';
 import { HistoryRibbon } from '@/modules/history/ribbon/Ribbon';
 import { useHistoryUi } from '@/modules/history/store';
 import { ByModelTable } from '@/modules/history/tables/ByModelTable';
 import { ByNetworkTable } from '@/modules/history/tables/ByNetworkTable';
+import { HeightGrip, SplitRow, WidthGrip, paneColStyle } from '@/modules/monitoring/PaneGrips';
 import { cn } from '@/lib/utils';
 import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
@@ -46,6 +48,7 @@ export function HistoryModule() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const desktop = useMediaQuery('(min-width: 768px)');
+  const [panes, setPanes] = useHistoryPanes();
   const queryClient = useQueryClient();
   const stores = useStoresQuery();
   const historyOk = isHistoryStoreOk(stores.data);
@@ -377,10 +380,39 @@ export function HistoryModule() {
       {historyOk && !runsQuery.isLoading ? (
         <>
           <KpiRow kpis={kpis} loading={false} />
-          <div className="grid w-full gap-4 lg:grid-cols-2 lg:items-start">
-            <RunsChart buckets={buckets} />
-            <ErrorTop rows={errors} onPick={onPickError} />
-          </div>
+          <SplitRow>
+            <div
+              className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
+              style={desktop ? paneColStyle(panes.statsShare) : undefined}
+            >
+              <div className="min-h-0 w-full" style={{ height: panes.chartH }}>
+                <RunsChart buckets={buckets} />
+              </div>
+              <HeightGrip
+                label={t('history.resize.chartHeight')}
+                value={panes.chartH}
+                onChange={(chartH) => setPanes({ chartH })}
+              />
+            </div>
+            <WidthGrip
+              label={t('history.resize.statsWidth')}
+              share={panes.statsShare}
+              onChange={(statsShare) => setPanes({ statsShare })}
+            />
+            <div
+              className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
+              style={desktop ? paneColStyle(1 - panes.statsShare) : undefined}
+            >
+              <div className="min-h-0 w-full" style={{ height: panes.errorsH }}>
+                <ErrorTop rows={errors} onPick={onPickError} />
+              </div>
+              <HeightGrip
+                label={t('history.resize.errorsHeight')}
+                value={panes.errorsH}
+                onChange={(errorsH) => setPanes({ errorsH })}
+              />
+            </div>
+          </SplitRow>
           <div className="flex gap-1 border-b" role="tablist">
             {(['history', 'model', 'network'] as const).map((tab) => (
               <button
@@ -414,19 +446,57 @@ export function HistoryModule() {
           ) : null}
           {filter.tab === 'history' ? (
             desktop ? (
-              <div className="grid w-full gap-3 md:grid-cols-2 md:items-start">
-                <Card className={cn(moduleCardClass, 'min-w-0')}>
-                  <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
-                </Card>
-                <Card className={cn(moduleCardClass, 'min-w-0')}>
-                  <div className={moduleCardBodyClass}>{detailPane}</div>
-                </Card>
-              </div>
+              <SplitRow>
+                <div
+                  className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
+                  style={paneColStyle(panes.listShare)}
+                >
+                  <div className="min-h-0 w-full" style={{ height: panes.listH }}>
+                    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
+                      <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
+                    </Card>
+                  </div>
+                  <HeightGrip
+                    label={t('history.resize.listHeight')}
+                    value={panes.listH}
+                    onChange={(listH) => setPanes({ listH })}
+                  />
+                </div>
+                <WidthGrip
+                  label={t('history.resize.listWidth')}
+                  share={panes.listShare}
+                  onChange={(listShare) => setPanes({ listShare })}
+                />
+                <div
+                  className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
+                  style={paneColStyle(1 - panes.listShare)}
+                >
+                  <div className="min-h-0 w-full" style={{ height: panes.detailH }}>
+                    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
+                      <div className={moduleCardBodyClass}>{detailPane}</div>
+                    </Card>
+                  </div>
+                  <HeightGrip
+                    label={t('history.resize.detailHeight')}
+                    value={panes.detailH}
+                    onChange={(detailH) => setPanes({ detailH })}
+                  />
+                </div>
+              </SplitRow>
             ) : (
               <>
-                <Card className={cn(moduleCardClass, 'min-w-0')}>
-                  <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
-                </Card>
+                <div className="flex w-full min-w-0 flex-col">
+                  <div className="min-h-0 w-full" style={{ height: panes.listH }}>
+                    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
+                      <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
+                    </Card>
+                  </div>
+                  <HeightGrip
+                    label={t('history.resize.listHeight')}
+                    value={panes.listH}
+                    onChange={(listH) => setPanes({ listH })}
+                  />
+                </div>
                 <Sheet open={showDetail} onOpenChange={(open) => !open && closeDetail()}>
                   <SheetContent side="bottom" closeLabel={t('history.close')} className="max-h-[min(90vh,1000px)] overflow-auto">
                     <SheetHeader>

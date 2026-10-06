@@ -49,6 +49,8 @@ Ruban : Actualiser, supprimer les exécutions sélectionnées, exporter les jour
 
 **Un filtre** pilote tout : période (aujourd’hui, 7/30 jours, de–à), réseau, modèle, recherche (ID d’exécution, réseau, erreur). KPI, graphique « exécutions par jour », erreurs fréquentes, onglets Historique / Par modèle / Par réseau et la liste utilisent le même filtre.
 
+Le graphique et la liste d’erreurs, ainsi que la liste des exécutions et le détail, se redimensionnent en tirant le bord, comme dans Surveillance. Les tailles restent après la fermeture de l’application.
+
 ## Résultats d’une exécution
 
 | Résultat | Signification |

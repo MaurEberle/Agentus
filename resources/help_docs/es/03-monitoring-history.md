@@ -49,6 +49,8 @@ Cinta: Actualizar, borrar ejecuciones seleccionadas, exportar registros, depurar
 
 **Un filtro** lo controla todo: periodo (hoy, 7/30 días, desde–hasta), red, modelo, búsqueda (ID de ejecución, red, error). KPI, gráfico «ejecuciones por día», errores más frecuentes, pestañas Historial / Por modelo / Por red y la lista usan el mismo filtro.
 
+El gráfico y la lista de errores, y la lista de ejecuciones y el detalle, se redimensionan arrastrando el borde, igual que en Supervisión. Los tamaños se conservan al cerrar la app.
+
 ## Resultados de una ejecución
 
 | Resultado | Significado |

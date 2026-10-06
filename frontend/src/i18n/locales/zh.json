@@ -1194,6 +1194,14 @@
   "history": {
     "title": "历史",
     "close": "关闭",
+    "resize": {
+      "chartHeight": "调整图表高度",
+      "errorsHeight": "调整错误列表高度",
+      "statsWidth": "调整图表和错误列表宽度",
+      "listHeight": "调整运行列表高度",
+      "detailHeight": "调整运行详情高度",
+      "listWidth": "调整列表和详情宽度"
+    },
     "copy": "复制",
     "ribbon": {
       "refresh": "刷新",

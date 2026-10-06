@@ -49,6 +49,8 @@ Yükler ve iletiler sırları **maskeler** (örneğin `Bearer`, anahtar önekler
 
 **Tek süzgeç** her şeyi yönetir: aralık (bugün, 7/30 gün, başlangıç–bitiş), ağ, model, arama (çalıştırma kimliği, ağ, hata). KPI, «güne göre çalıştırmalar» grafiği, sık hatalar, Geçmiş / Modele göre / Ağa göre sekmeleri ve liste aynı süzgeci kullanır.
 
+Grafik ve hata listesi ile çalıştırma listesi ve ayrıntı, İzleme’deki gibi kenardan sürüklenerek boyutlanır. Ayarladığınız boyutlar uygulamayı kapattıktan sonra kalır.
+
 ## Bir çalıştırmanın sonuçları
 
 | Sonuç | Anlam |

@@ -1248,6 +1248,14 @@
   "history": {
     "title": "Historie",
     "close": "Schließen",
+    "resize": {
+      "chartHeight": "Höhe des Diagramms ändern",
+      "errorsHeight": "Höhe der Fehlerliste ändern",
+      "statsWidth": "Breite von Diagramm und Fehlern ändern",
+      "listHeight": "Höhe der Laufliste ändern",
+      "detailHeight": "Höhe der Laufdetails ändern",
+      "listWidth": "Breite von Liste und Detail ändern"
+    },
     "copy": "Kopieren",
     "ribbon": {
       "refresh": "Aktualisieren",

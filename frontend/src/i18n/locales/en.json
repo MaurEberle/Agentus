@@ -1248,6 +1248,14 @@
   "history": {
     "title": "History",
     "close": "Close",
+    "resize": {
+      "chartHeight": "Resize chart height",
+      "errorsHeight": "Resize error list height",
+      "statsWidth": "Resize chart and error list width",
+      "listHeight": "Resize run list height",
+      "detailHeight": "Resize run detail height",
+      "listWidth": "Resize list and detail width"
+    },
     "copy": "Copy",
     "ribbon": {
       "refresh": "Refresh",

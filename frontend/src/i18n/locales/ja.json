@@ -1194,6 +1194,14 @@
   "history": {
     "title": "履歴",
     "close": "閉じる",
+    "resize": {
+      "chartHeight": "グラフの高さを変更",
+      "errorsHeight": "エラー一覧の高さを変更",
+      "statsWidth": "グラフとエラー一覧の幅を変更",
+      "listHeight": "実行一覧の高さを変更",
+      "detailHeight": "詳細の高さを変更",
+      "listWidth": "一覧と詳細の幅を変更"
+    },
     "copy": "コピー",
     "ribbon": {
       "refresh": "更新",
