@@ -9,6 +9,7 @@ import {
   type Edge,
   type Node,
 } from '@xyflow/react';
+import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +43,7 @@ function GraphInner({
   run: RunSnapshot;
   dimmed?: boolean;
 }) {
+  const { resolvedTheme } = useTheme();
   const selectedNodeId = useMonitoringStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useMonitoringStore((state) => state.setSelectedNodeId);
   const setLogNodeId = useMonitoringStore((state) => state.setLogNodeId);
@@ -135,6 +137,7 @@ function GraphInner({
         onInit={(instance) => {
           void instance.fitView({ padding: 0.2, duration: 0 });
         }}
+        colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
         proOptions={{ hideAttribution: true }}
         onNodeClick={onNodeClick}
         onPaneClick={() => setSelectedNodeId(null)}

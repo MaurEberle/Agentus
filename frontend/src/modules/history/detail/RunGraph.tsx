@@ -9,6 +9,7 @@ import {
   type Edge,
   type Node,
 } from '@xyflow/react';
+import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { StatusNode, statusNodeSize, type StatusFlowNode } from '@/modules/monitoring/graph/StatusNode';
@@ -37,6 +38,7 @@ function FitButton() {
 }
 
 function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
+  const { resolvedTheme } = useTheme();
   const statusById = useMemo(() => {
     const map = new Map(steps?.map((step) => [step.nodeId, step]) ?? []);
     return map;
@@ -117,6 +119,7 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
         onInit={(instance) => {
           void instance.fitView({ padding: 0.2, duration: 0 });
         }}
+        colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
         proOptions={{ hideAttribution: true }}
         minZoom={0.3}
         maxZoom={1.4}
