@@ -14,6 +14,7 @@ from app.runtime.ollama import (
     list_loaded_models,
     list_ollama_models,
     model_block_count,
+    ollama_num_gpu,
     parse_block_count,
     ping_ollama,
     unload,
@@ -187,6 +188,16 @@ def test_gpu_layers_for_percent() -> None:
     assert clamp_gpu_layers(8, None) == 8
     assert clamp_gpu_layers(60, 60) == 60
     assert clamp_gpu_layers(35, 35) == 35
+    assert ollama_num_gpu(32, 32) == 33
+    assert ollama_num_gpu(31, 32) == 32
+    assert ollama_num_gpu(1, 32) == 2
+    assert ollama_num_gpu(0, 32) == 0
+    assert ollama_num_gpu(47, 47) == 48
+    assert ollama_num_gpu(24, 47) == 25
+    assert ollama_num_gpu(99, 47) == 48
+    assert ollama_num_gpu(8, None) == 9
+    assert ollama_num_gpu(999, 32) == 999
+    assert ollama_num_gpu(999, None) == 999
 
 
 def test_model_block_count_caches(monkeypatch: pytest.MonkeyPatch) -> None:

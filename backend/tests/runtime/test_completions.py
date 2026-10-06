@@ -137,7 +137,7 @@ def test_stream_two_deltas_then_done(monkeypatch: pytest.MonkeyPatch) -> None:
         body = json.loads(request.content.decode("utf-8"))
         assert body["stream"] is True
         assert "stream_options" not in body
-        assert body["options"]["num_gpu"] == 16
+        assert body["options"]["num_gpu"] == 17
         return httpx.Response(200, content=payload)
 
     install_transport(monkeypatch, handler)
@@ -551,7 +551,7 @@ def test_gpu_max_in_payload(monkeypatch: pytest.MonkeyPatch) -> None:
 
     install_transport(monkeypatch, handler)
     complete(CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG))
-    assert seen[0]["options"]["num_gpu"] == 16
+    assert seen[0]["options"]["num_gpu"] == 17
 
 
 def test_gpu_max_falls_back_to_auto(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -569,7 +569,7 @@ def test_gpu_max_falls_back_to_auto(monkeypatch: pytest.MonkeyPatch) -> None:
         CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
     )
     assert result.content == "hello"
-    assert seen[0]["num_gpu"] == 16
+    assert seen[0]["num_gpu"] == 17
     assert seen[1]["num_gpu"] == -1
 
 
@@ -632,7 +632,7 @@ def test_num_thread_in_ollama_payload(monkeypatch: pytest.MonkeyPatch) -> None:
     options = seen[0]["options"]
     assert options["num_thread"] == 6
     assert options["num_ctx"] == 8192
-    assert options["num_gpu"] == 16
+    assert options["num_gpu"] == 17
 
 
 def test_stream_gpu_fallback_before_delta(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -655,7 +655,7 @@ def test_stream_gpu_fallback_before_delta(monkeypatch: pytest.MonkeyPatch) -> No
             CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
         )
     )
-    assert seen[0]["num_gpu"] == 16
+    assert seen[0]["num_gpu"] == 17
     assert seen[1]["num_gpu"] == -1
     texts = [e.text for e in events if e.kind == "delta"]
     assert texts == ["ok"]

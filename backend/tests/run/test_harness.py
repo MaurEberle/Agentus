@@ -850,7 +850,7 @@ def test_num_thread_is_sent_to_ollama(monkeypatch, api_env) -> None:
     monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 47)
     stored = _drive(monkeypatch, _complete, doc=doc)
     assert stored["outcome"] == "succeeded"
-    assert options[0] == {"num_ctx": 8192, "num_thread": 6, "num_gpu": 24}
+    assert options[0] == {"num_ctx": 8192, "num_thread": 6, "num_gpu": 25}
 
 
 def test_num_gpu_percent_still_maps_for_old_graphs(monkeypatch, api_env) -> None:
@@ -873,7 +873,30 @@ def test_num_gpu_percent_still_maps_for_old_graphs(monkeypatch, api_env) -> None
     monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 47)
     stored = _drive(monkeypatch, _complete, doc=doc)
     assert stored["outcome"] == "succeeded"
-    assert options[0] == {"num_gpu": 24}
+    assert options[0] == {"num_gpu": 25}
+
+
+def test_num_gpu_max_includes_output_slot(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        options.append(req.ollama_options)
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 32
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] == {"num_gpu": 33}
 
 
 def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None:

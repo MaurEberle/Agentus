@@ -64,7 +64,7 @@ def parse_block_count(payload: object) -> int | None:
 
 
 def gpu_layers_for_percent(percent: int, block_count: int | None) -> int:
-    """Map 10–100 % offload to Ollama ``num_gpu`` (layer count). Unknown size → 999 (max)."""
+    """Map 10–100 % offload to transformer layers (UI/VRAM). Unknown size → 999."""
     pct = max(10, min(100, int(percent)))
     if not isinstance(block_count, int) or block_count < 1:
         return 999
@@ -74,11 +74,28 @@ def gpu_layers_for_percent(percent: int, block_count: int | None) -> int:
 
 
 def clamp_gpu_layers(count: int, block_count: int | None) -> int:
-    """Keep a layer offload on ``1..block_count``. Unknown size keeps the count."""
+    """Keep a transformer offload on ``1..block_count``. Unknown size keeps the count."""
     n = max(1, int(count))
     if isinstance(block_count, int) and block_count > 0:
         return min(n, block_count)
     return n
+
+
+def ollama_num_gpu(offload: int, block_count: int | None) -> int:
+    """llama.cpp ``-ngl``: repeating layers plus the output slot.
+
+    Graph and inspector count transformer blocks (``1..block_count``).
+    llama-server counts those plus the output layer, so full offload is
+    ``block_count + 1``. ``0`` stays CPU-only. ``999`` stays max/unknown.
+    """
+    n = int(offload)
+    if n <= 0:
+        return 0
+    if n >= 999:
+        return 999
+    if not isinstance(block_count, int) or block_count < 1:
+        return n + 1
+    return min(max(1, n), block_count) + 1
 
 
 def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:

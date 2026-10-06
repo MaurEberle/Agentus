@@ -32,7 +32,7 @@ from app.runtime.models import (
     TestLlmRequest,
     ToolCall,
 )
-from app.runtime.ollama import model_block_count
+from app.runtime.ollama import model_block_count, ollama_num_gpu
 from app.runtime.urls import completions_url, responses_url, settings_roots
 
 log = logging.getLogger("agentus.runtime")
@@ -321,7 +321,7 @@ def _apply_gpu_max(req: CompletionRequest, options: dict[str, Any]) -> dict[str,
     if "num_gpu" in options:
         return options
     layers = model_block_count(req.model, base_url=req.base_url)
-    options["num_gpu"] = layers if layers else 999
+    options["num_gpu"] = ollama_num_gpu(layers, layers) if layers else 999
     return options
 
 
