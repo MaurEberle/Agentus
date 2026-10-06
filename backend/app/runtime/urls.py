@@ -81,6 +81,25 @@ def completions_url(
     )
 
 
+def responses_url(
+    provider: Provider,
+    *,
+    ollama_root: str,
+    override_base: str | None,
+    settings_openai: str | None,
+) -> str:
+    """OpenAI Responses API. Function tools plus reasoning for gpt-5.6 / gpt-6."""
+    return _join_api(
+        _provider_base(
+            provider,
+            ollama_root=ollama_root,
+            override_base=override_base,
+            settings_openai=settings_openai,
+        ),
+        "responses",
+    )
+
+
 def embeddings_url(
     provider: Provider,
     *,

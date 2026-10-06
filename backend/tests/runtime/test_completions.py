@@ -10,10 +10,13 @@ from app.runtime.completions import (
     _ollama_messages,
     _openai_messages,
     _parse_usage,
+    _responses_input,
+    _responses_tools,
     complete,
     complete_live,
     complete_stream,
     estimate_token_count,
+    uses_openai_responses,
 )
 from app.runtime.errors import RuntimeApiError, clip_error_detail
 from app.runtime.models import ChatMessage, CompletionRequest, ToolCall
@@ -768,3 +771,202 @@ def test_xai_complete_keeps_openai_tool_followup(monkeypatch: pytest.MonkeyPatch
     assert isinstance(call["function"]["arguments"], str)
     assert tool["tool_call_id"] == "c1"
     assert "tool_name" not in tool
+
+
+_HTTP_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "http",
+        "description": "fetch",
+        "parameters": {"type": "object", "properties": {}},
+    },
+}
+
+
+def test_uses_openai_responses_only_for_gpt56_tools() -> None:
+    luna = CompletionRequest(
+        provider="openai",
+        model="gpt-5.6-luna",
+        messages=_MSG,
+        tools=[_HTTP_TOOL],
+        secret="sk",
+    )
+    assert uses_openai_responses(luna) is True
+    assert uses_openai_responses(luna.model_copy(update={"tools": None})) is False
+    assert uses_openai_responses(luna.model_copy(update={"model": "gpt-4o"})) is False
+    assert uses_openai_responses(luna.model_copy(update={"provider": "xai", "model": "grok-4.5"})) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "anthropic", "model": "claude-sonnet-4-6"})
+    ) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "gemini", "model": "gemini-2.5-pro"})
+    ) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "openai_compat", "model": "gpt-5.6-luna"})
+    ) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "ollama", "model": "qwen3.8"})
+    ) is False
+    assert uses_openai_responses(luna.model_copy(update={"model": "gpt-6-astra"})) is True
+
+
+def test_responses_tools_flatten_chat_schema() -> None:
+    flat = _responses_tools([_HTTP_TOOL])
+    assert flat == [
+        {
+            "type": "function",
+            "name": "http",
+            "description": "fetch",
+            "parameters": {"type": "object", "properties": {}},
+            "strict": False,
+        }
+    ]
+
+
+def test_responses_input_maps_system_and_tool_followup() -> None:
+    messages = [
+        ChatMessage(role="system", content="plan only"),
+        *_tool_followup_messages(call_id="c1", tool_name="file_access"),
+    ]
+    instructions, items = _responses_input(messages)
+    assert instructions == "plan only"
+    assert items[0] == {"role": "user", "content": "speichere den text"}
+    assert items[1]["type"] == "function_call"
+    assert items[1]["call_id"] == "c1"
+    assert items[1]["name"] == "file_access"
+    assert items[2] == {
+        "type": "function_call_output",
+        "call_id": "c1",
+        "output": '{"ok":true,"bytes":1631}',
+    }
+
+
+def test_openai_luna_tools_post_to_responses(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "model": "gpt-5.6-luna",
+                "output": [
+                    {
+                        "type": "reasoning",
+                        "summary": [{"type": "summary_text", "text": "need the file tree"}],
+                    },
+                    {
+                        "type": "function_call",
+                        "call_id": "call_1",
+                        "name": "http",
+                        "arguments": '{"url":"x"}',
+                    },
+                ],
+                "usage": {"input_tokens": 12, "output_tokens": 4},
+            },
+        )
+
+    install_transport(monkeypatch, handler)
+    result = complete(
+        CompletionRequest(
+            provider="openai",
+            model="gpt-5.6-luna",
+            messages=[
+                ChatMessage(role="system", content="you are architect"),
+                ChatMessage(role="user", content="inspect the repo"),
+            ],
+            tools=[_HTTP_TOOL],
+            secret="sk-openai",
+        )
+    )
+    assert str(seen[0].url).endswith("/responses")
+    body = json.loads(seen[0].content.decode("utf-8"))
+    assert body["store"] is False
+    assert "messages" not in body
+    assert "stream_options" not in body
+    assert body["instructions"] == "you are architect"
+    assert body["tools"][0]["name"] == "http"
+    assert "function" not in body["tools"][0]
+    assert result.tool_calls[0].id == "call_1"
+    assert result.tool_calls[0].name == "http"
+    assert result.reasoning == "need the file tree"
+    assert result.finish_reason == "tool_calls"
+
+
+def test_openai_gpt4o_tools_stay_on_chat_completions(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, json=_chat_ok("ok"))
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="openai",
+            model="gpt-4o",
+            messages=_MSG,
+            tools=[_HTTP_TOOL],
+            secret="sk-openai",
+        )
+    )
+    assert seen[0].endswith("/chat/completions")
+
+
+def test_xai_tools_stay_on_chat_completions(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, json=_chat_ok("ok"))
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="xai",
+            model="grok-4.5",
+            messages=_MSG,
+            tools=[_HTTP_TOOL],
+            secret="sk-xai",
+        )
+    )
+    assert seen[0].endswith("/chat/completions")
+
+
+def test_openai_luna_stream_parses_responses_events(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'event: response.output_text.delta\n'
+        b'data: {"type":"response.output_text.delta","delta":"Hi"}\n\n'
+        b'event: response.output_item.added\n'
+        b'data: {"type":"response.output_item.added","output_index":1,'
+        b'"item":{"type":"function_call","call_id":"call_9","name":"http","arguments":""}}\n\n'
+        b'event: response.function_call_arguments.delta\n'
+        b'data: {"type":"response.function_call_arguments.delta","output_index":1,"delta":"{\\"url\\":\\"x\\"}"}\n\n'
+        b'event: response.completed\n'
+        b'data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2}}}\n\n'
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        assert str(request.url).endswith("/responses")
+        assert body["stream"] is True
+        assert "stream_options" not in body
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(
+        CompletionRequest(
+            provider="openai",
+            model="gpt-5.6-luna",
+            messages=_MSG,
+            tools=[_HTTP_TOOL],
+            secret="sk-openai",
+        )
+    )
+    assert result.content == "Hi"
+    assert result.tool_calls[0].id == "call_9"
+    assert result.tool_calls[0].name == "http"
+    assert result.tool_calls[0].arguments == '{"url":"x"}'
+    assert result.usage is not None
+    assert result.usage.prompt_tokens == 3
+    assert result.usage.completion_tokens == 2

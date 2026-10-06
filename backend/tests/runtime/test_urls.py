@@ -11,6 +11,7 @@ from app.runtime.urls import (
     completions_url,
     embeddings_url,
     models_url,
+    responses_url,
 )
 
 
@@ -77,6 +78,17 @@ def test_completions_url_openai_default() -> None:
         settings_openai=None,
     )
     assert url == f"{DEFAULT_OPENAI_BASE}/chat/completions"
+
+
+def test_responses_url_openai_default() -> None:
+    url = responses_url(
+        "openai",
+        ollama_root="http://127.0.0.1:11434",
+        override_base=None,
+        settings_openai=None,
+    )
+    assert url == f"{DEFAULT_OPENAI_BASE}/responses"
+    assert "/v1/v1" not in url
 
 
 def test_completions_url_anthropic_default() -> None:

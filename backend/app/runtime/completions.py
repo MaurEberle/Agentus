@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from collections.abc import Callable, Generator, Iterator
 from typing import Any
@@ -32,9 +33,12 @@ from app.runtime.models import (
     ToolCall,
 )
 from app.runtime.ollama import model_block_count
-from app.runtime.urls import completions_url, settings_roots
+from app.runtime.urls import completions_url, responses_url, settings_roots
 
 log = logging.getLogger("agentus.runtime")
+
+# OpenAI gpt-5.6 / gpt-6 reject function tools on /v1/chat/completions.
+_RESPONSES_TOOLS_MODEL = re.compile(r"^(gpt-5\.6|gpt-6)([.-]|$)", re.I)
 
 _LOAD_FAIL_MARKERS = (
     "memory",
@@ -124,6 +128,119 @@ def _openai_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
             ]
         out.append(item)
     return out
+
+
+def uses_openai_responses(req: CompletionRequest) -> bool:
+    """Official OpenAI gpt-5.6 / gpt-6 need /v1/responses when function tools are attached."""
+    if req.provider != "openai":
+        return False
+    if not req.tools:
+        return False
+    return bool(_RESPONSES_TOOLS_MODEL.match((req.model or "").strip()))
+
+
+def _request_url(req: CompletionRequest) -> str:
+    if uses_openai_responses(req):
+        ollama_root, openai_base = settings_roots()
+        return responses_url(
+            req.provider,
+            ollama_root=ollama_root,
+            override_base=req.base_url,
+            settings_openai=openai_base,
+        )
+    return _endpoint(req.provider, req.base_url)
+
+
+def _responses_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for tool in tools:
+        if not isinstance(tool, dict):
+            continue
+        fn = tool.get("function") if isinstance(tool.get("function"), dict) else None
+        if tool.get("type") == "function" and fn is not None:
+            item: dict[str, Any] = {
+                "type": "function",
+                "name": str(fn.get("name") or ""),
+                "description": str(fn.get("description") or ""),
+                "parameters": fn.get("parameters")
+                if isinstance(fn.get("parameters"), dict)
+                else {"type": "object", "properties": {}},
+                "strict": bool(fn["strict"]) if "strict" in fn else False,
+            }
+            out.append(item)
+            continue
+        out.append(tool)
+    return out
+
+
+def _responses_input(messages: list[ChatMessage]) -> tuple[str | None, list[dict[str, Any]]]:
+    instructions: list[str] = []
+    items: list[dict[str, Any]] = []
+    pending_ids: list[str] = []
+    used = 0
+    seq = 0
+    for message in messages:
+        if message.role == "system":
+            text = (message.content or "").strip()
+            if text:
+                instructions.append(text)
+            continue
+        if message.role == "user":
+            items.append({"role": "user", "content": message.content or ""})
+            continue
+        if message.role == "assistant":
+            text = message.content
+            if isinstance(text, str) and text.strip():
+                items.append({"role": "assistant", "content": text})
+            pending_ids = []
+            used = 0
+            for call in message.tool_calls or []:
+                seq += 1
+                cid = (call.id or "").strip() or f"call_{seq}"
+                pending_ids.append(cid)
+                items.append(
+                    {
+                        "type": "function_call",
+                        "call_id": cid,
+                        "name": call.name,
+                        "arguments": call.arguments if call.arguments is not None else "{}",
+                    }
+                )
+            continue
+        if message.role == "tool":
+            cid = (message.tool_call_id or "").strip()
+            if not cid and used < len(pending_ids):
+                cid = pending_ids[used]
+            if cid:
+                used += 1
+            items.append(
+                {
+                    "type": "function_call_output",
+                    "call_id": cid or f"call_{seq or 1}",
+                    "output": message.content or "",
+                }
+            )
+    joined = "\n\n".join(instructions) or None
+    return joined, items
+
+
+def _responses_payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
+    instructions, items = _responses_input(req.messages)
+    body: dict[str, Any] = {
+        "model": req.model,
+        "input": items,
+        "stream": stream,
+        "store": False,
+    }
+    if instructions:
+        body["instructions"] = instructions
+    if req.temperature is not None:
+        body["temperature"] = req.temperature
+    if req.max_tokens is not None:
+        body["max_output_tokens"] = req.max_tokens
+    if req.tools:
+        body["tools"] = _responses_tools(req.tools)
+    return body
 
 
 def _ollama_arguments(raw: str) -> dict[str, Any]:
@@ -230,6 +347,8 @@ def _ollama_payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
 def _payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
     if req.provider == "ollama":
         return _ollama_payload(req, stream=stream)
+    if uses_openai_responses(req):
+        return _responses_payload(req, stream=stream)
     body: dict[str, Any] = {
         "model": req.model,
         "messages": _openai_messages(req.messages),
@@ -388,12 +507,94 @@ def _message_content(message: dict[str, Any]) -> str | None:
     return str(content)
 
 
+def _responses_message_text(item: dict[str, Any]) -> str:
+    if item.get("type") != "message":
+        return ""
+    parts: list[str] = []
+    for part in item.get("content") or []:
+        if not isinstance(part, dict):
+            continue
+        if part.get("type") in {"output_text", "text"}:
+            text = part.get("text")
+            if isinstance(text, str) and text:
+                parts.append(text)
+    return "".join(parts)
+
+
+def _responses_reasoning_text(item: dict[str, Any]) -> str:
+    if item.get("type") != "reasoning":
+        return ""
+    parts: list[str] = []
+    raw = item.get("text")
+    if isinstance(raw, str) and raw:
+        parts.append(raw)
+    summary = item.get("summary") or item.get("content") or []
+    if isinstance(summary, list):
+        for part in summary:
+            if isinstance(part, dict):
+                text = part.get("text")
+                if isinstance(text, str) and text:
+                    parts.append(text)
+            elif isinstance(part, str) and part:
+                parts.append(part)
+    return "".join(parts)
+
+
+def _function_call_from_item(item: dict[str, Any]) -> ToolCall | None:
+    if item.get("type") != "function_call":
+        return None
+    return ToolCall(
+        id=str(item.get("call_id") or item.get("id") or ""),
+        name=str(item.get("name") or ""),
+        arguments=_tool_arguments(item.get("arguments")),
+    )
+
+
+def _result_from_responses(body: dict[str, Any], req: CompletionRequest) -> CompletionResult:
+    texts: list[str] = []
+    reasons: list[str] = []
+    calls: list[ToolCall] = []
+    for item in body.get("output") or []:
+        if not isinstance(item, dict):
+            continue
+        text = _responses_message_text(item)
+        if text:
+            texts.append(text)
+        reason = _responses_reasoning_text(item)
+        if reason:
+            reasons.append(reason)
+        call = _function_call_from_item(item)
+        if call is not None:
+            calls.append(call)
+    if not texts:
+        convenience = body.get("output_text")
+        if isinstance(convenience, str) and convenience:
+            texts.append(convenience)
+    status = body.get("status") if isinstance(body.get("status"), str) else None
+    if calls:
+        finish = "tool_calls"
+    elif status == "incomplete":
+        finish = "length"
+    else:
+        finish = "stop"
+    return CompletionResult(
+        content="".join(texts) or None,
+        reasoning="".join(reasons) or None,
+        tool_calls=calls,
+        finish_reason=finish,
+        usage=_parse_usage(body.get("usage")) or _parse_usage(body),
+        model=str(body.get("model") or req.model),
+    )
+
+
 def _result_from_body(body: object, req: CompletionRequest) -> CompletionResult:
     if not isinstance(body, dict):
         raise RuntimeApiError("runtime.badRequest", detail="invalid completion body")
     err_text = _chunk_error_text(body)
     if err_text:
         raise RuntimeApiError("runtime.badRequest", detail=err_text)
+    if isinstance(body.get("output"), list) and "choices" not in body:
+        return _result_from_responses(body, req)
     choices = body.get("choices")
     if isinstance(choices, list) and choices:
         first = choices[0] if isinstance(choices[0], dict) else {}
@@ -421,7 +622,7 @@ def _result_from_body(body: object, req: CompletionRequest) -> CompletionResult:
 
 def complete(req: CompletionRequest) -> CompletionResult:
     secret = _auth_secret(req.provider, req.secret, req.credential_id)
-    url = _endpoint(req.provider, req.base_url)
+    url = _request_url(req)
     headers = request_headers(req.provider, secret)
     current = req
     last_status = 0
@@ -490,6 +691,82 @@ def _accumulate_tool_delta(
     ]
 
 
+def _calls_from_acc(acc: dict[int, dict[str, str]]) -> list[ToolCall]:
+    return [
+        ToolCall(id=slot["id"], name=slot["name"], arguments=slot["arguments"])
+        for _, slot in sorted(acc.items())
+        if slot.get("id") or slot.get("name") or slot.get("arguments")
+    ]
+
+
+def _emit_responses_chunk(
+    chunk: dict[str, Any], acc: dict[int, dict[str, str]]
+) -> tuple[list[StreamEvent], str | None, CompletionUsage | None]:
+    events: list[StreamEvent] = []
+    finish: str | None = None
+    usage: CompletionUsage | None = None
+    etype = str(chunk.get("type") or "")
+    if etype in {"response.output_text.delta", "response.text.delta"}:
+        delta = chunk.get("delta")
+        if isinstance(delta, str) and delta:
+            events.append(StreamEvent(kind="delta", text=delta))
+        return events, finish, usage
+    if etype in {
+        "response.reasoning_text.delta",
+        "response.reasoning.delta",
+        "response.reasoning_summary_text.delta",
+    }:
+        delta = chunk.get("delta")
+        if isinstance(delta, str) and delta:
+            events.append(StreamEvent(kind="delta", reasoning=delta))
+        return events, finish, usage
+    if etype == "response.output_item.added":
+        item = chunk.get("item") if isinstance(chunk.get("item"), dict) else {}
+        index = int(chunk.get("output_index") or 0)
+        if item.get("type") == "function_call":
+            slot = acc.setdefault(index, {"id": "", "name": "", "arguments": ""})
+            slot["id"] = str(item.get("call_id") or item.get("id") or slot["id"])
+            slot["name"] = str(item.get("name") or slot["name"])
+            if item.get("arguments"):
+                slot["arguments"] = str(item["arguments"])
+            events.append(StreamEvent(kind="tool_call_delta", tool_calls=_calls_from_acc(acc)))
+        return events, finish, usage
+    if etype == "response.function_call_arguments.delta":
+        index = int(chunk.get("output_index") or 0)
+        slot = acc.setdefault(index, {"id": "", "name": "", "arguments": ""})
+        delta = chunk.get("delta")
+        if isinstance(delta, str):
+            slot["arguments"] += delta
+        events.append(StreamEvent(kind="tool_call_delta", tool_calls=_calls_from_acc(acc)))
+        return events, finish, usage
+    if etype == "response.function_call_arguments.done":
+        index = int(chunk.get("output_index") or 0)
+        slot = acc.setdefault(index, {"id": "", "name": "", "arguments": ""})
+        if chunk.get("arguments") is not None:
+            slot["arguments"] = str(chunk["arguments"])
+        if chunk.get("name"):
+            slot["name"] = str(chunk["name"])
+        events.append(StreamEvent(kind="tool_call_delta", tool_calls=_calls_from_acc(acc)))
+        return events, finish, usage
+    if etype == "response.completed":
+        resp = chunk.get("response") if isinstance(chunk.get("response"), dict) else chunk
+        usage = _parse_usage(resp.get("usage")) if isinstance(resp, dict) else None
+        if isinstance(resp, dict):
+            for index, item in enumerate(resp.get("output") or []):
+                if not isinstance(item, dict) or item.get("type") != "function_call":
+                    continue
+                slot = acc.setdefault(int(index), {"id": "", "name": "", "arguments": ""})
+                slot["id"] = slot["id"] or str(item.get("call_id") or item.get("id") or "")
+                slot["name"] = slot["name"] or str(item.get("name") or "")
+                if not slot["arguments"] and item.get("arguments") is not None:
+                    slot["arguments"] = _tool_arguments(item.get("arguments"))
+        finish = "tool_calls" if acc else "stop"
+        return events, finish, usage
+    if etype in {"response.failed", "response.incomplete"}:
+        finish = "length" if etype.endswith("incomplete") else "stop"
+    return events, finish, usage
+
+
 def _emit_openai_chunk(
     chunk: dict[str, Any], acc: dict[int, dict[str, str]]
 ) -> tuple[list[StreamEvent], str | None]:
@@ -546,7 +823,7 @@ def _emit_native_chunk(
 def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
     try:
         secret = _auth_secret(req.provider, req.secret, req.credential_id)
-        url = _endpoint(req.provider, req.base_url)
+        url = _request_url(req)
         headers = request_headers(req.provider, secret)
     except RuntimeApiError as exc:
         yield StreamEvent(kind="error", error_key=exc.error_key)
@@ -609,6 +886,19 @@ def _stream_once(
                             return "retry"
                         yield _stream_error("runtime.badRequest", err_text)
                         return "done"
+                    kind = chunk.get("type")
+                    if isinstance(kind, str) and kind.startswith("response."):
+                        resp_events, resp_finish, resp_usage = _emit_responses_chunk(chunk, acc)
+                        if _usage_nonzero(resp_usage):
+                            usage = resp_usage
+                            emitted = True
+                            yield StreamEvent(kind="usage", usage=usage)
+                        for event in resp_events:
+                            emitted = True
+                            yield event
+                        if resp_finish:
+                            finish = resp_finish
+                        continue
                     chunk_usage = _parse_usage(chunk.get("usage")) or _parse_usage(chunk)
                     if _usage_nonzero(chunk_usage):
                         usage = chunk_usage
