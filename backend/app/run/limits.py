@@ -4,7 +4,11 @@ MAX_ORCHESTRATOR_STEPS = 24
 # Consecutive think turns without call/ask/finish. Runaway guard, not a work budget.
 MAX_ORCHESTRATOR_THINKS = 64
 # Consecutive think turns in one agent invocation without a tool call or result.
-MAX_AGENT_THINKS = 64
+MAX_AGENT_THINKS = 128
+# Consecutive 0- or 1-token think turns on agent or orchestrator.
+MAX_SHORT_THINKS = 5
+# After a successful write/delete, a think this small is the result, not another round.
+MAX_CLOSING_THINK_TOKENS = 16
 # Failed tool calls in one agent invocation. Successful calls are unbounded.
 MAX_FAILED_TOOL_CALLS = 10
 # Orchestrator checks files; it does not spend the run on tools instead of agents.

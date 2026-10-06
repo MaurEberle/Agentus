@@ -1383,7 +1383,8 @@
         "done": "Agente concluído",
         "toolFailures": "Agente interrompido após {{failed}} chamadas de ferramenta com falha",
         "think": "O agente está a pensar (não é um resultado).",
-        "thinkLimit": "Demasiados passos de pensamento sem resultado."
+        "thinkLimit": "Demasiados passos de pensamento sem resultado.",
+        "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos."
       },
       "knowledge": "Pesquisa de conhecimento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1416,6 +1417,7 @@
         "defer": "O passo seguinte após a mensagem no chat era ilegível; a execução continua.",
         "think": "O orquestrador está a pensar (não conta como passo).",
         "thinkLimit": "Demasiados turnos de pensamento sem uma chamada.",
+        "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos.",
         "window": "O prompt não cabe em nenhuma janela de contexto."
       }
     },

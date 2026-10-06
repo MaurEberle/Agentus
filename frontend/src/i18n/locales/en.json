@@ -1437,7 +1437,8 @@
         "done": "Agent finished",
         "toolFailures": "Agent stopped after {{failed}} failed tool calls",
         "think": "Agent is thinking (not a result).",
-        "thinkLimit": "Too many think turns without a result."
+        "thinkLimit": "Too many think turns without a result.",
+        "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {
@@ -1470,6 +1471,7 @@
         "defer": "The next step after the chat reply was unreadable; the run continues.",
         "think": "Orchestrator is thinking (does not count as a step).",
         "thinkLimit": "Too many think turns without a call.",
+        "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
         "window": "The prompt does not fit any context window."
       }
     },

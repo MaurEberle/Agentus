@@ -1437,7 +1437,8 @@
         "done": "Agent fertig",
         "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen beendet",
         "think": "Agent denkt (kein Ergebnis).",
-        "thinkLimit": "Zu viele Denkschritte ohne Ergebnis."
+        "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",
+        "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {
@@ -1470,6 +1471,7 @@
         "defer": "Nächster Schritt nach der Chat-Nachricht war unlesbar; der Lauf geht weiter.",
         "think": "Orchestrator denkt (zählt nicht als Schritt).",
         "thinkLimit": "Zu viele Denkschritte ohne Auftrag.",
+        "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
         "window": "Der Prompt passt in kein Kontextfenster."
       }
     },

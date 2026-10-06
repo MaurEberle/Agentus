@@ -1383,7 +1383,8 @@
         "done": "Ajan bitti",
         "toolFailures": "Ajan {{failed}} başarısız araç çağrısından sonra durdu",
         "think": "Ajan düşünüyor (sonuç değil).",
-        "thinkLimit": "Sonuçsuz çok fazla düşünme adımı."
+        "thinkLimit": "Sonuçsuz çok fazla düşünme adımı.",
+        "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu."
       },
       "knowledge": "Bilgi araması ({{count}} sonuç)",
       "knowledgeIndex": {
@@ -1416,6 +1417,7 @@
         "defer": "Sohbet iletisinden sonraki adım okunamadı; çalışma devam ediyor.",
         "think": "Orkestratör düşünüyor (adım sayılmaz).",
         "thinkLimit": "Çağrı olmadan çok fazla düşünme turu.",
+        "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu.",
         "window": "İstem hiçbir bağlam penceresine sığmıyor."
       }
     },

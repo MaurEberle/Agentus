@@ -1383,7 +1383,8 @@
         "done": "Agente finalizado",
         "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas",
         "think": "El agente está pensando (no es un resultado).",
-        "thinkLimit": "Demasiados pasos de pensamiento sin resultado."
+        "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",
+        "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1416,6 +1417,7 @@
         "defer": "El siguiente paso tras el mensaje de chat era ilegible; la ejecución continúa.",
         "think": "El orquestador está pensando (no cuenta como paso).",
         "thinkLimit": "Demasiados turnos de pensamiento sin un encargo.",
+        "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
         "window": "El prompt no cabe en ninguna ventana de contexto."
       }
     },

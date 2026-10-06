@@ -1383,7 +1383,8 @@
         "done": "Agent terminé",
         "toolFailures": "Agent arrêté après {{failed}} appels d'outil en échec",
         "think": "L’agent réfléchit (ce n’est pas un résultat).",
-        "thinkLimit": "Trop d’étapes de réflexion sans résultat."
+        "thinkLimit": "Trop d’étapes de réflexion sans résultat.",
+        "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes."
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
       "knowledgeIndex": {
@@ -1416,6 +1417,7 @@
         "defer": "L’étape suivante après le message de chat était illisible ; l’exécution continue.",
         "think": "L’orchestrateur réfléchit (ne compte pas comme une étape).",
         "thinkLimit": "Trop de tours de réflexion sans appel.",
+        "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes.",
         "window": "L’invite ne tient dans aucune fenêtre de contexte."
       }
     },
