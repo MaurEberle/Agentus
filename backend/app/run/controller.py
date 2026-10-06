@@ -477,10 +477,13 @@ class RunController:
         self.teardown(outcome=outcome)
         with self.lock:
             self.service_status = "stopped"
-        publish("service", {"serviceStatus": "stopped"})
         if self.snapshot:
-            self.snapshot = self.snapshot.model_copy(update={"service_status": "stopped"})
+            patch: dict[str, Any] = {"service_status": "stopped", "outcome": outcome}
+            if error_message:
+                patch["error_message"] = error_message
+            self.snapshot = self.snapshot.model_copy(update=patch)
             publish("run", self.snapshot.model_dump(by_alias=True))
+        publish("service", {"serviceStatus": "stopped"})
 
     def teardown(self, outcome: str | None) -> None:
         self.stop_event.set()
@@ -689,6 +692,7 @@ def _build_snapshot(
         network_name=compiled.network_name,
         started_at=started,
         service_status=status,
+        outcome="running",
         graph=RunGraph(nodes=nodes, edges=edges),
         nodes_runtime=runtime,
         activity=Activity(

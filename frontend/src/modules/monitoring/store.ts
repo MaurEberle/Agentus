@@ -57,6 +57,7 @@ type MonitoringState = {
 
 let lastService: ServiceStatus | null = null;
 let lastStepKey = '';
+let pendingEndRunId: string | null = null;
 
 function toastOnce(key: string, titleKey: string, variant: 'success' | 'info' | 'error', descriptionKey?: string) {
   const state = useMonitoringStore.getState();
@@ -65,15 +66,37 @@ function toastOnce(key: string, titleKey: string, variant: 'success' | 'info' | 
   notify({ titleKey, descriptionKey, variant });
 }
 
-function notifyTransitions(next: ServiceStatus, runId: string | undefined, errorMessage?: string) {
+function notifyRunEnded(runId: string | undefined, outcome?: RunSnapshot['outcome']) {
+  if (!outcome || outcome === 'running') return;
+  const key = `end:${runId ?? 'x'}`;
+  if (outcome === 'succeeded') {
+    toastOnce(key, 'monitoring.notify.runSucceeded', 'success');
+  } else if (outcome === 'failed' || outcome === 'timeout') {
+    toastOnce(key, 'monitoring.notify.runFailed', 'error');
+  } else if (outcome === 'cancelled') {
+    toastOnce(key, 'monitoring.notify.runCancelled', 'info');
+  } else {
+    toastOnce(key, 'monitoring.notify.runStopped', 'info');
+  }
+  pendingEndRunId = null;
+}
+
+function notifyTransitions(
+  next: ServiceStatus,
+  runId: string | undefined,
+  outcome?: RunSnapshot['outcome'],
+  errorMessage?: string,
+) {
   const prev = lastService;
   lastService = next;
+  if (next === 'running' || next === 'starting') pendingEndRunId = null;
   if (!prev || prev === next) return;
-  if (next === 'running' && (prev === 'stopped' || prev === 'starting' || prev === 'disconnected')) {
-    toastOnce(`start:${runId ?? 'x'}`, 'monitoring.notify.runStarted', 'success');
-  }
-  if (next === 'stopped' && (prev === 'running' || prev === 'stopping')) {
-    toastOnce(`stop:${runId ?? 'x'}`, 'monitoring.notify.runStopped', 'info');
+  if (next === 'stopped' && (prev === 'running' || prev === 'stopping' || prev === 'starting')) {
+    if (outcome && outcome !== 'running') {
+      notifyRunEnded(runId, outcome);
+    } else {
+      pendingEndRunId = runId ?? '';
+    }
   }
   if (
     (next === 'disconnected' || next === 'error') &&
@@ -213,7 +236,7 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       app.setRunId(null);
       applyWaitAsk(null);
     }
-    notifyTransitions(evt.serviceStatus, current.run?.runId, evt.errorMessage);
+    notifyTransitions(evt.serviceStatus, current.run?.runId, current.run?.outcome, evt.errorMessage);
     useMonitoringStore.setState({
       lastErrorMessage: evt.errorMessage ?? (evt.serviceStatus === 'error' ? current.lastErrorMessage : null),
       adapterErrorKey: evt.serviceStatus === 'disconnected' ? 'monitoring.empty.disconnectedTitle' : null,
@@ -282,7 +305,15 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
     app.setRunId(merged.runId);
     if (merged.serviceStatus) {
       app.setServiceStatus(merged.serviceStatus);
-      notifyTransitions(merged.serviceStatus, merged.runId, merged.errorMessage);
+      notifyTransitions(merged.serviceStatus, merged.runId, merged.outcome, merged.errorMessage);
+    }
+    if (
+      pendingEndRunId !== null &&
+      merged.outcome &&
+      merged.outcome !== 'running' &&
+      (!pendingEndRunId || pendingEndRunId === merged.runId)
+    ) {
+      notifyRunEnded(merged.runId, merged.outcome);
     }
     const step = merged.activity.stepError;
     const stepKey = step ? `${merged.runId}:${step.nodeId}:${step.message}` : '';

@@ -1144,6 +1144,9 @@
     "notify": {
       "runStarted": "运行已启动",
       "runStopped": "运行已结束",
+      "runSucceeded": "运行成功",
+      "runFailed": "运行失败",
+      "runCancelled": "运行已停止",
       "stepFailed": "步骤失败",
       "disconnected": "无法访问服务"
     },

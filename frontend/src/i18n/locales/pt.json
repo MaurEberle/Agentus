@@ -1144,6 +1144,9 @@
     "notify": {
       "runStarted": "Execução iniciada",
       "runStopped": "Execução parada",
+      "runSucceeded": "Execução bem-sucedida",
+      "runFailed": "Execução falhou",
+      "runCancelled": "Execução parada",
       "stepFailed": "O passo falhou",
       "disconnected": "Serviço inacessível"
     },

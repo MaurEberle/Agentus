@@ -1144,6 +1144,9 @@
     "notify": {
       "runStarted": "実行を開始しました",
       "runStopped": "実行が停止しました",
+      "runSucceeded": "実行が成功しました",
+      "runFailed": "実行が失敗しました",
+      "runCancelled": "実行を停止しました",
       "stepFailed": "ステップに失敗しました",
       "disconnected": "サービスに到達できません"
     },

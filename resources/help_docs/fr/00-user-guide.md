@@ -55,6 +55,8 @@ Optionnel : **Outil** vers le port **Outil** de l’agent ou de l’orchestrateu
 
 **Arrêter** annule l’exécution (résultat **Annulé**, pas **Erreur**). Ollama reste allumé.
 
+La cloche signale le démarrage et l’arrêt seulement en cas de succès ou d’échec. Si une exécution se termine d’elle-même, un avis indique succès, erreur ou annulation.
+
 Sans réseau actif, rien ne démarre. Un réseau invalide (erreur de validation, modèle manquant) doit être vérifié dans l’éditeur avant le démarrage.
 
 Pendant que le réseau actif tourne, **ce** document de l’éditeur est en lecture seule. Tu peux continuer à voir d’autres réseaux ; supprimer le réseau en cours dans la bibliothèque est bloqué.

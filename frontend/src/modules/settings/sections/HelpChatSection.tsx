@@ -180,7 +180,6 @@ export function HelpChatSection() {
         helpChat: helpChatWritePayload(help) as HelpChatSettings,
       });
       syncHelpChat(next);
-      notify({ titleKey: 'settings.notify.saved', variant: 'success' });
       return true;
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
@@ -191,14 +190,10 @@ export function HelpChatSection() {
   }
 
   function persistWebSearch(patch: { webSearchEnabled?: boolean; webSearchCredentialId?: string | null }) {
-    return patchSettings({ helpChat: patch as HelpChatSettings })
-      .then(() => {
-        notify({ titleKey: 'settings.notify.saved', variant: 'success' });
-      })
-      .catch(() => {
-        notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
-        return Promise.reject();
-      });
+    return patchSettings({ helpChat: patch as HelpChatSettings }).catch(() => {
+      notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+      return Promise.reject();
+    });
   }
 
   async function runPing() {

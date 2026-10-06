@@ -1198,6 +1198,9 @@
     "notify": {
       "runStarted": "Lauf gestartet",
       "runStopped": "Lauf beendet",
+      "runSucceeded": "Lauf erfolgreich",
+      "runFailed": "Lauf fehlgeschlagen",
+      "runCancelled": "Lauf gestoppt",
       "stepFailed": "Schritt fehlgeschlagen",
       "disconnected": "Dienst nicht erreichbar"
     },

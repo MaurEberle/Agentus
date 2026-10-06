@@ -1,6 +1,6 @@
 # Paramètres
 
-Engrenage dans l’en-tête. Sections à gauche : Apparence, Identifiants, Runtime, Chat d’aide, Serveurs MCP, Données, À propos. Champs non enregistrés au changement : dialogue Rester / Abandonner.
+Engrenage dans l’en-tête. Sections à gauche : Apparence, Identifiants, Runtime, Chat d’aide, Serveurs MCP, Données, À propos. Champs non enregistrés au changement : dialogue Rester / Abandonner. Enregistrer les paramètres ne crée pas de notification ; une erreur d’enregistrement oui.
 
 ## Apparence
 

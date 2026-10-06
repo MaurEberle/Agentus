@@ -55,6 +55,8 @@ Optional: **Werkzeug** oder **MCP** an den Anschluss **Werkzeug** von Agent oder
 
 **Stopp** bricht den Lauf ab (Ergebnis **Abbruch**, nicht **Fehler**). Ollama bleibt an.
 
+Die Glocke meldet Start und Stopp nur bei Erfolg oder Misserfolg. Endet ein Lauf von selbst, kommt eine Meldung zu Erfolg, Fehler oder Abbruch.
+
 Ohne aktives Netz startet nichts. Ein ungültiges Netz (Validierungsfehler, fehlendes Modell) solltest du vor dem Start im Editor prüfen.
 
 Während das aktive Netz läuft, ist **dieses** Dokument im Editor schreibgeschützt. Andere Netze kannst du weiter ansehen; Löschen des laufenden Netzes in der Verwaltung ist gesperrt.

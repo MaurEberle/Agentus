@@ -55,6 +55,8 @@ Bağlantılar (tipli bağlantı noktaları, rastgele oklar değil):
 
 **Durdur** çalıştırmayı iptal eder (sonuç **İptal**, **Hata** değil). Ollama açık kalır.
 
+Zil, başlatma ve durdurmayı yalnızca başarı veya başarısızlıkta bildirir. Çalıştırma kendiliğinden biterse başarı, hata veya iptal bildirimi gelir.
+
 Etkin ağ yoksa hiçbir şey başlamaz. Geçersiz bir ağı (doğrulama hatası, eksik model) başlamadan düzenleyicide denetlemelisin.
 
 Etkin ağ çalışırken düzenleyicideki **bu** belge salt okunur. Diğer ağlara bakmaya devam edebilirsin; kitaplıkta çalışan ağı silmek kilitlidir.

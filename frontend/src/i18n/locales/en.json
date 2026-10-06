@@ -1198,6 +1198,9 @@
     "notify": {
       "runStarted": "Run started",
       "runStopped": "Run stopped",
+      "runSucceeded": "Run succeeded",
+      "runFailed": "Run failed",
+      "runCancelled": "Run stopped",
       "stepFailed": "Step failed",
       "disconnected": "Service unreachable"
     },

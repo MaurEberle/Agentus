@@ -1,6 +1,6 @@
 # Definições
 
-Engrenagem no cabeçalho. Secções à esquerda: Aparência, Credenciais, Runtime, Chat de ajuda, Servidores MCP, Dados, Acerca de. Campos por guardar ao mudar: diálogo Ficar / Descartar.
+Engrenagem no cabeçalho. Secções à esquerda: Aparência, Credenciais, Runtime, Chat de ajuda, Servidores MCP, Dados, Acerca de. Campos por guardar ao mudar: diálogo Ficar / Descartar. Guardar definições não cria uma notificação; um erro ao guardar sim.
 
 ## Aparência
 

@@ -1,6 +1,6 @@
 # Ajustes
 
-Engranaje en el encabezado. Secciones a la izquierda: Apariencia, Credenciales, Runtime, Chat de ayuda, Servidores MCP, Datos, Acerca de. Campos sin guardar al cambiar: diálogo Quedarse / Descartar.
+Engranaje en el encabezado. Secciones a la izquierda: Apariencia, Credenciales, Runtime, Chat de ayuda, Servidores MCP, Datos, Acerca de. Campos sin guardar al cambiar: diálogo Quedarse / Descartar. Guardar ajustes no crea una notificación; un error al guardar sí.
 
 ## Apariencia
 

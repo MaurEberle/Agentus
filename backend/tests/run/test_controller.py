@@ -38,6 +38,22 @@ def test_start_without_active(client: TestClient) -> None:
     assert response.json()["messageKey"] == "run.noActiveNetwork"
 
 
+def test_finished_snapshot_carries_outcome(client: TestClient) -> None:
+    _save_mini(startMessage="go")
+    response = client.post("/api/run/start")
+    assert response.status_code == 200
+    thread = get_controller().thread
+    if thread:
+        thread.join(timeout=5)
+    time.sleep(0.05)
+    snap = get_controller().snapshot
+    assert snap is not None
+    assert snap.outcome == "succeeded"
+    assert snap.service_status == "stopped"
+    body = client.get("/api/run").json()
+    assert body["outcome"] == "succeeded"
+
+
 def test_start_succeeds_and_teardown_unloads(client: TestClient) -> None:
     _save_mini(startMessage="go")
     response = client.post("/api/run/start")

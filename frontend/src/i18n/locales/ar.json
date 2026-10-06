@@ -1144,6 +1144,9 @@
     "notify": {
       "runStarted": "بدأ التشغيل",
       "runStopped": "توقف التشغيل",
+      "runSucceeded": "نجح التشغيل",
+      "runFailed": "فشل التشغيل",
+      "runCancelled": "توقف التشغيل",
       "stepFailed": "فشلت الخطوة",
       "disconnected": "الخدمة غير متاحة"
     },

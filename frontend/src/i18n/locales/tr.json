@@ -1144,6 +1144,9 @@
     "notify": {
       "runStarted": "Çalıştırma başladı",
       "runStopped": "Çalıştırma durdu",
+      "runSucceeded": "Çalıştırma başarılı",
+      "runFailed": "Çalıştırma başarısız",
+      "runCancelled": "Çalıştırma durdu",
       "stepFailed": "Adım başarısız",
       "disconnected": "Hizmete erişilemiyor"
     },

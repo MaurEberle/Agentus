@@ -136,11 +136,6 @@ export async function startActiveRun() {
   }
 
   store.setServiceStatus('starting');
-  notify({
-    titleKey: 'notify.runStarting.title',
-    descriptionKey: 'notify.runStarting.desc',
-    variant: 'info',
-  });
 
   try {
     const result: StartRunResponse = await apiFetch<StartRunResponse>('/run/start', { method: 'POST' });
@@ -169,21 +164,11 @@ export async function stopActiveRun() {
   }
 
   store.setServiceStatus('stopping');
-  notify({
-    titleKey: 'notify.runStopping.title',
-    descriptionKey: 'notify.runStopping.desc',
-    variant: 'info',
-  });
 
   try {
     const result: StopRunResponse = await apiFetch<StopRunResponse>('/run/stop', { method: 'POST' });
     store.setServiceStatus(result.serviceStatus);
     store.setRunId(null);
-    notify({
-      titleKey: 'notify.runStopped.title',
-      descriptionKey: 'notify.runStopped.desc',
-      variant: 'success',
-    });
     void queryClient.invalidateQueries({ queryKey: ['session'] });
     void queryClient.invalidateQueries({ queryKey: ['runs'] });
     void queryClient.invalidateQueries({ queryKey: ['networks'] });
