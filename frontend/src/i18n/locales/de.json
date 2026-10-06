@@ -717,6 +717,10 @@
         "name": "Name",
         "description": "Beschreibung",
         "tags": "Tags",
+        "tagsPlaceholder": "Tag hinzufügen",
+        "tagsHint": "Enter, Komma oder + übernimmt den Tag.",
+        "addTag": "Tag übernehmen",
+        "removeTag": "{{tag}} entfernen",
         "stats": "{{nodes}} Knoten · {{edges}} Kanten",
         "noIssues": "Keine Validierungsfehler."
       },
@@ -1003,10 +1007,12 @@
       "description": "Beschreibung"
     },
     "tags": {
-      "title": "Tags hinzufügen",
-      "body": "Die Tags werden zu {{count}} Netzen hinzugefügt, bestehende bleiben.",
+      "title": "Tags setzen",
+      "body": "Vorhandene Tags der Auswahl ({{count}}) sind vorausgefüllt.",
       "label": "Tags",
-      "placeholder": "ops, prod",
+      "placeholder": "Tag hinzufügen",
+      "hint": "Enter, Komma oder + übernimmt den Tag.",
+      "remove": "{{tag}} entfernen",
       "add": "Hinzufügen"
     },
     "delete": {
@@ -1031,7 +1037,7 @@
       "error": "Aktion fehlgeschlagen",
       "duplicated": "Kopie in der Bibliothek angelegt",
       "renamed": "Metadaten gespeichert",
-      "tagged": "Tags hinzugefügt",
+      "tagged": "Tags gespeichert",
       "deleted": "Netze gelöscht",
       "imported": "{{count}} Netze importiert",
       "exported": "Export gestartet"

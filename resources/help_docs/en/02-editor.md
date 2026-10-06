@@ -50,7 +50,7 @@ Invalid drags are rejected.
 
 ## Inspector
 
-No node selected: name, description, tags, stats, validation list of the **open** network.
+No node selected: name, description, tags, stats, validation list of the **open** network. Tags are chips; Enter, comma, or plus commits a tag, the cross removes it. The library filters on the same tags.
 
 Node selected:
 
@@ -93,7 +93,7 @@ Leaving with unsaved changes: Save / Discard / Cancel.
 
 List with search (name, description, tags), sort, filters “valid only” / “active only”. Multi-select.
 
-Actions: New (editor), Open, Duplicate, Rename, Set tags, **Set active** (only one valid network), Delete, Import, Export.
+Actions: New (editor), Open, Duplicate, Rename, Set tags, **Set active** (only one valid network), Delete, Import, Export. Set tags opens the existing tags of the selection as chips.
 
 Delete removes the workspace entry, not your knowledge source files on disk, not the help corpus, and not history runs. A **running** network is skipped. Deleting the active network clears quick select.
 

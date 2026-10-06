@@ -8,6 +8,7 @@ from typing import Any
 
 from app.db.bootstrap import WindowGeom, save_window
 from app.db.paths import webview_storage_dir
+from app.http.paths import static_dir
 from app.host.bridge import ChromeHostApi, inject_chrome_host
 from app.host.geometry import MIN_H, MIN_W, start_placement
 from app.host.native_frame import (
@@ -31,6 +32,19 @@ def _dev() -> bool:
         "true",
         "yes",
     }
+
+
+def spa_window_url(port: int) -> str:
+    """Bust WebView2's HTML cache after an overlay (same origin, new query)."""
+    stamp = "0"
+    folder = static_dir()
+    if folder is not None:
+        index = folder / "index.html"
+        try:
+            stamp = str(int(index.stat().st_mtime))
+        except OSError:
+            pass
+    return f"http://127.0.0.1:{port}/?v={stamp}"
 
 
 def webview_start_kwargs(*, icon_path: str | None) -> dict[str, Any]:
@@ -92,7 +106,7 @@ def run_host(host: str, port: int) -> None:
         icon_path = resolve_app_icon()
         win = webview.create_window(
             title=WINDOW_TITLE,
-            url=f"http://127.0.0.1:{port}/",
+            url=spa_window_url(port),
             js_api=api,
             width=geom.w,
             height=geom.h,

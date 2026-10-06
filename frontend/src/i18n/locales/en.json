@@ -717,6 +717,10 @@
         "name": "Name",
         "description": "Description",
         "tags": "Tags",
+        "tagsPlaceholder": "Add a tag",
+        "tagsHint": "Enter, comma, or + commits the tag.",
+        "addTag": "Add tag",
+        "removeTag": "Remove {{tag}}",
         "stats": "{{nodes}} nodes · {{edges}} edges",
         "noIssues": "No validation issues."
       },
@@ -1003,10 +1007,12 @@
       "description": "Description"
     },
     "tags": {
-      "title": "Add tags",
-      "body": "Tags are added to {{count}} networks. Existing tags stay.",
+      "title": "Set tags",
+      "body": "Existing tags of the selection ({{count}}) are filled in.",
       "label": "Tags",
-      "placeholder": "ops, prod",
+      "placeholder": "Add a tag",
+      "hint": "Enter, comma, or + commits the tag.",
+      "remove": "Remove {{tag}}",
       "add": "Add"
     },
     "delete": {
@@ -1031,7 +1037,7 @@
       "error": "Action failed",
       "duplicated": "Copy added to the library",
       "renamed": "Metadata saved",
-      "tagged": "Tags added",
+      "tagged": "Tags saved",
       "deleted": "Networks deleted",
       "imported": "{{count}} networks imported",
       "exported": "Export started"

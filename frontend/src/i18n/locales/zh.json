@@ -663,6 +663,10 @@
         "name": "名称",
         "description": "描述",
         "tags": "标签",
+        "tagsPlaceholder": "添加标签",
+        "tagsHint": "按 Enter、逗号或 + 确认标签。",
+        "addTag": "添加标签",
+        "removeTag": "移除 {{tag}}",
         "stats": "{{nodes}} 个节点 · {{edges}} 条边",
         "noIssues": "没有验证错误。"
       },
@@ -949,10 +953,12 @@
       "description": "描述"
     },
     "tags": {
-      "title": "添加标签",
-      "body": "标签将添加到 {{count}} 个网络。现有标签保留。",
+      "title": "设置标签",
+      "body": "所选网络的现有标签（{{count}}）已填入。",
       "label": "标签",
-      "placeholder": "ops, prod",
+      "placeholder": "添加标签",
+      "hint": "按 Enter、逗号或 + 确认标签。",
+      "remove": "移除 {{tag}}",
       "add": "添加"
     },
     "delete": {
@@ -977,7 +983,7 @@
       "error": "操作失败",
       "duplicated": "已将副本添加到资料库",
       "renamed": "元数据已保存",
-      "tagged": "已添加标签",
+      "tagged": "标签已保存",
       "deleted": "已删除网络",
       "imported": "已导入 {{count}} 个网络",
       "exported": "已开始导出"

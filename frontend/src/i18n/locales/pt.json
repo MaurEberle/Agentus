@@ -663,6 +663,10 @@
         "name": "Nome",
         "description": "Descrição",
         "tags": "Etiquetas",
+        "tagsPlaceholder": "Adicionar etiqueta",
+        "tagsHint": "Enter, vírgula ou + confirma a etiqueta.",
+        "addTag": "Adicionar etiqueta",
+        "removeTag": "Remover {{tag}}",
         "stats": "{{nodes}} nós · {{edges}} arestas",
         "noIssues": "Sem erros de validação."
       },
@@ -949,10 +953,12 @@
       "description": "Descrição"
     },
     "tags": {
-      "title": "Adicionar etiquetas",
-      "body": "As etiquetas são adicionadas a {{count}} redes. As existentes mantêm-se.",
+      "title": "Definir etiquetas",
+      "body": "As etiquetas existentes da seleção ({{count}}) já estão preenchidas.",
       "label": "Etiquetas",
-      "placeholder": "ops, prod",
+      "placeholder": "Adicionar etiqueta",
+      "hint": "Enter, vírgula ou + confirma a etiqueta.",
+      "remove": "Remover {{tag}}",
       "add": "Adicionar"
     },
     "delete": {
@@ -977,7 +983,7 @@
       "error": "A ação falhou",
       "duplicated": "Cópia adicionada à biblioteca",
       "renamed": "Metadados guardados",
-      "tagged": "Etiquetas adicionadas",
+      "tagged": "Etiquetas guardadas",
       "deleted": "Redes eliminadas",
       "imported": "{{count}} redes importadas",
       "exported": "Exportação iniciada"

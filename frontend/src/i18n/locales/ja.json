@@ -663,6 +663,10 @@
         "name": "名前",
         "description": "説明",
         "tags": "タグ",
+        "tagsPlaceholder": "タグを追加",
+        "tagsHint": "Enter、カンマ、または + で確定します。",
+        "addTag": "タグを追加",
+        "removeTag": "{{tag}} を削除",
         "stats": "{{nodes}} ノード · {{edges}} エッジ",
         "noIssues": "検証エラーはありません。"
       },
@@ -949,10 +953,12 @@
       "description": "説明"
     },
     "tags": {
-      "title": "タグを追加",
-      "body": "タグは {{count}} 個のネットワークに追加されます。既存のタグは残ります。",
+      "title": "タグを設定",
+      "body": "選択中の既存タグ（{{count}}）を表示します。",
       "label": "タグ",
-      "placeholder": "ops, prod",
+      "placeholder": "タグを追加",
+      "hint": "Enter、カンマ、または + で確定します。",
+      "remove": "{{tag}} を削除",
       "add": "追加"
     },
     "delete": {
@@ -977,7 +983,7 @@
       "error": "操作に失敗しました",
       "duplicated": "コピーをライブラリに追加しました",
       "renamed": "メタデータを保存しました",
-      "tagged": "タグを追加しました",
+      "tagged": "タグを保存しました",
       "deleted": "ネットワークを削除しました",
       "imported": "{{count}} 個のネットワークをインポートしました",
       "exported": "エクスポートを開始しました"

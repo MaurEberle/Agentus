@@ -50,7 +50,7 @@ Um arrasto inválido é recusado.
 
 ## Inspetor
 
-Nenhum nó escolhido: nome, descrição, etiquetas, estatísticas, lista de validação da rede **aberta**.
+Nenhum nó escolhido: nome, descrição, etiquetas, estatísticas, lista de validação da rede **aberta**. As etiquetas são chips; Enter, vírgula ou mais confirma uma etiqueta, a cruz remove-a. A biblioteca filtra pelas mesmas etiquetas.
 
 Nó escolhido:
 
@@ -93,7 +93,7 @@ Sair sem guardar: diálogo Guardar / Descartar / Cancelar.
 
 Lista com pesquisa (nome, descrição, etiquetas), ordenação, filtros «só válidas» / «só ativas». Seleção múltipla.
 
-Ações: Novo (editor), Abrir, Duplicar, Mudar o nome, Definir etiquetas, **Definir como ativa** (só uma rede válida), Apagar, Importar, Exportar.
+Ações: Novo (editor), Abrir, Duplicar, Mudar o nome, Definir etiquetas, **Definir como ativa** (só uma rede válida), Apagar, Importar, Exportar. Definir etiquetas carrega as etiquetas existentes da seleção como chips.
 
 Apagar remove a entrada da área de trabalho, não os teus ficheiros de conhecimento no disco, nem o corpus de ajuda nem as execuções do histórico. Uma rede **em execução** é ignorada. Apagar a rede ativa esvazia a seleção rápida.
 

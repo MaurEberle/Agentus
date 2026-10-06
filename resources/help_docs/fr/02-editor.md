@@ -50,7 +50,7 @@ Un glisser invalide est refusé.
 
 ## Inspecteur
 
-Aucun nœud choisi : nom, description, étiquettes, statistiques, liste de validation du réseau **ouvert**.
+Aucun nœud choisi : nom, description, étiquettes, statistiques, liste de validation du réseau **ouvert**. Les étiquettes sont des pastilles ; Entrée, virgule ou plus valide une étiquette, la croix la retire. La bibliothèque filtre sur les mêmes étiquettes.
 
 Nœud choisi :
 
@@ -93,7 +93,7 @@ Quitter sans enregistrer : dialogue Enregistrer / Abandonner / Annuler.
 
 Liste avec recherche (nom, description, étiquettes), tri, filtres « valides seulement » / « actifs seulement ». Sélection multiple.
 
-Actions : Nouveau (éditeur), Ouvrir, Dupliquer, Renommer, Ajouter des étiquettes, **Définir comme actif** (un seul réseau valide), Supprimer, Importer, Exporter.
+Actions : Nouveau (éditeur), Ouvrir, Dupliquer, Renommer, Définir les étiquettes, **Définir comme actif** (un seul réseau valide), Supprimer, Importer, Exporter. Définir les étiquettes charge les étiquettes existantes de la sélection comme pastilles.
 
 Supprimer retire l’entrée de l’espace de travail, pas tes fichiers source de connaissances sur le disque, ni le corpus d’aide, ni les exécutions d’historique. Un réseau **en cours** est ignoré. Supprimer le réseau actif vide la sélection rapide.
 

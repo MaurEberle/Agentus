@@ -37,7 +37,10 @@ def mount_spa(app: FastAPI) -> None:
     async def spa(request: Request, full_path: str = "") -> object:
         if full_path == "api" or full_path.startswith("api/"):
             raise AppError("http.notFound", status_code=404)
-        return await static.get_response(full_path, request.scope)
+        response = await static.get_response(full_path, request.scope)
+        if "text/html" in (response.headers.get("content-type") or ""):
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     router = APIRouter(route_class=_SpaRoute)
     router.add_api_route("/", spa, methods=["GET", "HEAD"], include_in_schema=False)

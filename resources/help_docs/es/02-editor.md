@@ -50,7 +50,7 @@ Un arrastre inválido se rechaza.
 
 ## Inspector
 
-Ningún nodo elegido: nombre, descripción, etiquetas, estadísticas, lista de validación de la red **abierta**.
+Ningún nodo elegido: nombre, descripción, etiquetas, estadísticas, lista de validación de la red **abierta**. Las etiquetas son chips; Intro, coma o más confirma una etiqueta, la cruz la quita. La biblioteca filtra por las mismas etiquetas.
 
 Nodo elegido:
 
@@ -93,7 +93,7 @@ Salir sin guardar: diálogo Guardar / Descartar / Cancelar.
 
 Lista con búsqueda (nombre, descripción, etiquetas), orden, filtros «solo válidas» / «solo activas». Selección múltiple.
 
-Acciones: Nuevo (editor), Abrir, Duplicar, Renombrar, Poner etiquetas, **Definir como activa** (solo una red válida), Borrar, Importar, Exportar.
+Acciones: Nuevo (editor), Abrir, Duplicar, Renombrar, Poner etiquetas, **Definir como activa** (solo una red válida), Borrar, Importar, Exportar. Poner etiquetas carga las etiquetas existentes de la selección como chips.
 
 Borrar quita la entrada del espacio de trabajo, no tus archivos de conocimiento en disco, ni el corpus de ayuda ni las ejecuciones del historial. Una red **en ejecución** se omite. Borrar la red activa vacía la selección rápida.
 

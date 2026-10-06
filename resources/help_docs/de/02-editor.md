@@ -50,7 +50,7 @@ Ungültiges Ziehen wird abgewiesen.
 
 ## Inspector
 
-Kein Knoten gewählt: Name, Beschreibung, Tags, Statistik, Validierungsliste des **offenen** Netzes.
+Kein Knoten gewählt: Name, Beschreibung, Tags, Statistik, Validierungsliste des **offenen** Netzes. Tags sind Chips; Enter, Komma oder Plus übernimmt einen Tag, das Kreuz entfernt ihn. Die Verwaltung filtert nach denselben Tags.
 
 Knoten gewählt:
 
@@ -93,7 +93,7 @@ Ungespeichert verlassen: Dialog Speichern / Verwerfen / Abbrechen.
 
 Liste mit Suche (Name, Beschreibung, Tags), Sortierung, Filter „nur gültige“ / „nur aktive“. Mehrfachauswahl.
 
-Aktionen: Neu (Editor), Öffnen, Duplizieren, Umbenennen, Tags setzen, **Als aktiv setzen** (nur ein gültiges Netz), Löschen, Importieren, Exportieren.
+Aktionen: Neu (Editor), Öffnen, Duplizieren, Umbenennen, Tags setzen, **Als aktiv setzen** (nur ein gültiges Netz), Löschen, Importieren, Exportieren. Tags setzen lädt die vorhandenen Tags der Auswahl als Chips.
 
 Löschen entfernt den Workspace-Eintrag, nicht deine Knowledge-Quelldateien auf der Platte, nicht den Hilfe-Korpus und nicht die Historie-Läufe. Ein **laufendes** Netz wird übersprungen. Aktives Netz löschen leert die Schnellwahl.
 

@@ -42,6 +42,17 @@ def test_about_has_version_no_paths_or_secrets(client: TestClient) -> None:
     assert "LOCALAPPDATA" not in text
 
 
+def test_spa_html_is_not_cached(tmp_path, monkeypatch) -> None:
+    dist = tmp_path / "spa"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html><body>ok</body></html>", encoding="utf-8")
+    monkeypatch.setenv("AGENTUS_NETWORK_STATIC_DIR", str(dist))
+    response = TestClient(create_app()).get("/")
+    assert response.status_code == 200
+    assert "ok" in response.text
+    assert response.headers.get("cache-control") == "no-store"
+
+
 def test_unknown_api_path_is_not_found(client: TestClient) -> None:
     response = client.get("/api/does-not-exist")
     assert response.status_code == 404

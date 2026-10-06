@@ -663,6 +663,10 @@
         "name": "Nom",
         "description": "Description",
         "tags": "Étiquettes",
+        "tagsPlaceholder": "Ajouter une étiquette",
+        "tagsHint": "Entrée, virgule ou + valide l’étiquette.",
+        "addTag": "Ajouter l’étiquette",
+        "removeTag": "Retirer {{tag}}",
         "stats": "{{nodes}} nœuds · {{edges}} arêtes",
         "noIssues": "Aucune erreur de validation."
       },
@@ -949,10 +953,12 @@
       "description": "Description"
     },
     "tags": {
-      "title": "Ajouter des étiquettes",
-      "body": "Les étiquettes sont ajoutées à {{count}} réseaux. Les étiquettes existantes restent.",
+      "title": "Définir les étiquettes",
+      "body": "Les étiquettes existantes de la sélection ({{count}}) sont préremplies.",
       "label": "Étiquettes",
-      "placeholder": "ops, prod",
+      "placeholder": "Ajouter une étiquette",
+      "hint": "Entrée, virgule ou + valide l’étiquette.",
+      "remove": "Retirer {{tag}}",
       "add": "Ajouter"
     },
     "delete": {
@@ -977,7 +983,7 @@
       "error": "L’action a échoué",
       "duplicated": "Copie ajoutée à la bibliothèque",
       "renamed": "Métadonnées enregistrées",
-      "tagged": "Étiquettes ajoutées",
+      "tagged": "Étiquettes enregistrées",
       "deleted": "Réseaux supprimés",
       "imported": "{{count}} réseaux importés",
       "exported": "Export lancé"

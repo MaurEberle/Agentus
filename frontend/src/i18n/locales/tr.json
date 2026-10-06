@@ -663,6 +663,10 @@
         "name": "Ad",
         "description": "Açıklama",
         "tags": "Etiketler",
+        "tagsPlaceholder": "Etiket ekle",
+        "tagsHint": "Enter, virgül veya + etiketi onaylar.",
+        "addTag": "Etiketi ekle",
+        "removeTag": "{{tag}} etiketini kaldır",
         "stats": "{{nodes}} düğüm · {{edges}} kenar",
         "noIssues": "Doğrulama hatası yok."
       },
@@ -949,10 +953,12 @@
       "description": "Açıklama"
     },
     "tags": {
-      "title": "Etiket ekle",
-      "body": "Etiketler {{count}} ağa eklenir. Mevcut etiketler kalır.",
+      "title": "Etiketleri ayarla",
+      "body": "Seçimin mevcut etiketleri ({{count}}) doldurulur.",
       "label": "Etiketler",
-      "placeholder": "ops, prod",
+      "placeholder": "Etiket ekle",
+      "hint": "Enter, virgül veya + etiketi onaylar.",
+      "remove": "{{tag}} etiketini kaldır",
       "add": "Ekle"
     },
     "delete": {
@@ -977,7 +983,7 @@
       "error": "Eylem başarısız",
       "duplicated": "Kopya kitaplığa eklendi",
       "renamed": "Üst veriler kaydedildi",
-      "tagged": "Etiketler eklendi",
+      "tagged": "Etiketler kaydedildi",
       "deleted": "Ağlar silindi",
       "imported": "{{count}} ağ içe aktarıldı",
       "exported": "Dışa aktarma başladı"

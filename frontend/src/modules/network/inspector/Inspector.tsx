@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ModelCombobox } from '@/components/ModelCombobox';
+import { TagInput } from '@/components/TagInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,10 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { pickFolderPath } from '@/lib/pickFolder';
 import {
   useEditorCredentialsQuery,
+  useEditorNetworksQuery,
   useMcpServersQuery,
   reindexNetworkKnowledge,
   testLlmConnection,
 } from '@/modules/network/api';
+import { uniqueTags } from '@/modules/networks/model/filter';
 import { useHostResourcesQuery, useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
 import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
@@ -54,6 +57,8 @@ export function Inspector({
   const selectedNodeIds = useNetworkEditor((state) => state.selectedNodeIds);
   const setMeta = useNetworkEditor((state) => state.setMeta);
   const select = useNetworkEditor((state) => state.select);
+  const networks = useEditorNetworksQuery();
+  const tagSuggestions = useMemo(() => uniqueTags(networks.data?.items ?? []), [networks.data?.items]);
 
   if (selectedNodeIds.length > 1) {
     return (
@@ -99,19 +104,21 @@ export function Inspector({
             onChange={(event) => setMeta({ description: event.target.value })}
           />
         </Field>
-        <Field label={t('network.inspector.graph.tags')}>
-          <Input
-            value={(document.tags ?? []).join(', ')}
+        <Field label={t('network.inspector.graph.tags')} htmlFor="network-graph-tags">
+          <TagInput
+            id="network-graph-tags"
+            value={document.tags ?? []}
             disabled={readOnly}
-            onChange={(event) =>
-              setMeta({
-                tags: event.target.value
-                  .split(',')
-                  .map((item) => item.trim())
-                  .filter(Boolean),
-              })
-            }
+            placeholder={t('network.inspector.graph.tagsPlaceholder')}
+            addLabel={t('network.inspector.graph.addTag')}
+            removeLabel={(tag) => t('network.inspector.graph.removeTag', { tag })}
+            suggestions={tagSuggestions}
+            describedBy="network-graph-tags-hint"
+            onChange={(tags) => setMeta({ tags })}
           />
+          <p id="network-graph-tags-hint" className="text-xs text-muted-foreground">
+            {t('network.inspector.graph.tagsHint')}
+          </p>
         </Field>
         <p className="text-xs text-muted-foreground">
           {t('network.inspector.graph.stats', {
@@ -161,10 +168,10 @@ export function Inspector({
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) {
   return (
     <div className="grid min-w-0 gap-1.5">
-      <Label>{label}</Label>
+      <Label htmlFor={htmlFor}>{label}</Label>
       {children}
     </div>
   );

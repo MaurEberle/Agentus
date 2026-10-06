@@ -50,7 +50,7 @@ Geçersiz sürükleme reddedilir.
 
 ## Denetçi
 
-Düğüm seçili değil: **açık** ağın adı, açıklaması, etiketleri, istatistiği, doğrulama listesi.
+Düğüm seçili değil: **açık** ağın adı, açıklaması, etiketleri, istatistiği, doğrulama listesi. Etiketler çiplerdir; Enter, virgül veya artı bir etiketi onaylar, çarpı kaldırır. Yönetim aynı etiketlere göre süzgeçler.
 
 Düğüm seçili:
 
@@ -93,7 +93,7 @@ Kaydetmeden çıkış: Kaydet / At / İptal iletişim kutusu.
 
 Arama (ad, açıklama, etiketler), sıralama, «yalnızca geçerli» / «yalnızca etkin» süzgeçleri. Çoklu seçim.
 
-Eylemler: Yeni (düzenleyici), Aç, Çoğalt, Yeniden adlandır, Etiket koy, **Etkin yap** (yalnızca geçerli bir ağ), Sil, İçe aktar, Dışa aktar.
+Eylemler: Yeni (düzenleyici), Aç, Çoğalt, Yeniden adlandır, Etiket koy, **Etkin yap** (yalnızca geçerli bir ağ), Sil, İçe aktar, Dışa aktar. Etiket koy, seçimin mevcut etiketlerini çip olarak yükler.
 
 Silme çalışma alanı kaydını kaldırır; diskteki bilgi kaynak dosyalarını, yardım derlemini ve geçmiş çalıştırmalarını kaldırmaz. **Çalışan** bir ağ atlanır. Etkin ağı silmek hızlı seçimi boşaltır.
 

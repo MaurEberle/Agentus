@@ -10,13 +10,13 @@ import { notify } from '@/lib/notifications';
 import type { NetworkListItem } from '@/modules/dashboard/model';
 import { downloadJson } from '@/modules/network/model/serialize';
 import {
-  addTags,
   deleteNetworks,
   duplicateNetwork,
   exportNetwork,
   importNetwork,
   listNetworkSummaries,
   renameNetwork,
+  saveNetworkTags,
   setLibraryActive,
 } from '@/modules/networks/api';
 import { DetailPanel } from '@/modules/networks/detail/DetailPanel';
@@ -26,7 +26,7 @@ import { RenameDialog } from '@/modules/networks/dialogs/RenameDialog';
 import { TagsDialog } from '@/modules/networks/dialogs/TagsDialog';
 import { FilterBar } from '@/modules/networks/filters/FilterBar';
 import { NetworkList } from '@/modules/networks/list/NetworkList';
-import { applyNetworkFilters, uniqueTags } from '@/modules/networks/model/filter';
+import { applyNetworkFilters, sharedTags, uniqueTags } from '@/modules/networks/model/filter';
 import { exportFileStem, exportStamp, isImportFail, parseImportJson } from '@/modules/networks/model/importDoc';
 import { downloadBlob, zipStore } from '@/modules/networks/model/zip';
 import { LibraryRibbon } from '@/modules/networks/ribbon/Ribbon';
@@ -61,6 +61,7 @@ export function NetworksModule() {
     [items, selectedIds],
   );
   const tags = useMemo(() => uniqueTags(items), [items]);
+  const seedTags = useMemo(() => sharedTags(selected), [selected]);
   const filtersOn = Boolean(filterQuery.trim() || tagFilter.length || onlyValid || onlyActive);
 
   const [busy, setBusy] = useState(false);
@@ -297,13 +298,12 @@ export function NetworksModule() {
         open={tagsOpen}
         count={selected.length}
         busy={busy}
+        initialTags={seedTags}
+        suggestions={tags}
         onClose={() => setTagsOpen(false)}
         onSave={(nextTags) => {
           void run(async () => {
-            await addTags(
-              selected.map((item) => item.id),
-              nextTags,
-            );
+            await saveNetworkTags(selected, seedTags, nextTags);
             setTagsOpen(false);
           }, 'networks.notify.tagged');
         }}
