@@ -29,6 +29,7 @@
     "start": "Start",
     "indexing": "Wissen wird indiziert: {{name}}",
     "stop": "Stopp",
+    "waitAsk": "Wartet auf Antwort",
     "quickSelect": "Schnellwahl",
     "quickSelectPlaceholder": "Netzwerk wählen",
     "noNetwork": "Kein Netzwerk",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "Kein aktives Netzwerk",
       "desc": "Die Schnellwahl wurde geleert."
+    },
+    "waitAsk": {
+      "title": "Rückfrage von {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -712,6 +717,10 @@
         "name": "Name",
         "description": "Beschreibung",
         "tags": "Tags",
+        "tagsPlaceholder": "Tag hinzufügen",
+        "tagsHint": "Enter, Komma oder + übernimmt den Tag.",
+        "addTag": "Tag übernehmen",
+        "removeTag": "{{tag}} entfernen",
         "stats": "{{nodes}} Knoten · {{edges}} Kanten",
         "noIssues": "Keine Validierungsfehler."
       },
@@ -737,7 +746,27 @@
         "numCtx": "Kontextlänge",
         "numCtxHint": "Grenzen kommen vom gewählten Modell.",
         "numCtxLoading": "Modellgrenzen werden geladen…",
-        "numCtxUnavailable": "Für dieses Modell sind keine Längenangaben verfügbar."
+        "numCtxUnavailable": "Für dieses Modell sind keine Längenangaben verfügbar.",
+        "numThread": "CPU-Threads",
+        "numThreadHint": "Standard sind die physischen Kerne.",
+        "numThreadLoading": "CPU-Kerne werden gelesen…",
+        "numThreadUnavailable": "Die CPU-Thread-Zahl ist nicht verfügbar.",
+        "numGpu": "GPU-Offload",
+        "numGpuHint": "Ein Schritt pro Layer. Standard sind alle Layer. Bei Ladefehler Auto.",
+        "numGpuLoading": "Layerzahl wird gelesen…",
+        "numGpuUnavailable": "Die Layerzahl ist für dieses Modell nicht verfügbar.",
+        "numGpuLayers": "{{offload}} von {{total}} Layern",
+        "vram": "GPU-Speicher",
+        "vramLoading": "Speicherbedarf wird geschätzt…",
+        "vramNeed": "{{need}} von {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Gewichte {{weights}} · Kontext {{kv}} · Reserve {{overhead}}",
+        "vramOver": "Passt nicht in den GPU-Speicher. Kontext oder Offload verringern, sonst rechnet die CPU mit.",
+        "vramTight": "Knapp. Ein zweites Modell oder ein voller Prompt kann überlaufen.",
+        "vramFormula": "GPU: letzte {{on}} von {{total}} Schichten. {{full}} × {{perToken}} B/Token × {{ctx}} Tokens.",
+        "vramFormulaMixed": "GPU: letzte {{on}} von {{total}} Schichten. {{full}} globale Schichten × {{ctx}} Tokens.",
+        "vramFormulaSwa": "GPU: letzte {{on}} von {{total}} Schichten. {{full}} global × {{ctx}} Tokens, {{swa}} Sliding-Window × Fenster {{window}}.",
+        "vramHint": "Schätzung je Schicht aus den Modelldaten. Die GPU nimmt die letzten N Schichten. Volle Attention: kompletter Kontext. Sliding-Window: nur das Fenster. KV-Cache ist f16."
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",
@@ -978,10 +1007,12 @@
       "description": "Beschreibung"
     },
     "tags": {
-      "title": "Tags hinzufügen",
-      "body": "Die Tags werden zu {{count}} Netzen hinzugefügt, bestehende bleiben.",
+      "title": "Tags setzen",
+      "body": "Vorhandene Tags der Auswahl ({{count}}) sind vorausgefüllt.",
       "label": "Tags",
-      "placeholder": "ops, prod",
+      "placeholder": "Tag hinzufügen",
+      "hint": "Enter, Komma oder + übernimmt den Tag.",
+      "remove": "{{tag}} entfernen",
       "add": "Hinzufügen"
     },
     "delete": {
@@ -1006,7 +1037,7 @@
       "error": "Aktion fehlgeschlagen",
       "duplicated": "Kopie in der Bibliothek angelegt",
       "renamed": "Metadaten gespeichert",
-      "tagged": "Tags hinzugefügt",
+      "tagged": "Tags gespeichert",
       "deleted": "Netze gelöscht",
       "imported": "{{count}} Netze importiert",
       "exported": "Export gestartet"
@@ -1096,7 +1127,8 @@
       "tool": "Werkzeug",
       "human": "Eingabe",
       "index": "Index",
-      "knowledge": "Wissen"
+      "knowledge": "Wissen",
+      "thinking": "Denken"
     },
     "activity": {
       "title": "Aktivität",
@@ -1119,6 +1151,12 @@
     "tabs": {
       "chat": "Chat",
       "log": "Log"
+    },
+    "resize": {
+      "chatHeight": "Höhe von Chat und Log ändern",
+      "graphHeight": "Höhe des Netzes ändern",
+      "activityHeight": "Höhe der Aktivität ändern",
+      "splitWidth": "Breite von Netz und Aktivität ändern"
     },
     "chat": {
       "placeholder": "Nachricht…",
@@ -1160,6 +1198,9 @@
     "notify": {
       "runStarted": "Lauf gestartet",
       "runStopped": "Lauf beendet",
+      "runSucceeded": "Lauf erfolgreich",
+      "runFailed": "Lauf fehlgeschlagen",
+      "runCancelled": "Lauf gestoppt",
       "stepFailed": "Schritt fehlgeschlagen",
       "disconnected": "Dienst nicht erreichbar"
     },
@@ -1207,6 +1248,14 @@
   "history": {
     "title": "Historie",
     "close": "Schließen",
+    "resize": {
+      "chartHeight": "Höhe des Diagramms ändern",
+      "errorsHeight": "Höhe der Fehlerliste ändern",
+      "statsWidth": "Breite von Diagramm und Fehlern ändern",
+      "listHeight": "Höhe der Laufliste ändern",
+      "detailHeight": "Höhe der Laufdetails ändern",
+      "listWidth": "Breite von Liste und Detail ändern"
+    },
     "copy": "Kopieren",
     "ribbon": {
       "refresh": "Aktualisieren",
@@ -1391,7 +1440,8 @@
     "run": {
       "start": "Lauf gestartet ({{networkName}})",
       "wait": {
-        "human": "Wartet auf Eingabe"
+        "human": "Wartet auf Eingabe",
+        "ask": "Rückfrage von {{speaker}}"
       },
       "chat": {
         "user": "Nutzereingabe"
@@ -1401,7 +1451,12 @@
       },
       "agent": {
         "start": "Agent gestartet",
-        "done": "Agent fertig"
+        "done": "Agent fertig",
+        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen beendet",
+        "toolJson": "Werkzeugaufruf {{name}} verworfen: JSON-Argumente unvollständig (Versuch {{attempt}}/{{max}}).",
+        "think": "Agent denkt (kein Ergebnis).",
+        "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",
+        "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {
@@ -1431,6 +1486,10 @@
       "orchestrator": {
         "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
         "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
+        "defer": "Nächster Schritt nach der Chat-Nachricht war unlesbar; der Lauf geht weiter.",
+        "think": "Orchestrator denkt (zählt nicht als Schritt).",
+        "thinkLimit": "Zu viele Denkschritte ohne Auftrag.",
+        "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
         "window": "Der Prompt passt in kein Kontextfenster."
       }
     },

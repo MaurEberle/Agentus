@@ -21,17 +21,19 @@ With no active run the page shows the **last saved run** for reading (graph, act
 
 Header: run id, start time, duration, rough step, active LLMs (local vs cloud).
 
-**Network (read-only):** the same graph, node colours by status (idle, waiting, running, done, error). Click a node to filter log/activity and open node detail (role, status, waiting on LLM/tool/input/index, last message, tokens). No editing, no second editor.
+**Network (read-only):** the same graph, node colours by status (idle, waiting, running, done, error). Click a node to filter log/activity and open node detail (role, status, waiting on LLM/tool/input/index/thinking, last message, tokens). No editing, no second editor.
 
 If knowledge hangs off an agent, start already shows the run while indexing: the knowledge node runs with wait reason **index**, the log names reading and embeddings, and the header and dashboard show the same name. An index that is already current is skipped and only noted as current.
 
 **Activity:** current nodes, progress “step x of y”, tokens in/out, optional context window.
 
+Chat and log sit above the network and activity. The three cards keep their height when the window grows; drag the edges between them to resize. The sizes you set are kept after you close the app.
+
 **Host resources:** CPU, RAM, GPU/VRAM of **this PC**, not only the app process. No local GPU (typical for cloud runs) is a hint, not an error.
 
 ## Run chat (monitoring)
 
-**Chat** tab: the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. The run waits only on a follow-up question. Agent text and internal commands do not appear here.
+**Chat** tab (opens when a run starts, if the graph has a chat input): the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. The run waits only on a follow-up question. Agent text and internal commands do not appear here. A follow-up question shows in the notification bell and the header; the taskbar icon flashes while the window is in the background.
 
 This is **not** the help bubble. History and tools belong to the network.
 
@@ -46,6 +48,8 @@ Payloads and messages **mask** secrets (for example `Bearer`, key prefixes). Do 
 Ribbon: refresh, delete selected runs, export logs, purge older than retention (see Settings → Data, default 90 days).
 
 **One filter** drives everything: range (today, 7/30 days, from–to), network, model, search (run id, network, error). KPIs, “runs by day” chart, top errors, tabs History / By model / By network, and the list all use that filter.
+
+The chart and error list, and the run list and detail, can be resized by dragging the edges, same as in Monitoring. The sizes you set are kept after you close the app.
 
 ## Run outcomes
 

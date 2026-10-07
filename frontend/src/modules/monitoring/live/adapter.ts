@@ -5,26 +5,40 @@ import { parseMockScenario } from '@/modules/monitoring/model/graph';
 import type { MonitoringHandle } from '@/modules/monitoring/model/types';
 import { applyMonitoringEvent, hydrateLastRun, hydrateMonitoring, useMonitoringStore } from '@/modules/monitoring/store';
 
+let liveHandle: MonitoringHandle | null = null;
 let handle: MonitoringHandle | null = null;
 
+function getLiveHandle(): MonitoringHandle {
+  if (!liveHandle) liveHandle = createSseHandle();
+  return liveHandle;
+}
+
 export function getMonitoringHandle(): MonitoringHandle {
-  if (!handle) {
-    handle = createSseHandle();
-  }
-  return handle;
+  return handle ?? getLiveHandle();
+}
+
+export function useLiveRunEvents() {
+  useEffect(() => {
+    const live = getLiveHandle();
+    if (!handle) handle = live;
+    hydrateMonitoring(live.getSnapshot());
+    if (!live.getSnapshot().run) void hydrateLastRun();
+    return live.subscribe(applyMonitoringEvent);
+  }, []);
 }
 
 export function useLiveMonitoring(mockQuery: string | null) {
   useEffect(() => {
     const scenario = import.meta.env.DEV ? parseMockScenario(mockQuery) : null;
-    handle = scenario ? createMockHandle() : createSseHandle();
-    if (scenario) handle.setMockScenario?.(scenario);
-    hydrateMonitoring(handle.getSnapshot());
-    if (!scenario && !handle.getSnapshot().run) void hydrateLastRun();
-    const stop = handle.subscribe(applyMonitoringEvent);
+    if (!scenario) return undefined;
+    const mock = createMockHandle();
+    handle = mock;
+    mock.setMockScenario?.(scenario);
+    hydrateMonitoring(mock.getSnapshot());
+    const stop = mock.subscribe(applyMonitoringEvent);
     return () => {
       stop();
-      handle = null;
+      handle = liveHandle;
     };
   }, [mockQuery]);
 }

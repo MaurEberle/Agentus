@@ -1,6 +1,18 @@
 MAX_AGENT_INVOCATIONS = 32
+# Agent dispatches (call). think / reply / ask / repair do not count.
 MAX_ORCHESTRATOR_STEPS = 24
-MAX_TOOL_ROUNDS = 8
+# Consecutive think turns without call/ask/finish. Runaway guard, not a work budget.
+MAX_ORCHESTRATOR_THINKS = 64
+# Consecutive think turns in one agent invocation without a tool call or result.
+MAX_AGENT_THINKS = 128
+# Consecutive 0- or 1-token think turns on agent or orchestrator.
+MAX_SHORT_THINKS = 5
+# After a successful write/delete, a think this small is the result, not another round.
+MAX_CLOSING_THINK_TOKENS = 16
+# Failed tool calls in one agent invocation. Successful calls are unbounded.
+MAX_FAILED_TOOL_CALLS = 10
+# Same truncated tool-call JSON from llama-server. Then it counts as one failed tool.
+MAX_TOOL_JSON_ATTEMPTS = 3
 # Orchestrator checks files; it does not spend the run on tools instead of agents.
 MAX_ORCHESTRATOR_TOOL_ROUNDS = 2
 # Extra attempts after an unreadable orchestrator decision. Not part of the step cap.

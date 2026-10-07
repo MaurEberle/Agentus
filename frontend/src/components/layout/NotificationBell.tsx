@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { formatRelative } from '@/lib/relativeTime';
 import { cn } from '@/lib/utils';
+import { WAIT_ASK_ACTION, openRunChat } from '@/lib/waitAsk';
 import { useAppStore, type AppNotification, type NotificationVariant } from '@/store';
 
 const VARIANT_ICON: Record<NotificationVariant, typeof Info> = {
@@ -96,7 +97,10 @@ function NotificationRow({
           'flex w-full gap-2 rounded-md px-2 py-2 text-left text-sm',
           item.read ? 'opacity-70' : 'cursor-pointer bg-accent/40',
         )}
-        onClick={onRead}
+        onClick={() => {
+          onRead();
+          if (item.action === WAIT_ASK_ACTION) openRunChat();
+        }}
       >
         <Icon className="mt-0.5 size-4 shrink-0" />
         <div className="min-w-0 flex-1">

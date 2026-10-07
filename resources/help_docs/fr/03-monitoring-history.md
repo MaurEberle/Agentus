@@ -21,17 +21,19 @@ Sans exécution active, la page montre la **dernière exécution enregistrée** 
 
 En-tête : ID d’exécution, heure de début, durée, étape approximative, LLM actifs (local vs cloud).
 
-**Réseau (lecture seule) :** le même graphe, couleurs de nœuds selon l’état (inactif, en attente, en cours, terminé, erreur). Un clic sur un nœud filtre journal/activité et ouvre le détail (rôle, statut, attente LLM/outil/saisie/index, dernier message, jetons). Pas d’édition, pas de second éditeur.
+**Réseau (lecture seule) :** le même graphe, couleurs de nœuds selon l’état (inactif, en attente, en cours, terminé, erreur). Un clic sur un nœud filtre journal/activité et ouvre le détail (rôle, statut, attente LLM/outil/saisie/index/réflexion, dernier message, jetons). Pas d’édition, pas de second éditeur.
 
 Si des connaissances sont reliées à un agent, le démarrage montre déjà l’exécution pendant l’indexation : le nœud tourne avec le motif d’attente **index**, le journal nomme la lecture et les embeddings, et l’en-tête comme le tableau de bord montrent le même nom. Un index déjà à jour est sauté et seulement noté comme actuel.
 
 **Activité :** nœuds actuels, progression « étape x sur y », jetons entrée/sortie, fenêtre de contexte optionnelle.
 
+Chat et journal sont au-dessus du réseau et de l’activité. Les trois cartes gardent leur hauteur si la fenêtre grandit ; on change la taille en tirant le bord. Les tailles restent après la fermeture de l’application.
+
 **Ressources de l’hôte :** CPU, RAM, GPU/VRAM **de ce PC**, pas seulement de l’app. Sans GPU local (typique des exécutions cloud) : un avis, pas une erreur.
 
 ## Chat réseau (supervision)
 
-Onglet **Chat** : conversation du graphe en cours. Actif seulement pendant l’exécution. Sans orchestrateur, le chat attend la première ligne et la passe à la chaîne. Avec orchestrateur, tu ne parles qu’à lui. L’exécution n’attend que sur une question. Les textes des agents et les ordres internes n’apparaissent pas ici.
+Onglet **Chat** (à chaque démarrage d’exécution, si le graphe a une entrée chat) : conversation du graphe en cours. Actif seulement pendant l’exécution. Sans orchestrateur, le chat attend la première ligne et la passe à la chaîne. Avec orchestrateur, tu ne parles qu’à lui. L’exécution n’attend que sur une question. Les textes des agents et les ordres internes n’apparaissent pas ici. Une question s’affiche dans la cloche et l’en-tête ; l’icône de la barre des tâches clignote si la fenêtre est en arrière-plan.
 
 Ce n’est **pas** la bulle d’aide. Historique et outils sont ceux du réseau.
 
@@ -46,6 +48,8 @@ Les charges utiles et messages **masquent** les secrets (par exemple `Bearer`, p
 Ruban : Actualiser, supprimer les exécutions sélectionnées, exporter les journaux, purger les anciennes selon la conservation (voir Paramètres → Données, défaut 90 jours).
 
 **Un filtre** pilote tout : période (aujourd’hui, 7/30 jours, de–à), réseau, modèle, recherche (ID d’exécution, réseau, erreur). KPI, graphique « exécutions par jour », erreurs fréquentes, onglets Historique / Par modèle / Par réseau et la liste utilisent le même filtre.
+
+Le graphique et la liste d’erreurs, ainsi que la liste des exécutions et le détail, se redimensionnent en tirant le bord, comme dans Surveillance. Les tailles restent après la fermeture de l’application.
 
 ## Résultats d’une exécution
 

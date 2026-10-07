@@ -2,6 +2,7 @@ import type { MouseEvent } from 'react';
 import { useTheme } from 'next-themes';
 import { toast, Toaster as Sonner } from 'sonner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { WAIT_ASK_ACTION, openRunChat } from '@/lib/waitAsk';
 import { useAppStore } from '@/store';
 
 function onToastClick(event: MouseEvent<HTMLDivElement>) {
@@ -11,8 +12,10 @@ function onToastClick(event: MouseEvent<HTMLDivElement>) {
   if (!(toastEl instanceof HTMLElement)) return;
   const id = toastEl.getAttribute('data-testid');
   if (!id) return;
+  const item = useAppStore.getState().notifications.find((row) => row.id === id);
   useAppStore.getState().markRead(id);
   toast.dismiss(id);
+  if (item?.action === WAIT_ASK_ACTION) openRunChat();
 }
 
 export function Toaster() {

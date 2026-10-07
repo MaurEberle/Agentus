@@ -29,6 +29,7 @@
     "start": "Başlat",
     "indexing": "Bilgi dizini oluşturuluyor: {{name}}",
     "stop": "Durdur",
+    "waitAsk": "Yanıt bekleniyor",
     "quickSelect": "Hızlı seçim",
     "quickSelectPlaceholder": "Ağ seç",
     "noNetwork": "Ağ yok",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "Etkin ağ yok",
       "desc": "Hızlı seçim temizlendi."
+    },
+    "waitAsk": {
+      "title": "{{speaker}} soruyor",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -658,6 +663,10 @@
         "name": "Ad",
         "description": "Açıklama",
         "tags": "Etiketler",
+        "tagsPlaceholder": "Etiket ekle",
+        "tagsHint": "Enter, virgül veya + etiketi onaylar.",
+        "addTag": "Etiketi ekle",
+        "removeTag": "{{tag}} etiketini kaldır",
         "stats": "{{nodes}} düğüm · {{edges}} kenar",
         "noIssues": "Doğrulama hatası yok."
       },
@@ -683,7 +692,27 @@
         "numCtx": "Bağlam uzunluğu",
         "numCtxHint": "Sınırlar seçilen modelden gelir.",
         "numCtxLoading": "Model sınırları yükleniyor…",
-        "numCtxUnavailable": "Bu model için uzunluk sınırı yok."
+        "numCtxUnavailable": "Bu model için uzunluk sınırı yok.",
+        "numThread": "CPU iş parçacıkları",
+        "numThreadHint": "Varsayılan, fiziksel çekirdek sayısıdır.",
+        "numThreadLoading": "CPU çekirdekleri okunuyor…",
+        "numThreadUnavailable": "CPU iş parçacığı sayısı yok.",
+        "numGpu": "GPU offload",
+        "numGpuHint": "Katman başına bir adım. Varsayılan tüm katmanlar. Yükleme başarısızsa Auto.",
+        "numGpuLoading": "Katman sayısı okunuyor…",
+        "numGpuUnavailable": "Bu model için katman sayısı yok.",
+        "numGpuLayers": "{{offload}} / {{total}} katman",
+        "vram": "GPU belleği",
+        "vramLoading": "Bellek ihtiyacı tahmin ediliyor…",
+        "vramNeed": "{{need}} / {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Ağırlık {{weights}} · bağlam {{kv}} · yedek {{overhead}}",
+        "vramOver": "GPU belleğine sığmıyor. Bağlamı veya offload’u düşür, yoksa CPU hesaplar.",
+        "vramTight": "Sıkışık. İkinci bir model veya dolu bir istem taşabilir.",
+        "vramFormula": "GPU: {{total}} katmanın son {{on}}. {{full}} × {{perToken}} B/jeton × {{ctx}} jeton.",
+        "vramFormulaMixed": "GPU: {{total}} katmanın son {{on}}. {{full}} küresel katman × {{ctx}} jeton.",
+        "vramFormulaSwa": "GPU: {{total}} katmanın son {{on}}. {{full}} küresel × {{ctx}} jeton, {{swa}} kayar pencere × pencere {{window}}.",
+        "vramHint": "Model verisinden katman katman tahmin. GPU son N katmanı alır. Tam dikkat: tüm bağlam. Kayar pencere: yalnızca penceresi. KV önbelleği f16."
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",
@@ -924,10 +953,12 @@
       "description": "Açıklama"
     },
     "tags": {
-      "title": "Etiket ekle",
-      "body": "Etiketler {{count}} ağa eklenir. Mevcut etiketler kalır.",
+      "title": "Etiketleri ayarla",
+      "body": "Seçimin mevcut etiketleri ({{count}}) doldurulur.",
       "label": "Etiketler",
-      "placeholder": "ops, prod",
+      "placeholder": "Etiket ekle",
+      "hint": "Enter, virgül veya + etiketi onaylar.",
+      "remove": "{{tag}} etiketini kaldır",
       "add": "Ekle"
     },
     "delete": {
@@ -952,7 +983,7 @@
       "error": "Eylem başarısız",
       "duplicated": "Kopya kitaplığa eklendi",
       "renamed": "Üst veriler kaydedildi",
-      "tagged": "Etiketler eklendi",
+      "tagged": "Etiketler kaydedildi",
       "deleted": "Ağlar silindi",
       "imported": "{{count}} ağ içe aktarıldı",
       "exported": "Dışa aktarma başladı"
@@ -1042,7 +1073,8 @@
       "tool": "Araç",
       "human": "Giriş",
       "index": "Dizin",
-      "knowledge": "Bilgi"
+      "knowledge": "Bilgi",
+      "thinking": "Düşünme"
     },
     "activity": {
       "title": "Etkinlik",
@@ -1065,6 +1097,12 @@
     "tabs": {
       "chat": "Sohbet",
       "log": "Günlük"
+    },
+    "resize": {
+      "chatHeight": "Sohbet ve günlük yüksekliğini değiştir",
+      "graphHeight": "Ağ yüksekliğini değiştir",
+      "activityHeight": "Etkinlik yüksekliğini değiştir",
+      "splitWidth": "Ağ ve etkinlik genişliğini değiştir"
     },
     "chat": {
       "placeholder": "İleti…",
@@ -1106,6 +1144,9 @@
     "notify": {
       "runStarted": "Çalıştırma başladı",
       "runStopped": "Çalıştırma durdu",
+      "runSucceeded": "Çalıştırma başarılı",
+      "runFailed": "Çalıştırma başarısız",
+      "runCancelled": "Çalıştırma durdu",
       "stepFailed": "Adım başarısız",
       "disconnected": "Hizmete erişilemiyor"
     },
@@ -1153,6 +1194,14 @@
   "history": {
     "title": "Geçmiş",
     "close": "Kapat",
+    "resize": {
+      "chartHeight": "Grafik yüksekliğini değiştir",
+      "errorsHeight": "Hata listesi yüksekliğini değiştir",
+      "statsWidth": "Grafik ve hata listesi genişliğini değiştir",
+      "listHeight": "Çalıştırma listesi yüksekliğini değiştir",
+      "detailHeight": "Ayrıntı yüksekliğini değiştir",
+      "listWidth": "Liste ve ayrıntı genişliğini değiştir"
+    },
     "copy": "Kopyala",
     "ribbon": {
       "refresh": "Yenile",
@@ -1337,7 +1386,8 @@
     "run": {
       "start": "Çalıştırma başladı ({{networkName}})",
       "wait": {
-        "human": "Giriş bekleniyor"
+        "human": "Giriş bekleniyor",
+        "ask": "{{speaker}} soruyor"
       },
       "chat": {
         "user": "Kullanıcı iletisi"
@@ -1347,7 +1397,12 @@
       },
       "agent": {
         "start": "Ajan başladı",
-        "done": "Ajan bitti"
+        "done": "Ajan bitti",
+        "toolFailures": "Ajan {{failed}} başarısız araç çağrısından sonra durdu",
+        "toolJson": "{{name}} araç çağrısı atıldı: eksik JSON argümanları (deneme {{attempt}}/{{max}}).",
+        "think": "Ajan düşünüyor (sonuç değil).",
+        "thinkLimit": "Sonuçsuz çok fazla düşünme adımı.",
+        "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu."
       },
       "knowledge": "Bilgi araması ({{count}} sonuç)",
       "knowledgeIndex": {
@@ -1377,6 +1432,10 @@
       "orchestrator": {
         "repair": "Komut okunamadı, yeniden deneniyor.",
         "unreadable": "Orkestratör okunabilir bir sonraki adım üretmedi.",
+        "defer": "Sohbet iletisinden sonraki adım okunamadı; çalışma devam ediyor.",
+        "think": "Orkestratör düşünüyor (adım sayılmaz).",
+        "thinkLimit": "Çağrı olmadan çok fazla düşünme turu.",
+        "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu.",
         "window": "İstem hiçbir bağlam penceresine sığmıyor."
       }
     },

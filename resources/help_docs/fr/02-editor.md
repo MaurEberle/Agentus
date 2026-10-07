@@ -50,17 +50,17 @@ Un glisser invalide est refusé.
 
 ## Inspecteur
 
-Aucun nœud choisi : nom, description, étiquettes, statistiques, liste de validation du réseau **ouvert**.
+Aucun nœud choisi : nom, description, étiquettes, statistiques, liste de validation du réseau **ouvert**. Les étiquettes sont des pastilles ; Entrée, virgule ou plus valide une étiquette, la croix la retire. La bibliothèque filtre sur les mêmes étiquettes.
 
 Nœud choisi :
 
-- **LLM :** fournisseur, modèle (liste du runtime), identifiant cloud, longueur de contexte selon le modèle (curseur en local, liste dans le cloud), ping, avancé température / jetons max. Cloud sans identifiant est invalide.
-- **Agent :** invite système et nom affiché. Si l’agent est sur un canal, l’inspecteur explique que les tâches viennent de l’orchestrateur.
+- **LLM :** fournisseur, modèle (liste du runtime), identifiant cloud, longueur de contexte selon le modèle (curseur en local, liste dans le cloud), threads CPU par nœud (défaut : cœurs physiques), offload GPU un pas par couche (défaut : toutes les couches, Auto si le chargement échoue), mémoire GPU estimée d’après le contexte et l’offload (N dernières couches sur le GPU ; attention complète sur tout le contexte, couches à fenêtre glissante seulement sur leur fenêtre ; alerte si ça ne tient pas sur la carte), ping, avancé température / jetons max. Cloud sans identifiant est invalide.
+- **Agent :** invite système et nom affiché. Si l’agent est sur un canal, l’inspecteur explique que les tâches viennent de l’orchestrateur. Il peut réfléchir en interne avant d’écrire ou d’appeler un outil ; la réflexion n’apparaît pas dans le chat.
 - **Outil :** type. HTTP : méthode et URL, identifiant optionnel. Recherche web : identifiant de type recherche web. Accès aux fichiers : dossier racine, pas la racine d’un lecteur ; l’agent ne travaille qu’en dessous, et écrire et supprimer sont des interrupteurs.
 - **MCP :** serveur activé dans **Paramètres → Serveurs MCP**. Par défaut tous les outils ; après une sonde vous pouvez en choisir un sous-ensemble. Les identifiants sont dans Paramètres. Le dossier racine pour fichiers et Excel est sur le nœud ; Git garde le dossier dans Paramètres.
 - **Connaissances :** dossier source (choix de dossier), fournisseur d’embeddings (Ollama, OpenAI ou Gemini) et modèle d’embeddings, topK, seuil de score, **Reconstruire l’index**. Le dossier peut être n’importe où, sauf une racine de lecteur ou de système et le corpus d’aide. Indexés : Markdown, texte, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV et code source. Les images et les anciens .doc/.xls sont ignorés. Les embeddings cloud exigent un identifiant. L’index appartient à ce réseau, pas à l’aide.
 - **Chat :** espace réservé, texte de départ, interrupteur « Saisie obligatoire ».
-- **Orchestrateur :** invite système. Le modèle choisit une question, une tâche vers un agent par son canal, une réponse ou la fin. Les agents sont les canaux, pas une seconde liste. Il appelle lui-même les outils branchés. Seule une question attend l’utilisateur.
+- **Orchestrateur :** invite système. Le modèle choisit réflexion, une question, une tâche vers un agent par son canal, une réponse ou la fin. La réflexion n’apparaît pas dans le chat et ne compte pas dans la limite d’étapes ; seuls les appels d’agents comptent. Les agents sont les canaux, pas une seconde liste. Il appelle lui-même les outils branchés. Seule une question attend l’utilisateur.
 - **Routeur :** branches nommées (nom + condition) et défaut.
 
 Les secrets n’appartiennent **pas** au texte de l’inspecteur ni à l’export du graphe — seulement le choix d’un identifiant.
@@ -93,7 +93,7 @@ Quitter sans enregistrer : dialogue Enregistrer / Abandonner / Annuler.
 
 Liste avec recherche (nom, description, étiquettes), tri, filtres « valides seulement » / « actifs seulement ». Sélection multiple.
 
-Actions : Nouveau (éditeur), Ouvrir, Dupliquer, Renommer, Ajouter des étiquettes, **Définir comme actif** (un seul réseau valide), Supprimer, Importer, Exporter.
+Actions : Nouveau (éditeur), Ouvrir, Dupliquer, Renommer, Définir les étiquettes, **Définir comme actif** (un seul réseau valide), Supprimer, Importer, Exporter. Définir les étiquettes charge les étiquettes existantes de la sélection comme pastilles.
 
 Supprimer retire l’entrée de l’espace de travail, pas tes fichiers source de connaissances sur le disque, ni le corpus d’aide, ni les exécutions d’historique. Un réseau **en cours** est ignoré. Supprimer le réseau actif vide la sélection rapide.
 

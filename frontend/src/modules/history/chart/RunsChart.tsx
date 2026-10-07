@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import type { ChartBucket } from '@/modules/history/model/types';
 
@@ -28,19 +29,19 @@ export function RunsChart({ buckets }: { buckets: ChartBucket[] }) {
   const hasTimeout = buckets.some((item) => item.timeout > 0);
 
   return (
-    <Card className={`${moduleCardClass} min-w-0`}>
+    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
       <CardHeader className="shrink-0 pb-2">
         <CardTitle>{t('history.chart.title')}</CardTitle>
       </CardHeader>
-      <CardContent className={moduleCardBodyClass}>
+      <CardContent className={cn(moduleCardBodyClass, 'flex flex-col')}>
         {buckets.every((item) => item.succeeded + item.failed + item.cancelled + item.timeout === 0) ? (
           <p className="text-sm text-muted-foreground">{t('history.chart.empty')}</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="min-h-0 flex-1 overflow-x-auto">
               <svg
                 viewBox={`0 0 ${width} ${height}`}
-                className="h-40 w-full min-w-[20rem]"
+                className="h-full min-h-[10rem] w-full min-w-[20rem]"
                 role="img"
                 aria-label={t('history.chart.title')}
               >

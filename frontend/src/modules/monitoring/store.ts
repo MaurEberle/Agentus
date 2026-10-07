@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { notify } from '@/lib/notifications';
+import { applyWaitAsk, hintMonitoringTab } from '@/lib/waitAsk';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 import { loadLatestHistoryRun } from '@/modules/monitoring/model/archive';
@@ -40,7 +41,9 @@ type MonitoringState = {
   selectedLogId: string | null;
   selectedNodeId: string | null;
   lastNotifyKey: string;
+  pendingChatFocus: boolean;
   setTab: (tab: MonitoringTab) => void;
+  setPendingChatFocus: (value: boolean) => void;
   setLogLevelMin: (level: LogLevel) => void;
   setLogQuery: (query: string) => void;
   setLogNodeId: (id: string | null) => void;
@@ -54,6 +57,7 @@ type MonitoringState = {
 
 let lastService: ServiceStatus | null = null;
 let lastStepKey = '';
+let pendingEndRunId: string | null = null;
 
 function toastOnce(key: string, titleKey: string, variant: 'success' | 'info' | 'error', descriptionKey?: string) {
   const state = useMonitoringStore.getState();
@@ -62,15 +66,37 @@ function toastOnce(key: string, titleKey: string, variant: 'success' | 'info' | 
   notify({ titleKey, descriptionKey, variant });
 }
 
-function notifyTransitions(next: ServiceStatus, runId: string | undefined, errorMessage?: string) {
+function notifyRunEnded(runId: string | undefined, outcome?: RunSnapshot['outcome']) {
+  if (!outcome || outcome === 'running') return;
+  const key = `end:${runId ?? 'x'}`;
+  if (outcome === 'succeeded') {
+    toastOnce(key, 'monitoring.notify.runSucceeded', 'success');
+  } else if (outcome === 'failed' || outcome === 'timeout') {
+    toastOnce(key, 'monitoring.notify.runFailed', 'error');
+  } else if (outcome === 'cancelled') {
+    toastOnce(key, 'monitoring.notify.runCancelled', 'info');
+  } else {
+    toastOnce(key, 'monitoring.notify.runStopped', 'info');
+  }
+  pendingEndRunId = null;
+}
+
+function notifyTransitions(
+  next: ServiceStatus,
+  runId: string | undefined,
+  outcome?: RunSnapshot['outcome'],
+  errorMessage?: string,
+) {
   const prev = lastService;
   lastService = next;
+  if (next === 'running' || next === 'starting') pendingEndRunId = null;
   if (!prev || prev === next) return;
-  if (next === 'running' && (prev === 'stopped' || prev === 'starting' || prev === 'disconnected')) {
-    toastOnce(`start:${runId ?? 'x'}`, 'monitoring.notify.runStarted', 'success');
-  }
-  if (next === 'stopped' && (prev === 'running' || prev === 'stopping')) {
-    toastOnce(`stop:${runId ?? 'x'}`, 'monitoring.notify.runStopped', 'info');
+  if (next === 'stopped' && (prev === 'running' || prev === 'stopping' || prev === 'starting')) {
+    if (outcome && outcome !== 'running') {
+      notifyRunEnded(runId, outcome);
+    } else {
+      pendingEndRunId = runId ?? '';
+    }
   }
   if (
     (next === 'disconnected' || next === 'error') &&
@@ -88,7 +114,7 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   chatGenerating: false,
   adapterErrorKey: null,
   lastErrorMessage: null,
-  tab: 'log',
+  tab: 'chat',
   logLevelMin: 'info',
   logQuery: '',
   logNodeId: null,
@@ -98,7 +124,12 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   selectedLogId: null,
   selectedNodeId: null,
   lastNotifyKey: '',
-  setTab: (tab) => set({ tab }),
+  pendingChatFocus: false,
+  setTab: (tab) => {
+    hintMonitoringTab(tab);
+    set({ tab });
+  },
+  setPendingChatFocus: (pendingChatFocus) => set({ pendingChatFocus }),
   setLogLevelMin: (logLevelMin) => set({ logLevelMin }),
   setLogQuery: (logQuery) => set({ logQuery }),
   setLogNodeId: (logNodeId) => set({ logNodeId }),
@@ -111,17 +142,23 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   clearLogFilter: () => set({ logNodeId: null }),
 }));
 
+function tabForNewRun(run: RunSnapshot | null): MonitoringTab {
+  return hasChatInput(run?.graph) ? 'chat' : 'log';
+}
+
 function tabForRun(run: RunSnapshot | null, preferred: MonitoringTab): MonitoringTab {
   if (preferred === 'chat' && hasChatInput(run?.graph)) return 'chat';
   return 'log';
 }
 
-function resetForRun(run: RunSnapshot | null): Partial<MonitoringState> {
+function resetForRun(run: RunSnapshot | null, mode: 'start' | 'keep'): Partial<MonitoringState> {
+  const tab = mode === 'start' ? tabForNewRun(run) : tabForRun(run, useMonitoringStore.getState().tab);
+  hintMonitoringTab(tab);
   return {
     logs: [],
     chatMessages: run?.chat?.messages ?? [],
     chatGenerating: Boolean(run?.chat?.generating),
-    tab: tabForRun(run, useMonitoringStore.getState().tab),
+    tab,
     logQuery: '',
     logNodeId: null,
     logErrorsOnly: false,
@@ -148,7 +185,7 @@ export async function hydrateLastRun() {
       run: loaded.run,
       logs: loaded.logs,
       lastErrorMessage: loaded.run.errorMessage ?? now.lastErrorMessage,
-      ...resetForRun(loaded.run),
+      ...resetForRun(loaded.run, 'keep'),
       chatMessages: loaded.run.chat?.messages ?? [],
       chatGenerating: false,
     });
@@ -166,6 +203,12 @@ export function hydrateMonitoring(snapshot: {
   store.setServiceStatus(snapshot.serviceStatus);
   store.setRunId(snapshot.run?.runId ?? store.runId);
   lastService = snapshot.serviceStatus;
+  applyWaitAsk(snapshot.run?.archived ? null : snapshot.run?.waitAsk ?? null);
+  const live = snapshot.serviceStatus === 'running' || snapshot.serviceStatus === 'starting';
+  const tab = live
+    ? tabForNewRun(snapshot.run)
+    : tabForRun(snapshot.run, useMonitoringStore.getState().tab);
+  hintMonitoringTab(tab);
   useMonitoringStore.setState({
     run: snapshot.run,
     resources: snapshot.resources,
@@ -174,7 +217,7 @@ export function hydrateMonitoring(snapshot: {
     chatGenerating: Boolean(snapshot.run?.chat?.generating),
     adapterErrorKey: null,
     lastErrorMessage: snapshot.run?.errorMessage ?? null,
-    tab: tabForRun(snapshot.run, useMonitoringStore.getState().tab),
+    tab,
   });
 }
 
@@ -189,8 +232,11 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
 
   if (evt.type === 'service') {
     app.setServiceStatus(evt.serviceStatus);
-    if (evt.serviceStatus === 'stopped') app.setRunId(null);
-    notifyTransitions(evt.serviceStatus, current.run?.runId, evt.errorMessage);
+    if (evt.serviceStatus === 'stopped') {
+      app.setRunId(null);
+      applyWaitAsk(null);
+    }
+    notifyTransitions(evt.serviceStatus, current.run?.runId, current.run?.outcome, evt.errorMessage);
     useMonitoringStore.setState({
       lastErrorMessage: evt.errorMessage ?? (evt.serviceStatus === 'error' ? current.lastErrorMessage : null),
       adapterErrorKey: evt.serviceStatus === 'disconnected' ? 'monitoring.empty.disconnectedTitle' : null,
@@ -259,7 +305,15 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
     app.setRunId(merged.runId);
     if (merged.serviceStatus) {
       app.setServiceStatus(merged.serviceStatus);
-      notifyTransitions(merged.serviceStatus, merged.runId, merged.errorMessage);
+      notifyTransitions(merged.serviceStatus, merged.runId, merged.outcome, merged.errorMessage);
+    }
+    if (
+      pendingEndRunId !== null &&
+      merged.outcome &&
+      merged.outcome !== 'running' &&
+      (!pendingEndRunId || pendingEndRunId === merged.runId)
+    ) {
+      notifyRunEnded(merged.runId, merged.outcome);
     }
     const step = merged.activity.stepError;
     const stepKey = step ? `${merged.runId}:${step.nodeId}:${step.message}` : '';
@@ -287,9 +341,10 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
     useMonitoringStore.setState({
       run: merged,
       lastErrorMessage: merged.errorMessage ?? current.lastErrorMessage,
-      ...(isNew ? resetForRun(merged) : null),
+      ...(isNew ? resetForRun(merged, 'start') : null),
       chatMessages,
       chatGenerating,
     });
+    applyWaitAsk(merged.archived || merged.serviceStatus === 'stopped' ? null : merged.waitAsk ?? null);
   }
 }

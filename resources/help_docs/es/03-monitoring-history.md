@@ -21,17 +21,19 @@ Sin ejecución activa la página muestra la **última ejecución guardada** para
 
 Cabecera: ID de ejecución, hora de inicio, duración, paso aproximado, LLM activos (local frente a nube).
 
-**Red (solo lectura):** el mismo grafo, colores de nodo según estado (inactivo, en espera, en curso, listo, error). Un clic en un nodo filtra registro/actividad y abre el detalle (rol, estado, espera LLM/herramienta/entrada/índice, último mensaje, tokens). Sin editar, sin segundo editor.
+**Red (solo lectura):** el mismo grafo, colores de nodo según estado (inactivo, en espera, en curso, listo, error). Un clic en un nodo filtra registro/actividad y abre el detalle (rol, estado, espera LLM/herramienta/entrada/índice/pensando, último mensaje, tokens). Sin editar, sin segundo editor.
 
 Si hay conocimiento en un agente, el inicio ya muestra la ejecución mientras se indexa: el nodo de conocimiento corre con motivo de espera **índice**, el registro nombra la lectura y los embeddings, y el encabezado y el panel muestran el mismo nombre. Un índice ya actual se omite y solo se anota como actual.
 
 **Actividad:** nodos actuales, progreso «paso x de y», tokens entrada/salida, ventana de contexto opcional.
 
+Chat y registro están encima de la red y la actividad. Las tres tarjetas mantienen su altura al agrandar la ventana; se arrastra el borde para cambiar el tamaño. Los tamaños se conservan al cerrar la aplicación.
+
 **Recursos del anfitrión:** CPU, RAM, GPU/VRAM **de este PC**, no solo de la app. Sin GPU local (típico en ejecuciones en la nube) aparece un aviso, no un error.
 
 ## Chat de red (supervisión)
 
-Pestaña **Chat**: conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí.
+Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano.
 
 Esto **no** es la burbuja de ayuda. Historial y herramientas son los de la red.
 
@@ -46,6 +48,8 @@ Las cargas y los mensajes **enmascaran** secretos (por ejemplo `Bearer`, prefijo
 Cinta: Actualizar, borrar ejecuciones seleccionadas, exportar registros, depurar entradas antiguas según retención (véase Ajustes → Datos, predeterminado 90 días).
 
 **Un filtro** lo controla todo: periodo (hoy, 7/30 días, desde–hasta), red, modelo, búsqueda (ID de ejecución, red, error). KPI, gráfico «ejecuciones por día», errores más frecuentes, pestañas Historial / Por modelo / Por red y la lista usan el mismo filtro.
+
+El gráfico y la lista de errores, y la lista de ejecuciones y el detalle, se redimensionan arrastrando el borde, igual que en Supervisión. Los tamaños se conservan al cerrar la app.
 
 ## Resultados de una ejecución
 

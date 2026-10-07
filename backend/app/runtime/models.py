@@ -55,6 +55,7 @@ class CompletionRequest(ApiModel):
 
 class CompletionResult(ApiModel):
     content: str | None = None
+    reasoning: str | None = None
     tool_calls: list[ToolCall] = Field(default_factory=list, alias="toolCalls")
     finish_reason: str | None = Field(default=None, alias="finishReason")
     usage: CompletionUsage | None = None
@@ -69,6 +70,7 @@ class StreamEvent(ApiModel):
     usage: CompletionUsage | None = None
     finish_reason: str | None = Field(default=None, alias="finishReason")
     error_key: str | None = Field(default=None, alias="errorKey")
+    error_detail: str | None = Field(default=None, alias="errorDetail")
 
 
 class EmbedRequest(ApiModel):
@@ -104,8 +106,21 @@ class RuntimeModelsResponse(ApiModel):
     message_key: str | None = Field(default=None, alias="messageKey")
 
 
+class KvLayerOut(ApiModel):
+    bytes_per_token: int = Field(default=0, alias="bytesPerToken")
+    window: int | None = None
+    fixed_bytes: int | None = Field(default=None, alias="fixedBytes")
+
+
 class RuntimeModelStats(ApiModel):
     context_min: int | None = Field(default=None, alias="contextMin")
     context_max: int | None = Field(default=None, alias="contextMax")
     steps: list[int] = Field(default_factory=list)
+    gpu_layers: int | None = Field(default=None, alias="gpuLayers")
+    weight_bytes: int | None = Field(default=None, alias="weightBytes")
+    kv_bytes_per_token: int | None = Field(default=None, alias="kvBytesPerToken")
+    kv_swa_bytes_per_token: int | None = Field(default=None, alias="kvSwaBytesPerToken")
+    swa_window: int | None = Field(default=None, alias="swaWindow")
+    overhead_bytes: int | None = Field(default=None, alias="overheadBytes")
+    kv_layers: list[KvLayerOut] | None = Field(default=None, alias="kvLayers")
     message_key: str | None = Field(default=None, alias="messageKey")

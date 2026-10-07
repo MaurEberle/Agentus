@@ -86,7 +86,6 @@ export function DataSection() {
     try {
       const next = await patchSettings({ historyRetentionDays: dataDraft.historyRetentionDays });
       syncData(next);
-      notify({ titleKey: 'settings.notify.saved', variant: 'success' });
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
     } finally {

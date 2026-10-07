@@ -1,7 +1,7 @@
-import type { ServiceStatus } from '@/store/session';
+import type { ServiceStatus, WaitAsk } from '@/store/session';
 
 export type NodeRuntimeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error';
-export type WaitReason = 'none' | 'llm' | 'tool' | 'human' | 'index' | 'knowledge';
+export type WaitReason = 'none' | 'llm' | 'tool' | 'human' | 'index' | 'knowledge' | 'thinking';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
 
@@ -20,6 +20,8 @@ export type ResourceSnapshot = {
   ts: string;
   cpuPercent: number;
   cpuPerCore?: number[];
+  cpuCores?: number;
+  cpuThreads?: number;
   ramUsedBytes: number;
   ramTotalBytes: number;
   gpus?: ResourceGpu[];
@@ -95,6 +97,7 @@ export type RunSnapshot = {
     };
   };
   chat?: { messages: ChatMessage[]; generating?: boolean };
+  waitAsk?: WaitAsk | null;
 };
 
 export type LogEvent = {

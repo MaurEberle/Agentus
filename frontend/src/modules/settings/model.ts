@@ -142,10 +142,23 @@ export type McpServerListItem = {
 export type RuntimePing = { ok: boolean; messageKey?: string };
 export type RuntimeModel = { name: string; sizeBytes?: number };
 
+export type KvLayer = {
+  bytesPerToken?: number;
+  window?: number | null;
+  fixedBytes?: number;
+};
+
 export type RuntimeModelStats = {
   contextMin?: number;
   contextMax?: number;
   steps?: number[];
+  gpuLayers?: number;
+  weightBytes?: number;
+  kvBytesPerToken?: number;
+  kvSwaBytesPerToken?: number;
+  swaWindow?: number;
+  overheadBytes?: number;
+  kvLayers?: KvLayer[];
   messageKey?: string;
 };
 export type HelpPing = { ok: boolean; messageKey?: string };

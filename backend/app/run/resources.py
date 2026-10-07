@@ -15,6 +15,20 @@ _lock = threading.Lock()
 _latest: ResourceSnapshot | None = None
 
 
+def _cpu_counts() -> tuple[int | None, int | None]:
+    try:
+        import psutil
+
+        threads = psutil.cpu_count(logical=True)
+        cores = psutil.cpu_count(logical=False) or threads
+        return (
+            int(cores) if cores else None,
+            int(threads) if threads else None,
+        )
+    except Exception:
+        return None, None
+
+
 def _sample(*, wait_cpu: bool = False) -> ResourceSnapshot:
     cpu = 0.0
     ram_used = 0
@@ -28,12 +42,15 @@ def _sample(*, wait_cpu: bool = False) -> ResourceSnapshot:
         ram_total = int(mem.total)
     except Exception:
         pass
+    cores, threads = _cpu_counts()
     gpus: list[ResourceGpu] | None
     sampled = _sample_gpus()
     gpus = sampled if sampled else None
     return ResourceSnapshot(
         ts=utc_now(),
         cpu_percent=cpu,
+        cpu_cores=cores,
+        cpu_threads=threads,
         ram_used_bytes=ram_used,
         ram_total_bytes=ram_total,
         gpus=gpus,

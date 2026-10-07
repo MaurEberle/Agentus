@@ -75,7 +75,6 @@ export function RuntimeSection() {
         openaiCompatBaseUrl: runtime.openaiCompatBaseUrl.trim(),
       });
       syncRuntime(next);
-      notify({ titleKey: 'settings.notify.saved', variant: 'success' });
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
     } finally {

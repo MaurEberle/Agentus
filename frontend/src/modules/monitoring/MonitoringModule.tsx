@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
+import { hintMonitoringTab } from '@/lib/waitAsk';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
 import { setDevScenario, useLiveMonitoring } from '@/modules/monitoring/live/adapter';
@@ -18,7 +20,8 @@ import { LogPanel } from '@/modules/monitoring/log/LogPanel';
 import { ResourcesPanel } from '@/modules/monitoring/resources/ResourcesPanel';
 import { RunHeader } from '@/modules/monitoring/run-header/RunHeader';
 import { useMonitoringStore } from '@/modules/monitoring/store';
-import { moduleCardClass, modulePaneHeightClass } from '@/modules/moduleCard';
+import { HeightGrip, SplitRow, WidthGrip, paneColStyle, useMonitoringPanes } from '@/modules/monitoring/PaneGrips';
+import { moduleCardClass } from '@/modules/moduleCard';
 
 export function MonitoringModule() {
   const { t } = useTranslation();
@@ -26,6 +29,7 @@ export function MonitoringModule() {
   useLiveMonitoring(params.get('mock'));
 
   const serviceStatus = useAppStore((state) => state.serviceStatus);
+  const waitAsk = useAppStore((state) => state.waitAsk);
   const activeNetworkName = useAppStore((state) => state.activeNetworkName);
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
   const run = useMonitoringStore((state) => state.run);
@@ -37,6 +41,8 @@ export function MonitoringModule() {
   const setSelectedNodeId = useMonitoringStore((state) => state.setSelectedNodeId);
   const setSelectedLogId = useMonitoringStore((state) => state.setSelectedLogId);
   const clearLogFilter = useMonitoringStore((state) => state.clearLogFilter);
+  const [panes, setPanes] = useMonitoringPanes();
+  const wide = useMediaQuery('(min-width: 768px)');
 
   const chat = hasChatInput(run?.graph);
   const empty = !run;
@@ -46,6 +52,10 @@ export function MonitoringModule() {
   useEffect(() => {
     if (!chat && tab === 'chat') setTab('log');
   }, [chat, setTab, tab]);
+
+  useEffect(() => {
+    hintMonitoringTab(tab);
+  }, [tab]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -92,33 +102,70 @@ export function MonitoringModule() {
         <>
           <RunHeader run={run} serviceStatus={serviceStatus} />
           {resources || !run.archived ? <ResourcesPanel resources={resources} dimmed={dimmed} /> : null}
-          <div className={cn('grid w-full gap-4 md:grid-cols-2 md:items-stretch', modulePaneHeightClass)}>
-            <div className="order-2 h-full min-h-0 md:order-1">
-              <MiniGraph run={run} dimmed={dimmed} />
-            </div>
-            <div className="order-1 h-full min-h-0 md:order-2">
-              <ActivityPanel run={run} dimmed={dimmed} />
-            </div>
-          </div>
-          <Card className={cn(moduleCardClass, 'min-h-[16rem]')}>
-            <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.log')}>
-              {chat ? (
-                <TabButton active={tab === 'chat'} onClick={() => setTab('chat')}>
-                  {t('monitoring.tabs.chat')}
+          <div className="flex w-full min-w-0 flex-col">
+            <Card className={moduleCardClass} style={{ height: panes.chatH }}>
+              <div className="flex gap-1 border-b px-2 pt-2" role="tablist" aria-label={t('monitoring.tabs.chat')}>
+                {chat ? (
+                  <TabButton
+                    active={tab === 'chat'}
+                    waiting={Boolean(waitAsk)}
+                    waitingLabel={t('shell.waitAsk')}
+                    onClick={() => setTab('chat')}
+                  >
+                    {t('monitoring.tabs.chat')}
+                  </TabButton>
+                ) : null}
+                <TabButton active={tab === 'log' || !chat} onClick={() => setTab('log')}>
+                  {t('monitoring.tabs.log')}
                 </TabButton>
-              ) : null}
-              <TabButton active={tab === 'log' || !chat} onClick={() => setTab('log')}>
-                {t('monitoring.tabs.log')}
-              </TabButton>
+              </div>
+              <CardContent className="flex min-h-0 flex-1 flex-col pt-4">
+                {chat && tab === 'chat' ? (
+                  <NetworkChat run={run} serviceStatus={serviceStatus} />
+                ) : (
+                  <LogPanel run={run} />
+                )}
+              </CardContent>
+            </Card>
+            <HeightGrip
+              label={t('monitoring.resize.chatHeight')}
+              value={panes.chatH}
+              onChange={(chatH) => setPanes({ chatH })}
+            />
+          </div>
+          <SplitRow>
+            <div
+              className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
+              style={wide ? paneColStyle(panes.graphShare) : undefined}
+            >
+              <div className="min-h-0 w-full" style={{ height: panes.graphH }}>
+                <MiniGraph run={run} dimmed={dimmed} />
+              </div>
+              <HeightGrip
+                label={t('monitoring.resize.graphHeight')}
+                value={panes.graphH}
+                onChange={(graphH) => setPanes({ graphH })}
+              />
             </div>
-            <CardContent className="flex min-h-0 flex-1 flex-col pt-4">
-              {chat && tab === 'chat' ? (
-                <NetworkChat run={run} serviceStatus={serviceStatus} />
-              ) : (
-                <LogPanel run={run} />
-              )}
-            </CardContent>
-          </Card>
+            <WidthGrip
+              label={t('monitoring.resize.splitWidth')}
+              share={panes.graphShare}
+              onChange={(graphShare) => setPanes({ graphShare })}
+            />
+            <div
+              className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
+              style={wide ? paneColStyle(1 - panes.graphShare) : undefined}
+            >
+              <div className="min-h-0 w-full" style={{ height: panes.activityH }}>
+                <ActivityPanel run={run} dimmed={dimmed} />
+              </div>
+              <HeightGrip
+                label={t('monitoring.resize.activityHeight')}
+                value={panes.activityH}
+                onChange={(activityH) => setPanes({ activityH })}
+              />
+            </div>
+          </SplitRow>
         </>
       ) : (
         <Card className={moduleCardClass}>
@@ -133,23 +180,33 @@ function TabButton({
   active,
   onClick,
   children,
+  waiting,
+  waitingLabel,
 }: {
   active: boolean;
   onClick: () => void;
   children: string;
+  waiting?: boolean;
+  waitingLabel?: string;
 }) {
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
+      aria-label={waiting && waitingLabel ? `${children}. ${waitingLabel}` : undefined}
       className={cn(
-        'rounded-t-md px-3 py-2 text-sm font-medium',
-        active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+        '-mb-px border-b-2 px-3 py-2 text-sm transition-colors',
+        active
+          ? 'border-primary font-semibold text-foreground'
+          : 'border-transparent font-medium text-muted-foreground hover:text-foreground',
       )}
       onClick={onClick}
     >
-      {children}
+      <span className="inline-flex items-center gap-1.5">
+        {children}
+        {waiting ? <span className="size-2 rounded-full bg-warning" aria-hidden /> : null}
+      </span>
     </button>
   );
 }

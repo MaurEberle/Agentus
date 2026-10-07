@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 import re
 
-from app.help.visible import strip_think
+from app.help.visible import strip_think, think_inner
 
-_ACTIONS = {"ask", "call", "reply", "finish"}
-_ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish)"')
+_ACTIONS = {"ask", "call", "reply", "finish", "think"}
+_ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish|think)"')
 # A salvaged task longer than this is a pasted document with broken quotes, not an instruction.
 _MAX_SALVAGED_TASK = 500
 
@@ -43,14 +43,17 @@ After a call you see a status line (name, id, finished, character count, file li
 The run keeps the full course in memory. That course is not in this prompt. Older results stay in memory.
 When an agent fails, the runtime adds one anomaly excerpt for that agent only. The following step does not keep it.
 Call one agent at a time, wait for the result, then decide again. You may call the same agent later with a new task.
+Call by the name or id in the roster below.
 The task field is a short instruction of a few sentences. Do not paste an agent result into it.
-To give an agent's result to another agent, set source to that agent's id. You write the id, not the text. A text agent needs the source as well as a tool agent.
-If a missing detail would change the task, ask. The run waits only on ask.
-You may answer yourself when no agent is needed. A reply is shown in the chat and the run continues. Domain work belongs to the agents.
-A status line without a successful write or delete means no file was written or deleted. A tool agent that returns text without a file line did not write. Call it again or check with your own tools before finish.
-Write ask, reply, and finish text in the user's language.
+To give an agent's result to another agent, set source to that agent's id or name. You write the id, not the text. The runtime attaches the stored text, including from an agent that has tools.
+If a missing detail would change the task, ask and wait. Do not write that you might ask. If the task is clear, call.
+A reply is shown in the chat. After a reply, the next JSON must be think, call, ask, or finish. Do not reply again. Do not announce a call in a reply; emit the call object. Domain work belongs to the agents.
+Use think for internal planning. Think is not shown in the chat and does not count against the step limit. After think, emit call, ask, or finish.
+A status line without a successful write or delete means no file was written or deleted. An agent that returned text completed that text. File work belongs to agents that write or delete. Before finish, those files must exist.
+Write ask, reply, think, and finish text in the user's language.
 Use ask for a question that needs an answer. Use reply to speak without waiting. Use finish only when the task is done and the run should stop.
 {tool_block}Reply with one JSON object and no other text. Do not describe the call in a sentence:
+{{"action":"think","text":"..."}}
 {{"action":"ask","text":"..."}}
 {{"action":"call","agent":"<id or name>","task":"...","source":""}}
 {{"action":"reply","text":"..."}}
@@ -65,6 +68,34 @@ Agents:
     return protocol
 
 
+def control_source(content: str, reasoning: str = "") -> str:
+    """Visible text wins. Empty visible falls back to think JSON, then provider reasoning."""
+    raw = content or ""
+    if strip_think(raw).strip():
+        return raw
+    inner = think_inner(raw).strip()
+    if inner and looks_like_control(inner):
+        return raw
+    return (reasoning or "").strip()
+
+
+def agent_think_text(content: str, reasoning: str = "") -> str | None:
+    """Internal planning for an agent turn. Visible prose is a result, not think."""
+    raw = content or ""
+    visible = strip_think(raw).strip()
+    blob = visible or think_inner(raw).strip() or (reasoning or "").strip()
+    if blob:
+        parsed = parse_orchestrator_action(blob)
+        if parsed.get("action") == "think":
+            return (parsed.get("text") or "").strip() or "…"
+    if visible:
+        return None
+    hidden = think_inner(raw).strip() or (reasoning or "").strip()
+    if hidden:
+        return hidden
+    return None
+
+
 def parse_orchestrator_action(raw: str) -> dict[str, str]:
     text = _prepare(raw)
     parsed = _parse_json_object(text)
@@ -73,6 +104,9 @@ def parse_orchestrator_action(raw: str) -> dict[str, str]:
     salvaged = _salvage(text)
     if salvaged is not None:
         return salvaged
+    prose = _salvage_prose_call(text)
+    if prose is not None:
+        return prose
     return {"action": "reply", "text": text, "agent": "", "task": "", "source": ""}
 
 
@@ -88,6 +122,8 @@ def reject_reason(raw: str) -> str | None:
         return "unreadable"
     if kind in {"ask", "reply", "finish"} and not (action.get("text") or "").strip():
         return "empty"
+    if kind == "think":
+        return None
     if kind == "call" and not (action.get("agent") or "").strip():
         return "empty"
     return None
@@ -105,7 +141,13 @@ def looks_like_control(text: str) -> bool:
 
 
 def _prepare(raw: str) -> str:
-    text = strip_think(raw or "").strip()
+    source = raw or ""
+    visible = strip_think(source).strip()
+    if visible:
+        text = visible
+    else:
+        inner = think_inner(source).strip()
+        text = inner if inner and looks_like_control(inner) else ""
     if text.startswith("```"):
         lines = text.splitlines()[1:]
         if lines and lines[-1].strip().startswith("```"):
@@ -132,6 +174,33 @@ def _parse_json_object(text: str) -> dict[str, str] | None:
             str(value.get("source") or ""),
         )
     return None
+
+
+_PROSE_CALL = re.compile(
+    r"^call\s+([^\s,.:;]+)(?:\s+with\s+|\s+to\s+|,\s*|:\s*|\s+[—–-]\s+|\s+)(.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+_PROSE_CALL_BARE = re.compile(r"^call\s+([^\s,.:;]+)\s*$", re.IGNORECASE)
+
+
+def _salvage_prose_call(text: str) -> dict[str, str] | None:
+    folded = (text or "").strip()
+    if not folded.lower().startswith("call "):
+        return None
+    match = _PROSE_CALL.match(folded)
+    if match:
+        agent = match.group(1).strip().strip("\"'`")
+        task = match.group(2).strip()
+        if agent and len(task) <= _MAX_SALVAGED_TASK:
+            return _action("call", "", agent, task, "")
+        return None
+    match = _PROSE_CALL_BARE.match(folded)
+    if not match:
+        return None
+    agent = match.group(1).strip().strip("\"'`")
+    if not agent:
+        return None
+    return _action("call", "", agent, "", "")
 
 
 def _salvage(text: str) -> dict[str, str] | None:
@@ -187,12 +256,66 @@ def _action(action: str, text: str, agent: str, task: str, source: str = "") -> 
     return {"action": action, "text": text, "agent": agent, "task": task, "source": source}
 
 
+_ROLE_NOISE = frozenset(
+    {
+        "coder",
+        "manager",
+        "agent",
+        "dev",
+        "developer",
+        "writer",
+        "bot",
+        "node",
+        "role",
+        "specialist",
+        "engineer",
+        "assistant",
+    }
+)
+
+
 def match_agent(token: str, agents: list[tuple[str, str]]) -> str | None:
     raw = token.strip()
     if not raw:
         return None
     folded = raw.casefold()
+    exact: list[str] = []
     for agent_id, name in agents:
         if folded == agent_id.casefold() or (name and folded == name.casefold()):
-            return agent_id
+            exact.append(agent_id)
+    uniq = list(dict.fromkeys(exact))
+    if len(uniq) == 1:
+        return uniq[0]
+    if uniq:
+        return None
+    simplified = _role_key(folded)
+    hits: list[str] = []
+    for agent_id, name in agents:
+        nid = agent_id.casefold()
+        nname = (name or "").casefold()
+        keys = {_role_key(nid), _role_key(nname), nid, nname}
+        if simplified and simplified in keys:
+            hits.append(agent_id)
+            continue
+        if _alias_hit(folded, simplified, nname):
+            hits.append(agent_id)
+    uniq = list(dict.fromkeys(hits))
+    if len(uniq) == 1:
+        return uniq[0]
     return None
+
+
+def _role_key(text: str) -> str:
+    parts = [part for part in re.split(r"[^a-z0-9]+", text.casefold()) if part and part not in _ROLE_NOISE]
+    return " ".join(parts)
+
+
+def _alias_hit(folded: str, simplified: str, name: str) -> bool:
+    if not name or len(name) < 4:
+        return False
+    words = [part for part in re.split(r"[^a-z0-9]+", folded) if part]
+    if name in words:
+        return True
+    if simplified and len(simplified) >= 4 and (name.startswith(simplified) or simplified.startswith(name)):
+        return True
+    return False

@@ -55,6 +55,8 @@ Opcional: **Herramienta** al puerto **Herramienta** del agente o del orquestador
 
 **Detener** cancela la ejecución (resultado **Cancelado**, no **Error**). Ollama sigue en marcha.
 
+La campana avisa del inicio y la detención solo si hay éxito o error. Si una ejecución termina sola, llega un aviso de éxito, error o cancelación.
+
 Sin red activa no arranca nada. Una red inválida (error de validación, modelo ausente) conviene comprobarla en el editor antes de iniciar.
 
 Mientras corre la red activa, **ese** documento del editor es de solo lectura. Puedes seguir viendo otras redes; borrar la red en ejecución en la biblioteca está bloqueado.

@@ -29,6 +29,7 @@
     "start": "Démarrer",
     "indexing": "Indexation des connaissances : {{name}}",
     "stop": "Arrêter",
+    "waitAsk": "En attente de réponse",
     "quickSelect": "Sélection rapide",
     "quickSelectPlaceholder": "Choisir un réseau",
     "noNetwork": "Aucun réseau",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "Aucun réseau actif",
       "desc": "La sélection rapide a été vidée."
+    },
+    "waitAsk": {
+      "title": "Question de {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -658,6 +663,10 @@
         "name": "Nom",
         "description": "Description",
         "tags": "Étiquettes",
+        "tagsPlaceholder": "Ajouter une étiquette",
+        "tagsHint": "Entrée, virgule ou + valide l’étiquette.",
+        "addTag": "Ajouter l’étiquette",
+        "removeTag": "Retirer {{tag}}",
         "stats": "{{nodes}} nœuds · {{edges}} arêtes",
         "noIssues": "Aucune erreur de validation."
       },
@@ -683,7 +692,27 @@
         "numCtx": "Longueur de contexte",
         "numCtxHint": "Les limites viennent du modèle choisi.",
         "numCtxLoading": "Chargement des limites du modèle…",
-        "numCtxUnavailable": "Aucune limite de longueur n’est disponible pour ce modèle."
+        "numCtxUnavailable": "Aucune limite de longueur n’est disponible pour ce modèle.",
+        "numThread": "Threads CPU",
+        "numThreadHint": "La valeur par défaut est le nombre de cœurs physiques.",
+        "numThreadLoading": "Lecture des cœurs CPU…",
+        "numThreadUnavailable": "Le nombre de threads CPU n’est pas disponible.",
+        "numGpu": "Offload GPU",
+        "numGpuHint": "Un pas par couche. Par défaut, toutes les couches. Auto si le chargement échoue.",
+        "numGpuLoading": "Lecture du nombre de couches…",
+        "numGpuUnavailable": "Le nombre de couches n’est pas disponible pour ce modèle.",
+        "numGpuLayers": "{{offload}} sur {{total}} couches",
+        "vram": "Mémoire GPU",
+        "vramLoading": "Estimation de la mémoire…",
+        "vramNeed": "{{need}} sur {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Poids {{weights}} · contexte {{kv}} · réserve {{overhead}}",
+        "vramOver": "Ne tient pas dans la mémoire GPU. Réduis le contexte ou l’offload, sinon le CPU calcule.",
+        "vramTight": "Serré. Un second modèle ou un prompt plein peut déborder.",
+        "vramFormula": "GPU : {{on}} dernières couches sur {{total}}. {{full}} × {{perToken}} o/jeton × {{ctx}} jetons.",
+        "vramFormulaMixed": "GPU : {{on}} dernières couches sur {{total}}. {{full}} couches globales × {{ctx}} jetons.",
+        "vramFormulaSwa": "GPU : {{on}} dernières couches sur {{total}}. {{full}} globales × {{ctx}} jetons, {{swa}} fenêtre glissante × fenêtre {{window}}.",
+        "vramHint": "Estimation couche par couche d’après le modèle. Le GPU prend les N dernières couches. Attention complète : tout le contexte. Fenêtre glissante : seulement sa fenêtre. Cache KV en f16."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",
@@ -924,10 +953,12 @@
       "description": "Description"
     },
     "tags": {
-      "title": "Ajouter des étiquettes",
-      "body": "Les étiquettes sont ajoutées à {{count}} réseaux. Les étiquettes existantes restent.",
+      "title": "Définir les étiquettes",
+      "body": "Les étiquettes existantes de la sélection ({{count}}) sont préremplies.",
       "label": "Étiquettes",
-      "placeholder": "ops, prod",
+      "placeholder": "Ajouter une étiquette",
+      "hint": "Entrée, virgule ou + valide l’étiquette.",
+      "remove": "Retirer {{tag}}",
       "add": "Ajouter"
     },
     "delete": {
@@ -952,7 +983,7 @@
       "error": "L’action a échoué",
       "duplicated": "Copie ajoutée à la bibliothèque",
       "renamed": "Métadonnées enregistrées",
-      "tagged": "Étiquettes ajoutées",
+      "tagged": "Étiquettes enregistrées",
       "deleted": "Réseaux supprimés",
       "imported": "{{count}} réseaux importés",
       "exported": "Export lancé"
@@ -1042,7 +1073,8 @@
       "tool": "Outil",
       "human": "Saisie",
       "index": "Index",
-      "knowledge": "Connaissances"
+      "knowledge": "Connaissances",
+      "thinking": "Réflexion"
     },
     "activity": {
       "title": "Activité",
@@ -1065,6 +1097,12 @@
     "tabs": {
       "chat": "Chat",
       "log": "Journal"
+    },
+    "resize": {
+      "chatHeight": "Modifier la hauteur du chat et du journal",
+      "graphHeight": "Modifier la hauteur du réseau",
+      "activityHeight": "Modifier la hauteur de l’activité",
+      "splitWidth": "Modifier la largeur du réseau et de l’activité"
     },
     "chat": {
       "placeholder": "Message…",
@@ -1106,6 +1144,9 @@
     "notify": {
       "runStarted": "Exécution démarrée",
       "runStopped": "Exécution arrêtée",
+      "runSucceeded": "Exécution réussie",
+      "runFailed": "Exécution échouée",
+      "runCancelled": "Exécution arrêtée",
       "stepFailed": "Étape échouée",
       "disconnected": "Service injoignable"
     },
@@ -1153,6 +1194,14 @@
   "history": {
     "title": "Historique",
     "close": "Fermer",
+    "resize": {
+      "chartHeight": "Modifier la hauteur du graphique",
+      "errorsHeight": "Modifier la hauteur de la liste d’erreurs",
+      "statsWidth": "Modifier la largeur du graphique et des erreurs",
+      "listHeight": "Modifier la hauteur de la liste des exécutions",
+      "detailHeight": "Modifier la hauteur du détail",
+      "listWidth": "Modifier la largeur de la liste et du détail"
+    },
     "copy": "Copier",
     "ribbon": {
       "refresh": "Actualiser",
@@ -1337,7 +1386,8 @@
     "run": {
       "start": "Exécution démarrée ({{networkName}})",
       "wait": {
-        "human": "En attente de saisie"
+        "human": "En attente de saisie",
+        "ask": "Question de {{speaker}}"
       },
       "chat": {
         "user": "Message utilisateur"
@@ -1347,7 +1397,12 @@
       },
       "agent": {
         "start": "Agent démarré",
-        "done": "Agent terminé"
+        "done": "Agent terminé",
+        "toolFailures": "Agent arrêté après {{failed}} appels d'outil en échec",
+        "toolJson": "Appel d’outil {{name}} ignoré : arguments JSON incomplets (essai {{attempt}}/{{max}}).",
+        "think": "L’agent réfléchit (ce n’est pas un résultat).",
+        "thinkLimit": "Trop d’étapes de réflexion sans résultat.",
+        "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes."
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
       "knowledgeIndex": {
@@ -1377,6 +1432,10 @@
       "orchestrator": {
         "repair": "Commande illisible, nouvel essai.",
         "unreadable": "L’orchestrateur n’a pas fourni d’étape lisible.",
+        "defer": "L’étape suivante après le message de chat était illisible ; l’exécution continue.",
+        "think": "L’orchestrateur réfléchit (ne compte pas comme une étape).",
+        "thinkLimit": "Trop de tours de réflexion sans appel.",
+        "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes.",
         "window": "L’invite ne tient dans aucune fenêtre de contexte."
       }
     },

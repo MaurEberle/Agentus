@@ -7,17 +7,27 @@ import httpx
 import pytest
 
 from app.runtime.completions import (
+    _ollama_messages,
+    _openai_messages,
     _parse_usage,
+    _responses_input,
+    _responses_tools,
     complete,
     complete_live,
     complete_stream,
     estimate_token_count,
+    uses_openai_responses,
 )
-from app.runtime.errors import RuntimeApiError
-from app.runtime.models import ChatMessage, CompletionRequest
+from app.runtime.errors import RuntimeApiError, clip_error_detail
+from app.runtime.models import ChatMessage, CompletionRequest, ToolCall
 from tests.runtime.transport import install_transport
 
 _MSG = [ChatMessage(role="user", content="hi")]
+
+
+@pytest.fixture(autouse=True)
+def _stub_block_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.runtime.completions.model_block_count", lambda *a, **k: 16)
 
 
 def _chat_ok(content: str = "hello", tool_calls: object | None = None) -> dict:
@@ -126,7 +136,8 @@ def test_stream_two_deltas_then_done(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode("utf-8"))
         assert body["stream"] is True
-        assert body["stream_options"] == {"include_usage": True}
+        assert "stream_options" not in body
+        assert body["options"]["num_gpu"] == 17
         return httpx.Response(200, content=payload)
 
     install_transport(monkeypatch, handler)
@@ -201,6 +212,75 @@ def test_stream_read_timeout_error_key(monkeypatch: pytest.MonkeyPatch) -> None:
     assert events[-1].error_key == "runtime.timeout"
 
 
+def test_clip_error_detail_collapses_and_truncates() -> None:
+    assert clip_error_detail("  a \n b  ") == "a b"
+    assert clip_error_detail("") is None
+    assert clip_error_detail(None) is None
+    clipped = clip_error_detail("x" * 600)
+    assert clipped is not None
+    assert len(clipped) == 500
+    assert clipped.endswith("…")
+
+
+def test_stream_chunk_error_keeps_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b'{"error":"invalid tool call json"}\n')
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    assert events[-1].kind == "error"
+    assert events[-1].error_key == "runtime.badRequest"
+    assert events[-1].error_detail == "invalid tool call json"
+
+
+def test_complete_live_raises_with_stream_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b'{"error":"invalid tool call json"}\n')
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete_live(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    assert err.value.error_key == "runtime.badRequest"
+    assert err.value.detail == "invalid tool call json"
+
+
+def test_stream_protocol_error_keeps_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.RemoteProtocolError("peer closed", request=request)
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    assert events[-1].kind == "error"
+    assert events[-1].error_key == "runtime.badRequest"
+    assert events[-1].error_detail is not None
+    assert "RemoteProtocolError" in events[-1].error_detail
+
+
+def test_http_400_keeps_body_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"error": "messages: invalid role"})
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    assert err.value.error_key == "runtime.badRequest"
+    assert err.value.status == 400
+    assert err.value.detail is not None
+    assert "invalid role" in err.value.detail
+
+
 def test_complete_live_aggregates_stream(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = (
         b'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n'
@@ -212,7 +292,7 @@ def test_complete_live_aggregates_stream(monkeypatch: pytest.MonkeyPatch) -> Non
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode("utf-8"))
         assert body["stream"] is True
-        assert body["stream_options"] == {"include_usage": True}
+        assert "stream_options" not in body
         return httpx.Response(200, content=payload)
 
     install_transport(monkeypatch, handler)
@@ -220,7 +300,27 @@ def test_complete_live_aggregates_stream(monkeypatch: pytest.MonkeyPatch) -> Non
         CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
     )
     assert result.content == "Hello"
+    assert result.reasoning is None
     assert result.finish_reason == "stop"
+
+
+def test_complete_live_keeps_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'data: {"choices":[{"delta":{"reasoning":"{\\"action\\":"}}]}\n\n'
+        b'data: {"choices":[{"delta":{"reasoning":"\\"call\\"}"}}]}\n\n'
+        b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        b"data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+    )
+    assert result.content is None
+    assert result.reasoning == '{"action":"call"}'
 
 
 def test_estimate_token_count() -> None:
@@ -369,3 +469,504 @@ def test_complete_live_abort(monkeypatch: pytest.MonkeyPatch) -> None:
             should_abort=lambda: True,
         )
     assert err.value.error_key == "run.cancelled"
+
+
+def test_openai_stream_sends_stream_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        assert body["stream_options"] == {"include_usage": True}
+        return httpx.Response(200, content=b"data: [DONE]\n\n")
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(
+                provider="xai",
+                model="grok",
+                messages=_MSG,
+                secret="sk-test-secret",
+            )
+        )
+    )
+    assert events[-1].kind == "done"
+
+
+def test_complete_native_ollama_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "model": "llama3.2:1b",
+                "message": {"role": "assistant", "content": "hi native"},
+                "done": True,
+                "done_reason": "stop",
+                "prompt_eval_count": 4,
+                "eval_count": 2,
+            },
+        )
+
+    install_transport(monkeypatch, handler)
+    result = complete(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+    )
+    assert result.content == "hi native"
+    assert result.finish_reason == "stop"
+    assert result.usage is not None
+    assert result.usage.prompt_tokens == 4
+    assert result.usage.completion_tokens == 2
+
+
+def test_native_stream_deltas(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'{"message":{"role":"assistant","content":"Hel"},"done":false}\n'
+        b'{"message":{"role":"assistant","content":"lo"},"done":false}\n'
+        b'{"message":{"role":"assistant","content":""},"done":true,"done_reason":"stop","prompt_eval_count":3,"eval_count":2}\n'
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    texts = [e.text for e in events if e.kind == "delta"]
+    assert texts == ["Hel", "lo"]
+    usage = [e for e in events if e.kind == "usage"]
+    assert usage
+    assert usage[-1].usage is not None
+    assert usage[-1].usage.completion_tokens == 2
+    assert events[-1].kind == "done"
+    assert events[-1].finish_reason == "stop"
+
+
+def test_gpu_max_in_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG))
+    assert seen[0]["options"]["num_gpu"] == 17
+
+
+def test_gpu_max_falls_back_to_auto(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        seen.append(body.get("options") or {})
+        if len(seen) == 1:
+            return httpx.Response(500, json={"error": "not enough memory to load model"})
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    result = complete(
+        CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+    )
+    assert result.content == "hello"
+    assert seen[0]["num_gpu"] == 17
+    assert seen[1]["num_gpu"] == -1
+
+
+def test_gpu_cpu_forced_does_not_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(500, json={"error": "not enough memory to load model"})
+
+    install_transport(monkeypatch, handler)
+    with pytest.raises(RuntimeApiError) as err:
+        complete(
+            CompletionRequest(
+                provider="ollama",
+                model="llama3.2:1b",
+                messages=_MSG,
+                ollama_options={"num_gpu": 0},
+            )
+        )
+    assert err.value.error_key == "runtime.upstream"
+    assert calls["n"] == 1
+
+
+def test_explicit_num_gpu_is_kept(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="ollama",
+            model="llama3.2:1b",
+            messages=_MSG,
+            ollama_options={"num_gpu": 8},
+        )
+    )
+    assert seen[0]["options"]["num_gpu"] == 8
+
+
+def test_num_thread_in_ollama_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="ollama",
+            model="llama3.2:1b",
+            messages=_MSG,
+            ollama_options={"num_thread": 6, "num_ctx": 8192},
+        )
+    )
+    options = seen[0]["options"]
+    assert options["num_thread"] == 6
+    assert options["num_ctx"] == 8192
+    assert options["num_gpu"] == 17
+
+
+def test_stream_gpu_fallback_before_delta(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+    payload = (
+        b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'
+        b"data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        seen.append(body.get("options") or {})
+        if len(seen) == 1:
+            return httpx.Response(500, json={"error": "failed to load model into vram"})
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    events = list(
+        complete_stream(
+            CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)
+        )
+    )
+    assert seen[0]["num_gpu"] == 17
+    assert seen[1]["num_gpu"] == -1
+    texts = [e.text for e in events if e.kind == "delta"]
+    assert texts == ["ok"]
+
+
+_WRITE_ARGS = '{"action":"write","path":"geschichte-ueber-eine-biene.txt"}'
+
+
+def _tool_followup_messages(*, call_id: str = "", tool_name: str | None = None) -> list[ChatMessage]:
+    return [
+        ChatMessage(role="user", content="speichere den text"),
+        ChatMessage(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                ToolCall(id=call_id, name="file_access", arguments=_WRITE_ARGS),
+            ],
+        ),
+        ChatMessage(
+            role="tool",
+            content='{"ok":true,"bytes":1631}',
+            tool_call_id=call_id or None,
+            name=tool_name,
+        ),
+    ]
+
+
+def test_ollama_messages_keeps_one_trailing_assistant() -> None:
+    messages = _ollama_messages(
+        [
+            ChatMessage(role="user", content="speichere"),
+            ChatMessage(role="assistant", content='{"action":"think","text":"first"}'),
+            ChatMessage(role="assistant", content='{"action":"think","text":"second"}'),
+        ]
+    )
+    assert [item["role"] for item in messages] == ["user", "assistant"]
+    assert messages[-1]["content"] == '{"action":"think","text":"second"}'
+
+
+def test_ollama_tool_followup_uses_native_shape() -> None:
+    messages = _ollama_messages(_tool_followup_messages())
+    assistant = messages[1]
+    tool = messages[2]
+    call = assistant["tool_calls"][0]
+    assert assistant["content"] == ""
+    assert "id" not in call
+    assert call["type"] == "function"
+    assert call["function"]["name"] == "file_access"
+    assert call["function"]["arguments"] == {
+        "action": "write",
+        "path": "geschichte-ueber-eine-biene.txt",
+    }
+    assert tool["role"] == "tool"
+    assert tool["tool_name"] == "file_access"
+    assert "tool_call_id" not in tool
+    assert "name" not in tool
+
+
+def test_openai_tool_followup_keeps_string_arguments() -> None:
+    messages = _openai_messages(_tool_followup_messages(call_id="c1", tool_name="file_access"))
+    call = messages[1]["tool_calls"][0]
+    tool = messages[2]
+    assert call["id"] == "c1"
+    assert call["type"] == "function"
+    assert call["function"]["arguments"] == _WRITE_ARGS
+    assert tool["tool_call_id"] == "c1"
+    assert tool["name"] == "file_access"
+    assert "tool_name" not in tool
+
+
+def test_ollama_complete_sends_native_tool_followup(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="ollama",
+            model="llama3.2:1b",
+            messages=_tool_followup_messages(),
+        )
+    )
+    body = seen[0]
+    call = body["messages"][1]["tool_calls"][0]
+    tool = body["messages"][2]
+    assert isinstance(call["function"]["arguments"], dict)
+    assert call["function"]["arguments"]["action"] == "write"
+    assert tool["tool_name"] == "file_access"
+    assert "tool_call_id" not in tool
+
+
+def test_xai_complete_keeps_openai_tool_followup(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="xai",
+            model="grok",
+            messages=_tool_followup_messages(call_id="c1", tool_name="file_access"),
+            secret="sk-test-secret",
+        )
+    )
+    call = seen[0]["messages"][1]["tool_calls"][0]
+    tool = seen[0]["messages"][2]
+    assert isinstance(call["function"]["arguments"], str)
+    assert tool["tool_call_id"] == "c1"
+    assert "tool_name" not in tool
+
+
+_HTTP_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "http",
+        "description": "fetch",
+        "parameters": {"type": "object", "properties": {}},
+    },
+}
+
+
+def test_uses_openai_responses_only_for_gpt56_tools() -> None:
+    luna = CompletionRequest(
+        provider="openai",
+        model="gpt-5.6-luna",
+        messages=_MSG,
+        tools=[_HTTP_TOOL],
+        secret="sk",
+    )
+    assert uses_openai_responses(luna) is True
+    assert uses_openai_responses(luna.model_copy(update={"tools": None})) is False
+    assert uses_openai_responses(luna.model_copy(update={"model": "gpt-4o"})) is False
+    assert uses_openai_responses(luna.model_copy(update={"provider": "xai", "model": "grok-4.5"})) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "anthropic", "model": "claude-sonnet-4-6"})
+    ) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "gemini", "model": "gemini-2.5-pro"})
+    ) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "openai_compat", "model": "gpt-5.6-luna"})
+    ) is False
+    assert uses_openai_responses(
+        luna.model_copy(update={"provider": "ollama", "model": "qwen3.8"})
+    ) is False
+    assert uses_openai_responses(luna.model_copy(update={"model": "gpt-6-astra"})) is True
+
+
+def test_responses_tools_flatten_chat_schema() -> None:
+    flat = _responses_tools([_HTTP_TOOL])
+    assert flat == [
+        {
+            "type": "function",
+            "name": "http",
+            "description": "fetch",
+            "parameters": {"type": "object", "properties": {}},
+            "strict": False,
+        }
+    ]
+
+
+def test_responses_input_maps_system_and_tool_followup() -> None:
+    messages = [
+        ChatMessage(role="system", content="plan only"),
+        *_tool_followup_messages(call_id="c1", tool_name="file_access"),
+    ]
+    instructions, items = _responses_input(messages)
+    assert instructions == "plan only"
+    assert items[0] == {"role": "user", "content": "speichere den text"}
+    assert items[1]["type"] == "function_call"
+    assert items[1]["call_id"] == "c1"
+    assert items[1]["name"] == "file_access"
+    assert items[2] == {
+        "type": "function_call_output",
+        "call_id": "c1",
+        "output": '{"ok":true,"bytes":1631}',
+    }
+
+
+def test_openai_luna_tools_post_to_responses(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "model": "gpt-5.6-luna",
+                "output": [
+                    {
+                        "type": "reasoning",
+                        "summary": [{"type": "summary_text", "text": "need the file tree"}],
+                    },
+                    {
+                        "type": "function_call",
+                        "call_id": "call_1",
+                        "name": "http",
+                        "arguments": '{"url":"x"}',
+                    },
+                ],
+                "usage": {"input_tokens": 12, "output_tokens": 4},
+            },
+        )
+
+    install_transport(monkeypatch, handler)
+    result = complete(
+        CompletionRequest(
+            provider="openai",
+            model="gpt-5.6-luna",
+            messages=[
+                ChatMessage(role="system", content="you are architect"),
+                ChatMessage(role="user", content="inspect the repo"),
+            ],
+            tools=[_HTTP_TOOL],
+            secret="sk-openai",
+        )
+    )
+    assert str(seen[0].url).endswith("/responses")
+    body = json.loads(seen[0].content.decode("utf-8"))
+    assert body["store"] is False
+    assert "messages" not in body
+    assert "stream_options" not in body
+    assert body["instructions"] == "you are architect"
+    assert body["tools"][0]["name"] == "http"
+    assert "function" not in body["tools"][0]
+    assert result.tool_calls[0].id == "call_1"
+    assert result.tool_calls[0].name == "http"
+    assert result.reasoning == "need the file tree"
+    assert result.finish_reason == "tool_calls"
+
+
+def test_openai_gpt4o_tools_stay_on_chat_completions(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, json=_chat_ok("ok"))
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="openai",
+            model="gpt-4o",
+            messages=_MSG,
+            tools=[_HTTP_TOOL],
+            secret="sk-openai",
+        )
+    )
+    assert seen[0].endswith("/chat/completions")
+
+
+def test_xai_tools_stay_on_chat_completions(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, json=_chat_ok("ok"))
+
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="xai",
+            model="grok-4.5",
+            messages=_MSG,
+            tools=[_HTTP_TOOL],
+            secret="sk-xai",
+        )
+    )
+    assert seen[0].endswith("/chat/completions")
+
+
+def test_openai_luna_stream_parses_responses_events(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'event: response.output_text.delta\n'
+        b'data: {"type":"response.output_text.delta","delta":"Hi"}\n\n'
+        b'event: response.output_item.added\n'
+        b'data: {"type":"response.output_item.added","output_index":1,'
+        b'"item":{"type":"function_call","call_id":"call_9","name":"http","arguments":""}}\n\n'
+        b'event: response.function_call_arguments.delta\n'
+        b'data: {"type":"response.function_call_arguments.delta","output_index":1,"delta":"{\\"url\\":\\"x\\"}"}\n\n'
+        b'event: response.completed\n'
+        b'data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2}}}\n\n'
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        assert str(request.url).endswith("/responses")
+        assert body["stream"] is True
+        assert "stream_options" not in body
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(
+        CompletionRequest(
+            provider="openai",
+            model="gpt-5.6-luna",
+            messages=_MSG,
+            tools=[_HTTP_TOOL],
+            secret="sk-openai",
+        )
+    )
+    assert result.content == "Hi"
+    assert result.tool_calls[0].id == "call_9"
+    assert result.tool_calls[0].name == "http"
+    assert result.tool_calls[0].arguments == '{"url":"x"}'
+    assert result.usage is not None
+    assert result.usage.prompt_tokens == 3
+    assert result.usage.completion_tokens == 2

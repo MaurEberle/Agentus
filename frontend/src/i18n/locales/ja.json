@@ -29,6 +29,7 @@
     "start": "開始",
     "indexing": "知識を索引しています: {{name}}",
     "stop": "停止",
+    "waitAsk": "返信待ち",
     "quickSelect": "クイック選択",
     "quickSelectPlaceholder": "ネットワークを選択",
     "noNetwork": "ネットワークなし",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "アクティブなネットワークはありません",
       "desc": "クイック選択をクリアしました。"
+    },
+    "waitAsk": {
+      "title": "{{speaker}} からの確認",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -658,6 +663,10 @@
         "name": "名前",
         "description": "説明",
         "tags": "タグ",
+        "tagsPlaceholder": "タグを追加",
+        "tagsHint": "Enter、カンマ、または + で確定します。",
+        "addTag": "タグを追加",
+        "removeTag": "{{tag}} を削除",
         "stats": "{{nodes}} ノード · {{edges}} エッジ",
         "noIssues": "検証エラーはありません。"
       },
@@ -683,7 +692,27 @@
         "numCtx": "コンテキスト長",
         "numCtxHint": "上限は選んだモデルからです。",
         "numCtxLoading": "モデル上限を読み込み中…",
-        "numCtxUnavailable": "このモデルの長さ情報はありません。"
+        "numCtxUnavailable": "このモデルの長さ情報はありません。",
+        "numThread": "CPU スレッド",
+        "numThreadHint": "既定は物理コア数です。",
+        "numThreadLoading": "CPU コアを読み取り中…",
+        "numThreadUnavailable": "CPU スレッド数を取得できません。",
+        "numGpu": "GPU オフロード",
+        "numGpuHint": "レイヤーごとに 1 段階。既定は全レイヤー。読み込み失敗時は Auto。",
+        "numGpuLoading": "レイヤー数を読み取り中…",
+        "numGpuUnavailable": "このモデルのレイヤー数は取得できません。",
+        "numGpuLayers": "{{offload}} / {{total}} レイヤー",
+        "vram": "GPU メモリ",
+        "vramLoading": "メモリ見積もり中…",
+        "vramNeed": "{{need}} / {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "重み {{weights}} · コンテキスト {{kv}} · 予備 {{overhead}}",
+        "vramOver": "GPU メモリに収まりません。コンテキストかオフロードを下げないと CPU が計算します。",
+        "vramTight": "余裕がありません。別モデルや満杯のプロンプトで溢れることがあります。",
+        "vramFormula": "GPU: 最後 {{on}} / {{total}} 層。{{full}} × {{perToken}} B/トークン × {{ctx}} トークン。",
+        "vramFormulaMixed": "GPU: 最後 {{on}} / {{total}} 層。グローバル {{full}} 層 × {{ctx}} トークン。",
+        "vramFormulaSwa": "GPU: 最後 {{on}} / {{total}} 層。グローバル {{full}} × {{ctx}} トークン、スライディング {{swa}} × 窓 {{window}}。",
+        "vramHint": "モデルデータから層ごとに見積もります。GPU は末尾の N 層です。フルアテンションはコンテキスト全体。スライディングウィンドウ層はその窓だけ。KV キャッシュは f16 です。"
       },
       "agent": {
         "hint": "LLM、ツール、知識はエッジから届く。オーケストレーターがなければメッセージがエージェントを起動する。",
@@ -924,10 +953,12 @@
       "description": "説明"
     },
     "tags": {
-      "title": "タグを追加",
-      "body": "タグは {{count}} 個のネットワークに追加されます。既存のタグは残ります。",
+      "title": "タグを設定",
+      "body": "選択中の既存タグ（{{count}}）を表示します。",
       "label": "タグ",
-      "placeholder": "ops, prod",
+      "placeholder": "タグを追加",
+      "hint": "Enter、カンマ、または + で確定します。",
+      "remove": "{{tag}} を削除",
       "add": "追加"
     },
     "delete": {
@@ -952,7 +983,7 @@
       "error": "操作に失敗しました",
       "duplicated": "コピーをライブラリに追加しました",
       "renamed": "メタデータを保存しました",
-      "tagged": "タグを追加しました",
+      "tagged": "タグを保存しました",
       "deleted": "ネットワークを削除しました",
       "imported": "{{count}} 個のネットワークをインポートしました",
       "exported": "エクスポートを開始しました"
@@ -1042,7 +1073,8 @@
       "tool": "ツール",
       "human": "入力",
       "index": "索引",
-      "knowledge": "知識"
+      "knowledge": "知識",
+      "thinking": "思考"
     },
     "activity": {
       "title": "アクティビティ",
@@ -1065,6 +1097,12 @@
     "tabs": {
       "chat": "チャット",
       "log": "ログ"
+    },
+    "resize": {
+      "chatHeight": "チャットとログの高さを変更",
+      "graphHeight": "ネットワークの高さを変更",
+      "activityHeight": "アクティビティの高さを変更",
+      "splitWidth": "ネットワークとアクティビティの幅を変更"
     },
     "chat": {
       "placeholder": "メッセージ…",
@@ -1106,6 +1144,9 @@
     "notify": {
       "runStarted": "実行を開始しました",
       "runStopped": "実行が停止しました",
+      "runSucceeded": "実行が成功しました",
+      "runFailed": "実行が失敗しました",
+      "runCancelled": "実行を停止しました",
       "stepFailed": "ステップに失敗しました",
       "disconnected": "サービスに到達できません"
     },
@@ -1153,6 +1194,14 @@
   "history": {
     "title": "履歴",
     "close": "閉じる",
+    "resize": {
+      "chartHeight": "グラフの高さを変更",
+      "errorsHeight": "エラー一覧の高さを変更",
+      "statsWidth": "グラフとエラー一覧の幅を変更",
+      "listHeight": "実行一覧の高さを変更",
+      "detailHeight": "詳細の高さを変更",
+      "listWidth": "一覧と詳細の幅を変更"
+    },
     "copy": "コピー",
     "ribbon": {
       "refresh": "更新",
@@ -1337,7 +1386,8 @@
     "run": {
       "start": "実行を開始しました（{{networkName}}）",
       "wait": {
-        "human": "入力待ち"
+        "human": "入力待ち",
+        "ask": "{{speaker}} からの確認"
       },
       "chat": {
         "user": "ユーザーメッセージ"
@@ -1347,7 +1397,12 @@
       },
       "agent": {
         "start": "エージェントを開始しました",
-        "done": "エージェントが完了しました"
+        "done": "エージェントが完了しました",
+        "toolFailures": "エージェントは失敗したツール呼び出し {{failed}} 回で停止しました",
+        "toolJson": "ツール呼び出し {{name}} を破棄しました。JSON 引数が不完全です（試行 {{attempt}}/{{max}}）。",
+        "think": "エージェントが思考中です（結果ではありません）。",
+        "thinkLimit": "結果のない思考が多すぎます。",
+        "thinkLoop": "1トークンの思考ループを {{thinks}} ステップで停止しました。"
       },
       "knowledge": "知識検索（{{count}} 件）",
       "knowledgeIndex": {
@@ -1377,6 +1432,10 @@
       "orchestrator": {
         "repair": "制御メッセージを読めなかったので再試行します。",
         "unreadable": "オーケストレーターが読める次の手順を出しませんでした。",
+        "defer": "チャット返信の次の手順が読めませんでした。実行は続きます。",
+        "think": "オーケストレーターが考えています（ステップに数えません）。",
+        "thinkLimit": "依頼なしの思考が多すぎます。",
+        "thinkLoop": "1トークンの思考ループを {{thinks}} ステップで停止しました。",
         "window": "プロンプトがどのコンテキスト窓にも収まりません。"
       }
     },

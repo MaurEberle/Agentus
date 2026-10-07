@@ -1,5 +1,6 @@
 import { apiFetch, queryClient } from '@/api/client';
 import { selectActiveNetwork } from '@/api/session';
+import { applyTagEdit } from '@/lib/tags';
 import type { NetworkListItem } from '@/modules/dashboard/model';
 import {
   createNetwork,
@@ -50,6 +51,22 @@ export async function addTags(ids: string[], tags: string[]): Promise<{ items: N
   });
   await refreshLists();
   return result;
+}
+
+export async function saveNetworkTags(
+  items: NetworkListItem[],
+  seed: string[],
+  next: string[],
+): Promise<void> {
+  await Promise.all(
+    items.map((item) =>
+      apiFetch<NetworkListItem>(`/networks/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ tags: applyTagEdit(item.tags, seed, next) }),
+      }),
+    ),
+  );
+  await refreshLists();
 }
 
 export async function exportNetwork(id: string): Promise<AgentNetworkDocument & { exportedAt: string }> {

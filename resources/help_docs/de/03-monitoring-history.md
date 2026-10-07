@@ -21,17 +21,19 @@ Ohne aktiven Lauf zeigt die Seite den **letzten gespeicherten Lauf** zum Ansehen
 
 Kopfbereich: Lauf-ID, Startzeit, Dauer, grober Schritt, aktive LLMs (lokal vs. Cloud).
 
-**Netz (nur Lesen):** derselbe Graph, Knotenfarben nach Status (Leerlauf, wartend, läuft, fertig, Fehler). Klick auf einen Knoten filtert Log/Aktivität und öffnet das Knotendetail (Rolle, Status, wartet auf LLM/Werkzeug/Eingabe/Index, letzte Meldung, Token). Kein Bearbeiten, kein zweiter Editor.
+**Netz (nur Lesen):** derselbe Graph, Knotenfarben nach Status (Leerlauf, wartend, läuft, fertig, Fehler). Klick auf einen Knoten filtert Log/Aktivität und öffnet das Knotendetail (Rolle, Status, wartet auf LLM/Werkzeug/Eingabe/Index/Denken, letzte Meldung, Token). Kein Bearbeiten, kein zweiter Editor.
 
 Hängt Wissen an einem Agenten, zeigt der Start den Lauf schon während der Indizierung: der Wissensknoten läuft mit Wartegrund **Index**, das Log nennt Lesen und Embeddings, die Kopfzeile und das Dashboard denselben Namen. Ein bereits aktueller Index wird übersprungen und nur kurz als aktuell gemeldet.
 
 **Aktivität:** aktuelle Knoten, Fortschritt „Schritt x von y“, Token ein/aus, optional Kontextfenster.
 
+Chat und Log stehen über Netz und Aktivität. Die drei Karten behalten ihre Höhe, wenn das Fenster größer wird; am Rand dazwischen lässt sich die Größe ziehen. Die eingestellten Größen bleiben nach dem Schließen der App erhalten.
+
 **Host-Ressourcen:** CPU, RAM, GPU/VRAM **dieses PCs**, nicht nur der App. Ohne lokale GPU (typisch bei Cloud-Läufen) erscheint ein Hinweis, kein Fehler.
 
 ## Netz-Chat (Monitoring)
 
-Tab **Chat**: Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht.
+Tab **Chat** (beim Start eines Laufs, wenn der Graph einen Chat-Eingang hat): Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht. Bei einer Rückfrage erscheinen ein Hinweis in der Glocke und in der Kopfzeile; das Taskleisten-Symbol blinkt, wenn das Fenster im Hintergrund liegt.
 
 Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 
@@ -46,6 +48,8 @@ Payloads und Meldungen **maskieren** Geheimnisse (zum Beispiel `Bearer`, Schlüs
 Ribbon: Aktualisieren, Löschen ausgewählter Läufe, Logs exportieren, alte Einträge nach Aufbewahrung bereinigen (siehe Einstellungen → Daten, Default 90 Tage).
 
 **Ein Filter** steuert alles: Zeitraum (Heute, 7/30 Tage, von–bis), Netz, Modell, Suche (Lauf-ID, Netz, Fehler). KPIs, Diagramm „Läufe nach Tag“, häufigste Fehler, Tabs Historie / Pro Modell / Pro Netz und die Liste verwenden denselben Filter.
+
+Diagramm und Fehlerliste sowie Lauf-Liste und Detail lassen sich wie im Monitoring am Rand ziehen. Die eingestellten Größen bleiben nach dem Schließen der App erhalten.
 
 ## Ergebnisse eines Laufs
 

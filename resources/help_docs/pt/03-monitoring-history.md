@@ -21,17 +21,19 @@ Sem execução ativa a página mostra a **última execução guardada** para lei
 
 Cabeçalho: ID da execução, hora de início, duração, passo aproximado, LLM ativos (local vs nuvem).
 
-**Rede (só leitura):** o mesmo grafo, cores de nó segundo o estado (inativo, à espera, a correr, pronto, erro). Um clique num nó filtra registo/atividade e abre o detalhe (função, estado, espera LLM/ferramenta/entrada/índice, última mensagem, tokens). Sem editar, sem segundo editor.
+**Rede (só leitura):** o mesmo grafo, cores de nó segundo o estado (inativo, à espera, a correr, pronto, erro). Um clique num nó filtra registo/atividade e abre o detalhe (função, estado, espera LLM/ferramenta/entrada/índice/pensar, última mensagem, tokens). Sem editar, sem segundo editor.
 
 Se houver conhecimento num agente, o início já mostra a execução durante a indexação: o nó de conhecimento corre com motivo de espera **índice**, o registo nomeia a leitura e os embeddings, e o cabeçalho e o painel mostram o mesmo nome. Um índice já atual é saltado e só anotado como atual.
 
 **Atividade:** nós atuais, progresso «passo x de y», tokens entrada/saída, janela de contexto opcional.
 
+Chat e registo ficam acima da rede e da atividade. Os três cartões mantêm a altura quando a janela cresce; arrasta-se o bordo para redimensionar. Os tamanhos ficam guardados depois de fechar a aplicação.
+
 **Recursos do anfitrião:** CPU, RAM, GPU/VRAM **deste PC**, não só da app. Sem GPU local (típico em execuções na nuvem) aparece um aviso, não um erro.
 
 ## Chat da rede (monitorização)
 
-Separador **Chat**: conversa do grafo em execução. Só ativo enquanto a execução corre. Sem orquestrador o chat espera a primeira linha e passa-a à cadeia. Com orquestrador falas só com ele. A execução espera só numa pergunta. Os textos dos agentes e as ordens internas não aparecem aqui.
+Separador **Chat** (ao iniciar uma execução, se o grafo tiver entrada de chat): conversa do grafo em execução. Só ativo enquanto a execução corre. Sem orquestrador o chat espera a primeira linha e passa-a à cadeia. Com orquestrador falas só com ele. A execução espera só numa pergunta. Os textos dos agentes e as ordens internas não aparecem aqui. Uma pergunta aparece no sino e no cabeçalho; o ícone da barra de tarefas pisca se a janela estiver em segundo plano.
 
 Isto **não** é a bolha de ajuda. Histórico e ferramentas são os da rede.
 
@@ -46,6 +48,8 @@ As cargas e as mensagens **mascaram** segredos (por exemplo `Bearer`, prefixos d
 Faixa: Atualizar, apagar execuções selecionadas, exportar registos, limpar entradas antigas segundo a retenção (ver Definições → Dados, predefinição 90 dias).
 
 **Um filtro** controla tudo: período (hoje, 7/30 dias, de–até), rede, modelo, pesquisa (ID da execução, rede, erro). KPI, gráfico «execuções por dia», erros mais frequentes, separadores Histórico / Por modelo / Por rede e a lista usam o mesmo filtro.
+
+O gráfico e a lista de erros, bem como a lista de execuções e o detalhe, redimensionam-se ao arrastar a margem, como na Monitorização. Os tamanhos ficam guardados depois de fechar a aplicação.
 
 ## Resultados de uma execução
 

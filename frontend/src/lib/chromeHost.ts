@@ -5,6 +5,7 @@ export interface ChromeHost {
   close: () => void;
   isMaximized: () => boolean | Promise<boolean>;
   pickFolder?: () => Promise<string | null>;
+  requestAttention?: (active?: boolean) => void | Promise<void>;
 }
 
 type PywebviewApi = Partial<ChromeHost> & Record<string, unknown>;
@@ -29,6 +30,9 @@ function asChromeHost(api: Partial<ChromeHost> | undefined | null): ChromeHost |
           const value = await api.pickFolder?.();
           return value ?? null;
         }
+      : undefined,
+    requestAttention: api.requestAttention
+      ? (active = true) => void api.requestAttention?.(active)
       : undefined,
   };
 }

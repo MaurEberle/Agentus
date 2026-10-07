@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { Square, Send } from 'lucide-react';
+import { MessageCircleQuestion, Square, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,10 @@ export function NetworkChat({
   const generating = useMonitoringStore((state) => state.chatGenerating);
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
+  const pendingFocus = useMonitoringStore((state) => state.pendingChatFocus);
+  const setPendingChatFocus = useMonitoringStore((state) => state.setPendingChatFocus);
   const config = chatInputConfig(run.graph);
   const running = serviceStatus === 'running';
   const waitingHuman =
@@ -37,6 +41,14 @@ export function NetworkChat({
     if (!el || !stickToBottom.current) return;
     el.scrollTop = el.scrollHeight;
   }, [generating, lastContent, messages.length]);
+
+  useEffect(() => {
+    if (!pendingFocus) return;
+    inputRef.current?.focus({ preventScroll: true });
+    setPendingChatFocus(false);
+  }, [pendingFocus, setPendingChatFocus]);
+
+  const waitingReply = waitingHuman && messages.length > 0;
 
   function onListScroll() {
     const el = listRef.current;
@@ -75,17 +87,28 @@ export function NetworkChat({
           messages.map((message) => <Bubble key={message.id} message={message} locale={i18n.language} />)
         )}
       </div>
-      {waitingHuman && messages.length > 0 ? (
-        <p className="px-1 pb-2 text-xs text-muted-foreground">{t('monitoring.chat.waitReply')}</p>
+      {waitingReply ? (
+        <Alert className="mb-2 border-warning/50 bg-warning/10 [&>svg]:text-warning [&>div]:pl-6">
+          <MessageCircleQuestion className="size-4" />
+          <AlertTitle>{t('shell.waitAsk')}</AlertTitle>
+          <AlertDescription>{t('monitoring.chat.waitReply')}</AlertDescription>
+        </Alert>
       ) : null}
-      <form onSubmit={submit} className="flex items-end gap-2 border-t pt-3">
+      <form
+        onSubmit={submit}
+        className={cn('flex items-end gap-2 border-t pt-3', waitingReply && 'rounded-md border-warning/60')}
+      >
         <Textarea
+          ref={inputRef}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={onKeyDown}
           disabled={!running}
           placeholder={config?.placeholder || t('monitoring.chat.placeholder')}
-          className="min-h-[44px] max-h-32 flex-1"
+          className={cn(
+            'min-h-[44px] max-h-32 flex-1',
+            waitingReply && 'border-warning focus-visible:ring-warning',
+          )}
           rows={2}
         />
         {generating ? (

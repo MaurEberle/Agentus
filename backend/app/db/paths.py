@@ -52,6 +52,14 @@ def default_config_path() -> Path:
     return local_app_data() / "config.yaml"
 
 
+def webview_storage_dir() -> Path:
+    """WebView2 user-data folder. Survives app close (language, pane sizes, help chat)."""
+    portable = portable_root()
+    if portable is not None:
+        return portable / "webview"
+    return local_app_data() / "webview"
+
+
 def default_data_dir() -> Path:
     portable = portable_root()
     if portable is not None:

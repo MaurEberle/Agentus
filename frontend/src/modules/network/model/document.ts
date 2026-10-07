@@ -51,6 +51,9 @@ export type LlmNodeData = {
   temperature?: number;
   maxTokens?: number;
   numCtx?: number;
+  numThread?: number;
+  numGpuPercent?: number;
+  numGpuLayers?: number;
 };
 
 export type AgentNodeData = {

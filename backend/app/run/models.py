@@ -8,8 +8,9 @@ from app.common.types import ServiceStatus
 from app.http.app import ApiModel
 
 NodeRuntimeStatus = Literal["idle", "waiting", "running", "done", "error"]
-WaitReason = Literal["none", "llm", "tool", "human", "index", "knowledge"]
+WaitReason = Literal["none", "llm", "tool", "human", "index", "knowledge", "thinking"]
 LogLevel = Literal["debug", "info", "warn", "error"]
+RunOutcome = Literal["running", "succeeded", "failed", "cancelled", "timeout"]
 
 
 class NodeTokens(ApiModel):
@@ -84,17 +85,26 @@ class Activity(ApiModel):
     tokens: ActivityTokens | None = None
 
 
+class WaitAsk(ApiModel):
+    id: str
+    speaker: str
+    excerpt: str = ""
+    node_id: str | None = Field(default=None, alias="nodeId")
+
+
 class RunSnapshot(ApiModel):
     run_id: str = Field(alias="runId")
     network_id: str = Field(alias="networkId")
     network_name: str = Field(alias="networkName")
     started_at: str = Field(alias="startedAt")
     service_status: ServiceStatus = Field(alias="serviceStatus")
+    outcome: RunOutcome | None = None
     error_message: str | None = Field(default=None, alias="errorMessage")
     graph: RunGraph
     nodes_runtime: dict[str, NodeRuntime] = Field(default_factory=dict, alias="nodesRuntime")
     activity: Activity = Field(default_factory=Activity)
     chat: dict[str, Any] | None = None
+    wait_ask: WaitAsk | None = Field(default=None, alias="waitAsk")
 
 
 class LogEvent(ApiModel):
@@ -120,6 +130,8 @@ class ResourceGpu(ApiModel):
 class ResourceSnapshot(ApiModel):
     ts: str
     cpu_percent: float = Field(alias="cpuPercent")
+    cpu_cores: int | None = Field(default=None, alias="cpuCores")
+    cpu_threads: int | None = Field(default=None, alias="cpuThreads")
     ram_used_bytes: int = Field(alias="ramUsedBytes")
     ram_total_bytes: int = Field(alias="ramTotalBytes")
     gpus: list[ResourceGpu] | None = None

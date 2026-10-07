@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FolderPickerHost } from '@/components/FolderPickerHost';
 import { HelpChatHost } from '@/components/help-chat/HelpChatHost';
@@ -10,11 +10,27 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { useHydrateSession, useSessionQuery } from '@/api/session';
 import { notify } from '@/lib/notifications';
+import { registerWaitAskOpen } from '@/lib/waitAsk';
+import { useLiveRunEvents } from '@/modules/monitoring/live/adapter';
+import { useMonitoringStore } from '@/modules/monitoring/store';
 
 let welcomeSeeded = false;
 
 function hideHtmlBootSplash() {
   document.getElementById('boot-splash')?.remove();
+}
+
+function WaitAskHost() {
+  const navigate = useNavigate();
+  useLiveRunEvents();
+  useEffect(() => {
+    return registerWaitAskOpen(() => {
+      useMonitoringStore.getState().setPendingChatFocus(true);
+      useMonitoringStore.getState().setTab('chat');
+      navigate('/monitoring');
+    });
+  }, [navigate]);
+  return null;
 }
 
 export function AppShell() {
@@ -65,6 +81,7 @@ export function AppShell() {
       <Toaster />
       <FolderPickerHost />
       <HelpChatHost />
+      <WaitAskHost />
     </div>
   );
 }

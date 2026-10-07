@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ModelCombobox } from '@/components/ModelCombobox';
+import { TagInput } from '@/components/TagInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,15 +13,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { pickFolderPath } from '@/lib/pickFolder';
 import {
   useEditorCredentialsQuery,
+  useEditorNetworksQuery,
   useMcpServersQuery,
   reindexNetworkKnowledge,
   testLlmConnection,
 } from '@/modules/network/api';
-import { useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
+import { uniqueTags } from '@/modules/networks/model/filter';
+import { useHostResourcesQuery, useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
 import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
 import { newId } from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
+import { cn } from '@/lib/utils';
+import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
+import { estimateVramParts, resolveGpuLayers } from '@/modules/network/inspector/vram';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -51,6 +57,8 @@ export function Inspector({
   const selectedNodeIds = useNetworkEditor((state) => state.selectedNodeIds);
   const setMeta = useNetworkEditor((state) => state.setMeta);
   const select = useNetworkEditor((state) => state.select);
+  const networks = useEditorNetworksQuery();
+  const tagSuggestions = useMemo(() => uniqueTags(networks.data?.items ?? []), [networks.data?.items]);
 
   if (selectedNodeIds.length > 1) {
     return (
@@ -96,19 +104,21 @@ export function Inspector({
             onChange={(event) => setMeta({ description: event.target.value })}
           />
         </Field>
-        <Field label={t('network.inspector.graph.tags')}>
-          <Input
-            value={(document.tags ?? []).join(', ')}
+        <Field label={t('network.inspector.graph.tags')} htmlFor="network-graph-tags">
+          <TagInput
+            id="network-graph-tags"
+            value={document.tags ?? []}
             disabled={readOnly}
-            onChange={(event) =>
-              setMeta({
-                tags: event.target.value
-                  .split(',')
-                  .map((item) => item.trim())
-                  .filter(Boolean),
-              })
-            }
+            placeholder={t('network.inspector.graph.tagsPlaceholder')}
+            addLabel={t('network.inspector.graph.addTag')}
+            removeLabel={(tag) => t('network.inspector.graph.removeTag', { tag })}
+            suggestions={tagSuggestions}
+            describedBy="network-graph-tags-hint"
+            onChange={(tags) => setMeta({ tags })}
           />
+          <p id="network-graph-tags-hint" className="text-xs text-muted-foreground">
+            {t('network.inspector.graph.tagsHint')}
+          </p>
         </Field>
         <p className="text-xs text-muted-foreground">
           {t('network.inspector.graph.stats', {
@@ -158,10 +168,10 @@ export function Inspector({
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) {
   return (
     <div className="grid min-w-0 gap-1.5">
-      <Label>{label}</Label>
+      <Label htmlFor={htmlFor}>{label}</Label>
       {children}
     </div>
   );
@@ -269,6 +279,253 @@ function ContextWindowField({ node, readOnly }: { node: GraphNode; readOnly: boo
   );
 }
 
+function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const provider = String(node.data.provider ?? 'ollama');
+  const model = String(node.data.model ?? '');
+  const stats = useModelStatsQuery({
+    provider: provider as LlmProvider,
+    model,
+    credentialId: String(node.data.credentialId ?? '') || undefined,
+    baseUrl: String(node.data.baseUrl ?? '') || undefined,
+    enabled: Boolean(model),
+  });
+  const layers = stats.data?.gpuLayers && stats.data.gpuLayers > 0 ? stats.data.gpuLayers : null;
+  const value =
+    layers == null
+      ? 1
+      : resolveGpuLayers(Number(node.data.numGpuLayers), Number(node.data.numGpuPercent), layers);
+
+  useEffect(() => {
+    if (readOnly || layers == null) return;
+    if (
+      node.data.numGpuLayers === value &&
+      node.data.numGpuPercent === undefined &&
+      node.data.numGpu === undefined
+    ) {
+      return;
+    }
+    editorUpdateNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
+  }, [layers, node.data.numGpu, node.data.numGpuLayers, node.data.numGpuPercent, node.id, readOnly, value]);
+
+  if (stats.isPending && !stats.data) {
+    return (
+      <Field label={t('network.inspector.llm.numGpu')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuLoading')}</p>
+      </Field>
+    );
+  }
+  if (layers == null) {
+    return (
+      <Field label={t('network.inspector.llm.numGpu')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuUnavailable')}</p>
+      </Field>
+    );
+  }
+
+  return (
+    <Field label={t('network.inspector.llm.numGpu')}>
+      <input
+        type="range"
+        min={1}
+        max={layers}
+        step={1}
+        value={value}
+        disabled={readOnly}
+        className="w-full accent-primary"
+        onChange={(event) =>
+          editorUpdateNodeData(node.id, {
+            numGpuLayers: Number(event.target.value),
+            numGpuPercent: undefined,
+            numGpu: undefined,
+          })
+        }
+      />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>1</span>
+        <span className="font-medium text-foreground">
+          {t('network.inspector.llm.numGpuLayers', { offload: value, total: layers })}
+        </span>
+        <span>{layers}</span>
+      </div>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuHint')}</p>
+    </Field>
+  );
+}
+
+function VramNeedField({ node }: { node: GraphNode }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
+  const provider = String(node.data.provider ?? 'ollama');
+  const model = String(node.data.model ?? '');
+  const stats = useModelStatsQuery({
+    provider: provider as LlmProvider,
+    model,
+    credentialId: String(node.data.credentialId ?? '') || undefined,
+    baseUrl: String(node.data.baseUrl ?? '') || undefined,
+    enabled: Boolean(model),
+  });
+  const resources = useHostResourcesQuery({ live: false });
+  const ctxRaw = Number(node.data.numCtx);
+  const ctx = Number.isFinite(ctxRaw) && ctxRaw > 0 ? ctxRaw : (stats.data?.contextMax ?? 0);
+  const parts = estimateVramParts({
+    weightBytes: stats.data?.weightBytes,
+    kvBytesPerToken: stats.data?.kvBytesPerToken,
+    kvSwaBytesPerToken: stats.data?.kvSwaBytesPerToken,
+    swaWindow: stats.data?.swaWindow,
+    overheadBytes: stats.data?.overheadBytes,
+    gpuLayers: stats.data?.gpuLayers,
+    kvLayers: stats.data?.kvLayers,
+    numCtx: ctx,
+    numGpuLayers: Number(node.data.numGpuLayers),
+    numGpuPercent: Number(node.data.numGpuPercent),
+  });
+  const count = (value: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+  const formula =
+    parts && (parts.fullLayers > 0 || parts.swaLayers > 0)
+      ? parts.swaLayers > 0
+        ? t('network.inspector.llm.vramFormulaSwa', {
+            on: parts.gpuOn,
+            total: parts.gpuTotal,
+            full: parts.fullLayers,
+            swa: parts.swaLayers,
+            ctx: count(ctx),
+            window: count(parts.swaWindow),
+          })
+        : parts.fullBytesPerToken > 0
+          ? t('network.inspector.llm.vramFormula', {
+              on: parts.gpuOn,
+              total: parts.gpuTotal,
+              full: parts.fullLayers,
+              perToken: count(parts.fullBytesPerToken),
+              ctx: count(ctx),
+            })
+          : t('network.inspector.llm.vramFormulaMixed', {
+              on: parts.gpuOn,
+              total: parts.gpuTotal,
+              full: parts.fullLayers,
+              ctx: count(ctx),
+            })
+      : null;
+  const gpuTotal = resources.data?.gpus?.[0]?.vramTotalBytes ?? 0;
+  const percent = parts && gpuTotal > 0 ? (parts.total / gpuTotal) * 100 : 0;
+  const over = Boolean(parts && gpuTotal > 0 && parts.total > gpuTotal);
+  const tight = Boolean(parts && gpuTotal > 0 && !over && percent >= 85);
+  const tone = meterTone(Math.min(100, percent), Boolean(parts && gpuTotal > 0));
+
+  if (stats.isPending && !stats.data) {
+    return (
+      <Field label={t('network.inspector.llm.vram')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramLoading')}</p>
+      </Field>
+    );
+  }
+  if (!parts) return null;
+
+  return (
+    <Field label={t('network.inspector.llm.vram')}>
+      {gpuTotal > 0 ? (
+        <div
+          className="h-2 overflow-hidden rounded-full bg-muted"
+          role="meter"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(Math.min(100, percent))}
+          aria-label={t('network.inspector.llm.vram')}
+        >
+          <div
+            className={cn(
+              'h-full rounded-full',
+              tone === 'off' && 'bg-muted-foreground/30',
+              tone === 'normal' && 'bg-primary',
+              tone === 'warn' && 'bg-warning',
+              tone === 'hot' && 'bg-destructive',
+            )}
+            style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+          />
+        </div>
+      ) : null}
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className={cn('tabular-nums', over && 'font-medium text-destructive', tight && 'font-medium text-warning')}>
+          {gpuTotal > 0
+            ? t('network.inspector.llm.vramNeed', {
+                need: formatBytes(parts.total, locale),
+                total: formatBytes(gpuTotal, locale),
+              })
+            : t('network.inspector.llm.vramNeedOnly', { need: formatBytes(parts.total, locale) })}
+        </span>
+        {gpuTotal > 0 ? (
+          <span className="tabular-nums text-muted-foreground">{formatPercent(percent, locale)}</span>
+        ) : null}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {t('network.inspector.llm.vramParts', {
+          weights: formatBytes(parts.weights, locale),
+          kv: formatBytes(parts.kv, locale),
+          overhead: formatBytes(parts.overhead, locale),
+        })}
+      </p>
+      {formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
+      {over ? <p className="text-xs text-destructive">{t('network.inspector.llm.vramOver')}</p> : null}
+      {tight ? <p className="text-xs text-warning">{t('network.inspector.llm.vramTight')}</p> : null}
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramHint')}</p>
+    </Field>
+  );
+}
+
+function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const resources = useHostResourcesQuery({ live: false });
+  const threads = resources.data?.cpuThreads ?? resources.data?.cpuCores ?? null;
+  const cores = resources.data?.cpuCores ?? threads;
+  const current = Number(node.data.numThread);
+
+  useEffect(() => {
+    if (readOnly || threads == null || cores == null) return;
+    if (!Number.isFinite(current) || current < 1 || current > threads) {
+      editorUpdateNodeData(node.id, { numThread: cores });
+    }
+  }, [cores, current, node.id, readOnly, threads]);
+
+  if (resources.isPending && !resources.data) {
+    return (
+      <Field label={t('network.inspector.llm.numThread')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadLoading')}</p>
+      </Field>
+    );
+  }
+  if (threads == null || cores == null) {
+    return (
+      <Field label={t('network.inspector.llm.numThread')}>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadUnavailable')}</p>
+      </Field>
+    );
+  }
+
+  const value = Number.isFinite(current) ? Math.min(threads, Math.max(1, current)) : cores;
+
+  return (
+    <Field label={t('network.inspector.llm.numThread')}>
+      <input
+        type="range"
+        min={1}
+        max={threads}
+        step={1}
+        value={value}
+        disabled={readOnly}
+        className="w-full accent-primary"
+        onChange={(event) => editorUpdateNodeData(node.id, { numThread: Number(event.target.value) })}
+      />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>1</span>
+        <span className="font-medium text-foreground">{value}</span>
+        <span>{threads}</span>
+      </div>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadHint')}</p>
+    </Field>
+  );
+}
+
 function DisplayNameField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   return (
@@ -341,6 +598,12 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     if (next !== provider) {
       patch.model = '';
       patch.numCtx = undefined;
+    }
+    if (next !== 'ollama') {
+      patch.numThread = undefined;
+      patch.numGpu = undefined;
+      patch.numGpuPercent = undefined;
+      patch.numGpuLayers = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -437,13 +700,28 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
             modelLocked ? t('network.inspector.llm.pickCredentialFirst') : t('network.inspector.llm.model')
           }
           noModelsLabel={t('network.inspector.llm.noModels')}
-          onChange={(value) => editorUpdateNodeData(node.id, { model: value, numCtx: undefined })}
+          onChange={(value) =>
+            editorUpdateNodeData(node.id, {
+              model: value,
+              numCtx: undefined,
+              numGpu: undefined,
+              numGpuPercent: undefined,
+              numGpuLayers: undefined,
+            })
+          }
         />
         {catalogFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
         ) : null}
       </Field>
       {model && !modelLocked ? <ContextWindowField node={node} readOnly={readOnly} /> : null}
+      {provider === 'ollama' && model && !modelLocked ? (
+        <>
+          <CpuThreadField node={node} readOnly={readOnly} />
+          <GpuOffloadField node={node} readOnly={readOnly} />
+          <VramNeedField node={node} />
+        </>
+      ) : null}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
         <Button
           type="button"

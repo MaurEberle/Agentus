@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatInt } from '@/modules/history/model/format';
 import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
+import { cn } from '@/lib/utils';
 import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import type { ErrorTopRow } from '@/modules/history/model/types';
 
@@ -15,7 +16,7 @@ export function ErrorTop({
 }) {
   const { t, i18n } = useTranslation();
   return (
-    <Card className={`${moduleCardClass} min-w-0`}>
+    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
       <CardHeader className="shrink-0 pb-2">
         <CardTitle>{t('history.errors.title')}</CardTitle>
       </CardHeader>

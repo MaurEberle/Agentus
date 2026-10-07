@@ -1,6 +1,6 @@
 # Ayarlar
 
-Başlık çubuğundaki dişli. Solda bölümler: Görünüm, Kimlik bilgileri, Çalışma zamanı, Yardım sohbeti, MCP sunucuları, Veri, Hakkında. Bölüm değiştirirken kaydedilmemiş alanlar: Kal / At iletişim kutusu.
+Başlık çubuğundaki dişli. Solda bölümler: Görünüm, Kimlik bilgileri, Çalışma zamanı, Yardım sohbeti, MCP sunucuları, Veri, Hakkında. Bölüm değiştirirken kaydedilmemiş alanlar: Kal / At iletişim kutusu. Ayarları kaydetmek bildirim oluşturmaz; kaydetme hatası oluşturur.
 
 ## Görünüm
 

@@ -1,6 +1,6 @@
 # Einstellungen
 
-Zahnrad in der Kopfzeile. Abschnitte links: Darstellung, Zugänge, Runtime, Hilfe-Chatbot, MCP-Server, Daten, Über. Ungespeicherte Felder beim Wechsel: Dialog Bleiben / Verwerfen.
+Zahnrad in der Kopfzeile. Abschnitte links: Darstellung, Zugänge, Runtime, Hilfe-Chatbot, MCP-Server, Daten, Über. Ungespeicherte Felder beim Wechsel: Dialog Bleiben / Verwerfen. Speichern in den Einstellungen erzeugt keine Benachrichtigung; ein Fehler beim Speichern schon.
 
 ## Darstellung
 

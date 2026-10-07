@@ -52,6 +52,12 @@ def test_pick_folder_cancel() -> None:
     assert api.pickFolder() is None
 
 
+def test_request_attention_without_native() -> None:
+    api = ChromeHostApi()
+    api.requestAttention(True)
+    api.requestAttention(False)
+
+
 def test_inject_sets_chrome_host() -> None:
     win = FakeWindow()
     inject_chrome_host(win)

@@ -55,6 +55,8 @@ Optional: **tool** or **MCP** on the agent or orchestrator **tool** port, **know
 
 **Stop** cancels the run (outcome **cancelled**, not **failed**). Ollama stays up.
 
+The bell reports start and stop only on success or failure. When a run ends on its own, you get a notice for success, failure, or cancel.
+
 With no active network, nothing starts. Fix an invalid network (validation errors, missing model) in the editor before starting.
 
 While the active network is running, **that** document is read-only in the editor. You can still view other networks; deleting the running network in the library is blocked.

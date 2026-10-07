@@ -30,6 +30,25 @@ def test_session_run_hook(client: TestClient) -> None:
     assert body["startedAt"] == "2026-01-01T00:00:00+00:00"
 
 
+def test_session_wait_ask(client: TestClient) -> None:
+    set_run_slice_provider(
+        lambda: RunSlice(
+            service_status="running",
+            run_id="run-1",
+            wait_ask={
+                "id": "ask-1",
+                "speaker": "Schriftsteller",
+                "excerpt": "Welche Sprache?",
+                "nodeId": "orch",
+            },
+        )
+    )
+    body = client.get("/api/session").json()
+    assert body["waitAsk"]["speaker"] == "Schriftsteller"
+    assert body["waitAsk"]["excerpt"] == "Welche Sprache?"
+    assert body["waitAsk"]["nodeId"] == "orch"
+
+
 def test_put_unknown_network_404(client: TestClient) -> None:
     response = client.put(
         "/api/session/active-network",

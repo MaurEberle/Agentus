@@ -50,17 +50,17 @@ Um arrasto inválido é recusado.
 
 ## Inspetor
 
-Nenhum nó escolhido: nome, descrição, etiquetas, estatísticas, lista de validação da rede **aberta**.
+Nenhum nó escolhido: nome, descrição, etiquetas, estatísticas, lista de validação da rede **aberta**. As etiquetas são chips; Enter, vírgula ou mais confirma uma etiqueta, a cruz remove-a. A biblioteca filtra pelas mesmas etiquetas.
 
 Nó escolhido:
 
-- **LLM:** fornecedor, modelo (lista do runtime), credencial na nuvem, comprimento de contexto segundo o modelo (slider local, lista na nuvem), ping, avançado temperatura / máx. tokens. Nuvem sem credencial é inválida.
-- **Agente:** prompt de sistema e nome visível. Se o agente está num canal, o inspetor explica que as tarefas vêm do orquestrador.
+- **LLM:** fornecedor, modelo (lista do runtime), credencial na nuvem, comprimento de contexto segundo o modelo (slider local, lista na nuvem), threads da CPU por nó (padrão: núcleos físicos), offload GPU um passo por camada (padrão: todas as camadas, Auto se o carregamento falhar), memória GPU estimada a partir do contexto e do offload (últimas N camadas na GPU; atenção completa no contexto inteiro, camadas de janela deslizante só a janela; aviso se não couber na placa), ping, avançado temperatura / máx. tokens. Nuvem sem credencial é inválida.
+- **Agente:** prompt de sistema e nome visível. Se o agente está num canal, o inspetor explica que as tarefas vêm do orquestrador. Pode pensar internamente antes de escrever ou chamar uma ferramenta; o pensamento não aparece no chat.
 - **Ferramenta:** tipo. HTTP: método e URL, credencial opcional. Pesquisa web: credencial do tipo pesquisa web. Acesso a ficheiros: pasta raiz, não a raiz da unidade; o agente só trabalha por baixo, e escrever e apagar são interruptores.
 - **MCP:** servidor ativo em **Definições → Servidores MCP**. Predefinição todas as ferramentas; após uma sonda podes escolher um subconjunto. As credenciais ficam nas Definições. A pasta raiz de sistema de ficheiros e Excel está no nó; o Git mantém a pasta nas Definições.
 - **Conhecimento:** pasta de origem (escolha de pasta), fornecedor de embeddings (Ollama, OpenAI ou Gemini) e modelo de embeddings, topK, limiar de pontuação, **Reconstruir índice**. A pasta pode estar em qualquer sítio, excepto uma raiz de unidade ou de sistema e o corpus de ajuda. Indexados: Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV e código. Imagens e .doc/.xls antigos são ignorados. Embeddings na nuvem precisam de credencial. O índice pertence a esta rede, não à ajuda.
 - **Chat:** marcador, texto inicial, interruptor «Entrada necessária».
-- **Orquestrador:** prompt de sistema. O modelo escolhe uma pergunta, uma tarefa para um agente pelo canal dele, uma resposta ou o fim. Os agentes são os canais, não uma segunda lista. Chama ele próprio as ferramentas ligadas. Só uma pergunta espera pelo utilizador.
+- **Orquestrador:** prompt de sistema. O modelo escolhe pensar, uma pergunta, uma tarefa para um agente pelo canal dele, uma resposta ou o fim. Pensar não aparece no chat e não conta contra o limite de passos; só as chamadas a agentes contam. Os agentes são os canais, não uma segunda lista. Chama ele próprio as ferramentas ligadas. Só uma pergunta espera pelo utilizador.
 - **Router:** ramos com nome (nome + condição) e predefinição.
 
 Os segredos **não** vão para o texto do inspetor nem para a exportação do grafo — só a escolha de uma credencial.
@@ -93,7 +93,7 @@ Sair sem guardar: diálogo Guardar / Descartar / Cancelar.
 
 Lista com pesquisa (nome, descrição, etiquetas), ordenação, filtros «só válidas» / «só ativas». Seleção múltipla.
 
-Ações: Novo (editor), Abrir, Duplicar, Mudar o nome, Definir etiquetas, **Definir como ativa** (só uma rede válida), Apagar, Importar, Exportar.
+Ações: Novo (editor), Abrir, Duplicar, Mudar o nome, Definir etiquetas, **Definir como ativa** (só uma rede válida), Apagar, Importar, Exportar. Definir etiquetas carrega as etiquetas existentes da seleção como chips.
 
 Apagar remove a entrada da área de trabalho, não os teus ficheiros de conhecimento no disco, nem o corpus de ajuda nem as execuções do histórico. Uma rede **em execução** é ignorada. Apagar a rede ativa esvazia a seleção rápida.
 

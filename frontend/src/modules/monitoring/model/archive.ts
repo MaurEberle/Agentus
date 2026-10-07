@@ -68,6 +68,7 @@ export function snapshotFromHistory(detail: RunDetail): RunSnapshot {
     errorMessage: detail.errorMessage,
     graph,
     nodesRuntime,
+    waitAsk: null,
     activity: {
       currentNodeIds: [],
       dag:

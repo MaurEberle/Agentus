@@ -13,6 +13,7 @@ from app.tools.catalog import reset_mcp_catalog_provider
 
 
 unloads: list[str] = []
+keeps: list[set[str]] = []
 
 
 def mini_doc(**chat: object) -> dict:
@@ -68,14 +69,22 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     reset_mcp_usage_provider()
     get_controller().reset()
     unloads.clear()
+    keeps.clear()
     monkeypatch.setattr("app.runtime.ollama.ensure_loaded", lambda *a, **k: None)
     monkeypatch.setattr("app.run.window.loaded_context", lambda *a, **k: None)
     monkeypatch.setattr("app.run.window.architecture_context", lambda *a, **k: None)
+    monkeypatch.setattr("app.run.window.model_thinking", lambda *a, **k: False)
     monkeypatch.setattr(
         "app.runtime.ollama.list_ollama_models",
         lambda *a, **k: [OllamaModel(name="llama3.2:1b", size_bytes=None)],
     )
     monkeypatch.setattr("app.runtime.ollama.unload", lambda *a, **k: unloads.append(a[0] if a else ""))
+
+    def _keep_only(keep, **kwargs):
+        keeps.append(set(keep))
+        return []
+
+    monkeypatch.setattr("app.runtime.ollama.keep_only", _keep_only)
     def _complete(req, should_abort=None, on_progress=None):
         return CompletionResult(content="hi", model=req.model, finish_reason="stop")
 

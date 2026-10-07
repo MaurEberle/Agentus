@@ -55,6 +55,8 @@ Opcional: **Ferramenta** para o porto **Ferramenta** do agente ou do orquestrado
 
 **Parar** cancela a execução (resultado **Cancelado**, não **Erro**). O Ollama continua ligado.
 
+O sino comunica o início e a paragem só em caso de sucesso ou falha. Se uma execução terminar sozinha, chega um aviso de sucesso, erro ou cancelamento.
+
 Sem rede ativa não arranca nada. Uma rede inválida (erro de validação, modelo em falta) deve ser verificada no editor antes de iniciar.
 
 Enquanto a rede ativa corre, **esse** documento no editor é só de leitura. Podes continuar a ver outras redes; apagar a rede em execução na biblioteca está bloqueado.

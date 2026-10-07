@@ -20,7 +20,8 @@ def test_last_agent_result_returns_to_the_orchestrator() -> None:
     blob = memory.prompt_text("system")
     assert "ZWEITES-ERGEBNIS" in blob
     assert "Result from Translate (tr):" in blob
-    assert "ERSTES-MANUSKRIPT" not in blob
+    assert "ERSTES-MANUSKRIPT" in blob
+    assert "Result from Schreiber (ag):" in blob
     assert "characters: 16" in blob
     assert "Hallo" in blob
 
@@ -86,19 +87,25 @@ def test_anomaly_text_only_when_the_failed_file_has_no_path() -> None:
     assert "Y" * 20 not in shown
 
 
-def test_tool_agent_prose_is_not_a_source() -> None:
+def test_tool_agent_text_is_a_source() -> None:
     memory = RunMemory()
     memory.add_user("DIALOG-DARF-NICHT-AN-DEN-AGENTEN")
     record = memory.begin_call("t", "Save", "speichere", True)
     record.text = "EIGENE-PROSA"
     record.finished = True
-    choice = memory.resolve_source("", [("t", "Save")])
-    assert choice.text == ""
-    assert choice.auto is False
-    message = memory.agent_message("t", "speichere", True, choice.text)
-    assert "speichere" in message
-    assert "EIGENE-PROSA" not in message
+    auto = memory.resolve_source("", [("t", "Save"), ("next", "Next")])
+    assert auto.auto is True
+    assert auto.text == "EIGENE-PROSA"
+    named = memory.resolve_source("Save", [("t", "Save"), ("next", "Next")])
+    assert named.text == "EIGENE-PROSA"
+    message = memory.agent_message("next", "baue", True, named.text)
+    assert "speichere" not in message
+    assert "EIGENE-PROSA" in message
+    assert "Source text" in message
     assert "DIALOG-DARF-NICHT" not in message
+    own = memory.agent_message("t", "nochmal", True, "")
+    assert "nochmal" in own
+    assert "EIGENE-PROSA" not in own
 
 
 def test_one_writer_is_attached_automatically() -> None:
@@ -121,8 +128,10 @@ def test_two_writers_without_source_name_ids_only() -> None:
     memory = RunMemory()
     first = memory.begin_call("a", "A", "eins", False)
     first.text = "TEXT-A"
+    first.finished = True
     second = memory.begin_call("b", "B", "zwei", False)
     second.text = "TEXT-B"
+    second.finished = True
     choice = memory.resolve_source("", [("a", "A"), ("b", "B")])
     assert choice.ambiguous == ["a", "b"]
     assert choice.text == ""
@@ -178,3 +187,29 @@ def test_continuation_skips_tool_arguments() -> None:
     assert reused["result"]["bytes"] == 12
     assert reused_file_result(record, "write", "other.txt") is None
     assert reused_file_result(record, "delete", "out.txt") is None
+
+
+def test_file_fact_records_mcp_write() -> None:
+    fact = file_fact(
+        "write_file",
+        {"path": "src/types.ts", "content": "export type X = 1"},
+        {"ok": True},
+        ok=True,
+    )
+    assert fact is not None
+    assert fact.tool == "write_file"
+    assert fact.action == "write"
+    assert fact.path == "src/types.ts"
+    prefixed = file_fact(
+        "mcp__5699a070_5cfc_4c59_ab23_c8d72ff4e014__write_file",
+        {"path": "src/engine.ts"},
+        {},
+        ok=True,
+    )
+    assert prefixed is not None
+    assert prefixed.action == "write"
+    assert prefixed.path == "src/engine.ts"
+    listed = file_fact("directory_tree", {"path": "."}, {}, ok=True)
+    assert listed is not None
+    assert listed.action == "list"
+    assert file_fact("calculator", {}, {"result": 1}, ok=True) is None

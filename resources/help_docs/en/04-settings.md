@@ -1,6 +1,6 @@
 # Settings
 
-Gear in the header. Sections: Appearance, Credentials, Runtime, Help chatbot, MCP servers, Data, About. Unsaved fields when leaving a section: Stay / Discard.
+Gear in the header. Sections: Appearance, Credentials, Runtime, Help chatbot, MCP servers, Data, About. Unsaved fields when leaving a section: Stay / Discard. Saving settings does not create a notification; a save error does.
 
 ## Appearance
 

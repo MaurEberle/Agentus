@@ -50,17 +50,17 @@ Un arrastre inválido se rechaza.
 
 ## Inspector
 
-Ningún nodo elegido: nombre, descripción, etiquetas, estadísticas, lista de validación de la red **abierta**.
+Ningún nodo elegido: nombre, descripción, etiquetas, estadísticas, lista de validación de la red **abierta**. Las etiquetas son chips; Intro, coma o más confirma una etiqueta, la cruz la quita. La biblioteca filtra por las mismas etiquetas.
 
 Nodo elegido:
 
-- **LLM:** proveedor, modelo (lista del runtime), credencial para la nube, longitud de contexto según el modelo (deslizador local, lista en la nube), ping, avanzado temperatura / máx. tokens. Nube sin credencial es inválida.
-- **Agente:** prompt de sistema y nombre visible. Si el agente está en un canal, el inspector explica que los encargos vienen del orquestador.
+- **LLM:** proveedor, modelo (lista del runtime), credencial para la nube, longitud de contexto según el modelo (deslizador local, lista en la nube), hilos de CPU por nodo (por defecto: núcleos físicos), offload GPU un paso por capa (por defecto: todas las capas, Auto si falla la carga), memoria GPU estimada según contexto y offload (últimas N capas en la GPU; atención completa sobre todo el contexto, capas de ventana deslizante solo su ventana; aviso si no cabe en la tarjeta), ping, avanzado temperatura / máx. tokens. Nube sin credencial es inválida.
+- **Agente:** prompt de sistema y nombre visible. Si el agente está en un canal, el inspector explica que los encargos vienen del orquestador. Puede pensar internamente antes de escribir o llamar a una herramienta; el pensamiento no aparece en el chat.
 - **Herramienta:** tipo. HTTP: método y URL, credencial opcional. Búsqueda web: credencial de tipo búsqueda web. Acceso a archivos: carpeta raíz, no la raíz de la unidad; el agente solo trabaja debajo, y escribir y borrar son interruptores.
 - **MCP:** servidor activo en **Ajustes → Servidores MCP**. Por defecto todas las herramientas; tras una prueba puedes elegir un subconjunto. Las credenciales van en Ajustes. La carpeta raíz de sistema de archivos y Excel está en el nodo; Git conserva la carpeta en Ajustes.
 - **Conocimiento:** carpeta de origen (selector), proveedor de embeddings (Ollama, OpenAI o Gemini) y modelo de embeddings, topK, umbral de puntuación, **Reconstruir índice**. La carpeta puede estar en cualquier sitio salvo una raíz de unidad o de sistema y el corpus de ayuda. Se indexan Markdown, texto, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV y código. Las imágenes y los .doc/.xls antiguos se omiten. Los embeddings en la nube necesitan credencial. El índice pertenece a esta red, no a la ayuda.
 - **Chat:** marcador, texto inicial, interruptor «Entrada necesaria».
-- **Orquestador:** prompt de sistema. El modelo elige una pregunta, un encargo a un agente por su canal, una respuesta o el cierre. Los agentes son los canales, no una segunda lista. Llama él mismo las herramientas conectadas. Solo una pregunta espera al usuario.
+- **Orquestador:** prompt de sistema. El modelo elige pensar, una pregunta, un encargo a un agente por su canal, una respuesta o el cierre. Pensar no aparece en el chat y no cuenta contra el límite de pasos; solo cuentan los encargos a agentes. Los agentes son los canales, no una segunda lista. Llama él mismo las herramientas conectadas. Solo una pregunta espera al usuario.
 - **Enrutador:** ramas con nombre (nombre + condición) y predeterminada.
 
 Los secretos **no** van en el texto del inspector ni en la exportación del grafo — solo la elección de una credencial.
@@ -93,7 +93,7 @@ Salir sin guardar: diálogo Guardar / Descartar / Cancelar.
 
 Lista con búsqueda (nombre, descripción, etiquetas), orden, filtros «solo válidas» / «solo activas». Selección múltiple.
 
-Acciones: Nuevo (editor), Abrir, Duplicar, Renombrar, Poner etiquetas, **Definir como activa** (solo una red válida), Borrar, Importar, Exportar.
+Acciones: Nuevo (editor), Abrir, Duplicar, Renombrar, Poner etiquetas, **Definir como activa** (solo una red válida), Borrar, Importar, Exportar. Poner etiquetas carga las etiquetas existentes de la selección como chips.
 
 Borrar quita la entrada del espacio de trabajo, no tus archivos de conocimiento en disco, ni el corpus de ayuda ni las ejecuciones del historial. Una red **en ejecución** se omite. Borrar la red activa vacía la selección rápida.
 

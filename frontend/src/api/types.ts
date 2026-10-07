@@ -1,4 +1,4 @@
-import type { ServiceStatus } from '@/store/session';
+import type { ServiceStatus, WaitAsk } from '@/store/session';
 
 export interface SessionDto {
   activeNetworkId: string | null;
@@ -8,6 +8,7 @@ export interface SessionDto {
   startedAt?: string;
   phase?: string | null;
   phaseLabel?: string | null;
+  waitAsk?: WaitAsk | null;
 }
 
 export interface NetworkOption {

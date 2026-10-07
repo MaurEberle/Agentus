@@ -11,16 +11,22 @@ from app.db.runs import insert_call, upsert_step
 from app.db.vault import get as vault_get
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
+from app.run.wait_ask import excerpt as ask_excerpt
 from app.run.knowledge import retrieve
 from app.run.limits import (
     DEFAULT_SCORE_MIN,
     DEFAULT_TOP_K,
     MAX_AGENT_INVOCATIONS,
+    MAX_AGENT_THINKS,
+    MAX_CLOSING_THINK_TOKENS,
+    MAX_SHORT_THINKS,
     MAX_CONTROL_REPAIRS,
+    MAX_FAILED_TOOL_CALLS,
+    MAX_TOOL_JSON_ATTEMPTS,
     MAX_ORCHESTRATOR_STEPS,
+    MAX_ORCHESTRATOR_THINKS,
     MAX_ORCHESTRATOR_TOOL_ROUNDS,
     MAX_SAME_RETRIES,
-    MAX_TOOL_ROUNDS,
     STREAM_IDLE_TIMEOUT_SEC,
 )
 from app.run.memory import (
@@ -34,6 +40,8 @@ from app.run.memory import (
     visible_text,
 )
 from app.run.orchestrate import (
+    agent_think_text,
+    control_source,
     match_agent,
     orchestrator_instructions,
     parse_orchestrator_action,
@@ -44,7 +52,7 @@ from app.mcp.payload import format_tool_result
 from app.run.mcp_bridge import get_mcp, map_openai_tool_name
 from app.run.models import ActivityDag, ActivityTokens, ChatMessage, NodeLlmInfo, NodeRuntime, NodeTokens
 from app.run.sse import publish
-from app.runtime.errors import RuntimeApiError
+from app.runtime.errors import RuntimeApiError, truncated_tool_call_name
 from app.runtime.completions import estimate_token_count
 from app.runtime.models import ChatMessage as LlmMessage
 from app.runtime.models import CompletionRequest, CompletionResult
@@ -54,17 +62,62 @@ _REPAIR_NOTE = (
     "Reply with one JSON object only. The task must be a short instruction. Do not paste an agent result."
 )
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
-_TOOL_USE_NOTE = "You have tools. Call a tool. A sentence without a tool call is discarded."
-_TOOL_REQUIRED = "You must call a tool with a tool call. A sentence without a tool call is discarded."
+_AGENT_THINK = (
+    "You may think first with {\"action\":\"think\",\"text\":\"...\"} or a think block. "
+    "Think is not the result and is not shown to the user. After think, call a tool if you have tools, "
+    "or write the visible result."
+)
+_TOOL_USE_NOTE = (
+    "You have tools. Call a tool, or think first. A final sentence without a tool call is discarded."
+)
+_TOOL_REQUIRED = (
+    "You must call a tool with a tool call. You may think first. "
+    "A final sentence without a tool call is discarded."
+)
 _TOOL_ANSWER = (
     "You already have tool results. Answer the user from those results. "
     "Call a tool only if you still need data you do not have."
 )
-_FINISH_FILES_NOTE = (
-    "A tool agent made no successful write or delete. Check with a tool or call that agent again. "
-    "Finish only when the files exist."
+_TOOL_DONE = (
+    "The file work succeeded. Write a short visible result for the next node. "
+    "Do not think again."
 )
+_TOOL_JSON_NOTE = (
+    "The last tool call to {name} was discarded: its JSON arguments were truncated. "
+    "Call the tool again with complete JSON. Prefer a smaller write if the file is large."
+)
+_FINISH_FILES_NOTE = (
+    "A coding agent made no successful write or delete and returned no text. "
+    "Check with a tool or call that agent again. Finish only when the files exist."
+)
+_REPAIR_BODY_CAP = 400
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
+
+
+def _control_raw(result: CompletionResult) -> str:
+    return control_source(result.content or "", result.reasoning or "")
+
+
+def _repair_payload(reason: str, raw: str) -> dict[str, str]:
+    body = (raw or "").strip()
+    if len(body) > _REPAIR_BODY_CAP:
+        body = body[:_REPAIR_BODY_CAP]
+    return {"reason": reason, "body": body}
+
+
+def _log_repair(node_id: str, reason: str, raw: str) -> None:
+    emit_log(
+        "info",
+        "run.orchestrator.repair",
+        node_id=node_id,
+        payload=_repair_payload(reason, raw),
+    )
+
+
+def _give_up(block_reply: bool) -> dict[str, str]:
+    return {"action": "think" if block_reply else "unreadable"}
+
+
 from app.tools.catalog import openai_tools_for_kinds
 from app.tools import execute as tools_execute
 
@@ -102,7 +155,12 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
             outcome = _run_linear(ctrl, compiled, user_text or "")
     except Exception as exc:
         fail_exc = exc
-        emit_log("error", str(exc), stack=traceback.format_exc())
+        emit_log(
+            "error",
+            str(exc),
+            payload=_runtime_error_payload(exc),
+            stack=traceback.format_exc(),
+        )
         outcome = "failed"
     finally:
         if outcome == "succeeded":
@@ -171,6 +229,33 @@ def _route(compiled: CompiledGraph, router_id: str, text: str) -> str | None:
     return edges[0][1] if edges else None
 
 
+def _fail_step_limit(ctrl: RunController, node_id: str) -> str:
+    emit_log("error", "run.stepLimit", node_id=node_id)
+    ctrl.fail_message = "run.stepLimit"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error="run.stepLimit")
+    return "failed"
+
+
+def _fail_think_limit(ctrl: RunController, node_id: str) -> str:
+    emit_log("error", "run.orchestrator.thinkLimit", node_id=node_id)
+    ctrl.fail_message = "run.orchestrator.thinkLimit"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error="run.orchestrator.thinkLimit")
+    return "failed"
+
+
+def _fail_think_loop(ctrl: RunController, node_id: str, thinks: int) -> str:
+    emit_log("error", "run.orchestrator.thinkLoop", node_id=node_id, payload={"thinks": thinks})
+    ctrl.fail_message = "run.orchestrator.thinkLoop"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error="run.orchestrator.thinkLoop")
+    return "failed"
+
+
 def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:
     conversation: list[LlmMessage] = []
     if user_text:
@@ -212,13 +297,12 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
             continue
         invocations += 1
         if invocations > MAX_AGENT_INVOCATIONS:
-            emit_log("error", "run.stepLimit", node_id=node_id)
-            return "failed"
+            return _fail_step_limit(ctrl, node_id)
         text = _agent_turn(ctrl, compiled, node_id, payload, conversation)
         if text is None:
             if ctrl.stop_event.is_set():
                 break
-            continue
+            return "failed" if ctrl.fail_message else "cancelled"
         for target in compiled.agents[node_id].outbound_message:
             pending.append((target, text))
     if ctrl.stop_event.is_set():
@@ -269,11 +353,17 @@ def _dispatch_tool(
     tool_node_id = owner_id
     args = _parse_args(call_arguments)
     mapped = map_openai_tool_name(call_name)
+    leaf = mapped[1] if mapped else call_name
     reused = None
-    if reuse and record is not None and call_name == "file_access":
-        reused = reused_file_result(
-            record, str(args.get("action") or ""), str(args.get("path") or "")
-        )
+    if reuse and record is not None:
+        if leaf == "file_access" or call_name == "file_access":
+            reused = reused_file_result(
+                record, str(args.get("action") or ""), str(args.get("path") or "")
+            )
+        else:
+            preview = file_fact(leaf, args, {}, ok=True)
+            if preview is not None and preview.path:
+                reused = reused_file_result(record, preview.action, preview.path)
     if reused is not None:
         tool_result = reused
     elif mapped and mcp:
@@ -342,7 +432,7 @@ def _dispatch_tool(
         node_id=tool_node_id,
         payload=payload,
     )
-    fact = None if reused is not None else file_fact(call_name, args, tool_result, ok=ok_tool)
+    fact = None if reused is not None else file_fact(leaf, args, tool_result, ok=ok_tool)
     masked = format_tool_result(mask_obj(tool_result))
     if record is not None:
         record_tool(
@@ -356,6 +446,29 @@ def _dispatch_tool(
             fact,
         )
     return masked, fact, ok_tool
+
+
+def _agent_tool_failures_stop(
+    ctrl: RunController,
+    agent_id: str,
+    record: AgentRecord | None,
+    failed_tools: int,
+) -> bool:
+    """True: orchestrator anomaly (break). False: abort the linear turn."""
+    emit_log(
+        "warn",
+        "run.agent.toolFailures",
+        node_id=agent_id,
+        payload={"failed": failed_tools},
+    )
+    if record is not None:
+        record.error = "too many tool failures"
+        return True
+    _set_node(ctrl, agent_id, "error", error="run.agent.toolFailures")
+    ctrl.fail_message = "run.agent.toolFailures"
+    ctrl.fail_class = "unknown"
+    ctrl.last_error_node_id = agent_id
+    return False
 
 
 def _agent_turn(
@@ -404,6 +517,7 @@ def _agent_turn(
         )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
+    system = system + "\n\n" + _AGENT_THINK
     tools = _tool_schemas(agent.tool_kinds, agent.mcp)
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
@@ -414,78 +528,168 @@ def _agent_turn(
     messages = [LlmMessage(role="system", content=system), *conversation]
     from app.runtime import completions as runtime_completions
 
-    rounds = 0
+    failed_tools = 0
+    json_attempts = 0
     nudges = 0
+    thinks = 0
+    short_thinks = 0
     content = ""
     offered = tools
     tool_ok = bool(record is not None and record.tool_ok)
+    wrote_ok = False
+    wrote_paths: list[str] = []
+    if record is not None:
+        for fact in record.files:
+            if fact.ok and fact.action in {"write", "delete"}:
+                wrote_ok = True
+                if fact.path:
+                    wrote_paths.append(fact.path)
     llm_node_id = agent.llm.node_id or agent_id
-    while rounds <= MAX_TOOL_ROUNDS:
-        choice = _bind_window(agent.llm, messages, memory) if memory is not None else None
-        if choice is not None and not choice.fits:
-            if record is not None:
-                record.error = "prompt does not fit"
-            _set_node(ctrl, agent_id, "done")
-            emit_log("warn", "run.agent.window", node_id=agent_id)
-            return ""
-        options = {"num_ctx": choice.num_ctx} if choice is not None and choice.num_ctx else None
-        context_max = choice.context_max if choice is not None else _static_context_max(agent.llm.num_ctx)
-        context_est = run_window.prompt_tokens(messages)
-        started = time.perf_counter()
-        emit_log(
-            "info",
-            "run.llm.start",
-            node_id=llm_node_id,
-            payload={
-                "provider": agent.llm.provider,
-                "model": agent.llm.model,
-                "waitReason": "llm",
-                "contextMax": context_max,
-            },
-        )
-        _set_llm(ctrl, compiled, llm_node_id, busy=True)
-        try:
-            result: CompletionResult = runtime_completions.complete_live(
-                CompletionRequest(
-                    provider=agent.llm.provider,  # type: ignore[arg-type]
-                    model=agent.llm.model,
-                    messages=messages,
-                    base_url=agent.llm.base_url,
-                    credential_id=agent.llm.credential_id,
-                    secret=secret,
-                    temperature=agent.llm.temperature,
-                    max_tokens=agent.llm.max_tokens,
-                    tools=offered or None,
-                    timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
-                    ollama_options=options,
-                ),
-                should_abort=ctrl.stop_event.is_set,
-                on_progress=lambda out, rate, cap=context_max, used=context_est: (
-                    _note_tokens(record, out),
-                    _publish_tokens(
-                        ctrl,
-                        agent_id,
-                        llm_node_id,
-                        tokens_in=None,
-                        tokens_out=out,
-                        per_second=rate,
-                        committed=False,
-                        context_used=used,
-                        context_max=cap,
-                    ),
-                ),
+    try:
+        while not ctrl.stop_event.is_set():
+            choice = _bind_window(agent.llm, messages, memory) if memory is not None else None
+            if choice is not None and not choice.fits:
+                if record is not None:
+                    record.error = "prompt does not fit"
+                _set_node(ctrl, agent_id, "done")
+                emit_log("warn", "run.agent.window", node_id=agent_id)
+                return ""
+            options = _ollama_options(agent.llm, choice)
+            context_max = choice.context_max if choice is not None else _static_context_max(agent.llm.num_ctx)
+            context_est = run_window.prompt_tokens(messages)
+            _prepare_resident(compiled, agent.llm)
+            started = time.perf_counter()
+            emit_log(
+                "info",
+                "run.llm.start",
+                node_id=llm_node_id,
+                payload={
+                    "provider": agent.llm.provider,
+                    "model": agent.llm.model,
+                    "waitReason": "llm",
+                    "contextMax": context_max,
+                },
             )
-            ok = True
-        except Exception as exc:
-            _set_llm(ctrl, compiled, llm_node_id, busy=False)
-            if isinstance(exc, RuntimeApiError) and (
-                exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
-            ):
-                return None
-            if memory is not None and record is not None:
-                key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"
-                record.error = key
-                emit_log("warn", key, node_id=agent_id)
+            _set_llm(ctrl, compiled, llm_node_id, busy=True)
+            try:
+                result: CompletionResult = runtime_completions.complete_live(
+                    CompletionRequest(
+                        provider=agent.llm.provider,  # type: ignore[arg-type]
+                        model=agent.llm.model,
+                        messages=messages,
+                        base_url=agent.llm.base_url,
+                        credential_id=agent.llm.credential_id,
+                        secret=secret,
+                        temperature=agent.llm.temperature,
+                        max_tokens=agent.llm.max_tokens,
+                        tools=offered or None,
+                        timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
+                        ollama_options=options,
+                    ),
+                    should_abort=ctrl.stop_event.is_set,
+                    on_progress=lambda out, rate, cap=context_max, used=context_est: (
+                        _note_tokens(record, out),
+                        _publish_tokens(
+                            ctrl,
+                            agent_id,
+                            llm_node_id,
+                            tokens_in=None,
+                            tokens_out=out,
+                            per_second=rate,
+                            committed=False,
+                            context_used=used,
+                            context_max=cap,
+                        ),
+                    ),
+                )
+                ok = True
+                json_attempts = 0
+            except Exception as exc:
+                if isinstance(exc, RuntimeApiError) and (
+                    exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
+                ):
+                    return None
+                tool_name = truncated_tool_call_name(exc)
+                if tool_name is not None:
+                    json_attempts += 1
+                    insert_call(
+                        run_id=ctrl.run_id or "",
+                        provider=agent.llm.provider,
+                        model=agent.llm.model,
+                        ok=False,
+                        node_id=agent_id,
+                        node_name=node_label(compiled, agent_id),
+                        duration_ms=int((time.perf_counter() - started) * 1000),
+                        error_message="runtime.badRequest",
+                    )
+                    emit_log(
+                        "warn",
+                        "run.agent.toolJson",
+                        node_id=agent_id,
+                        payload={
+                            "name": tool_name,
+                            "attempt": json_attempts,
+                            "max": MAX_TOOL_JSON_ATTEMPTS,
+                            **(_runtime_error_payload(exc) or {}),
+                        },
+                    )
+                    messages.append(
+                        LlmMessage(
+                            role="user",
+                            content=_TOOL_JSON_NOTE.format(name=tool_name),
+                        )
+                    )
+                    if json_attempts < MAX_TOOL_JSON_ATTEMPTS:
+                        continue
+                    json_attempts = 0
+                    failed_tools += 1
+                    if record is not None:
+                        record_tool(
+                            record,
+                            ToolEvent(
+                                name=tool_name,
+                                arguments="",
+                                ok=False,
+                                result="truncated tool JSON",
+                            ),
+                            file_fact(
+                                tool_name,
+                                {},
+                                {"ok": False, "error": "truncated tool JSON"},
+                                ok=False,
+                            ),
+                        )
+                    if failed_tools >= MAX_FAILED_TOOL_CALLS:
+                        if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
+                            content = ""
+                            break
+                        return None
+                    continue
+                if memory is not None and record is not None:
+                    key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"
+                    record.error = key
+                    emit_log("warn", key, node_id=agent_id, payload=_runtime_error_payload(exc))
+                    insert_call(
+                        run_id=ctrl.run_id or "",
+                        provider=agent.llm.provider,
+                        model=agent.llm.model,
+                        ok=False,
+                        node_id=agent_id,
+                        node_name=node_label(compiled, agent_id),
+                        duration_ms=int((time.perf_counter() - started) * 1000),
+                        error_message=key,
+                    )
+                    _set_node(ctrl, agent_id, "done")
+                    return ""
+                ctrl.last_error_node_id = agent_id
+                emit_log(
+                    "error",
+                    str(exc),
+                    node_id=agent_id,
+                    payload=_runtime_error_payload(exc),
+                    stack=traceback.format_exc(),
+                )
+                _set_node(ctrl, agent_id, "error", error=str(exc))
                 insert_call(
                     run_id=ctrl.run_id or "",
                     provider=agent.llm.provider,
@@ -494,138 +698,228 @@ def _agent_turn(
                     node_id=agent_id,
                     node_name=node_label(compiled, agent_id),
                     duration_ms=int((time.perf_counter() - started) * 1000),
-                    error_message=key,
                 )
-                _set_node(ctrl, agent_id, "done")
-                return ""
-            ctrl.last_error_node_id = agent_id
-            emit_log("error", str(exc), node_id=agent_id, stack=traceback.format_exc())
-            _set_node(ctrl, agent_id, "error", error=str(exc))
+                raise
+            duration_ms = int((time.perf_counter() - started) * 1000)
+            usage = result.usage
+            if usage:
+                out_final = usage.completion_tokens
+                in_final = usage.prompt_tokens
+            elif result.content:
+                out_final = estimate_token_count(result.content)
+                in_final = None
+            else:
+                out_final = None
+                in_final = None
+            rate_final = None
+            if out_final is not None and duration_ms > 0:
+                rate_final = out_final / max(duration_ms / 1000.0, 0.05)
+            used_now = in_final if in_final is not None else context_est
+            _note_tokens(record, out_final)
+            _publish_tokens(
+                ctrl,
+                agent_id,
+                llm_node_id,
+                tokens_in=in_final,
+                tokens_out=out_final,
+                per_second=rate_final,
+                committed=True,
+                context_used=used_now,
+                context_max=context_max,
+            )
             insert_call(
                 run_id=ctrl.run_id or "",
                 provider=agent.llm.provider,
                 model=agent.llm.model,
-                ok=False,
+                ok=ok,
                 node_id=agent_id,
                 node_name=node_label(compiled, agent_id),
-                duration_ms=int((time.perf_counter() - started) * 1000),
+                duration_ms=duration_ms,
+                tokens_in=in_final,
+                tokens_out=out_final,
             )
-            raise
-        _set_llm(ctrl, compiled, llm_node_id, busy=False)
-        duration_ms = int((time.perf_counter() - started) * 1000)
-        usage = result.usage
-        if usage:
-            out_final = usage.completion_tokens
-            in_final = usage.prompt_tokens
-        elif result.content:
-            out_final = estimate_token_count(result.content)
-            in_final = None
-        else:
-            out_final = None
-            in_final = None
-        rate_final = None
-        if out_final is not None and duration_ms > 0:
-            rate_final = out_final / max(duration_ms / 1000.0, 0.05)
-        used_now = in_final if in_final is not None else context_est
-        _note_tokens(record, out_final)
-        _publish_tokens(
-            ctrl,
-            agent_id,
-            llm_node_id,
-            tokens_in=in_final,
-            tokens_out=out_final,
-            per_second=rate_final,
-            committed=True,
-            context_used=used_now,
-            context_max=context_max,
-        )
-        insert_call(
-            run_id=ctrl.run_id or "",
-            provider=agent.llm.provider,
-            model=agent.llm.model,
-            ok=ok,
-            node_id=agent_id,
-            node_name=node_label(compiled, agent_id),
-            duration_ms=duration_ms,
-            tokens_in=in_final,
-            tokens_out=out_final,
-        )
-        emit_log(
-            "debug",
-            "run.llm.done",
-            node_id=llm_node_id,
-            payload={
-                "model": agent.llm.model,
-                "durationMs": duration_ms,
-                "tokensIn": usage.prompt_tokens if usage else None,
-                "tokensOut": usage.completion_tokens if usage else None,
-            },
-        )
-        if result.tool_calls and rounds < MAX_TOOL_ROUNDS:
-            rounds += 1
-            _set_node(ctrl, agent_id, "running", wait="tool")
-            messages.append(
-                LlmMessage(
-                    role="assistant",
-                    content=result.content,
-                    tool_calls=result.tool_calls,
-                )
+            emit_log(
+                "debug",
+                "run.llm.done",
+                node_id=llm_node_id,
+                payload={
+                    "model": agent.llm.model,
+                    "durationMs": duration_ms,
+                    "tokensIn": usage.prompt_tokens if usage else None,
+                    "tokensOut": usage.completion_tokens if usage else None,
+                },
             )
-            for call in result.tool_calls:
-                body, _fact, ok_call = _dispatch_tool(
-                    ctrl,
-                    compiled,
-                    owner_id=agent_id,
-                    call_name=call.name,
-                    call_arguments=call.arguments or "",
-                    tool_kinds=agent.tool_kinds,
-                    mcp=mcp,
-                    record=record,
-                    reuse=reuse,
-                )
-                if ok_call:
-                    tool_ok = True
+            if result.tool_calls:
+                thinks = 0
+                short_thinks = 0
+                _set_node(ctrl, agent_id, "running", wait="tool")
                 messages.append(
-                    LlmMessage(role="tool", content=body, tool_call_id=call.id)
+                    LlmMessage(
+                        role="assistant",
+                        content=result.content,
+                        tool_calls=result.tool_calls,
+                    )
                 )
-            if tool_ok:
-                _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
-            if rounds >= MAX_TOOL_ROUNDS:
-                offered = []
-            continue
-        content = result.content or ""
-        if (
-            offered
-            and not result.tool_calls
-            and not tool_ok
-            and nudges < 1
-        ):
-            nudges += 1
-            messages.append(LlmMessage(role="assistant", content=content))
-            messages.append(LlmMessage(role="user", content=_TOOL_USE_NOTE))
-            continue
-        break
-    _set_node(ctrl, agent_id, "done")
-    emit_log("info", "run.agent.done", node_id=agent_id)
-    if publish_chat and compiled.chat_input:
-        text = (content or "").strip()
-        if not text and record is not None:
-            for event in reversed(record.tools):
-                if event.result:
-                    text = event.result[:4000]
+                for call in result.tool_calls:
+                    body, _fact, ok_call = _dispatch_tool(
+                        ctrl,
+                        compiled,
+                        owner_id=agent_id,
+                        call_name=call.name,
+                        call_arguments=call.arguments or "",
+                        tool_kinds=agent.tool_kinds,
+                        mcp=mcp,
+                        record=record,
+                        reuse=reuse,
+                    )
+                    if ok_call:
+                        tool_ok = True
+                        if _fact is not None and _fact.action in {"write", "delete"}:
+                            wrote_ok = True
+                            if _fact.path:
+                                wrote_paths.append(_fact.path)
+                    else:
+                        failed_tools += 1
+                    messages.append(
+                        LlmMessage(
+                            role="tool",
+                            content=body,
+                            tool_call_id=call.id or None,
+                            name=call.name or None,
+                        )
+                    )
+                if wrote_ok:
+                    _set_system_note(messages, _TOOL_REQUIRED, _TOOL_DONE)
+                    _set_system_note(messages, _TOOL_ANSWER, _TOOL_DONE)
+                elif tool_ok:
+                    _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
+                if failed_tools >= MAX_FAILED_TOOL_CALLS:
+                    if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
+                        content = result.content or ""
+                        break
+                    return None
+                continue
+            think_body = agent_think_text(result.content or "", result.reasoning or "")
+            if think_body is not None:
+                tokens = _think_out_tokens(result, out_final)
+                if wrote_ok and tokens <= MAX_CLOSING_THINK_TOKENS:
+                    content = _think_as_result(think_body, wrote_paths, content)
                     break
-        if text:
-            msg = ChatMessage(
-                id=str(uuid.uuid4()),
-                run_id=ctrl.run_id or "",
-                role="assistant",
-                content=text,
-                created_at=utc_now(),
-            )
-            ctrl.remember_chat(msg, generating=False)
-            conversation.append(LlmMessage(role="assistant", content=text))
-            content = text
-    return content
+                thinks += 1
+                if tokens <= 1:
+                    short_thinks += 1
+                else:
+                    short_thinks = 0
+                emit_log(
+                    "info",
+                    "run.agent.think",
+                    node_id=agent_id,
+                    payload={"text": think_body[:400]},
+                )
+                _set_node(ctrl, agent_id, "running", wait="thinking")
+                looped = short_thinks >= MAX_SHORT_THINKS
+                if looped or thinks >= MAX_AGENT_THINKS:
+                    if wrote_ok:
+                        content = _think_as_result(think_body, wrote_paths, content)
+                        break
+                    log_key = "run.agent.thinkLoop" if looped else "run.agent.thinkLimit"
+                    emit_log(
+                        "warn",
+                        log_key,
+                        node_id=agent_id,
+                        payload={"thinks": short_thinks if looped else thinks},
+                    )
+                    if record is not None:
+                        record.error = "think loop" if looped else "too many thinks"
+                        content = ""
+                        break
+                    _set_node(ctrl, agent_id, "error", error=log_key)
+                    ctrl.fail_message = log_key
+                    ctrl.fail_class = "unknown"
+                    ctrl.last_error_node_id = agent_id
+                    return None
+                stored = (result.content or "").strip() or '{"action":"think"}'
+                _store_think(messages, stored)
+                continue
+            content = result.content or ""
+            if (
+                offered
+                and not result.tool_calls
+                and not tool_ok
+                and nudges < 1
+            ):
+                nudges += 1
+                messages.append(LlmMessage(role="assistant", content=content))
+                messages.append(LlmMessage(role="user", content=_TOOL_USE_NOTE))
+                continue
+            if wrote_ok and not (content or "").strip():
+                content = _think_as_result("", wrote_paths, "")
+            break
+        _set_node(ctrl, agent_id, "done")
+        emit_log("info", "run.agent.done", node_id=agent_id)
+        if publish_chat and compiled.chat_input:
+            text = (content or "").strip()
+            if not text and record is not None:
+                for event in reversed(record.tools):
+                    if event.result:
+                        text = event.result[:4000]
+                        break
+            if text:
+                msg = ChatMessage(
+                    id=str(uuid.uuid4()),
+                    run_id=ctrl.run_id or "",
+                    role="assistant",
+                    content=text,
+                    created_at=utc_now(),
+                )
+                ctrl.remember_chat(msg, generating=False)
+                conversation.append(LlmMessage(role="assistant", content=text))
+                content = text
+        return content
+    finally:
+        _set_llm(ctrl, compiled, llm_node_id, busy=False)
+
+
+def _think_out_tokens(result: CompletionResult, out_final: int | None) -> int:
+    if out_final is not None:
+        return out_final
+    return estimate_token_count((result.content or "") + (result.reasoning or ""))
+
+
+def _think_as_result(body: str, paths: list[str], fallback: str) -> str:
+    text = (body or "").strip()
+    if text and text != "…":
+        return text
+    if paths:
+        return ", ".join(paths)
+    return fallback or ""
+
+
+def _tag_tokens(
+    action: dict[str, str], result: CompletionResult, out_final: int | None
+) -> dict[str, str]:
+    tagged = dict(action)
+    tagged["_tokens"] = str(_think_out_tokens(result, out_final))
+    return tagged
+
+
+def _pop_tokens(action: dict[str, str] | None) -> int | None:
+    if not action or "_tokens" not in action:
+        return None
+    raw = action.pop("_tokens")
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def _store_think(messages: list[LlmMessage], stored: str) -> None:
+    """Keep a single trailing assistant think. Gemma/Ollama reject two at the end."""
+    think = LlmMessage(role="assistant", content=stored)
+    if messages and messages[-1].role == "assistant" and not messages[-1].tool_calls:
+        messages[-1] = think
+        return
+    messages.append(think)
 
 
 def _set_system_note(messages: list[LlmMessage], old: str, new: str) -> None:
@@ -651,10 +945,64 @@ def _note_tokens(record: AgentRecord | None, out: int | None) -> None:
         record.saw_tokens = True
 
 
+def _prepare_resident(compiled: CompiledGraph, llm) -> None:
+    if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
+        return
+    from app.run.vram import release_others
+    from app.settings.service import load_settings
+
+    try:
+        settings = load_settings()
+        dropped = release_others(settings, compiled, current=llm.model)
+    except Exception:
+        return
+    if dropped:
+        emit_log(
+            "info",
+            "run.llm.release",
+            payload={"dropped": dropped, "keep": llm.model},
+        )
+
+
 def _static_context_max(num_ctx: int | None) -> int | None:
     if isinstance(num_ctx, int) and num_ctx > 0:
         return num_ctx
     return None
+
+
+def _ollama_options(llm, choice) -> dict | None:
+    if llm.provider != "ollama":
+        return None
+    options: dict = {}
+    if choice is not None and choice.num_ctx:
+        options["num_ctx"] = choice.num_ctx
+    if isinstance(llm.num_thread, int) and llm.num_thread > 0:
+        options["num_thread"] = llm.num_thread
+    if isinstance(llm.num_gpu, int) and llm.num_gpu > 0:
+        from app.runtime.ollama import clamp_gpu_layers, model_block_count, ollama_num_gpu
+
+        layers = model_block_count(llm.model, base_url=llm.base_url)
+        options["num_gpu"] = ollama_num_gpu(clamp_gpu_layers(llm.num_gpu, layers), layers)
+    elif isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0:
+        from app.runtime.ollama import gpu_layers_for_percent, model_block_count, ollama_num_gpu
+
+        layers = model_block_count(llm.model, base_url=llm.base_url)
+        options["num_gpu"] = ollama_num_gpu(
+            gpu_layers_for_percent(llm.num_gpu_percent, layers),
+            layers,
+        )
+    return options or None
+
+
+def _runtime_error_payload(exc: BaseException) -> dict | None:
+    if not isinstance(exc, RuntimeApiError):
+        return None
+    payload: dict = {}
+    if exc.detail:
+        payload["detail"] = exc.detail
+    if exc.status is not None:
+        payload["status"] = exc.status
+    return payload or None
 
 
 def _bind_window(llm, messages: list[LlmMessage], memory: RunMemory):
@@ -662,14 +1010,18 @@ def _bind_window(llm, messages: list[LlmMessage], memory: RunMemory):
     tag = llm.model or ""
     loaded = None
     arch = None
+    thinking = False
     if llm.provider == "ollama" and tag:
         if tag not in memory.arch:
             memory.arch[tag] = run_window.architecture_context(tag, base_url=llm.base_url)
+        if tag not in memory.thinking:
+            memory.thinking[tag] = run_window.model_thinking(tag, base_url=llm.base_url)
         if tag not in memory.loaded:
             memory.loaded[tag] = run_window.loaded_context(tag, base_url=llm.base_url)
         arch = memory.arch[tag]
+        thinking = bool(memory.thinking.get(tag))
         loaded = memory.loaded[tag]
-    need = run_window.prompt_need(messages, llm.max_tokens)
+    need = run_window.prompt_need(messages, llm.max_tokens, thinking=thinking)
     choice = run_window.choose_window(
         need=need,
         preferred=preferred,
@@ -677,6 +1029,7 @@ def _bind_window(llm, messages: list[LlmMessage], memory: RunMemory):
         raised=memory.raised.get(tag),
         architecture_max=arch,
         provider=llm.provider,
+        thinking=thinking,
     )
     if choice.num_ctx and tag:
         memory.raised[tag] = choice.num_ctx
@@ -842,15 +1195,14 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp)
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
+    thinks = 0
+    short_thinks = 0
+    spoke = False
     while not ctrl.stop_event.is_set():
-        steps += 1
-        if steps > MAX_ORCHESTRATOR_STEPS:
-            emit_log("error", "run.stepLimit", node_id=orch.node_id)
-            _store_memory(ctrl, memory)
-            return "failed"
         offered = tool_schemas if memory.allow_own_tools else []
         system = orchestrator_instructions(orch.system_prompt, roster, _function_names(offered))
-        action = _orchestrator_action(ctrl, compiled, system, memory, offered)
+        action = _orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
+        tokens = _pop_tokens(action)
         memory.clear_anomaly()
         _store_memory(ctrl, memory)
         if action is None:
@@ -865,9 +1217,41 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             emit_log("error", "run.orchestrator.unreadable", node_id=orch.node_id)
             _set_node(ctrl, orch.node_id, "error", error="run.orchestrator.unreadable")
             return "failed"
+        if action.get("action") in {"think", "defer"}:
+            body = (action.get("text") or "").strip()
+            emit_log(
+                "info",
+                "run.orchestrator.think",
+                node_id=orch.node_id,
+                payload={"text": body[:400]},
+            )
+            _set_node(ctrl, orch.node_id, "running", wait="thinking")
+            thinks += 1
+            if tokens is not None and tokens <= 1:
+                short_thinks += 1
+            else:
+                short_thinks = 0
+            if short_thinks >= MAX_SHORT_THINKS:
+                _store_memory(ctrl, memory)
+                _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _fail_think_loop(ctrl, orch.node_id, short_thinks)
+            if thinks >= MAX_ORCHESTRATOR_THINKS:
+                _store_memory(ctrl, memory)
+                _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _fail_think_limit(ctrl, orch.node_id)
+            continue
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
+        emit_log(
+            "info",
+            "run.orchestrator.action",
+            node_id=orch.node_id,
+            payload={"action": kind, "agent": action.get("agent") or ""},
+        )
         if kind == "ask":
+            spoke = False
+            thinks = 0
+            short_thinks = 0
             _speak(ctrl, compiled, memory, "ask", text or "…", wait=True)
             reply = _queue_get(ctrl)
             if not reply or ctrl.stop_event.is_set():
@@ -876,8 +1260,17 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             _clear_human_wait(ctrl, compiled)
             continue
         if kind == "call":
-            if _orchestrator_call(ctrl, compiled, memory, names, action, user_text) == "cancelled":
+            spoke = False
+            thinks = 0
+            short_thinks = 0
+            if steps >= MAX_ORCHESTRATOR_STEPS:
+                _store_memory(ctrl, memory)
+                return _fail_step_limit(ctrl, orch.node_id)
+            outcome = _orchestrator_call(ctrl, compiled, memory, names, action, user_text)
+            if outcome == "cancelled":
                 return "cancelled"
+            if outcome == "ran":
+                steps += 1
             continue
         if kind == "finish":
             if _tool_work_unverified(memory) and not memory.finish_warned:
@@ -893,8 +1286,12 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         if text.strip():
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
+        spoke = True
+        thinks = 0
+        short_thinks = 0
         continue
     _store_memory(ctrl, memory)
+    _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
     return "cancelled"
 
 
@@ -910,17 +1307,17 @@ def _orchestrator_call(
     agent_id = match_agent(token, names)
     task = (action.get("task") or "").strip() or memory.last_user() or user_text
     if agent_id is None or agent_id not in compiled.agents:
-        memory.add_note(f"Unknown agent: {token}. Use an id from the roster.")
-        return "continue"
+        memory.add_note(_unknown_agent_note(token, names))
+        return "skipped"
     agent = compiled.agents[agent_id]
     has_tools = bool(agent.tool_kinds or agent.mcp)
     source = memory.resolve_source(action.get("source") or "", names)
     if source.ambiguous:
         memory.add_note("Source is ambiguous. Set source to one id: " + ", ".join(source.ambiguous))
-        return "continue"
+        return "skipped"
     if source.missing:
         memory.add_note(f"Unknown source: {source.missing}.")
-        return "continue"
+        return "skipped"
     if source.auto:
         emit_log("info", "run.memory.source", node_id=agent_id)
     name = dict(names).get(agent_id, agent_id)
@@ -945,10 +1342,16 @@ def _orchestrator_call(
             reuse=continued,
         )
         if text is None:
-            return "cancelled" if ctrl.stop_event.is_set() else "continue"
+            return "cancelled" if ctrl.stop_event.is_set() else "ran"
         if record.error == "prompt does not fit":
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
+        if record.error == "too many tool failures":
+            memory.set_anomaly(record)
+            return "ran"
+        if record.error in {"too many thinks", "think loop"}:
+            memory.set_anomaly(record)
+            return "ran"
         if record.error:
             if record.tool_ok and not continued:
                 continued = True
@@ -965,19 +1368,25 @@ def _orchestrator_call(
                 record.error = ""
                 continue
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
         visible = visible_text(text or "")
         if text and not visible:
             memory.reject(text, "empty")
+        wrote = any(fact.ok and fact.action in {"write", "delete"} for fact in record.files)
         if not visible and not record.tool_ok:
             record.error = "empty result"
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
         record.text = visible
         if has_tools and not record.tool_ok:
             record.error = "no tool used"
             memory.set_anomaly(record)
-            return "continue"
+            return "ran"
+        if not visible and not wrote:
+            record.error = "empty result"
+            emit_log("warn", "run.agent.empty", node_id=agent_id)
+            memory.set_anomaly(record)
+            return "ran"
         record.finished = True
         if any(not fact.ok for fact in record.files):
             record.error = "tool failed"
@@ -985,7 +1394,7 @@ def _orchestrator_call(
         else:
             _publish_progress(ctrl, name, record)
             memory.add_note(f"Status already shown to the user: {name} finished.")
-        return "continue"
+        return "ran"
     return "cancelled"
 
 
@@ -993,11 +1402,24 @@ def _tool_work_unverified(memory: RunMemory) -> bool:
     called = [rec for rec in memory.records if rec.has_tools]
     if not called:
         return False
-    return not any(
+    if any(
         fact.ok and fact.action in {"write", "delete"}
         for rec in called
         for fact in rec.files
-    )
+    ):
+        return False
+    return any(rec.finished and not (rec.text or "").strip() for rec in called)
+
+
+def _unknown_agent_note(token: str, names: list[tuple[str, str]]) -> str:
+    roster = ", ".join(f"{name} ({agent_id})" for agent_id, name in names)
+    return f"Unknown agent: {token}. Use a name or id from the roster: {roster}."
+
+
+def _source_repair_note(source) -> str:
+    if source.ambiguous:
+        return "Source is ambiguous. Set source to one id: " + ", ".join(source.ambiguous)
+    return f"Unknown source: {source.missing}."
 
 
 def _finish_targets(ctrl: RunController, compiled: CompiledGraph, orch, text: str) -> None:
@@ -1031,7 +1453,22 @@ def _speak(
     _publish_assistant(ctrl, text)
     memory.add_spoken(kind, text)
     if wait:
+        _begin_ask(ctrl, compiled, text)
         _wait_chat(ctrl, compiled)
+
+
+def _begin_ask(ctrl: RunController, compiled: CompiledGraph, text: str) -> None:
+    orch = compiled.orchestrator
+    node_id = orch.node_id if orch is not None else (compiled.chat_input.id if compiled.chat_input else None)
+    speaker = node_label(compiled, node_id) or "orchestrator"
+    clipped = ask_excerpt(text)
+    ask = ctrl.set_wait_ask(speaker=speaker, excerpt=clipped, node_id=node_id)
+    emit_log(
+        "info",
+        "run.wait.ask",
+        node_id=node_id,
+        payload={"id": ask.id, "speaker": speaker, "excerpt": clipped},
+    )
 
 
 def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
@@ -1044,8 +1481,12 @@ def _wait_chat(ctrl: RunController, compiled: CompiledGraph) -> None:
 
 
 def _clear_human_wait(ctrl: RunController, compiled: CompiledGraph) -> None:
+    ctrl.clear_wait_ask()
     if compiled.chat_input:
         _set_node(ctrl, compiled.chat_input.id, "idle")
+    orch = compiled.orchestrator
+    if orch is not None:
+        _set_node(ctrl, orch.node_id, "idle")
 
 
 def _orchestrator_action(
@@ -1054,6 +1495,9 @@ def _orchestrator_action(
     system: str,
     memory: RunMemory,
     tools: list[dict],
+    names: list[tuple[str, str]],
+    *,
+    block_reply: bool,
 ) -> dict[str, str] | None:
     orch = compiled.orchestrator
     if orch is None:
@@ -1064,172 +1508,240 @@ def _orchestrator_action(
     offered = list(tools)
     messages = memory.orchestrator_messages(system)
     mcp = get_mcp()
-    while not ctrl.stop_event.is_set():
-        choice = _bind_window(orch.llm, messages, memory)
-        if not choice.fits:
-            ctrl.fail_message = "run.orchestrator.window"
-            ctrl.fail_class = "orchestrator"
-            ctrl.last_error_node_id = orch.node_id
-            emit_log("error", "run.orchestrator.window", node_id=orch.node_id)
-            return {"action": "failed-window"}
-        _set_node(ctrl, orch.node_id, "running", wait="llm")
-        ctrl.flush_chat(generating=True)
-        llm = orch.llm
-        secret = None
-        if llm.provider != "ollama" and llm.credential_id:
-            secret = vault_get(llm.credential_id)
-        started = time.perf_counter()
-        llm_node_id = llm.node_id or orch.node_id
-        context_max = choice.context_max
-        context_est = run_window.prompt_tokens(messages)
-        options = {"num_ctx": choice.num_ctx} if choice.num_ctx else None
-        emit_log(
-            "info",
-            "run.llm.start",
-            node_id=llm_node_id,
-            payload={"provider": llm.provider, "model": llm.model, "waitReason": "llm", "contextMax": context_max},
-        )
-        from app.runtime import completions as runtime_completions
+    llm_node_id = orch.llm.node_id or orch.node_id
+    action: dict[str, str] | None = None
+    try:
+        while not ctrl.stop_event.is_set():
+            choice = _bind_window(orch.llm, messages, memory)
+            if not choice.fits:
+                ctrl.fail_message = "run.orchestrator.window"
+                ctrl.fail_class = "orchestrator"
+                ctrl.last_error_node_id = orch.node_id
+                emit_log("error", "run.orchestrator.window", node_id=orch.node_id)
+                action = {"action": "failed-window"}
+                return action
+            _set_node(ctrl, orch.node_id, "running", wait="llm")
+            ctrl.flush_chat(generating=True)
+            llm = orch.llm
+            secret = None
+            if llm.provider != "ollama" and llm.credential_id:
+                secret = vault_get(llm.credential_id)
+            started = time.perf_counter()
+            llm_node_id = llm.node_id or orch.node_id
+            context_max = choice.context_max
+            context_est = run_window.prompt_tokens(messages)
+            options = _ollama_options(llm, choice)
+            _prepare_resident(compiled, llm)
+            emit_log(
+                "info",
+                "run.llm.start",
+                node_id=llm_node_id,
+                payload={"provider": llm.provider, "model": llm.model, "waitReason": "llm", "contextMax": context_max},
+            )
+            from app.runtime import completions as runtime_completions
 
-        _set_llm(ctrl, compiled, llm_node_id, busy=True)
-        try:
-            result = runtime_completions.complete_live(
-                CompletionRequest(
-                    provider=llm.provider,  # type: ignore[arg-type]
-                    model=llm.model,
-                    messages=messages,
-                    base_url=llm.base_url,
-                    credential_id=llm.credential_id,
-                    secret=secret,
-                    temperature=llm.temperature,
-                    max_tokens=llm.max_tokens,
-                    tools=offered or None,
-                    timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
-                    ollama_options=options,
-                ),
-                should_abort=ctrl.stop_event.is_set,
-                on_progress=lambda out, rate, cap=context_max, used=context_est: _publish_tokens(
-                    ctrl,
-                    orch.node_id,
-                    llm_node_id,
-                    tokens_in=None,
-                    tokens_out=out,
-                    per_second=rate,
-                    committed=False,
-                    context_used=used,
-                    context_max=cap,
-                ),
-            )
-        except Exception as exc:
-            _set_llm(ctrl, compiled, llm_node_id, busy=False)
-            if isinstance(exc, RuntimeApiError) and (
-                exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
-            ):
-                return None
-            key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"
-            if key in _SAME_RETRY and model_retries < MAX_SAME_RETRIES:
-                model_retries += 1
-                emit_log("warn", key, node_id=orch.node_id)
-                continue
-            ctrl.last_error_node_id = orch.node_id
-            emit_log("error", str(exc), node_id=orch.node_id, stack=traceback.format_exc())
-            _set_node(ctrl, orch.node_id, "error", error=str(exc))
-            raise
-        _set_llm(ctrl, compiled, llm_node_id, busy=False)
-        duration_ms = int((time.perf_counter() - started) * 1000)
-        usage = result.usage
-        out_final = usage.completion_tokens if usage else (
-            estimate_token_count(result.content) if result.content else None
-        )
-        in_final = usage.prompt_tokens if usage else context_est
-        rate_final = None
-        if out_final is not None and duration_ms > 0:
-            rate_final = out_final / max(duration_ms / 1000.0, 0.05)
-        _publish_tokens(
-            ctrl,
-            orch.node_id,
-            llm_node_id,
-            tokens_in=in_final,
-            tokens_out=out_final,
-            per_second=rate_final,
-            committed=True,
-            context_used=in_final,
-            context_max=context_max,
-        )
-        insert_call(
-            run_id=ctrl.run_id or "",
-            provider=llm.provider,
-            model=llm.model,
-            ok=True,
-            node_id=orch.node_id,
-            node_name=node_label(compiled, orch.node_id),
-            duration_ms=duration_ms,
-            tokens_in=in_final,
-            tokens_out=out_final,
-        )
-        if result.tool_calls and rounds < MAX_ORCHESTRATOR_TOOL_ROUNDS and offered:
-            rounds += 1
-            model_retries = 0
-            memory.allow_own_tools = False
-            _set_node(ctrl, orch.node_id, "running", wait="tool")
-            messages.append(
-                LlmMessage(
-                    role="assistant",
-                    content=result.content,
-                    tool_calls=result.tool_calls,
-                )
-            )
-            for call in result.tool_calls:
-                body, fact, ok_tool = _dispatch_tool(
-                    ctrl,
-                    compiled,
-                    owner_id=orch.node_id,
-                    call_name=call.name,
-                    call_arguments=call.arguments or "",
-                    tool_kinds=orch.tool_kinds,
-                    mcp=mcp,
-                    record=None,
-                    reuse=False,
-                )
-                memory.note_own_tool(
-                    ToolEvent(
-                        name=call.name,
-                        arguments=call.arguments or "",
-                        ok=ok_tool,
-                        result=body[:8000],
+            _set_llm(ctrl, compiled, llm_node_id, busy=True)
+            try:
+                result = runtime_completions.complete_live(
+                    CompletionRequest(
+                        provider=llm.provider,  # type: ignore[arg-type]
+                        model=llm.model,
+                        messages=messages,
+                        base_url=llm.base_url,
+                        credential_id=llm.credential_id,
+                        secret=secret,
+                        temperature=llm.temperature,
+                        max_tokens=llm.max_tokens,
+                        tools=offered or None,
+                        timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
+                        ollama_options=options,
                     ),
-                    fact,
+                    should_abort=ctrl.stop_event.is_set,
+                    on_progress=lambda out, rate, cap=context_max, used=context_est: _publish_tokens(
+                        ctrl,
+                        orch.node_id,
+                        llm_node_id,
+                        tokens_in=None,
+                        tokens_out=out,
+                        per_second=rate,
+                        committed=False,
+                        context_used=used,
+                        context_max=cap,
+                    ),
                 )
-                messages.append(LlmMessage(role="tool", content=body, tool_call_id=call.id))
-            if rounds >= MAX_ORCHESTRATOR_TOOL_ROUNDS:
-                offered = []
-                messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
-            continue
-        if result.tool_calls:
-            offered = []
-            memory.allow_own_tools = False
-            raw = result.content or ""
-            if not raw.strip():
-                repairs += 1
-                emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
-                if repairs <= MAX_CONTROL_REPAIRS:
-                    memory.add_note(_TOOL_DECIDE_NOTE)
-                    messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
+            except Exception as exc:
+                if isinstance(exc, RuntimeApiError) and (
+                    exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
+                ):
+                    return None
+                key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"
+                if key in _SAME_RETRY and model_retries < MAX_SAME_RETRIES:
+                    model_retries += 1
+                    emit_log("warn", key, node_id=orch.node_id)
                     continue
-                return {"action": "unreadable"}
-        raw = result.content or ""
-        reason = reject_reason(raw)
-        if reason:
-            memory.reject(raw, reason)
-            repairs += 1
-            emit_log("info", "run.orchestrator.repair", node_id=orch.node_id)
-            if repairs <= MAX_CONTROL_REPAIRS:
-                memory.add_note(_REPAIR_NOTE)
-                messages.append(LlmMessage(role="user", content=_REPAIR_NOTE))
+                ctrl.last_error_node_id = orch.node_id
+                emit_log(
+                    "error",
+                    str(exc),
+                    node_id=orch.node_id,
+                    payload=_runtime_error_payload(exc),
+                    stack=traceback.format_exc(),
+                )
+                _set_node(ctrl, orch.node_id, "error", error=str(exc))
+                raise
+            duration_ms = int((time.perf_counter() - started) * 1000)
+            usage = result.usage
+            out_final = usage.completion_tokens if usage else (
+                estimate_token_count(result.content) if result.content else None
+            )
+            in_final = usage.prompt_tokens if usage else context_est
+            rate_final = None
+            if out_final is not None and duration_ms > 0:
+                rate_final = out_final / max(duration_ms / 1000.0, 0.05)
+            _publish_tokens(
+                ctrl,
+                orch.node_id,
+                llm_node_id,
+                tokens_in=in_final,
+                tokens_out=out_final,
+                per_second=rate_final,
+                committed=True,
+                context_used=in_final,
+                context_max=context_max,
+            )
+            insert_call(
+                run_id=ctrl.run_id or "",
+                provider=llm.provider,
+                model=llm.model,
+                ok=True,
+                node_id=orch.node_id,
+                node_name=node_label(compiled, orch.node_id),
+                duration_ms=duration_ms,
+                tokens_in=in_final,
+                tokens_out=out_final,
+            )
+            if result.tool_calls and rounds < MAX_ORCHESTRATOR_TOOL_ROUNDS and offered:
+                rounds += 1
+                model_retries = 0
+                memory.allow_own_tools = False
+                _set_node(ctrl, orch.node_id, "running", wait="tool")
+                messages.append(
+                    LlmMessage(
+                        role="assistant",
+                        content=result.content,
+                        tool_calls=result.tool_calls,
+                    )
+                )
+                for call in result.tool_calls:
+                    body, fact, ok_tool = _dispatch_tool(
+                        ctrl,
+                        compiled,
+                        owner_id=orch.node_id,
+                        call_name=call.name,
+                        call_arguments=call.arguments or "",
+                        tool_kinds=orch.tool_kinds,
+                        mcp=mcp,
+                        record=None,
+                        reuse=False,
+                    )
+                    memory.note_own_tool(
+                        ToolEvent(
+                            name=call.name,
+                            arguments=call.arguments or "",
+                            ok=ok_tool,
+                            result=body[:8000],
+                        ),
+                        fact,
+                    )
+                    messages.append(
+                        LlmMessage(
+                            role="tool",
+                            content=body,
+                            tool_call_id=call.id or None,
+                            name=call.name or None,
+                        )
+                    )
+                if rounds >= MAX_ORCHESTRATOR_TOOL_ROUNDS:
+                    offered = []
+                    messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
                 continue
-            return {"action": "unreadable"}
-        return parse_orchestrator_action(raw)
-    return None
+            if result.tool_calls:
+                offered = []
+                memory.allow_own_tools = False
+                raw = _control_raw(result)
+                if not raw.strip():
+                    repairs += 1
+                    _log_repair(orch.node_id, "empty", raw)
+                    if repairs <= MAX_CONTROL_REPAIRS:
+                        memory.add_note(_TOOL_DECIDE_NOTE)
+                        messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
+                        continue
+                    action = _give_up(block_reply)
+                    return action
+            raw = _control_raw(result)
+            reason = reject_reason(raw)
+            if reason:
+                memory.reject(raw, reason)
+                repairs += 1
+                _log_repair(orch.node_id, reason, raw)
+                if repairs <= MAX_CONTROL_REPAIRS:
+                    memory.add_note(_REPAIR_NOTE)
+                    messages.append(LlmMessage(role="user", content=_REPAIR_NOTE))
+                    continue
+                action = _give_up(block_reply)
+                return action
+            parsed = parse_orchestrator_action(raw)
+            kind = parsed.get("action") or "reply"
+            if kind == "reply" and block_reply:
+                action = {
+                    "action": "think",
+                    "text": parsed.get("text") or "",
+                    "agent": "",
+                    "task": "",
+                    "source": "",
+                }
+                return _tag_tokens(action, result, out_final)
+            if kind == "call":
+                token = parsed.get("agent") or ""
+                agent_id = match_agent(token, names)
+                if agent_id is None:
+                    repairs += 1
+                    emit_log(
+                        "warn",
+                        "run.orchestrator.unknownAgent",
+                        node_id=orch.node_id,
+                        payload={"token": token},
+                    )
+                    if repairs <= MAX_CONTROL_REPAIRS:
+                        note = _unknown_agent_note(token, names)
+                        memory.add_note(note)
+                        messages.append(LlmMessage(role="user", content=note))
+                        continue
+                    action = _give_up(block_reply)
+                    return action
+                source = memory.resolve_source(parsed.get("source") or "", names)
+                if source.missing or source.ambiguous:
+                    repairs += 1
+                    emit_log(
+                        "warn",
+                        "run.orchestrator.unknownSource",
+                        node_id=orch.node_id,
+                        payload={"source": parsed.get("source") or ""},
+                    )
+                    if repairs <= MAX_CONTROL_REPAIRS:
+                        note = _source_repair_note(source)
+                        memory.add_note(note)
+                        messages.append(LlmMessage(role="user", content=note))
+                        continue
+                    action = _give_up(block_reply)
+                    return action
+                parsed["agent"] = agent_id
+            action = parsed
+            return _tag_tokens(action, result, out_final)
+        return None
+    finally:
+        if not (action and action.get("action") in {"think", "defer"}):
+            _set_llm(ctrl, compiled, llm_node_id, busy=False)
 
 
 def _publish_progress(ctrl: RunController, name: str, record: AgentRecord) -> None:

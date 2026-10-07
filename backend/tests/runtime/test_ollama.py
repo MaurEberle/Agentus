@@ -6,7 +6,19 @@ import httpx
 import pytest
 
 from app.runtime.errors import RuntimeTransportError
-from app.runtime.ollama import ensure_loaded, list_loaded_models, list_ollama_models, ping_ollama, unload
+from app.runtime.ollama import (
+    clamp_gpu_layers,
+    ensure_loaded,
+    gpu_layers_for_percent,
+    keep_only,
+    list_loaded_models,
+    list_ollama_models,
+    model_block_count,
+    ollama_num_gpu,
+    parse_block_count,
+    ping_ollama,
+    unload,
+)
 from tests.runtime.transport import install_transport
 
 
@@ -83,9 +95,134 @@ def test_unload_keep_alive_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     assert bodies[0]["model"] == "llama3.2:1b"
 
 
+def test_keep_only_unloads_other_tags(monkeypatch: pytest.MonkeyPatch) -> None:
+    loaded = [
+        {"name": "writer"},
+        {"name": "saver"},
+        {"name": "help-chat"},
+    ]
+    dropped: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/api/ps"):
+            return httpx.Response(200, json={"models": list(loaded)})
+        if request.url.path.endswith("/api/generate"):
+            body = json.loads(request.content.decode("utf-8"))
+            if body.get("keep_alive") == 0:
+                dropped.append(body["model"])
+                loaded[:] = [row for row in loaded if row["name"] != body["model"]]
+            return httpx.Response(200, json={})
+        raise AssertionError(request.url.path)
+
+    install_transport(monkeypatch, handler)
+    gone = keep_only({"saver", "help-chat"})
+    assert gone == ["writer"]
+    assert dropped == ["writer"]
+    assert [row["name"] for row in loaded] == ["saver", "help-chat"]
+
+
 def test_list_loaded_uses_model_key(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"models": [{"model": "mistral"}]})
 
     install_transport(monkeypatch, handler)
     assert list_loaded_models() == ["mistral"]
+
+
+def test_parse_block_count() -> None:
+    assert parse_block_count({"model_info": {"llama.block_count": 16}}) == 16
+    assert parse_block_count({"model_info": {"qwen3.block_count": 65, "qwen3.attention.head_count": 20}}) == 65
+    assert parse_block_count({}) is None
+    assert parse_block_count({"model_info": {"llama.block_count": 0}}) is None
+    assert parse_block_count({"model_info": {"llama.block_count": -1}}) is None
+
+
+def test_parse_block_count_uses_architecture_not_dense_prefix() -> None:
+    payload = {
+        "model_info": {
+            "general.architecture": "deepseek2",
+            "deepseek2.block_count": 47,
+            "deepseek2.leading_dense_block_count": 1,
+        }
+    }
+    assert parse_block_count(payload) == 47
+
+
+def test_parse_block_count_ignores_fast_and_vision() -> None:
+    assert (
+        parse_block_count(
+            {
+                "model_info": {
+                    "general.architecture": "fish-speech",
+                    "fish-speech.block_count": 36,
+                    "fish_speech.fast_block_count": 4,
+                }
+            }
+        )
+        == 36
+    )
+    assert (
+        parse_block_count(
+            {
+                "model_info": {
+                    "general.architecture": "qwen3vl",
+                    "qwen3vl.block_count": 28,
+                    "qwen3vl.vision.block_count": 1,
+                }
+            }
+        )
+        == 28
+    )
+
+
+def test_gpu_layers_for_percent() -> None:
+    assert gpu_layers_for_percent(100, 47) == 47
+    assert gpu_layers_for_percent(10, 47) == 5
+    assert gpu_layers_for_percent(50, 47) == 24
+    assert gpu_layers_for_percent(10, 16) == 2
+    assert gpu_layers_for_percent(100, None) == 999
+    assert gpu_layers_for_percent(50, None) == 999
+    assert clamp_gpu_layers(24, 47) == 24
+    assert clamp_gpu_layers(99, 47) == 47
+    assert clamp_gpu_layers(0, 47) == 1
+    assert clamp_gpu_layers(8, None) == 8
+    assert clamp_gpu_layers(60, 60) == 60
+    assert clamp_gpu_layers(35, 35) == 35
+    assert ollama_num_gpu(32, 32) == 33
+    assert ollama_num_gpu(31, 32) == 32
+    assert ollama_num_gpu(1, 32) == 2
+    assert ollama_num_gpu(0, 32) == 0
+    assert ollama_num_gpu(47, 47) == 48
+    assert ollama_num_gpu(24, 47) == 25
+    assert ollama_num_gpu(99, 47) == 48
+    assert ollama_num_gpu(8, None) == 9
+    assert ollama_num_gpu(999, 32) == 999
+    assert ollama_num_gpu(999, None) == 999
+
+
+def test_model_block_count_caches(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime import ollama as ollama_mod
+
+    ollama_mod._block_counts.clear()
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        return httpx.Response(200, json={"model_info": {"llama.block_count": 16}})
+
+    install_transport(monkeypatch, handler)
+    assert model_block_count("llama3.2:1b") == 16
+    assert model_block_count("llama3.2:1b") == 16
+    assert calls == ["/api/show"]
+
+
+def test_model_block_count_missing_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime import ollama as ollama_mod
+
+    ollama_mod._block_counts.clear()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("offline", request=request)
+
+    install_transport(monkeypatch, handler)
+    assert model_block_count("missing") is None

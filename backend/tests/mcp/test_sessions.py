@@ -198,6 +198,53 @@ def test_call_without_open(api_env) -> None:
     assert out["errorKey"] == "mcp.session.closed"
 
 
+def test_call_reopens_after_idle(api_env, monkeypatch, tmp_path) -> None:
+    init()
+    sessions: list[FakeSession] = []
+    folder = tmp_path / "kb"
+    folder.mkdir()
+
+    def _connect(**kwargs: object) -> FakeSession:
+        fake = FakeSession()
+        sessions.append(fake)
+        return fake
+
+    monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
+    monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
+    item = create_server(McpServerCreate(recipe_id="filesystem", enabled=True))
+    SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
+    assert len(sessions) == 1
+    SESSIONS._idle_close(item.id)
+    assert sessions[0].closed is True
+    out = SESSIONS.call(item.id, "search", {"q": "x"})
+    assert out["ok"] is True
+    assert len(sessions) == 2
+    assert sessions[1].calls == [("search", {"q": "x"})]
+    SESSIONS.close_all()
+
+
+def test_idle_reopen_keeps_root_override(api_env, monkeypatch, tmp_path) -> None:
+    init()
+    captured: list[dict] = []
+
+    def _connect(**kwargs: object) -> FakeSession:
+        captured.append(dict(kwargs))
+        return FakeSession()
+
+    monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
+    monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
+    folder = tmp_path / "kb"
+    folder.mkdir()
+    item = create_server(McpServerCreate(recipe_id="filesystem", enabled=True))
+    SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
+    SESSIONS._idle_close(item.id)
+    out = SESSIONS.call(item.id, "list_directory", {})
+    assert out["ok"] is True
+    assert len(captured) == 2
+    assert any(str(folder) in str(arg) for arg in captured[1].get("args", []))
+    SESSIONS.close_all()
+
+
 def test_open_for_and_call_masks(api_env, monkeypatch) -> None:
     init()
     fake = FakeSession(result={"text": "hello sk-abcdefghij"})

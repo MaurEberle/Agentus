@@ -29,6 +29,7 @@
     "start": "Start",
     "indexing": "Indexing knowledge: {{name}}",
     "stop": "Stop",
+    "waitAsk": "Waiting for a reply",
     "quickSelect": "Quick select",
     "quickSelectPlaceholder": "Select network",
     "noNetwork": "No network",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "No active network",
       "desc": "The quick select was cleared."
+    },
+    "waitAsk": {
+      "title": "Follow-up from {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -712,6 +717,10 @@
         "name": "Name",
         "description": "Description",
         "tags": "Tags",
+        "tagsPlaceholder": "Add a tag",
+        "tagsHint": "Enter, comma, or + commits the tag.",
+        "addTag": "Add tag",
+        "removeTag": "Remove {{tag}}",
         "stats": "{{nodes}} nodes · {{edges}} edges",
         "noIssues": "No validation issues."
       },
@@ -737,7 +746,27 @@
         "numCtx": "Context length",
         "numCtxHint": "Limits come from the selected model.",
         "numCtxLoading": "Loading model limits…",
-        "numCtxUnavailable": "No length limits are available for this model."
+        "numCtxUnavailable": "No length limits are available for this model.",
+        "numThread": "CPU threads",
+        "numThreadHint": "Default is the physical core count.",
+        "numThreadLoading": "Reading CPU cores…",
+        "numThreadUnavailable": "CPU thread count is not available.",
+        "numGpu": "GPU offload",
+        "numGpuHint": "One step per layer. Default is every layer. Auto if loading fails.",
+        "numGpuLoading": "Reading layer count…",
+        "numGpuUnavailable": "Layer count is not available for this model.",
+        "numGpuLayers": "{{offload}} of {{total}} layers",
+        "vram": "GPU memory",
+        "vramLoading": "Estimating memory need…",
+        "vramNeed": "{{need}} of {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Weights {{weights}} · context {{kv}} · reserve {{overhead}}",
+        "vramOver": "Does not fit in GPU memory. Lower context or offload, or the CPU will do the work.",
+        "vramTight": "Tight. A second model or a full prompt may spill.",
+        "vramFormula": "GPU: last {{on}} of {{total}} layers. {{full}} × {{perToken}} B/token × {{ctx}} tokens.",
+        "vramFormulaMixed": "GPU: last {{on}} of {{total}} layers. {{full}} global layers × {{ctx}} tokens.",
+        "vramFormulaSwa": "GPU: last {{on}} of {{total}} layers. {{full}} global × {{ctx}} tokens, {{swa}} sliding-window × window {{window}}.",
+        "vramHint": "Per-layer estimate from model data. The GPU takes the last N layers. Full attention uses the whole context. Sliding-window layers stay at their window. KV cache is f16."
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
@@ -978,10 +1007,12 @@
       "description": "Description"
     },
     "tags": {
-      "title": "Add tags",
-      "body": "Tags are added to {{count}} networks. Existing tags stay.",
+      "title": "Set tags",
+      "body": "Existing tags of the selection ({{count}}) are filled in.",
       "label": "Tags",
-      "placeholder": "ops, prod",
+      "placeholder": "Add a tag",
+      "hint": "Enter, comma, or + commits the tag.",
+      "remove": "Remove {{tag}}",
       "add": "Add"
     },
     "delete": {
@@ -1006,7 +1037,7 @@
       "error": "Action failed",
       "duplicated": "Copy added to the library",
       "renamed": "Metadata saved",
-      "tagged": "Tags added",
+      "tagged": "Tags saved",
       "deleted": "Networks deleted",
       "imported": "{{count}} networks imported",
       "exported": "Export started"
@@ -1096,7 +1127,8 @@
       "tool": "Tool",
       "human": "Input",
       "index": "Index",
-      "knowledge": "Knowledge"
+      "knowledge": "Knowledge",
+      "thinking": "Thinking"
     },
     "activity": {
       "title": "Activity",
@@ -1119,6 +1151,12 @@
     "tabs": {
       "chat": "Chat",
       "log": "Log"
+    },
+    "resize": {
+      "chatHeight": "Resize chat and log height",
+      "graphHeight": "Resize network height",
+      "activityHeight": "Resize activity height",
+      "splitWidth": "Resize network and activity width"
     },
     "chat": {
       "placeholder": "Message…",
@@ -1160,6 +1198,9 @@
     "notify": {
       "runStarted": "Run started",
       "runStopped": "Run stopped",
+      "runSucceeded": "Run succeeded",
+      "runFailed": "Run failed",
+      "runCancelled": "Run stopped",
       "stepFailed": "Step failed",
       "disconnected": "Service unreachable"
     },
@@ -1207,6 +1248,14 @@
   "history": {
     "title": "History",
     "close": "Close",
+    "resize": {
+      "chartHeight": "Resize chart height",
+      "errorsHeight": "Resize error list height",
+      "statsWidth": "Resize chart and error list width",
+      "listHeight": "Resize run list height",
+      "detailHeight": "Resize run detail height",
+      "listWidth": "Resize list and detail width"
+    },
     "copy": "Copy",
     "ribbon": {
       "refresh": "Refresh",
@@ -1391,7 +1440,8 @@
     "run": {
       "start": "Run started ({{networkName}})",
       "wait": {
-        "human": "Waiting for input"
+        "human": "Waiting for input",
+        "ask": "Follow-up from {{speaker}}"
       },
       "chat": {
         "user": "User message"
@@ -1401,7 +1451,12 @@
       },
       "agent": {
         "start": "Agent started",
-        "done": "Agent finished"
+        "done": "Agent finished",
+        "toolFailures": "Agent stopped after {{failed}} failed tool calls",
+        "toolJson": "Discarded tool call {{name}}: incomplete JSON arguments (attempt {{attempt}}/{{max}}).",
+        "think": "Agent is thinking (not a result).",
+        "thinkLimit": "Too many think turns without a result.",
+        "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {
@@ -1431,6 +1486,10 @@
       "orchestrator": {
         "repair": "Control message was unreadable, trying again.",
         "unreadable": "The orchestrator did not produce a readable next step.",
+        "defer": "The next step after the chat reply was unreadable; the run continues.",
+        "think": "Orchestrator is thinking (does not count as a step).",
+        "thinkLimit": "Too many think turns without a call.",
+        "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
         "window": "The prompt does not fit any context window."
       }
     },

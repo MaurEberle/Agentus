@@ -11,6 +11,38 @@ def test_compile_agent_without_tools() -> None:
     assert compiled.agents["ag"].tool_kinds == []
     assert compiled.chat_input is not None
     assert "end" in compiled.end_ids
+    assert compiled.agents["ag"].llm.num_thread is None
+    assert compiled.agents["ag"].llm.num_gpu is None
+    assert compiled.agents["ag"].llm.num_gpu_percent is None
+
+
+def test_compile_num_thread_and_num_ctx() -> None:
+    raw = mini_doc()
+    for node in raw["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numThread"] = 6
+            node["data"]["numCtx"] = 8192
+            node["data"]["numGpuPercent"] = 50
+            node["data"]["numGpuLayers"] = 24
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].llm.num_thread == 6
+    assert compiled.agents["ag"].llm.num_ctx == 8192
+    assert compiled.agents["ag"].llm.num_gpu == 24
+    assert compiled.agents["ag"].llm.num_gpu_percent == 50
+
+
+def test_compile_legacy_num_gpu_is_ignored() -> None:
+    raw = mini_doc()
+    for node in raw["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpu"] = 1
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].llm.num_gpu is None
+    assert compiled.agents["ag"].llm.num_gpu_percent is None
 
 
 def test_compile_mcp_node_on_agent() -> None:

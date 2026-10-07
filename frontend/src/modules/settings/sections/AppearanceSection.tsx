@@ -20,7 +20,6 @@ import {
   setAppLanguage,
   type AppLanguage,
 } from '@/i18n';
-import { notify } from '@/lib/notifications';
 import { patchSettings } from '@/modules/settings/api';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useAppStore } from '@/store';
@@ -98,12 +97,7 @@ export function AppearanceSection() {
             checked={fabVisible}
             onCheckedChange={(checked) => {
               setHelpChatFabVisible(checked);
-              void patchSettings({ helpChatFabVisible: checked }).then(() => {
-                notify({
-                  titleKey: 'settings.notify.saved',
-                  variant: 'success',
-                });
-              });
+              void patchSettings({ helpChatFabVisible: checked });
             }}
           />
         </div>

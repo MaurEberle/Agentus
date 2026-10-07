@@ -29,6 +29,7 @@
     "start": "Iniciar",
     "indexing": "Indexando conocimiento: {{name}}",
     "stop": "Detener",
+    "waitAsk": "Espera tu respuesta",
     "quickSelect": "Selección rápida",
     "quickSelectPlaceholder": "Elegir red",
     "noNetwork": "Sin red",
@@ -141,6 +142,10 @@
     "networkCleared": {
       "title": "Ninguna red activa",
       "desc": "Se ha vaciado la selección rápida."
+    },
+    "waitAsk": {
+      "title": "Pregunta de {{speaker}}",
+      "desc": "{{excerpt}}"
     }
   },
   "footer": {
@@ -658,6 +663,10 @@
         "name": "Nombre",
         "description": "Descripción",
         "tags": "Etiquetas",
+        "tagsPlaceholder": "Añadir etiqueta",
+        "tagsHint": "Intro, coma o + confirma la etiqueta.",
+        "addTag": "Añadir etiqueta",
+        "removeTag": "Quitar {{tag}}",
         "stats": "{{nodes}} nodos · {{edges}} aristas",
         "noIssues": "Sin errores de validación."
       },
@@ -683,7 +692,27 @@
         "numCtx": "Longitud de contexto",
         "numCtxHint": "Los límites vienen del modelo elegido.",
         "numCtxLoading": "Cargando límites del modelo…",
-        "numCtxUnavailable": "Este modelo no informa límites de longitud."
+        "numCtxUnavailable": "Este modelo no informa límites de longitud.",
+        "numThread": "Hilos de CPU",
+        "numThreadHint": "El valor por defecto es el número de núcleos físicos.",
+        "numThreadLoading": "Leyendo núcleos de CPU…",
+        "numThreadUnavailable": "No hay un recuento de hilos de CPU.",
+        "numGpu": "Offload GPU",
+        "numGpuHint": "Un paso por capa. Por defecto, todas las capas. Auto si falla la carga.",
+        "numGpuLoading": "Leyendo el número de capas…",
+        "numGpuUnavailable": "El número de capas no está disponible para este modelo.",
+        "numGpuLayers": "{{offload}} de {{total}} capas",
+        "vram": "Memoria GPU",
+        "vramLoading": "Estimando la memoria necesaria…",
+        "vramNeed": "{{need}} de {{total}}",
+        "vramNeedOnly": "{{need}}",
+        "vramParts": "Pesos {{weights}} · contexto {{kv}} · reserva {{overhead}}",
+        "vramOver": "No cabe en la memoria GPU. Baja el contexto o el offload; si no, calculará la CPU.",
+        "vramTight": "Justo. Un segundo modelo o un prompt lleno puede desbordar.",
+        "vramFormula": "GPU: últimas {{on}} de {{total}} capas. {{full}} × {{perToken}} B/token × {{ctx}} tokens.",
+        "vramFormulaMixed": "GPU: últimas {{on}} de {{total}} capas. {{full}} capas globales × {{ctx}} tokens.",
+        "vramFormulaSwa": "GPU: últimas {{on}} de {{total}} capas. {{full}} globales × {{ctx}} tokens, {{swa}} ventana deslizante × ventana {{window}}.",
+        "vramHint": "Estimación por capa a partir del modelo. La GPU toma las últimas N capas. Atención completa: todo el contexto. Ventana deslizante: solo su ventana. Caché KV en f16."
       },
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",
@@ -924,10 +953,12 @@
       "description": "Descripción"
     },
     "tags": {
-      "title": "Añadir etiquetas",
-      "body": "Las etiquetas se añaden a {{count}} redes; las existentes se mantienen.",
+      "title": "Poner etiquetas",
+      "body": "Las etiquetas existentes de la selección ({{count}}) ya están rellenadas.",
       "label": "Etiquetas",
-      "placeholder": "ops, prod",
+      "placeholder": "Añadir etiqueta",
+      "hint": "Intro, coma o + confirma la etiqueta.",
+      "remove": "Quitar {{tag}}",
       "add": "Añadir"
     },
     "delete": {
@@ -952,7 +983,7 @@
       "error": "La acción ha fallado",
       "duplicated": "Copia añadida a la biblioteca",
       "renamed": "Metadatos guardados",
-      "tagged": "Etiquetas añadidas",
+      "tagged": "Etiquetas guardadas",
       "deleted": "Redes eliminadas",
       "imported": "{{count}} redes importadas",
       "exported": "Exportación iniciada"
@@ -1042,7 +1073,8 @@
       "tool": "Herramienta",
       "human": "Entrada",
       "index": "Índice",
-      "knowledge": "Conocimiento"
+      "knowledge": "Conocimiento",
+      "thinking": "Pensando"
     },
     "activity": {
       "title": "Actividad",
@@ -1065,6 +1097,12 @@
     "tabs": {
       "chat": "Chat",
       "log": "Registro"
+    },
+    "resize": {
+      "chatHeight": "Cambiar la altura de chat y registro",
+      "graphHeight": "Cambiar la altura de la red",
+      "activityHeight": "Cambiar la altura de la actividad",
+      "splitWidth": "Cambiar el ancho de red y actividad"
     },
     "chat": {
       "placeholder": "Mensaje…",
@@ -1106,6 +1144,9 @@
     "notify": {
       "runStarted": "Ejecución iniciada",
       "runStopped": "Ejecución detenida",
+      "runSucceeded": "Ejecución correcta",
+      "runFailed": "Ejecución fallida",
+      "runCancelled": "Ejecución detenida",
       "stepFailed": "El paso ha fallado",
       "disconnected": "Servicio no accesible"
     },
@@ -1153,6 +1194,14 @@
   "history": {
     "title": "Historial",
     "close": "Cerrar",
+    "resize": {
+      "chartHeight": "Cambiar la altura del gráfico",
+      "errorsHeight": "Cambiar la altura de la lista de errores",
+      "statsWidth": "Cambiar el ancho del gráfico y de los errores",
+      "listHeight": "Cambiar la altura de la lista de ejecuciones",
+      "detailHeight": "Cambiar la altura del detalle",
+      "listWidth": "Cambiar el ancho de lista y detalle"
+    },
     "copy": "Copiar",
     "ribbon": {
       "refresh": "Actualizar",
@@ -1337,7 +1386,8 @@
     "run": {
       "start": "Ejecución iniciada ({{networkName}})",
       "wait": {
-        "human": "Esperando entrada"
+        "human": "Esperando entrada",
+        "ask": "Pregunta de {{speaker}}"
       },
       "chat": {
         "user": "Mensaje del usuario"
@@ -1347,7 +1397,12 @@
       },
       "agent": {
         "start": "Agente iniciado",
-        "done": "Agente finalizado"
+        "done": "Agente finalizado",
+        "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas",
+        "toolJson": "Llamada a herramienta {{name}} descartada: argumentos JSON incompletos (intento {{attempt}}/{{max}}).",
+        "think": "El agente está pensando (no es un resultado).",
+        "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",
+        "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1377,6 +1432,10 @@
       "orchestrator": {
         "repair": "La orden no se pudo leer, nuevo intento.",
         "unreadable": "El orquestador no entregó un paso legible.",
+        "defer": "El siguiente paso tras el mensaje de chat era ilegible; la ejecución continúa.",
+        "think": "El orquestador está pensando (no cuenta como paso).",
+        "thinkLimit": "Demasiados turnos de pensamiento sin un encargo.",
+        "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
         "window": "El prompt no cabe en ninguna ventana de contexto."
       }
     },

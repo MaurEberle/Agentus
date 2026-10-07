@@ -28,6 +28,11 @@ class ChromeHostApi:
             return False
         return bool(getattr(self._window, "maximized", False))
 
+    def requestAttention(self, active: bool = True) -> None:
+        from app.host.native_frame import flash_window
+
+        flash_window(self._window, bool(active))
+
     def pickFolder(self) -> str | None:
         if self._window is None:
             return None

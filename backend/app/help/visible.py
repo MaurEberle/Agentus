@@ -83,3 +83,29 @@ class ThinkStripper:
 def strip_think(text: str) -> str:
     tool = ThinkStripper()
     return tool.feed(text) + tool.finish()
+
+
+def think_inner(text: str) -> str:
+    """Concatenated ``<think>`` bodies. An unclosed span runs to the end."""
+    if not text:
+        return ""
+    bodies: list[str] = []
+    rest = text
+    while rest:
+        folded = rest.lower()
+        start = folded.find(_OPEN)
+        if start < 0:
+            break
+        rest = rest[start + len(_OPEN) :]
+        folded = rest.lower()
+        end = folded.find(_CLOSE)
+        if end < 0:
+            piece = rest.strip()
+            if piece:
+                bodies.append(piece)
+            break
+        piece = rest[:end].strip()
+        if piece:
+            bodies.append(piece)
+        rest = rest[end + len(_CLOSE) :]
+    return "\n".join(bodies)

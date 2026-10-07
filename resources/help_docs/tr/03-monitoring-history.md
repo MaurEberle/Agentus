@@ -21,17 +21,19 @@ Etkin çalıştırma yoksa sayfa **son kaydedilen çalıştırmayı** okumak iç
 
 Üst alan: çalıştırma kimliği, başlangıç saati, süre, kaba adım, etkin LLM’ler (yerel / bulut).
 
-**Ağ (yalnızca okuma):** aynı grafik, duruma göre düğüm renkleri (boşta, bekliyor, çalışıyor, bitti, hata). Bir düğüme tıklamak günlük/etkinliği süzgeçler ve ayrıntıyı açar (rol, durum, LLM/araç/giriş/dizin bekleniyor, son ileti, belirteç). Düzenleme yok, ikinci düzenleyici yok.
+**Ağ (yalnızca okuma):** aynı grafik, duruma göre düğüm renkleri (boşta, bekliyor, çalışıyor, bitti, hata). Bir düğüme tıklamak günlük/etkinliği süzgeçler ve ayrıntıyı açar (rol, durum, LLM/araç/giriş/dizin/düşünme bekleniyor, son ileti, belirteç). Düzenleme yok, ikinci düzenleyici yok.
 
 Bir ajana bilgi bağlıysa başlangıç, dizin oluşurken çalıştırmayı gösterir: bilgi düğümü bekleme nedeni **dizin** ile çalışır, günlük okumayı ve gömmeleri adlandırır, başlık ve kontrol paneli aynı adı gösterir. Zaten güncel bir dizin atlanır ve yalnızca güncel diye not edilir.
 
 **Etkinlik:** geçerli düğümler, «adım x / y» ilerleme, giriş/çıkış belirteçleri, isteğe bağlı bağlam penceresi.
 
+Sohbet ve günlük, ağ ve etkinliğin üstündedir. Pencere büyüyünce üç kart yüksekliğini korur; kenardan sürükleyerek boyut değişir. Ayarlanan boyutlar uygulama kapanınca da kalır.
+
 **Ana bilgisayar kaynakları:** **bu PC’nin** CPU, RAM, GPU/VRAM değerleri, yalnızca uygulama değil. Yerel GPU yoksa (bulut çalıştırmalarında tipik) bir uyarı çıkar, hata değil.
 
 ## Ağ sohbeti (izleme)
 
-**Sohbet** sekmesi: çalışan grafiğin konuşması. Yalnızca çalıştırma sürerken etkin. Orkestratör yoksa sohbet ilk satırı bekler ve zincire verir. Orkestratör varken yalnız onunla konuşursun. Çalıştırma yalnız bir soruda bekler. Ajan metinleri ve iç komutlar burada görünmez.
+**Sohbet** sekmesi (çalıştırma başlayınca, grafikte sohbet girişi varsa): çalışan grafiğin konuşması. Yalnızca çalıştırma sürerken etkin. Orkestratör yoksa sohbet ilk satırı bekler ve zincire verir. Orkestratör varken yalnız onunla konuşursun. Çalıştırma yalnız bir soruda bekler. Ajan metinleri ve iç komutlar burada görünmez. Bir soru zilde ve başlıkta görünür; pencere arka plandaysa görev çubuğu simgesi yanıp söner.
 
 Bu **yardım baloncuğu değildir**. Geçmiş ve araçlar ağındır.
 
@@ -46,6 +48,8 @@ Yükler ve iletiler sırları **maskeler** (örneğin `Bearer`, anahtar önekler
 Şerit: Yenile, seçili çalıştırmaları sil, günlükleri dışa aktar, saklama süresine göre eskileri temizle (Ayarlar → Veri, varsayılan 90 gün).
 
 **Tek süzgeç** her şeyi yönetir: aralık (bugün, 7/30 gün, başlangıç–bitiş), ağ, model, arama (çalıştırma kimliği, ağ, hata). KPI, «güne göre çalıştırmalar» grafiği, sık hatalar, Geçmiş / Modele göre / Ağa göre sekmeleri ve liste aynı süzgeci kullanır.
+
+Grafik ve hata listesi ile çalıştırma listesi ve ayrıntı, İzleme’deki gibi kenardan sürüklenerek boyutlanır. Ayarladığınız boyutlar uygulamayı kapattıktan sonra kalır.
 
 ## Bir çalıştırmanın sonuçları
 

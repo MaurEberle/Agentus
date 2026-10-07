@@ -9,6 +9,12 @@ export function uniqueTags(items: NetworkListItem[]): string[] {
   return [...tags].sort((a, b) => a.localeCompare(b));
 }
 
+export function sharedTags(items: NetworkListItem[]): string[] {
+  if (items.length === 0) return [];
+  const [first, ...rest] = items;
+  return (first.tags ?? []).filter((tag) => rest.every((item) => (item.tags ?? []).includes(tag)));
+}
+
 export function applyNetworkFilters(
   items: NetworkListItem[],
   filters: {

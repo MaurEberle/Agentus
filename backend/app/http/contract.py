@@ -66,6 +66,7 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("DELETE", "/api/credentials/:id", CREDENTIALS),
     ContractRoute("POST", "/api/runtime/ping", RUNTIME),
     ContractRoute("GET", "/api/runtime/models", RUNTIME),
+    ContractRoute("GET", "/api/runtime/model-stats", RUNTIME),
     ContractRoute("POST", "/api/runtime/test-llm", RUNTIME),
     ContractRoute("GET", "/api/runtime/resources", RUNTIME),
     ContractRoute("GET", "/api/mcp/recipes", MCP),

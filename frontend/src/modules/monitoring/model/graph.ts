@@ -53,11 +53,13 @@ export function mergeRunSnapshot(
       nodesRuntime: patch.nodesRuntime ?? {},
       activity: patch.activity ?? { currentNodeIds: [] },
       chat: patch.chat,
+      waitAsk: patch.waitAsk ?? null,
     };
   }
   return {
     ...prev,
     ...patch,
+    waitAsk: patch.archived ? null : (patch.waitAsk !== undefined ? patch.waitAsk : prev.waitAsk),
     graph: patch.graph ?? prev.graph,
     nodesRuntime: patch.nodesRuntime
       ? { ...prev.nodesRuntime, ...patch.nodesRuntime }
