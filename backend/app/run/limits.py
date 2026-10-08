@@ -23,7 +23,10 @@ MAX_SAME_RETRIES = 1
 STREAM_IDLE_TIMEOUT_SEC = 180.0
 RESOURCES_INTERVAL_SEC = 1.5
 SSE_QUEUE_MAX = 1000
-LOG_PAYLOAD_MAX = 8000
+# Per-string cap for run log payloads. Payloads stay valid JSON; the UI clips previews.
+LOG_PAYLOAD_MAX = 1_000_000
+# Snapshot lastMessage cap. Activity/log lists clip further in the UI.
+LAST_MESSAGE_MAX = 8000
 KNOWLEDGE_CHUNK_CHARS = 800
 DEFAULT_TOP_K = 4
 DEFAULT_SCORE_MIN = 0.0

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DetailOverlay } from '@/modules/monitoring/overlay/DetailOverlay';
+import { clipPreview } from '@/modules/monitoring/model/format';
 import { nodeDisplayName } from '@/modules/monitoring/model/graph';
 import type { RunSnapshot } from '@/modules/monitoring/model/types';
 import { useMonitoringStore } from '@/modules/monitoring/store';
@@ -38,7 +39,12 @@ export function NodeDetail({ run }: { run: RunSnapshot }) {
           {runtime.lastMessage ? (
             <div>
               <dt className="text-xs text-muted-foreground">{t('monitoring.graph.lastMessage')}</dt>
-              <dd className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{runtime.lastMessage}</dd>
+              <dd
+                className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words"
+                title={runtime.lastMessage.length > 300 ? runtime.lastMessage : undefined}
+              >
+                {clipPreview(runtime.lastMessage)}
+              </dd>
             </div>
           ) : null}
           {runtime.error ? (

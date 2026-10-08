@@ -1456,7 +1456,8 @@
         "toolJson": "Discarded tool call {{name}}: incomplete JSON arguments (attempt {{attempt}}/{{max}}).",
         "think": "Agent is thinking (not a result).",
         "thinkLimit": "Too many think turns without a result.",
-        "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns."
+        "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
+        "truncated": "Reply was cut off; not a result."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {

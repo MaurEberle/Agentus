@@ -2287,3 +2287,175 @@ def test_orchestrator_retries_truncated_tool_json(monkeypatch, api_env) -> None:
     assert "run.agent.toolJson" in messages
     texts = [item["content"] for item in (stored["chat"] or [])]
     assert "Fertig." in texts
+
+
+def test_linear_num_ctx_wish_is_sent_to_ollama(monkeypatch, api_env) -> None:
+    options: list[object] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        options.append(req.ollama_options)
+        return CompletionResult(content="ok", model=req.model, finish_reason="stop")
+
+    doc = mini_doc(startMessage="go")
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numCtx"] = 8192
+    stored = _drive(monkeypatch, _complete, doc=doc, user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert options
+    assert options[0] == {"num_ctx": 8192}
+
+
+def test_successful_read_keeps_tool_required(monkeypatch, api_env) -> None:
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    systems: list[str] = []
+    executed: list[str] = []
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed.append(str(args.get("action") or ""))
+        return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "content": "x", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        systems.append(req.messages[0].content or "")
+        if not any(message.role == "tool" for message in req.messages):
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"read","path":"a.txt"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if executed == ["read"]:
+            assert "You must call a tool" in (req.messages[0].content or "")
+            assert "You already have tool results" not in (req.messages[0].content or "")
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="2",
+                        name="file_access",
+                        arguments='{"action":"write","path":"b.txt","content":"y"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed == ["read", "write"]
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+
+
+def test_linear_truncated_completion_is_not_a_result(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    fragment = "Now I have a clear picture of the project. Let me analyze what's missing and"
+    executed: list[str] = []
+    n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed.append(str(args.get("action") or ""))
+        return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 3})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        n["n"] += 1
+        if n["n"] == 1:
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"read","path":"readme.md"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if n["n"] == 2:
+            return CompletionResult(
+                content=fragment,
+                reasoning="hidden plan about missing tests and i18n",
+                model=req.model,
+                finish_reason="length",
+            )
+        if n["n"] == 3:
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="2",
+                        name="file_access",
+                        arguments='{"action":"write","path":"app.js","content":"ok"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed == ["read", "write"]
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert fragment not in texts
+    assert "Fertig." in texts
+    rows = list_logs(stored["id"])
+    messages = [row["message"] for row in rows]
+    assert "run.agent.truncated" in messages
+    truncated = next(row for row in rows if row["message"] == "run.agent.truncated")
+    payload = truncated.get("payload") or {}
+    assert payload.get("content") == fragment
+    assert payload.get("reasoning") == "hidden plan about missing tests and i18n"
+    assert payload.get("finishReason") == "length"
+    thinks = [row for row in rows if row["message"] == "run.agent.think"]
+    assert thinks
+    assert (thinks[0].get("payload") or {}).get("text") == fragment
+    dones = [row for row in rows if row["message"] == "run.llm.done"]
+    assert any((row.get("payload") or {}).get("content") == fragment for row in dones)
+
+
+def test_agent_think_log_keeps_full_text(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+
+    body = "plan " + ("x" * 4500)
+    n = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        n["n"] += 1
+        if n["n"] == 1:
+            return CompletionResult(
+                content='{"action":"think","text":"' + body + '"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        return CompletionResult(content="ok", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=mini_doc(startMessage="go"), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    thinks = [row for row in list_logs(stored["id"]) if row["message"] == "run.agent.think"]
+    assert thinks
+    assert (thinks[0].get("payload") or {}).get("text") == body
+    dones = [row for row in list_logs(stored["id"]) if row["message"] == "run.llm.done"]
+    assert dones
+    first = dones[0].get("payload") or {}
+    assert body in (first.get("content") or "")
+    assert "finishReason" in first

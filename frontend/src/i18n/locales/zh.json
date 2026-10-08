@@ -1402,7 +1402,8 @@
         "toolJson": "已丢弃工具调用 {{name}}：JSON 参数不完整（第 {{attempt}}/{{max}} 次）。",
         "think": "智能体正在思考（不是结果）。",
         "thinkLimit": "思考轮次过多且没有结果。",
-        "thinkLoop": "1 token 思考循环在 {{thinks}} 步后已停止。"
+        "thinkLoop": "1 token 思考循环在 {{thinks}} 步后已停止。",
+        "truncated": "回复被截断；不是结果。"
       },
       "knowledge": "知识搜索（{{count}} 条结果）",
       "knowledgeIndex": {

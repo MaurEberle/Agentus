@@ -1402,7 +1402,8 @@
         "toolJson": "Chamada de ferramenta {{name}} descartada: argumentos JSON incompletos (tentativa {{attempt}}/{{max}}).",
         "think": "O agente está a pensar (não é um resultado).",
         "thinkLimit": "Demasiados passos de pensamento sem resultado.",
-        "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos."
+        "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos.",
+        "truncated": "Resposta cortada; não é um resultado."
       },
       "knowledge": "Pesquisa de conhecimento ({{count}} resultados)",
       "knowledgeIndex": {

@@ -1456,7 +1456,8 @@
         "toolJson": "Werkzeugaufruf {{name}} verworfen: JSON-Argumente unvollständig (Versuch {{attempt}}/{{max}}).",
         "think": "Agent denkt (kein Ergebnis).",
         "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",
-        "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet."
+        "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
+        "truncated": "Antwort abgeschnitten; kein Ergebnis."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {

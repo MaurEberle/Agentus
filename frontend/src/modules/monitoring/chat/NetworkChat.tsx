@@ -107,7 +107,7 @@ export function NetworkChat({
           placeholder={config?.placeholder || t('monitoring.chat.placeholder')}
           className={cn(
             'min-h-[44px] max-h-32 flex-1',
-            waitingReply && 'border-warning focus-visible:ring-warning',
+            waitingReply && 'border-warning focus-visible:border-warning',
           )}
           rows={2}
         />

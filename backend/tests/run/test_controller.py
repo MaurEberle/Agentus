@@ -262,3 +262,16 @@ def test_data_location_busy(client: TestClient) -> None:
     assert response.status_code == 409
     assert response.json()["messageKey"] == "dataDir.busy"
     client.post("/api/run/stop")
+
+
+def test_clip_log_strings_keeps_valid_json() -> None:
+    from app.run.controller import _clip_log_strings
+
+    long_text = "a" * 50
+    clipped = _clip_log_strings({"text": long_text, "n": 1}, limit=10)
+    assert isinstance(clipped, dict)
+    assert clipped["text"] == "aaaaaaaaaa..."
+    assert clipped["n"] == 1
+    nested = _clip_log_strings({"body": {"text": long_text}}, limit=8)
+    assert nested["body"]["text"].endswith("...")
+    assert len(nested["body"]["text"]) == 11

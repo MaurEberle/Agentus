@@ -1402,7 +1402,8 @@
         "toolJson": "ツール呼び出し {{name}} を破棄しました。JSON 引数が不完全です（試行 {{attempt}}/{{max}}）。",
         "think": "エージェントが思考中です（結果ではありません）。",
         "thinkLimit": "結果のない思考が多すぎます。",
-        "thinkLoop": "1トークンの思考ループを {{thinks}} ステップで停止しました。"
+        "thinkLoop": "1トークンの思考ループを {{thinks}} ステップで停止しました。",
+        "truncated": "応答が途中で切れました（結果ではありません）。"
       },
       "knowledge": "知識検索（{{count}} 件）",
       "knowledgeIndex": {

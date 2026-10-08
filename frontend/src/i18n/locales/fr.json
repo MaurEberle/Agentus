@@ -1402,7 +1402,8 @@
         "toolJson": "Appel d’outil {{name}} ignoré : arguments JSON incomplets (essai {{attempt}}/{{max}}).",
         "think": "L’agent réfléchit (ce n’est pas un résultat).",
         "thinkLimit": "Trop d’étapes de réflexion sans résultat.",
-        "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes."
+        "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes.",
+        "truncated": "Réponse tronquée ; ce n’est pas un résultat."
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
       "knowledgeIndex": {
