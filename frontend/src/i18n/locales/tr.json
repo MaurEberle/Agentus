@@ -361,7 +361,7 @@
       "credentialHelp": "Önce uygun türde bir kimlik oluşturun.",
       "noCredentialOfKind": "Bu türde kimlik yok — önce Kimlik bilgilerinde ekleyin.",
       "hint": {
-        "github": "Kimlik bilgilerinde GitHub PAT (tür GitHub). Yerel npx. Kök klasör yok.",
+        "github": "Kimlik bilgilerinde GitHub PAT (tür GitHub). Resmi sunucu, ilk kullanımda indirilir. Kök klasör yok.",
         "azure": "Azure/Entra jetonu veya PAT (tür Azure). Yerel npx.",
         "gitlab": "GitLab kişisel erişim jetonu (tür GitLab). Yerel npx.",
         "filesystem": "Kimlik gerekmez. Kök klasör düzenleyicideki MCP düğümünde, Ayarlar’da değil. Yerel npx.",
@@ -1497,6 +1497,9 @@
     },
     "ping": {
       "failed": "MCP yoklaması başarısız."
+    },
+    "github": {
+      "download": "Resmi GitHub MCP sunucusu indirilemedi."
     },
     "root": {
       "required": "Kök klasör zorunlu.",

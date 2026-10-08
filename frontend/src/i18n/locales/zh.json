@@ -361,7 +361,7 @@
       "credentialHelp": "请先创建匹配类型的凭据。",
       "noCredentialOfKind": "没有此类型的凭据 — 先在凭据中添加。",
       "hint": {
-        "github": "在凭据中使用 GitHub PAT（类型 GitHub）。本地 npx。无需根目录。",
+        "github": "在凭据中使用 GitHub PAT（类型 GitHub）。官方服务器，首次使用时下载。无需根目录。",
         "azure": "Azure/Entra 令牌或 PAT（类型 Azure）。本地 npx。",
         "gitlab": "GitLab 个人访问令牌（类型 GitLab）。本地 npx。",
         "filesystem": "无需凭据。根文件夹在编辑器的 MCP 节点上，不在设置里。本地 npx。",
@@ -1497,6 +1497,9 @@
     },
     "ping": {
       "failed": "MCP 探测失败。"
+    },
+    "github": {
+      "download": "无法下载官方 GitHub MCP 服务器。"
     },
     "root": {
       "required": "必须指定根文件夹。",

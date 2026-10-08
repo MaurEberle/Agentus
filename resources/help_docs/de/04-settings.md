@@ -49,7 +49,7 @@ Was welches Rezept braucht:
 
 | Rezept | Zugang | Sonst |
 |--------|--------|--------|
-| GitHub | PAT, Art **GitHub** | lokal `npx` |
+| GitHub | PAT, Art **GitHub** | offizieller Server, Download beim ersten Start |
 | GitLab | PAT, Art **GitLab** | lokal `npx` |
 | Azure | Token/PAT, Art **Azure** | lokal `npx` |
 | Slack | Bot-Token, Art **Slack** | lokal `npx` |

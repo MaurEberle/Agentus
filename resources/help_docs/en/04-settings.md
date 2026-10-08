@@ -49,7 +49,7 @@ What each recipe needs:
 
 | Recipe | Credential | Other |
 |--------|------------|--------|
-| GitHub | PAT, kind **GitHub** | local `npx` |
+| GitHub | PAT, kind **GitHub** | official server, downloaded on first use |
 | GitLab | PAT, kind **GitLab** | local `npx` |
 | Azure | token/PAT, kind **Azure** | local `npx` |
 | Slack | bot token, kind **Slack** | local `npx` |

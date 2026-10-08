@@ -38,3 +38,6 @@ packages = ["app"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q --import-mode=importlib"
+markers = [
+    "github_mcp_download: exercise the real GitHub MCP binary installer (mocked HTTP)",
+]

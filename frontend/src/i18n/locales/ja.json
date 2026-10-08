@@ -361,7 +361,7 @@
       "credentialHelp": "先に合う種類の認証情報を作成してください。",
       "noCredentialOfKind": "この種類の認証情報がありません。先に認証情報で追加します。",
       "hint": {
-        "github": "認証情報で GitHub PAT（種類 GitHub）。ローカル npx。ルートフォルダー不要。",
+        "github": "認証情報で GitHub PAT（種類 GitHub）。公式サーバー、初回起動時にダウンロード。ルートフォルダー不要。",
         "azure": "Azure/Entra トークンまたは PAT（種類 Azure）。ローカル npx。",
         "gitlab": "GitLab 個人アクセストークン（種類 GitLab）。ローカル npx。",
         "filesystem": "認証情報は不要。ルートフォルダーはエディターの MCP ノードで、設定ではありません。ローカル npx。",
@@ -1497,6 +1497,9 @@
     },
     "ping": {
       "failed": "MCP の確認に失敗しました。"
+    },
+    "github": {
+      "download": "公式 GitHub MCP サーバーをダウンロードできませんでした。"
     },
     "root": {
       "required": "ルートフォルダーは必須です。",

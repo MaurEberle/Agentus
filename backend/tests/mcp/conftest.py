@@ -12,6 +12,18 @@ from app.settings.in_use import reset_mcp_usage_provider
 from app.tools.catalog import reset_mcp_catalog_provider
 
 
+@pytest.fixture(autouse=True)
+def stub_github_mcp_binary(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path):
+    if request.node.get_closest_marker("github_mcp_download"):
+        return
+    fake = tmp_path / "github-mcp-server.exe"
+    fake.write_bytes(b"MZ")
+    monkeypatch.setattr(
+        "app.mcp.github_server.ensure_github_mcp_server",
+        lambda: str(fake),
+    )
+
+
 @pytest.fixture
 def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AGENTUS_NETWORK_HOME", str(tmp_path / "home"))

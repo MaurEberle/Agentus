@@ -361,7 +361,7 @@
       "credentialHelp": "Crie primeiro uma credencial do tipo certo.",
       "noCredentialOfKind": "Não há credencial deste tipo — crie-a em Credenciais.",
       "hint": {
-        "github": "PAT do GitHub em Credenciais (tipo GitHub). npx local. Sem pasta raiz.",
+        "github": "PAT do GitHub em Credenciais (tipo GitHub). Servidor oficial, descarregado na primeira utilização. Sem pasta raiz.",
         "azure": "Token Azure/Entra ou PAT (tipo Azure). npx local.",
         "gitlab": "Token de acesso pessoal do GitLab (tipo GitLab). npx local.",
         "filesystem": "Sem credencial. A pasta raiz fica no nó MCP do editor, não nas Definições. npx local.",
@@ -1497,6 +1497,9 @@
     },
     "ping": {
       "failed": "A sonda MCP falhou."
+    },
+    "github": {
+      "download": "Não foi possível descarregar o servidor MCP oficial do GitHub."
     },
     "root": {
       "required": "A pasta raiz é obrigatória.",

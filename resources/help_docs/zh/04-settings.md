@@ -39,7 +39,7 @@
 
 ## MCP 服务器
 
-外部工具的模板（**配方**）：GitHub、文件系统、Git、Playwright、Postgres、Slack、Notion、Excel 等。配方不是随附程序。很多需要本机上的 Node/`npx`、Docker 或 `uvx`，外加凭据。
+外部工具的模板（**配方**）：GitHub、文件系统、Git、Playwright、Postgres、Slack、Notion、Excel 等。配方不是随附程序。很多需要本机上的 Node/`npx`、Docker 或 `uvx`，外加凭据。GitHub 使用官方 MCP 服务器，首次使用时自动下载，不需要 `npx`。
 
 默认：服务器**未启用**。应用不会在打开时启动 MCP 进程，而是在运行需要已连接的 **MCP 节点**时启动。先在**设置 → 凭据**中创建 PAT、令牌或连接串，再启用配方。图中使用调色板节点 **MCP**。
 

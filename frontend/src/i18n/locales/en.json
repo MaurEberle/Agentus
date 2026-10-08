@@ -342,7 +342,7 @@
       "pingError": "MCP probe failed",
       "runtimeMissing": "Runtime missing (Node, npx, Docker, or uvx).",
       "hint": {
-        "github": "GitHub PAT under Credentials (kind GitHub). Local npx. No root folder.",
+        "github": "GitHub PAT under Credentials (kind GitHub). Official server, downloaded on first use. No root folder.",
         "azure": "Azure/Entra token or PAT (kind Azure). Local npx.",
         "gitlab": "GitLab personal access token (kind GitLab). Local npx.",
         "filesystem": "No credential. Set the root folder on the MCP node in the editor, not in Settings. Local npx.",
@@ -464,6 +464,9 @@
     },
     "ping": {
       "failed": "MCP probe failed."
+    },
+    "github": {
+      "download": "The official GitHub MCP server could not be downloaded."
     },
     "root": {
       "required": "A root folder is required.",

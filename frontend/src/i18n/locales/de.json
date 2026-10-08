@@ -342,7 +342,7 @@
       "pingError": "MCP-Probe fehlgeschlagen",
       "runtimeMissing": "Runtime fehlt (Node, npx, Docker oder uvx).",
       "hint": {
-        "github": "GitHub PAT unter Zugänge (Art GitHub). Lokal npx. Kein Wurzelordner.",
+        "github": "GitHub PAT unter Zugänge (Art GitHub). Offizieller Server, Download beim ersten Start. Kein Wurzelordner.",
         "azure": "Azure-/Entra-Token oder PAT (Art Azure). Lokal npx.",
         "gitlab": "GitLab Personal Access Token (Art GitLab). Lokal npx.",
         "filesystem": "Kein Zugang. Wurzelordner am MCP-Knoten im Editor, nicht in den Einstellungen. Lokal npx.",
@@ -464,6 +464,9 @@
     },
     "ping": {
       "failed": "MCP-Probe fehlgeschlagen."
+    },
+    "github": {
+      "download": "Offizieller GitHub-MCP-Server konnte nicht geladen werden."
     },
     "root": {
       "required": "Wurzelordner ist Pflicht.",

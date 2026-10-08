@@ -45,6 +45,9 @@ def test_github_needs_pat_and_no_root() -> None:
     assert recipe.needs_root is False
     assert recipe.credential_kinds == ["github"]
     assert recipe.env_from_kind.get("github") == "GITHUB_PERSONAL_ACCESS_TOKEN"
+    assert recipe.runtime == "none"
+    assert recipe.command == "github-mcp-server"
+    assert recipe.args == ["stdio"]
     assert "query" in recipe.tool_schemas["search_repositories"]["properties"]
 
 

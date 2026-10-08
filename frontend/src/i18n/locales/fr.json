@@ -361,7 +361,7 @@
       "credentialHelp": "Créez d’abord un identifiant du type adapté.",
       "noCredentialOfKind": "Aucun identifiant de ce type — créez-en un dans Identifiants.",
       "hint": {
-        "github": "PAT GitHub dans Identifiants (type GitHub). npx local. Pas de dossier racine.",
+        "github": "PAT GitHub dans Identifiants (type GitHub). Serveur officiel, téléchargé au premier usage. Pas de dossier racine.",
         "azure": "Jeton Azure/Entra ou PAT (type Azure). npx local.",
         "gitlab": "Jeton d’accès personnel GitLab (type GitLab). npx local.",
         "filesystem": "Aucun identifiant. Le dossier racine se règle sur le nœud MCP dans l’éditeur, pas dans Paramètres. npx local.",
@@ -1497,6 +1497,9 @@
     },
     "ping": {
       "failed": "La sonde MCP a échoué."
+    },
+    "github": {
+      "download": "Le serveur MCP GitHub officiel n’a pas pu être téléchargé."
     },
     "root": {
       "required": "Le dossier racine est obligatoire.",

@@ -270,6 +270,29 @@ def test_open_for_and_call_masks(api_env, monkeypatch) -> None:
     assert fake.closed is True
 
 
+def test_github_open_uses_official_binary(api_env, monkeypatch) -> None:
+    init()
+    captured: dict = {}
+
+    def _connect(**kwargs: object) -> FakeSession:
+        captured.update(kwargs)
+        return FakeSession()
+
+    monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
+    monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
+    item = create_server(
+        McpServerCreate(recipe_id="github", credential_ids=["cred-1"], enabled=False)
+    )
+    set_enabled(item.id, True)
+    SESSIONS.open_for([item.id])
+    command = str(captured.get("command") or "")
+    assert command.endswith("github-mcp-server.exe")
+    assert captured.get("args") == ["stdio"]
+    assert "npx" not in command
+    assert "@modelcontextprotocol/server-github" not in str(captured.get("args"))
+    SESSIONS.close_all()
+
+
 def test_postgres_app_db_no_spawn(api_env, monkeypatch) -> None:
     init()
     spawned = []

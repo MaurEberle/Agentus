@@ -39,7 +39,7 @@
 
 ## MCP サーバー
 
-外部ツールのひな型（**レシピ**）: GitHub、ファイルシステム、Git、Playwright、Postgres、Slack、Notion、Excel など。レシピは同梱プログラムではありません。多くは PC 上の Node/`npx`、Docker、`uvx` と資格情報が必要です。
+外部ツールのひな型（**レシピ**）: GitHub、ファイルシステム、Git、Playwright、Postgres、Slack、Notion、Excel など。レシピは同梱プログラムではありません。多くは PC 上の Node/`npx`、Docker、`uvx` と資格情報が必要です。GitHub は公式 MCP サーバーを使い、初回起動時にダウンロードします。`npx` は不要です。
 
 既定: サーバー **無効**。アプリは起動時に MCP プロセスを始めず、実行が接続済みの **MCP ノード**を必要としたときに始めます。先に**設定 → 認証情報**で PAT・トークン・接続文字列を作り、レシピを有効化します。グラフではパレットの **MCP** ノードです。
 
