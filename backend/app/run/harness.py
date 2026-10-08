@@ -29,6 +29,7 @@ from app.run.limits import (
     MAX_SAME_RETRIES,
     LAST_MESSAGE_MAX,
     STREAM_IDLE_TIMEOUT_SEC,
+    SUBSTANTIAL_RESULT_CHARS,
 )
 from app.run.memory import (
     AgentRecord,
@@ -47,6 +48,7 @@ from app.run.orchestrate import (
     orchestrator_instructions,
     parse_orchestrator_action,
     reject_reason,
+    salvage_tool_calls,
 )
 from app.run import window as run_window
 from app.mcp.payload import format_tool_result
@@ -65,11 +67,15 @@ _REPAIR_NOTE = (
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
 _AGENT_THINK = (
     "You may think first with {\"action\":\"think\",\"text\":\"...\"} or a think block. "
-    "Think is not the result and is not shown to the user. After think, call a tool if you have tools, "
-    "or write the visible result."
+    "Think is not the result and is not shown to the user. After think, write the visible result."
+)
+_AGENT_THINK_TOOLS = (
+    "You may think first with a think block. "
+    "Think is not the result and is not shown to the user. After think, call a tool with a tool call. "
+    "Do not write a JSON object for think when you have tools."
 )
 _TOOL_USE_NOTE = (
-    "You have tools. Call a tool, or think first. A final sentence without a tool call is discarded."
+    "You have tools. Call a tool with a tool call. A final sentence without a tool call is discarded."
 )
 _TOOL_REQUIRED = (
     "You must call a tool with a tool call. You may think first. "
@@ -532,8 +538,8 @@ def _agent_turn(
         )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
-    system = system + "\n\n" + _AGENT_THINK
     tools = _tool_schemas(agent.tool_kinds, agent.mcp)
+    system = system + "\n\n" + (_AGENT_THINK_TOOLS if tools else _AGENT_THINK)
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
     mcp = get_mcp()
@@ -549,6 +555,7 @@ def _agent_turn(
     thinks = 0
     short_thinks = 0
     content = ""
+    best_visible = ""
     offered = tools
     tool_ok = bool(record is not None and record.tool_ok)
     wrote_ok = False
@@ -773,6 +780,7 @@ def _agent_turn(
                     },
                 ),
             )
+            result = _with_salvaged_tools(result, offered)
             if result.tool_calls:
                 thinks = 0
                 short_thinks = 0
@@ -826,7 +834,11 @@ def _agent_turn(
                     return None
                 continue
             truncated = _result_truncated(result)
-            think_body = agent_think_text(result.content or "", result.reasoning or "")
+            think_body = agent_think_text(
+                result.content or "",
+                result.reasoning or "",
+                has_tools=bool(offered),
+            )
             if truncated and think_body is None and not result.tool_calls:
                 think_body = (result.content or "").strip() or (result.reasoning or "").strip() or "…"
             if truncated and not result.tool_calls:
@@ -883,7 +895,14 @@ def _agent_turn(
                 _store_think(messages, stored)
                 continue
             content = result.content or ""
-            need_tool = (not tool_ok) or (file_prep and not wrote_ok)
+            visible = visible_text(content)
+            if len(visible) > len(best_visible):
+                best_visible = visible
+            need_tool = (not tool_ok) or (
+                file_prep
+                and not wrote_ok
+                and len(visible) < SUBSTANTIAL_RESULT_CHARS
+            )
             if (
                 offered
                 and not result.tool_calls
@@ -896,6 +915,8 @@ def _agent_turn(
                 continue
             if wrote_ok and not (content or "").strip():
                 content = _think_as_result("", wrote_paths, "")
+            if not wrote_ok and len(visible_text(content or "")) < len(best_visible):
+                content = best_visible
             break
         _set_node(ctrl, agent_id, "done")
         emit_log("info", "run.agent.done", node_id=agent_id)
@@ -926,6 +947,15 @@ def _think_out_tokens(result: CompletionResult, out_final: int | None) -> int:
     if out_final is not None:
         return out_final
     return estimate_token_count((result.content or "") + (result.reasoning or ""))
+
+
+def _with_salvaged_tools(result: CompletionResult, offered: list[dict] | None) -> CompletionResult:
+    if result.tool_calls or not offered:
+        return result
+    calls = salvage_tool_calls(result.content or "", _function_names(offered))
+    if not calls:
+        return result
+    return result.model_copy(update={"tool_calls": calls})
 
 
 def _think_as_result(body: str, paths: list[str], fallback: str) -> str:
@@ -1354,11 +1384,8 @@ def _orchestrator_call(
     agent = compiled.agents[agent_id]
     has_tools = bool(agent.tool_kinds or agent.mcp)
     source = memory.resolve_source(action.get("source") or "", names)
-    if source.ambiguous:
-        memory.add_note("Source is ambiguous. Set source to one id: " + ", ".join(source.ambiguous))
-        return "skipped"
-    if source.missing:
-        memory.add_note(f"Unknown source: {source.missing}.")
+    if source.ambiguous or source.missing:
+        memory.add_note(_source_repair_note(source, memory))
         return "skipped"
     if source.auto:
         emit_log("info", "run.memory.source", node_id=agent_id)
@@ -1458,10 +1485,15 @@ def _unknown_agent_note(token: str, names: list[tuple[str, str]]) -> str:
     return f"Unknown agent: {token}. Use a name or id from the roster: {roster}."
 
 
-def _source_repair_note(source) -> str:
+def _source_repair_note(source, memory: RunMemory) -> str:
     if source.ambiguous:
         return "Source is ambiguous. Set source to one id: " + ", ".join(source.ambiguous)
-    return f"Unknown source: {source.missing}."
+    last = ""
+    for rec in memory.records:
+        if rec.finished and rec.text:
+            last = rec.agent_id
+    hint = f" Last stored text is from {last}." if last else ""
+    return f"Unknown source: {source.missing}.{hint} Omit source to send only the task."
 
 
 def _finish_targets(ctrl: RunController, compiled: CompiledGraph, orch, text: str) -> None:
@@ -1785,12 +1817,18 @@ def _orchestrator_action(
                         payload={"source": parsed.get("source") or ""},
                     )
                     if repairs <= MAX_CONTROL_REPAIRS:
-                        note = _source_repair_note(source)
+                        note = _source_repair_note(source, memory)
                         memory.add_note(note)
                         messages.append(LlmMessage(role="user", content=note))
                         continue
-                    action = _give_up(block_reply)
-                    return action
+                    action = {
+                        "action": "think",
+                        "text": "",
+                        "agent": "",
+                        "task": "",
+                        "source": "",
+                    }
+                    return _tag_tokens(action, result, out_final)
                 parsed["agent"] = agent_id
             action = parsed
             return _tag_tokens(action, result, out_final)

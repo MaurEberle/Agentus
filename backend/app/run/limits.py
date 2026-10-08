@@ -23,6 +23,8 @@ MAX_SAME_RETRIES = 1
 STREAM_IDLE_TIMEOUT_SEC = 180.0
 RESOURCES_INTERVAL_SEC = 1.5
 SSE_QUEUE_MAX = 1000
+# Visible agent text after list/read/stat/mkdir is the result at this length.
+SUBSTANTIAL_RESULT_CHARS = 400
 # Per-string cap for run log payloads. Payloads stay valid JSON; the UI clips previews.
 LOG_PAYLOAD_MAX = 1_000_000
 # Snapshot lastMessage cap. Activity/log lists clip further in the UI.

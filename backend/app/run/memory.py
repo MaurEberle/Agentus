@@ -124,8 +124,6 @@ class RunMemory:
             return SourceChoice(text=text)
         if len(writers) == 1:
             return SourceChoice(text=writers[0][2], auto=True)
-        if len(writers) > 1:
-            return SourceChoice(ambiguous=[item[0] for item in writers])
         return SourceChoice()
 
     def agent_message(self, agent_id: str, task: str, has_tools: bool, source_text: str) -> str:
