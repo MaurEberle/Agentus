@@ -97,13 +97,22 @@ def _sample_gpus() -> list[ResourceGpu]:
             rows = []
     if not rows:
         rows = _sample_nvml()
+    try:
+        from app.run.gpu_win import order_gpu_rows
+
+        rows = order_gpu_rows(rows)
+    except Exception:
+        pass
     out: list[ResourceGpu] = []
     for row in rows:
         try:
+            vendor = row.get("vendor_id")
             out.append(
                 ResourceGpu(
                     index=int(row["index"]),
                     name=str(row["name"]) if row.get("name") else None,
+                    vendor_id=int(vendor) if vendor is not None else None,
+                    inference=bool(row.get("inference")),
                     util_percent=float(row["util_percent"]),
                     vram_used_bytes=int(row["vram_used_bytes"]),
                     vram_total_bytes=int(row["vram_total_bytes"]),
@@ -137,6 +146,8 @@ def _sample_nvml() -> list[dict[str, object]]:
                 {
                     "index": index,
                     "name": name,
+                    "vendor_id": 0x10DE,
+                    "inference": True,
                     "util_percent": float(util.gpu),
                     "vram_used_bytes": int(mem.used),
                     "vram_total_bytes": int(mem.total),

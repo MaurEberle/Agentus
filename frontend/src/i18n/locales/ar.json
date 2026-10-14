@@ -710,6 +710,7 @@
         "vramLoading": "جاري تقدير الذاكرة…",
         "vramNeed": "{{need}} من {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "المحسوبة: {{names}}",
         "vramParts": "الأوزان {{weights}} · السياق {{kv}} · احتياطي {{overhead}}",
         "vramOver": "لا تتسع لذاكرة GPU. خفّض السياق أو التفريغ وإلا تحسب المعالج.",
         "vramTight": "ضيق. نموذج ثانٍ أو موجّه ممتلئ قد يفيض.",

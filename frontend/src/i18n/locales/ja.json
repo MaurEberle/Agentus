@@ -710,6 +710,7 @@
         "vramLoading": "メモリ見積もり中…",
         "vramNeed": "{{need}} / {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "対象: {{names}}",
         "vramParts": "重み {{weights}} · コンテキスト {{kv}} · 予備 {{overhead}}",
         "vramOver": "GPU メモリに収まりません。コンテキストかオフロードを下げないと CPU が計算します。",
         "vramTight": "余裕がありません。別モデルや満杯のプロンプトで溢れることがあります。",

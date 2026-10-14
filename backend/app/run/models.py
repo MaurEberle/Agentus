@@ -122,6 +122,8 @@ class LogEvent(ApiModel):
 class ResourceGpu(ApiModel):
     index: int
     name: str | None = None
+    vendor_id: int | None = Field(default=None, alias="vendorId")
+    inference: bool = False
     util_percent: float = Field(alias="utilPercent")
     vram_used_bytes: int = Field(alias="vramUsedBytes")
     vram_total_bytes: int = Field(alias="vramTotalBytes")

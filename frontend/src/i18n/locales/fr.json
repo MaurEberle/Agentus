@@ -710,6 +710,7 @@
         "vramLoading": "Estimation de la mémoire…",
         "vramNeed": "{{need}} sur {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "Prises en compte : {{names}}",
         "vramParts": "Poids {{weights}} · contexte {{kv}} · réserve {{overhead}}",
         "vramOver": "Ne tient pas dans la mémoire GPU. Réduis le contexte ou l’offload, sinon le CPU calcule.",
         "vramTight": "Serré. Un second modèle ou un prompt plein peut déborder.",

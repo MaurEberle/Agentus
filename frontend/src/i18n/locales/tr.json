@@ -710,6 +710,7 @@
         "vramLoading": "Bellek ihtiyacı tahmin ediliyor…",
         "vramNeed": "{{need}} / {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "Dikkate alınan: {{names}}",
         "vramParts": "Ağırlık {{weights}} · bağlam {{kv}} · yedek {{overhead}}",
         "vramOver": "GPU belleğine sığmıyor. Bağlamı veya offload’u düşür, yoksa CPU hesaplar.",
         "vramTight": "Sıkışık. İkinci bir model veya dolu bir istem taşabilir.",

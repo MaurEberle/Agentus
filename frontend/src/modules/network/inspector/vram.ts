@@ -1,3 +1,25 @@
+const DISCRETE_BYTES = 512 * 1024 * 1024;
+
+export type VramGpu = {
+  name?: string;
+  vramTotalBytes: number;
+  inference?: boolean;
+};
+
+/** GPUs one runtime can fill together. Falls back when the host sent no flag. */
+export function inferenceGpus<T extends VramGpu>(gpus: T[]): T[] {
+  const flagged = gpus.filter((gpu) => gpu.inference);
+  if (flagged.length > 0) return flagged;
+  const discrete = gpus.filter((gpu) => gpu.vramTotalBytes >= DISCRETE_BYTES);
+  if (discrete.length > 0) return discrete;
+  if (gpus.length === 0) return [];
+  return [gpus.reduce((best, gpu) => (gpu.vramTotalBytes > best.vramTotalBytes ? gpu : best))];
+}
+
+export function inferenceVramBytes(gpus: VramGpu[]): number {
+  return inferenceGpus(gpus).reduce((sum, gpu) => sum + Math.max(0, gpu.vramTotalBytes), 0);
+}
+
 export function snapGpuPercent(value: number): number {
   if (!Number.isFinite(value)) return 100;
   return Math.min(100, Math.max(10, Math.round(value / 10) * 10));

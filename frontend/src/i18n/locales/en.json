@@ -767,6 +767,7 @@
         "vramLoading": "Estimating memory need…",
         "vramNeed": "{{need}} of {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "Counted: {{names}}",
         "vramParts": "Weights {{weights}} · context {{kv}} · reserve {{overhead}}",
         "vramOver": "Does not fit in GPU memory. Lower context or offload, or the CPU will do the work.",
         "vramTight": "Tight. A second model or a full prompt may spill.",
