@@ -137,7 +137,7 @@ Erzeugt unter `dist/`:
 | `Agentus-Network-Setup-{version}-x64.exe` | NSIS Per-User-Setup |
 | `Agentus-Network-Portable-{version}-x64.zip` | derselbe Freeze plus `portable.txt` |
 
-Voraussetzungen: Python 3.12-venv im Backend, `frontend/dist`. `makensis` wird beim Setup-Build als portable NSIS-ZIP (aktuellste Version) nach `build/nsis/` geladen, ohne Adminrechte. Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` (PNG `resources/icons/app.png`).
+Voraussetzungen: `frontend/dist` (oder Node für den Frontend-Build). Fehlt ein `backend\.venv` mit 64-bit-Python 3.12 oder neuer, installiert der Build die aktuelle Python-3.12-x64 pro Benutzer von python.org (sonst winget `Python.Python.3.12`) und legt `backend\.venv` an. Ohne Adminrechte. `makensis` wird beim Setup-Build als portable NSIS-ZIP (aktuellste Version) nach `build/nsis/` geladen, ebenfalls ohne Adminrechte. Vendor-Cache `installer/vendor/` nicht committen. Icon `resources/icons/app.ico` (PNG `resources/icons/app.png`).
 
 Mehr: [`installer/README.md`](installer/README.md), Checkliste für eine frische Windows-VM dort.
 

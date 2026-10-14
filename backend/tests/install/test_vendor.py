@@ -93,6 +93,9 @@ def test_nsi_is_per_user_without_portable_marker() -> None:
     assert "/INPUTCHARSET" in build
     assert "Ensure-Makensis" in build
     assert "Install-NsisPortable" in build
+    assert "Install-Python312" in build
+    assert "Python.Python.3.12" in build
+    assert "https://www.python.org/ftp/python/" in build
     assert "best_release.json" in build
     assert "nsis-${ver}.zip" in build
     assert "api.github.com/repos/ollama/ollama/releases/latest" in build

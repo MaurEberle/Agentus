@@ -1,6 +1,6 @@
 # Agentus Network — Windows-Installer
 
-PyInstaller onedir + NSIS 3 Unicode, Per-User, kein Admin. Version kommt aus `backend/pyproject.toml`. Fehlt `makensis`, lädt der Build die **aktuellste** portable NSIS-ZIP nach `build/nsis/` (kein `setup.exe`, keine Adminrechte). WebView2-Bootstrapper und Ollama-URL/SHA256 werden beim Build auf den jeweils neuesten Stand gezogen.
+PyInstaller onedir + NSIS 3 Unicode, Per-User, kein Admin. Version kommt aus `backend/pyproject.toml`. Fehlt ein `backend\.venv` mit 64-bit-Python 3.12 oder neuer, installiert der Build die aktuelle Python-3.12-x64 pro Benutzer von python.org, sonst über winget `Python.Python.3.12`, und legt das venv an (keine Adminrechte). Fehlt `makensis`, lädt der Build die **aktuellste** portable NSIS-ZIP nach `build/nsis/` (kein `setup.exe`, keine Adminrechte). WebView2-Bootstrapper und Ollama-URL/SHA256 werden beim Build auf den jeweils neuesten Stand gezogen.
 
 Build:
 

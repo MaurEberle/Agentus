@@ -71,7 +71,7 @@ Tests nutzen `AGENTUS_NETWORK_HOME` (tmp) und `AGENTUS_NETWORK_VAULT=memory`. CI
 
 Dieselbe App, ein Prozess. `AGENTUS_NETWORK_DEV` / `NO_HOST` **nicht** setzen. Windows: WebView2-Fenster, SPA von Loopback (nicht `file://`). Ollama bleibt ein eigener Daemon. Ist er installiert, die URL Loopback und Port 11434 tot, startet die App ihn im Hintergrund (`ollama app.exe --hide --fast-startup`, sonst `serve`). Dieser Prozess beendet Ollama nicht. `AGENTUS_NETWORK_NO_OLLAMA=1` unterdrückt den Start.
 
-Version = dieses `pyproject.toml`. Build (Windows x64):
+Version = dieses `pyproject.toml`. Build (Windows x64). Fehlt `backend\.venv` mit Python 3.12 x64 oder neuer, installiert `build-windows.ps1` Python 3.12 pro Benutzer und legt das venv an:
 
 ```powershell
 .\scripts\build-windows.ps1

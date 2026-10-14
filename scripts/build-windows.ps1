@@ -50,30 +50,202 @@ function Get-VersionQuad([string]$ver) {
     return ($parts[0..3] -join ".")
 }
 
+function Test-Python64AtLeast312 {
+    param([Parameter(Mandatory = $true)][string]$Exe)
+    & $Exe -c "import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 12) and sys.maxsize > 2**32 else 1)"
+    return $LASTEXITCODE -eq 0
+}
+
+function Test-Python312x64 {
+    param([Parameter(Mandatory = $true)][string]$Exe)
+    & $Exe -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) and sys.maxsize > 2**32 else 1)"
+    return $LASTEXITCODE -eq 0
+}
+
+function Find-Python312Exe {
+    $candidates = New-Object System.Collections.Generic.List[string]
+    $py = Get-Command py.exe -ErrorAction SilentlyContinue
+    if ($py -and $py.Source -notlike "*\WindowsApps\*") {
+        $listing = @(& $py.Source -0p 2>$null)
+        foreach ($line in $listing) {
+            if ($line -match '^\s*-V:3\.12(?:-32|-64)?\s+\*?\s*(.+\.exe)\s*$') {
+                $candidates.Add($Matches[1].Trim())
+            }
+        }
+    }
+    foreach ($root in @(
+            "HKCU:\Software\Python\PythonCore\3.12\InstallPath",
+            "HKLM:\Software\Python\PythonCore\3.12\InstallPath",
+            "HKLM:\Software\WOW6432Node\Python\PythonCore\3.12\InstallPath"
+        )) {
+        $key = Get-Item -LiteralPath $root -ErrorAction SilentlyContinue
+        if (-not $key) { continue }
+        $dir = [string]$key.GetValue("")
+        $registered = [string]$key.GetValue("ExecutablePath")
+        if ($registered) { $candidates.Add($registered) }
+        if ($dir) { $candidates.Add((Join-Path $dir.TrimEnd("\") "python.exe")) }
+    }
+    foreach ($path in @(
+            (Join-Path $env:LOCALAPPDATA "Programs\Python\Python312\python.exe"),
+            "C:\Python312\python.exe",
+            (Join-Path $env:ProgramFiles "Python312\python.exe")
+        )) {
+        if ($path) { $candidates.Add($path) }
+    }
+    $seen = @{}
+    foreach ($path in $candidates) {
+        if (-not $path -or $seen.ContainsKey($path)) { continue }
+        $seen[$path] = $true
+        if ((Test-Path -LiteralPath $path) -and (Test-Python312x64 $path)) {
+            return (Resolve-Path -LiteralPath $path).Path
+        }
+    }
+    return $null
+}
+
+function Get-Python312InstallerSpec {
+    $curl = Join-Path $env:SystemRoot "System32\curl.exe"
+    if (-not (Test-Path -LiteralPath $curl)) {
+        throw "curl.exe not found; cannot find a Python 3.12 installer"
+    }
+    $html = @(& $curl -fsSL -A (Get-HttpUserAgent) -- "https://www.python.org/ftp/python/") -join "`n"
+    if ($LASTEXITCODE -ne 0) {
+        throw "could not list https://www.python.org/ftp/python/"
+    }
+    $versions = @(
+        [regex]::Matches($html, 'href="(3\.12\.\d+)/"') |
+            ForEach-Object { $_.Groups[1].Value } |
+            Sort-Object { [version]$_ } -Descending
+    )
+    foreach ($ver in $versions) {
+        $page = @(& $curl -fsSL -A (Get-HttpUserAgent) -- "https://www.python.org/ftp/python/$ver/") -join "`n"
+        if ($LASTEXITCODE -ne 0) { continue }
+        $name = "python-$ver-amd64.exe"
+        if ($page.Contains($name)) {
+            return [pscustomobject]@{
+                Version = [string]$ver
+                Name    = $name
+                Url     = "https://www.python.org/ftp/python/$ver/$name"
+            }
+        }
+    }
+    throw "no python-3.12.x-amd64.exe published on python.org"
+}
+
+function Install-Python312FromPythonOrg {
+    $spec = Get-Python312InstallerSpec
+    $ver = $spec.Version
+    $name = $spec.Name
+    $url = $spec.Url
+    $destDir = Join-Path $RepoRoot "build\python"
+    $installer = Join-Path $destDir $name
+    if (-not (Test-Path -LiteralPath $installer)) {
+        Invoke-HttpDownload -Url $url -OutFile $installer -MinBytes 20MB | Out-Null
+    }
+    $sig = Get-AuthenticodeSignature -LiteralPath $installer
+    $subject = ""
+    if ($sig.SignerCertificate) {
+        $subject = [string]$sig.SignerCertificate.Subject
+    }
+    if ($sig.Status -ne "Valid" -or $subject -notmatch "Python Software Foundation") {
+        Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+        throw "Python installer signature is not valid for the Python Software Foundation ($($sig.Status))"
+    }
+    $target = Join-Path $env:LOCALAPPDATA "Programs\Python\Python312"
+    Write-Host "install Python $ver per user -> $target"
+    $proc = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList @(
+        "/quiet",
+        "InstallAllUsers=0",
+        "PrependPath=0",
+        "Include_pip=1",
+        "Include_launcher=1",
+        "Include_test=0",
+        "Shortcuts=0",
+        "AssociateFiles=0",
+        "CompileAll=0",
+        "TargetDir=$target"
+    )
+    if ($proc.ExitCode -ne 0 -and $proc.ExitCode -ne 3010) {
+        throw "Python installer exited $($proc.ExitCode)"
+    }
+    $exe = Join-Path $target "python.exe"
+    if ((Test-Path -LiteralPath $exe) -and (Test-Python312x64 $exe)) {
+        return (Resolve-Path -LiteralPath $exe).Path
+    }
+    $found = Find-Python312Exe
+    if (-not $found) {
+        throw "Python $ver install did not produce a 64-bit python.exe"
+    }
+    return $found
+}
+
+function Install-Python312WithWinget {
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        return $null
+    }
+    Write-Host "install Python.Python.3.12 with winget (per user)"
+    & $winget.Source install --id Python.Python.3.12 --exact --scope user `
+        --accept-package-agreements --accept-source-agreements --disable-interactivity | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "winget exited $LASTEXITCODE"
+    }
+    return Find-Python312Exe
+}
+
+function Install-Python312 {
+    $installed = $null
+    try {
+        $installed = Install-Python312FromPythonOrg
+    }
+    catch {
+        Write-Warning "python.org Python 3.12 install failed: $($_.Exception.Message)"
+    }
+    if (-not $installed) {
+        $installed = Install-Python312WithWinget
+    }
+    $path = @($installed) |
+        Where-Object { $_ -is [string] -and (Test-Path -LiteralPath $_) } |
+        Select-Object -Last 1
+    if ($path -and (Test-Python312x64 $path)) {
+        return [string]$path
+    }
+    throw "Python 3.12 not found. The build could not install it from python.org or winget (Python.Python.3.12)."
+}
+
+function Ensure-BuildVenv {
+    param([Parameter(Mandatory = $true)][string]$BasePython)
+    $venvPy = Join-Path $Backend ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $venvPy) {
+        return (Resolve-Path -LiteralPath $venvPy).Path
+    }
+    Write-Host "python -m venv backend\.venv"
+    & $BasePython -m venv (Join-Path $Backend ".venv") | Out-Null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $venvPy)) {
+        throw "could not create backend\.venv with $BasePython"
+    }
+    return (Resolve-Path -LiteralPath $venvPy).Path
+}
+
 function Get-PythonExe {
-    $venv = Join-Path $Backend ".venv\Scripts\python.exe"
-    if (Test-Path -LiteralPath $venv) {
-        return $venv
+    $venvPy = Join-Path $Backend ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $venvPy) {
+        if (Test-Python64AtLeast312 $venvPy) {
+            return (Resolve-Path -LiteralPath $venvPy).Path
+        }
+        throw "backend\.venv is not 64-bit Python 3.12 or newer. Remove backend\.venv and re-run the build."
     }
-    $cmd = Get-Command py -ErrorAction SilentlyContinue
-    if ($cmd) {
-        return $cmd.Source
+    $base = Find-Python312Exe
+    if (-not $base) {
+        $base = Install-Python312
     }
-    $cmd = Get-Command python -ErrorAction SilentlyContinue
-    if ($cmd) {
-        return $cmd.Source
-    }
-    throw "Python 3.12 not found. Create backend\.venv or install Python."
+    return Ensure-BuildVenv -BasePython $base
 }
 
 function Invoke-Python {
     param([Parameter(Mandatory = $true)][string[]]$PyArgs)
     $exe = Get-PythonExe
-    $prefix = @()
-    if ($exe -like "*\py.exe" -or (Split-Path -Leaf $exe) -eq "py.exe") {
-        $prefix = @("-3.12")
-    }
-    & $exe @prefix @PyArgs
+    & $exe @PyArgs
     if ($LASTEXITCODE -ne 0) {
         throw "python exited $LASTEXITCODE : $($PyArgs -join ' ')"
     }
@@ -472,6 +644,7 @@ function Invoke-SignIfConfigured {
     }
 }
 
+if ($MyInvocation.InvocationName -ne ".") {
 Test-PowerShellSyntax -Path $FetchUrl
 Test-PowerShellSyntax -Path $PSCommandPath
 
@@ -539,11 +712,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot "build"))) {
     New-Item -ItemType Directory -Path (Join-Path $RepoRoot "build") | Out-Null
 }
 $pyExe = Get-PythonExe
-$pyPrefix = @()
-if ($pyExe -like "*\py.exe" -or (Split-Path -Leaf $pyExe) -eq "py.exe") {
-    $pyPrefix = @("-3.12")
-}
-$pyiArgs = $pyPrefix + @(
+$pyiArgs = @(
     "-m", "PyInstaller", $Spec,
     "--noconfirm", "--clean",
     "--log-level", "WARN",
@@ -606,4 +775,5 @@ Write-Host "freeze $exe"
 Write-Host "portable $(Join-Path $Dist "Agentus-Network-Portable-$Version-x64.zip")"
 if (Test-Path -LiteralPath $setup) {
     Write-Host "setup $setup"
+}
 }
