@@ -39,7 +39,7 @@ L’aide répond dans la langue de l’interface. Si le modèle ne peut pas l’
 
 ## Serveurs MCP
 
-Modèles (**recettes**) pour outils externes : GitHub, système de fichiers, Git, Playwright, Postgres, Slack, Notion, Excel et autres. Les recettes ne sont pas des programmes livrés. Beaucoup ont besoin de Node/`npx`, Docker ou `uvx` sur le PC plus un identifiant.
+Modèles (**recettes**) pour outils externes : GitHub, système de fichiers, Git, Playwright, Postgres, Slack, Notion, Excel et autres. Les recettes ne sont pas des programmes livrés. Beaucoup ont besoin de Node/`npx`, Docker ou `uvx` sur le PC plus un identifiant. GitHub utilise le serveur MCP officiel, téléchargé au premier usage ; `npx` n’est pas nécessaire.
 
 Défaut : serveur **inactif**. L’app ne démarre pas les processus MCP à l’ouverture, mais quand une exécution a besoin d’un **nœud MCP** connecté. D’abord **Paramètres → Identifiants** (PAT, jeton ou chaîne), puis la recette. Dans le graphe, le nœud palette **MCP**.
 

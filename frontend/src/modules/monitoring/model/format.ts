@@ -1,6 +1,13 @@
 import type { ServiceStatus } from '@/store/session';
 import type { LogLevel } from '@/modules/monitoring/model/types';
 
+export const LOG_PREVIEW_CHARS = 300;
+
+export function clipPreview(text: string, limit = LOG_PREVIEW_CHARS): string {
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit).trimEnd()}...`;
+}
+
 export function pad2(value: number): string {
   return value.toString().padStart(2, '0');
 }

@@ -26,5 +26,9 @@ def resolve_stdio_command(
 ) -> tuple[str, list[str]]:
     del runtime
     cmd = command or ""
+    from app.mcp.github_server import ensure_github_mcp_server, is_github_mcp_command
+
+    if is_github_mcp_command(cmd):
+        return ensure_github_mcp_server(), list(args) or ["stdio"]
     found = shutil.which(cmd) if cmd else None
     return found or cmd, list(args)

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { clipPreview } from '@/modules/monitoring/model/format';
 import { nodeDisplayName, runTokenStats } from '@/modules/monitoring/model/graph';
 import type { RunSnapshot } from '@/modules/monitoring/model/types';
 import { moduleCardBodyClass } from '@/modules/moduleCard';
@@ -67,9 +68,9 @@ export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: bool
             </ul>
           )}
           {task ? (
-            <p className="mt-2 text-sm leading-snug">
+            <p className="mt-2 text-sm leading-snug" title={task.length > 300 ? task : undefined}>
               <span className="text-xs font-medium text-muted-foreground">{t('monitoring.activity.task')}: </span>
-              {task}
+              {clipPreview(task)}
             </p>
           ) : null}
         </div>

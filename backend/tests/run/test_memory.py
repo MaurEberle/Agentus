@@ -133,8 +133,13 @@ def test_two_writers_without_source_name_ids_only() -> None:
     second.text = "TEXT-B"
     second.finished = True
     choice = memory.resolve_source("", [("a", "A"), ("b", "B")])
-    assert choice.ambiguous == ["a", "b"]
+    assert choice.ambiguous == []
     assert choice.text == ""
+    assert choice.auto is False
+    message = memory.agent_message("c", "baue", False, choice.text)
+    assert "TEXT-A" not in message
+    assert "TEXT-B" not in message
+    assert "Source text" not in message
 
 
 def test_explicit_source_picks_that_text() -> None:

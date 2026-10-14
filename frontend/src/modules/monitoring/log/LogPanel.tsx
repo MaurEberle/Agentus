@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { fileStamp, formatTime, safeFilePart, shortId } from '@/modules/monitoring/model/format';
+import { clipPreview, fileStamp, formatTime, safeFilePart, shortId } from '@/modules/monitoring/model/format';
 import { filterLogs, logHasExtra, nodeDisplayName } from '@/modules/monitoring/model/graph';
 import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { maskSecrets, maskText } from '@/modules/monitoring/model/mask';
@@ -277,7 +277,7 @@ function LogRow({
               event.level === 'warn' && 'font-medium',
             )}
           >
-            {formatRunLogMessage(event.message, t, event.payload)}
+            {clipPreview(formatRunLogMessage(event.message, t, event.payload))}
           </span>
         </span>
       </div>

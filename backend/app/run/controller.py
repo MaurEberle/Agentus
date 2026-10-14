@@ -613,6 +613,18 @@ def _seed_steps(compiled: CompiledGraph, run_id: str) -> None:
         )
 
 
+def _clip_log_strings(value: object, limit: int) -> object:
+    if isinstance(value, str):
+        if len(value) <= limit:
+            return value
+        return value[:limit] + "..."
+    if isinstance(value, dict):
+        return {str(key): _clip_log_strings(item, limit) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_clip_log_strings(item, limit) for item in value]
+    return value
+
+
 def emit_log(
     level: str,
     message: str,
@@ -627,15 +639,13 @@ def emit_log(
     if node_name is None:
         node_name = node_label(ctrl.compiled, node_id)
     if payload is not None:
-        dumped = json.dumps(mask_obj(payload), ensure_ascii=False, default=str)
-        if len(dumped) > LOG_PAYLOAD_MAX:
-            dumped = dumped[:LOG_PAYLOAD_MAX]
-            try:
-                payload = json.loads(dumped)
-            except json.JSONDecodeError:
-                payload = {"truncated": True}
-        else:
-            payload = json.loads(dumped)
+        payload = json.loads(
+            json.dumps(
+                _clip_log_strings(mask_obj(payload), LOG_PAYLOAD_MAX),
+                ensure_ascii=False,
+                default=str,
+            )
+        )
     event = LogEvent(
         id=str(uuid.uuid4()),
         ts=utc_now(),

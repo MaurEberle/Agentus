@@ -6,6 +6,7 @@ import json
 import re
 
 from app.help.visible import strip_think, think_inner
+from app.runtime.models import ToolCall
 
 _ACTIONS = {"ask", "call", "reply", "finish", "think"}
 _ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish|think)"')
@@ -45,7 +46,7 @@ When an agent fails, the runtime adds one anomaly excerpt for that agent only. T
 Call one agent at a time, wait for the result, then decide again. You may call the same agent later with a new task.
 Call by the name or id in the roster below.
 The task field is a short instruction of a few sentences. Do not paste an agent result into it.
-To give an agent's result to another agent, set source to that agent's id or name. You write the id, not the text. The runtime attaches the stored text, including from an agent that has tools.
+To attach an agent's stored text, set source to that agent's id or name. You write the id, not the text. The runtime attaches the stored text, including from an agent that has tools. Omit source, or leave it empty, to send only the task.
 If a missing detail would change the task, ask and wait. Do not write that you might ask. If the task is clear, call.
 A reply is shown in the chat. After a reply, the next JSON must be think, call, ask, or finish. Do not reply again. Do not announce a call in a reply; emit the call object. Domain work belongs to the agents.
 Use think for internal planning. Think is not shown in the chat and does not count against the step limit. After think, emit call, ask, or finish.
@@ -55,7 +56,7 @@ Use ask for a question that needs an answer. Use reply to speak without waiting.
 {tool_block}Reply with one JSON object and no other text. Do not describe the call in a sentence:
 {{"action":"think","text":"..."}}
 {{"action":"ask","text":"..."}}
-{{"action":"call","agent":"<id or name>","task":"...","source":""}}
+{{"action":"call","agent":"<id or name>","task":"..."}}
 {{"action":"reply","text":"..."}}
 {{"action":"finish","text":"..."}}
 
@@ -79,7 +80,7 @@ def control_source(content: str, reasoning: str = "") -> str:
     return (reasoning or "").strip()
 
 
-def agent_think_text(content: str, reasoning: str = "") -> str | None:
+def agent_think_text(content: str, reasoning: str = "", *, has_tools: bool = False) -> str | None:
     """Internal planning for an agent turn. Visible prose is a result, not think."""
     raw = content or ""
     visible = strip_think(raw).strip()
@@ -87,6 +88,8 @@ def agent_think_text(content: str, reasoning: str = "") -> str | None:
     if blob:
         parsed = parse_orchestrator_action(blob)
         if parsed.get("action") == "think":
+            if has_tools and visible:
+                return None
             return (parsed.get("text") or "").strip() or "…"
     if visible:
         return None
@@ -158,11 +161,10 @@ def _prepare(raw: str) -> str:
 
 def _parse_json_object(text: str) -> dict[str, str] | None:
     start = text.find("{")
-    end = text.rfind("}")
-    if start < 0 or end <= start:
+    if start < 0:
         return None
     try:
-        value = json.loads(text[start : end + 1])
+        value, _end = json.JSONDecoder().raw_decode(text[start:])
     except ValueError:
         return None
     if isinstance(value, dict) and value.get("action") in _ACTIONS:
@@ -223,7 +225,9 @@ def _salvage(text: str) -> dict[str, str] | None:
                 return None
         if len(task) > _MAX_SALVAGED_TASK:
             return None
-        return _action(action, "", agent_found[0].strip(), task.strip(), "")
+        source_found = _closed_string(text, "source")
+        source = source_found[0].strip() if source_found else ""
+        return _action(action, "", agent_found[0].strip(), task.strip(), source)
     spoken = _closed_string(text, "text")
     if spoken is None:
         return None
@@ -254,6 +258,106 @@ def _closed_string(text: str, name: str) -> tuple[str, int] | None:
 
 def _action(action: str, text: str, agent: str, task: str, source: str = "") -> dict[str, str]:
     return {"action": action, "text": text, "agent": agent, "task": task, "source": source}
+
+
+_TOOL_CALL_BLOCK = re.compile(r"<tool_call>(.*?)</tool_call>", re.DOTALL | re.IGNORECASE)
+_FUNCTION_EQ = re.compile(r"<function=([^>\s]+)>(.*?)</function>", re.DOTALL | re.IGNORECASE)
+_ARG_PAIR = re.compile(
+    r"<arg_key>\s*([^<]+?)\s*</arg_key>\s*<arg_value>(.*?)</arg_value>",
+    re.DOTALL | re.IGNORECASE,
+)
+_PARAM_EQ = re.compile(
+    r"<parameter=([^>]+)>(.*?)</parameter>",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def salvage_tool_calls(content: str, offered: list[str] | None = None) -> list[ToolCall]:
+    """Turn a complete XML tool_call / function= block into native tool calls."""
+    text = content or ""
+    names = offered or []
+    found: list[ToolCall] = []
+    for match in _TOOL_CALL_BLOCK.finditer(text):
+        call = _tool_call_from_block(match.group(1), names, len(found))
+        if call is not None:
+            found.append(call)
+    for match in _FUNCTION_EQ.finditer(text):
+        call = _tool_call_from_named(match.group(1), match.group(2), names, len(found))
+        if call is not None:
+            found.append(call)
+    return found
+
+
+def _tool_call_from_block(inner: str, offered: list[str], index: int) -> ToolCall | None:
+    blob = (inner or "").strip()
+    if not blob:
+        return None
+    try:
+        value = json.loads(blob)
+    except ValueError:
+        value = None
+    if isinstance(value, dict):
+        fn = value.get("function") if isinstance(value.get("function"), dict) else None
+        name = str((fn or value).get("name") or "")
+        args = (fn or value).get("arguments", value.get("parameters"))
+        if args is None:
+            args = {key: val for key, val in value.items() if key not in {"name", "function"}}
+        return _make_tool_call(name, args, offered, index)
+    name, rest = _leading_tool_name(blob)
+    pairs = {key.strip(): val for key, val in _ARG_PAIR.findall(rest)}
+    if not pairs:
+        pairs = {key.strip(): val for key, val in _PARAM_EQ.findall(rest)}
+    if name and pairs:
+        return _make_tool_call(name, pairs, offered, index)
+    return None
+
+
+def _tool_call_from_named(name: str, inner: str, offered: list[str], index: int) -> ToolCall | None:
+    pairs = {key.strip(): val for key, val in _PARAM_EQ.findall(inner or "")}
+    if not pairs:
+        pairs = {key.strip(): val for key, val in _ARG_PAIR.findall(inner or "")}
+    if not (name or "").strip() or not pairs:
+        return None
+    return _make_tool_call(name, pairs, offered, index)
+
+
+def _leading_tool_name(blob: str) -> tuple[str, str]:
+    lines = blob.splitlines()
+    first = (lines[0] if lines else blob).strip()
+    if first.startswith("{") or first.startswith("<"):
+        return "", blob
+    return first, "\n".join(lines[1:]) if lines else ""
+
+
+def _make_tool_call(name: str, args: object, offered: list[str], index: int) -> ToolCall | None:
+    resolved = _resolve_tool_name(name, offered)
+    if not resolved:
+        return None
+    if isinstance(args, str):
+        arguments = args
+    else:
+        try:
+            arguments = json.dumps(args if args is not None else {}, ensure_ascii=False)
+        except (TypeError, ValueError):
+            return None
+    return ToolCall(id=f"salvage_{index + 1}", name=resolved, arguments=arguments)
+
+
+def _resolve_tool_name(raw: str, offered: list[str]) -> str:
+    name = (raw or "").strip().strip("\"'`")
+    if not name:
+        return ""
+    if name in offered:
+        return name
+    hits: list[str] = []
+    for item in offered:
+        leaf = item.rsplit("__", 1)[-1] if "__" in item else item
+        if leaf == name or item.endswith("__" + name):
+            hits.append(item)
+    uniq = list(dict.fromkeys(hits))
+    if len(uniq) == 1:
+        return uniq[0]
+    return name
 
 
 _ROLE_NOISE = frozenset(

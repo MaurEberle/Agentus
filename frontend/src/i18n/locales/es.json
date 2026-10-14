@@ -361,7 +361,7 @@
       "credentialHelp": "Crea primero una credencial del tipo adecuado.",
       "noCredentialOfKind": "No hay credencial de este tipo: créala primero en Credenciales.",
       "hint": {
-        "github": "PAT de GitHub en Credenciales (tipo GitHub). npx local. Sin carpeta raíz.",
+        "github": "PAT de GitHub en Credenciales (tipo GitHub). Servidor oficial, descarga al primer uso. Sin carpeta raíz.",
         "azure": "Token Azure/Entra o PAT (tipo Azure). npx local.",
         "gitlab": "Token personal de GitLab (tipo GitLab). npx local.",
         "filesystem": "Sin credencial. La carpeta raíz va en el nodo MCP del editor, no en Ajustes. npx local.",
@@ -1402,7 +1402,8 @@
         "toolJson": "Llamada a herramienta {{name}} descartada: argumentos JSON incompletos (intento {{attempt}}/{{max}}).",
         "think": "El agente está pensando (no es un resultado).",
         "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",
-        "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos."
+        "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
+        "truncated": "Respuesta cortada; no es un resultado."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1496,6 +1497,9 @@
     },
     "ping": {
       "failed": "La prueba MCP ha fallado."
+    },
+    "github": {
+      "download": "No se pudo descargar el servidor MCP oficial de GitHub."
     },
     "root": {
       "required": "La carpeta raíz es obligatoria.",

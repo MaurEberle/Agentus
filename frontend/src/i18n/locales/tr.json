@@ -361,7 +361,7 @@
       "credentialHelp": "Önce uygun türde bir kimlik oluşturun.",
       "noCredentialOfKind": "Bu türde kimlik yok — önce Kimlik bilgilerinde ekleyin.",
       "hint": {
-        "github": "Kimlik bilgilerinde GitHub PAT (tür GitHub). Yerel npx. Kök klasör yok.",
+        "github": "Kimlik bilgilerinde GitHub PAT (tür GitHub). Resmi sunucu, ilk kullanımda indirilir. Kök klasör yok.",
         "azure": "Azure/Entra jetonu veya PAT (tür Azure). Yerel npx.",
         "gitlab": "GitLab kişisel erişim jetonu (tür GitLab). Yerel npx.",
         "filesystem": "Kimlik gerekmez. Kök klasör düzenleyicideki MCP düğümünde, Ayarlar’da değil. Yerel npx.",
@@ -1402,7 +1402,8 @@
         "toolJson": "{{name}} araç çağrısı atıldı: eksik JSON argümanları (deneme {{attempt}}/{{max}}).",
         "think": "Ajan düşünüyor (sonuç değil).",
         "thinkLimit": "Sonuçsuz çok fazla düşünme adımı.",
-        "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu."
+        "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu.",
+        "truncated": "Yanıt kesildi; sonuç değil."
       },
       "knowledge": "Bilgi araması ({{count}} sonuç)",
       "knowledgeIndex": {
@@ -1496,6 +1497,9 @@
     },
     "ping": {
       "failed": "MCP yoklaması başarısız."
+    },
+    "github": {
+      "download": "Resmi GitHub MCP sunucusu indirilemedi."
     },
     "root": {
       "required": "Kök klasör zorunlu.",

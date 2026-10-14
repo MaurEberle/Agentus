@@ -39,7 +39,7 @@ Yardım arayüz dilinde yanıtlar. Model o dili kullanamazsa İngilizce yanıtla
 
 ## MCP sunucuları
 
-Dış araçlar için şablonlar (**tarifler**): GitHub, dosya sistemi, Git, Playwright, Postgres, Slack, Notion, Excel ve diğerleri. Tarifler birlikte gelen programlar değildir. Birçoğu PC’de Node/`npx`, Docker veya `uvx` artı bir kimlik bilgisi ister.
+Dış araçlar için şablonlar (**tarifler**): GitHub, dosya sistemi, Git, Playwright, Postgres, Slack, Notion, Excel ve diğerleri. Tarifler birlikte gelen programlar değildir. Birçoğu PC’de Node/`npx`, Docker veya `uvx` artı bir kimlik bilgisi ister. GitHub resmi MCP sunucusunu kullanır; ilk kullanımda indirilir, `npx` gerekmez.
 
 Varsayılan: sunucu **etkin değil**. Uygulama açılışta MCP süreçlerini başlatmaz; bir çalıştırma bağlı bir **MCP düğümüne** ihtiyaç duyunca başlatır. Önce **Ayarlar → Kimlik bilgileri** (PAT, jeton veya bağlantı), sonra tarif. Grafikte palet düğümü **MCP**.
 

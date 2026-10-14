@@ -5,6 +5,7 @@ from app.run.orchestrate import (
     orchestrator_instructions,
     parse_orchestrator_action,
     reject_reason,
+    salvage_tool_calls,
 )
 
 
@@ -29,6 +30,7 @@ def test_parse_actions() -> None:
     assert parsed["action"] == "call"
     assert parsed["agent"] == "ag"
     assert parsed["task"] == "schreib"
+    assert parsed["source"] == ""
 
 
 def test_control_source_falls_back_to_reasoning() -> None:
@@ -125,6 +127,8 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "Do not announce a call" in text
     assert "Use think for internal planning" in text
     assert '{"action":"think","text":"..."}' in text
+    assert '{"action":"call","agent":"<id or name>","task":"..."}' in text
+    assert "Omit source" in text
 
 
 def test_instructions_mention_connected_tools() -> None:
@@ -154,6 +158,64 @@ def test_agent_think_text() -> None:
     assert agent_think_text("<think>hidden</think>sichtbar") is None
     assert agent_think_text("") is None
     assert agent_think_text("   ") is None
+    assert agent_think_text('{"action":"think","text":"plan"}', has_tools=True) is None
+    assert (
+        agent_think_text(
+            '{"action":"think","text":"plan"}</arg_value></tool_call>',
+            has_tools=True,
+        )
+        is None
+    )
+    assert agent_think_text("<think>hidden</think>", has_tools=True) == "hidden"
+    assert agent_think_text("", "native reasoning", has_tools=True) == "native reasoning"
+
+
+def test_first_json_object_keeps_source() -> None:
+    raw = (
+        '{"action":"call","agent":"Senior","task":"implement","source":"Architekt"}'
+        '{"action":"think","text":"also"}'
+    )
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "Senior"
+    assert parsed["task"] == "implement"
+    assert parsed["source"] == "Architekt"
+
+
+def test_salvage_keeps_closed_source() -> None:
+    raw = '{"action":"call","agent":"Autor","task":"Schreibe.","source":"ag","'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "Autor"
+    assert parsed["source"] == "ag"
+
+
+def test_salvage_tool_calls_from_xml() -> None:
+    json_block = (
+        '<tool_call>\n{"name": "file_access", "arguments": '
+        '{"action": "write", "path": "a.txt", "content": "x"}}\n</tool_call>'
+    )
+    calls = salvage_tool_calls(json_block, ["file_access"])
+    assert len(calls) == 1
+    assert calls[0].name == "file_access"
+    assert "a.txt" in calls[0].arguments
+    xml = (
+        "<tool_call>write_file\n"
+        "<arg_key>path</arg_key>\n<arg_value>src/a.ts</arg_value>\n"
+        "</tool_call>"
+    )
+    mapped = salvage_tool_calls(xml, ["mcp__abc__write_file"])
+    assert len(mapped) == 1
+    assert mapped[0].name == "mcp__abc__write_file"
+    assert "src/a.ts" in mapped[0].arguments
+    named = salvage_tool_calls(
+        "<function=file_access><parameter=action>write</parameter>"
+        "<parameter=path>b.txt</parameter></function>",
+        ["file_access"],
+    )
+    assert len(named) == 1
+    assert named[0].name == "file_access"
+    assert salvage_tool_calls('{"action":"think","text":"x"}</arg_value></tool_call>') == []
 
 
 def test_match_agent_role_alias() -> None:

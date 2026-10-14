@@ -39,7 +39,7 @@ A ajuda responde na língua da interface. Se o modelo não puder usá-la, respon
 
 ## Servidores MCP
 
-Modelos (**receitas**) para ferramentas externas: GitHub, sistema de ficheiros, Git, Playwright, Postgres, Slack, Notion, Excel e outras. As receitas não são programas incluídos. Muitas precisam de Node/`npx`, Docker ou `uvx` no PC mais uma credencial.
+Modelos (**receitas**) para ferramentas externas: GitHub, sistema de ficheiros, Git, Playwright, Postgres, Slack, Notion, Excel e outras. As receitas não são programas incluídos. Muitas precisam de Node/`npx`, Docker ou `uvx` no PC mais uma credencial. O GitHub usa o servidor MCP oficial, descarregado na primeira utilização; não precisa de `npx`.
 
 Predefinição: servidor **inativo**. A app não arranca processos MCP ao abrir, mas quando uma execução precisa de um **nó MCP** ligado. Primeiro **Definições → Credenciais** (PAT, token ou cadeia), depois a receita. No grafo, o nó da paleta **MCP**.
 

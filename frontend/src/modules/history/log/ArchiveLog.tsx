@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { filterLogs, logHasExtra } from '@/modules/monitoring/model/graph';
+import { clipPreview } from '@/modules/monitoring/model/format';
 import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
 import { maskSecrets, maskText } from '@/modules/monitoring/model/mask';
 import { DetailOverlay } from '@/modules/monitoring/overlay/DetailOverlay';
@@ -187,7 +188,7 @@ function LogRow({
         <span className="min-w-0">
           {event.nodeName ? <span className="mr-2 text-muted-foreground">{event.nodeName}</span> : null}
           <span className={cn(event.level === 'error' && 'font-medium text-destructive')}>
-            {formatRunLogMessage(event.message, t, event.payload)}
+            {clipPreview(formatRunLogMessage(event.message, t, event.payload))}
           </span>
         </span>
       </div>
