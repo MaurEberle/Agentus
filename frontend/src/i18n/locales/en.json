@@ -131,6 +131,10 @@
       "title": "Run failed",
       "desc": "Start or stop failed."
     },
+    "runStartFailed": {
+      "title": "Run failed",
+      "desc": "Start failed: {{detail}}"
+    },
     "noNetwork": {
       "title": "No network selected",
       "desc": "Choose a network in the quick select first."
@@ -905,6 +909,7 @@
       "knowledgeRoot": "Drive or system root is not allowed.",
       "knowledgeSandbox": "Path must be under the data folder.",
       "knowledgeHelpCorpus": "The help corpus is not network knowledge.",
+      "knowledgeDataDir": "The application data folder is not network knowledge.",
       "knowledgeTarget": "Connect knowledge only to the agent knowledge port.",
       "cycle": "Cycles are not allowed.",
       "knowledge": {

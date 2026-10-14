@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import queue
 import threading
 import uuid
@@ -10,9 +11,9 @@ from app.common.secrets import mask_obj, mask_text
 from app.common.types import ServiceStatus
 from app.db.engine import utc_now
 from app.db.networks import get_network, touch_network
-from app.db.errors import StoreUnavailable
+from app.db.errors import PersistError, StoreUnavailable
 from app.db.runs import complete_run, get_run, insert_log, insert_run, update_run, upsert_step
-from app.http.errors import AppError
+from app.http.errors import AppError, persist_status
 from app.run.compile import CompiledGraph, compile_document
 from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument
@@ -37,6 +38,8 @@ from app.run.resources import start_resources, stop_resources
 from app.run.sse import publish
 from app.run.validate import validate_document
 from app.settings.service import RunSlice, load_settings, set_run_slice_provider
+
+log = logging.getLogger("agentus.run")
 
 _controller: RunController | None = None
 
@@ -244,9 +247,6 @@ class RunController:
                 except AppError:
                     raise
                 except Exception as exc:
-                    from app.common.secrets import mask_text
-                    from app.db.errors import PersistError
-
                     if isinstance(exc, PersistError):
                         raise AppError(exc.message_key, status_code=409) from exc
                     raise AppError(
@@ -280,10 +280,15 @@ class RunController:
             return {"serviceStatus": "running", "runId": run_id}
         except AppError as exc:
             self._fail_start(exc.message_key, exc.message)
-            raise exc
-        except Exception:
-            self._fail_start("run.invalidNetwork")
-            raise AppError("run.invalidNetwork", status_code=409)
+            raise
+        except PersistError as exc:
+            self._fail_start(exc.message_key, None)
+            raise AppError(exc.message_key, status_code=persist_status(exc.message_key)) from exc
+        except Exception as exc:
+            detail = mask_text(str(exc))[:240]
+            log.exception("run start failed")
+            self._fail_start("run.startFailed", detail or None)
+            raise AppError("run.startFailed", status_code=500, message=detail or None) from exc
 
     def _fail_start(self, message_key: str | None = None, message: str | None = None) -> None:
         run_id = self.run_id

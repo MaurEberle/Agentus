@@ -6,6 +6,7 @@ export interface ChromeHost {
   isMaximized: () => boolean | Promise<boolean>;
   pickFolder?: () => Promise<string | null>;
   requestAttention?: (active?: boolean) => void | Promise<void>;
+  openExternal?: (url: string) => boolean | Promise<boolean>;
 }
 
 type PywebviewApi = Partial<ChromeHost> & Record<string, unknown>;
@@ -33,6 +34,9 @@ function asChromeHost(api: Partial<ChromeHost> | undefined | null): ChromeHost |
       : undefined,
     requestAttention: api.requestAttention
       ? (active = true) => void api.requestAttention?.(active)
+      : undefined,
+    openExternal: api.openExternal
+      ? async (url: string) => Boolean(await api.openExternal?.(url))
       : undefined,
   };
 }

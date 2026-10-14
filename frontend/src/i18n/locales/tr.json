@@ -131,6 +131,10 @@
       "title": "Çalıştırma başarısız",
       "desc": "Başlatma veya durdurma başarısız oldu."
     },
+    "runStartFailed": {
+      "title": "Çalıştırma başarısız",
+      "desc": "Başlatma başarısız oldu: {{detail}}"
+    },
     "noNetwork": {
       "title": "Ağ seçilmedi",
       "desc": "Önce hızlı seçimden bir ağ seçin."
@@ -847,6 +851,7 @@
       "knowledgeRoot": "Sürücü veya sistem kökü izinli değil.",
       "knowledgeSandbox": "Yol veri klasörünün altında olmalıdır.",
       "knowledgeHelpCorpus": "Yardım derlemi ağ bilgisi değildir.",
+      "knowledgeDataDir": "Uygulama veri klasörü ağ bilgisi değildir.",
       "knowledgeTarget": "Bilgiyi yalnızca ajan knowledge bağlantı noktasına bağlayın.",
       "cycle": "Döngülere izin verilmez.",
       "knowledge": {

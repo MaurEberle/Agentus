@@ -264,6 +264,38 @@ def test_data_location_busy(client: TestClient) -> None:
     client.post("/api/run/stop")
 
 
+def test_unexpected_start_error_is_start_failed(client: TestClient, monkeypatch) -> None:
+    _save_mini(startMessage="go")
+
+    def boom():
+        raise RuntimeError("boom sk-abcdefghijk")
+
+    monkeypatch.setattr("app.run.controller.load_settings", boom)
+    response = client.post("/api/run/start")
+    assert response.status_code == 500
+    body = response.json()
+    assert body["messageKey"] == "run.startFailed"
+    assert body["messageKey"] != "run.invalidNetwork"
+    assert "sk-***" in body["message"]
+    assert "sk-abcdefghijk" not in body["message"]
+    assert get_controller().is_busy() is False
+
+
+def test_persist_error_on_start_keeps_its_key(client: TestClient, monkeypatch) -> None:
+    from app.db.errors import PersistError
+
+    _save_mini(startMessage="go")
+
+    def boom():
+        raise PersistError("store.locked")
+
+    monkeypatch.setattr("app.run.controller.load_settings", boom)
+    response = client.post("/api/run/start")
+    assert response.status_code == 400
+    assert response.json()["messageKey"] == "store.locked"
+    assert get_controller().is_busy() is False
+
+
 def test_clip_log_strings_keeps_valid_json() -> None:
     from app.run.controller import _clip_log_strings
 

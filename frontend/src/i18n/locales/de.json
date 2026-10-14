@@ -131,6 +131,10 @@
       "title": "Lauf fehlgeschlagen",
       "desc": "Der Start oder Stopp ist fehlgeschlagen."
     },
+    "runStartFailed": {
+      "title": "Lauf fehlgeschlagen",
+      "desc": "Der Start ist fehlgeschlagen: {{detail}}"
+    },
     "noNetwork": {
       "title": "Kein Netzwerk gewählt",
       "desc": "Wähle zuerst ein Netzwerk in der Schnellwahl."
@@ -905,6 +909,7 @@
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
       "knowledgeSandbox": "Pfad muss unter dem Datenordner liegen.",
       "knowledgeHelpCorpus": "Der Hilfe-Korpus ist kein Netz-Wissen.",
+      "knowledgeDataDir": "Der Anwendungsdatenordner ist kein Netz-Wissen.",
       "knowledgeTarget": "Wissen nur mit dem Agenten-Port knowledge verbinden.",
       "cycle": "Zyklen sind nicht erlaubt.",
       "knowledge": {

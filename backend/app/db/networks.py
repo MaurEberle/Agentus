@@ -150,7 +150,8 @@ def duplicate_network(id: str, new_id: str, new_name: str) -> NetworkRow:
         )
         collections = conn.execute(
             """
-            SELECT node_id, source_path, embedding_model_id, dimension, state, updated_at
+            SELECT node_id, source_path, embedding_model_id, dimension, state, updated_at,
+                   content_fingerprint
             FROM network_rag_collections WHERE network_id = ?
             """,
             (id,),
@@ -160,8 +161,8 @@ def duplicate_network(id: str, new_id: str, new_name: str) -> NetworkRow:
                 """
                 INSERT INTO network_rag_collections (
                   network_id, node_id, source_path, embedding_model_id,
-                  dimension, state, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                  dimension, state, updated_at, content_fingerprint
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     new_id,
@@ -171,6 +172,7 @@ def duplicate_network(id: str, new_id: str, new_name: str) -> NetworkRow:
                     col["dimension"],
                     col["state"],
                     col["updated_at"],
+                    col["content_fingerprint"],
                 ),
             )
         chunks = conn.execute(

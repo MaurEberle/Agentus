@@ -4,6 +4,7 @@ import { BrandMark } from '@/components/BrandMark';
 import { LightMarkdown } from '@/components/help-chat/markdown';
 import type { HelpMessage, HelpSource } from '@/components/help-chat/model';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getChromeHost } from '@/lib/chromeHost';
 import { cn } from '@/lib/utils';
 
 function Sources({ sources }: { sources: HelpSource[] }) {
@@ -19,6 +20,12 @@ function Sources({ sources }: { sources: HelpSource[] }) {
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-2"
+              onClick={(event) => {
+                const openExternal = getChromeHost()?.openExternal;
+                if (!openExternal) return;
+                event.preventDefault();
+                void openExternal(source.url!);
+              }}
             >
               {t('helpChat.sources.web')}: {source.title}
             </a>

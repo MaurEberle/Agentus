@@ -33,6 +33,11 @@ class ChromeHostApi:
 
         flash_window(self._window, bool(active))
 
+    def openExternal(self, url: str) -> bool:
+        from app.host.navigation import open_external_url
+
+        return open_external_url(url)
+
     def pickFolder(self) -> str | None:
         if self._window is None:
             return None

@@ -20,9 +20,12 @@ const START_ERROR_DESC: Record<string, string> = {
   'runtime.upstream': 'settings.runtime.unreachable',
   'graph.knowledge.path': 'network.validation.knowledgePath',
   'graph.knowledge.helpCorpus': 'network.validation.knowledgeHelpCorpus',
+  'graph.knowledge.dataDir': 'network.validation.knowledgeDataDir',
   'graph.fileAccess.root': 'network.validation.fileAccessRoot',
   'graph.cycle': 'network.validation.cycle',
   'graph.agent.noLlm': 'network.validation.agentLlm',
+  'graph.agent.noMessage': 'network.validation.agentMessage',
+  'run.startFailed': 'notify.runStartFailed.desc',
   'graph.llm.credential': 'network.validation.modelRequired',
   'graph.end.missing': 'network.validation.endRequired',
   'graph.chatInput.duplicate': 'network.validation.tooManyChatInputs',
@@ -70,10 +73,12 @@ function notifyStartError(error: unknown) {
       break;
     }
   }
-  const values =
-    error.messageKey?.startsWith('runtime.') && error.message
-      ? { name: error.message }
-      : undefined;
+  let values: Record<string, string> | undefined;
+  if (error.messageKey === 'run.startFailed' && error.message) {
+    values = { detail: error.message };
+  } else if (error.messageKey?.startsWith('runtime.') && error.message) {
+    values = { name: error.message };
+  }
   notify({
     titleKey: 'notify.runError.title',
     descriptionKey,

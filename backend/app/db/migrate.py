@@ -232,3 +232,14 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
         except Exception:
             conn.execute("ROLLBACK")
             raise
+    if store == "workspace" and current < 2:
+        conn.execute("BEGIN")
+        try:
+            conn.execute(
+                "ALTER TABLE network_rag_collections ADD COLUMN content_fingerprint TEXT"
+            )
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (2)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise

@@ -17,6 +17,7 @@ from app.host.native_frame import (
     resolve_app_icon,
     set_window_icon,
 )
+from app.host.navigation import guard_navigation, is_allowed_url
 from app.host.server import start_uvicorn, stop_uvicorn, wait_health
 from app.host.single_instance import WINDOW_TITLE, acquire, release
 
@@ -123,6 +124,7 @@ def run_host(host: str, port: int) -> None:
         def _shown() -> None:
             enable_frameless_resize(win)
             set_window_icon(win, icon_path)
+            guard_navigation(win, port)
             if maximized:
                 win.maximize()
 
@@ -136,6 +138,16 @@ def run_host(host: str, port: int) -> None:
             _save_geom(win)
 
         def _loaded() -> None:
+            guard_navigation(win, port)
+            current = ""
+            getter = getattr(win, "get_current_url", None)
+            if callable(getter):
+                try:
+                    current = getter() or ""
+                except Exception:
+                    current = ""
+            if current and not is_allowed_url(current, port):
+                return
             inject_chrome_host(win)
 
         win.events.shown += _shown

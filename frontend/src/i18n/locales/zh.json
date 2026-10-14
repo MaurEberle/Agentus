@@ -131,6 +131,10 @@
       "title": "运行失败",
       "desc": "启动或停止失败。"
     },
+    "runStartFailed": {
+      "title": "运行失败",
+      "desc": "启动失败：{{detail}}"
+    },
     "noNetwork": {
       "title": "未选择网络",
       "desc": "请先在快速选择中选择网络。"
@@ -847,6 +851,7 @@
       "knowledgeRoot": "不允许使用驱动器或系统根目录。",
       "knowledgeSandbox": "路径必须位于数据文件夹下。",
       "knowledgeHelpCorpus": "帮助语料不是网络知识。",
+      "knowledgeDataDir": "应用数据文件夹不是网络知识。",
       "knowledgeTarget": "知识只能连接到智能体 knowledge 端口。",
       "cycle": "不允许循环。",
       "knowledge": {

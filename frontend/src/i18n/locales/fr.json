@@ -131,6 +131,10 @@
       "title": "Échec de l’exécution",
       "desc": "Le démarrage ou l’arrêt a échoué."
     },
+    "runStartFailed": {
+      "title": "Échec de l’exécution",
+      "desc": "Le démarrage a échoué : {{detail}}"
+    },
     "noNetwork": {
       "title": "Aucun réseau sélectionné",
       "desc": "Choisissez d’abord un réseau dans la sélection rapide."
@@ -847,6 +851,7 @@
       "knowledgeRoot": "La racine d’un lecteur ou du système n’est pas autorisée.",
       "knowledgeSandbox": "Le chemin doit se trouver sous le dossier de données.",
       "knowledgeHelpCorpus": "Le corpus d’aide n’est pas une connaissance de réseau.",
+      "knowledgeDataDir": "Le dossier de données de l’application n’est pas une connaissance de réseau.",
       "knowledgeTarget": "Reliez les connaissances uniquement au port knowledge de l’agent.",
       "cycle": "Les cycles ne sont pas autorisés.",
       "knowledge": {

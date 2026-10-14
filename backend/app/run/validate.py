@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from app.common.types import NEEDS_CREDENTIAL, PROVIDERS
-from app.db.paths import RAG_DIR_NAME
 from app.run.channels import agent_id_from_channel, normalize_channel_edges
 from app.run.graph_models import (
     AgentNetworkDocument,
@@ -75,25 +73,10 @@ def _has_cycle(doc: AgentNetworkDocument) -> bool:
     return any(visit(node.id) for node in doc.nodes)
 
 
-def _path_ok(source_path: str, data_dir: str) -> bool:
-    """Absolute folder, not a drive root, not the help corpus. data_dir is unused."""
-    del data_dir
-    raw = source_path.strip()
-    if not raw:
-        return False
-    raw = os.path.expanduser(raw)
-    if not os.path.isabs(raw):
-        return False
-    try:
-        real = os.path.realpath(os.path.normpath(raw))
-    except (ValueError, OSError):
-        return False
-    if is_forbidden_root(Path(real)):
-        return False
-    parts = real.replace("\\", "/").split("/")
-    if RAG_DIR_NAME in parts:
-        return False
-    return True
+def _knowledge_reason(source_path: str, data_dir: str) -> str | None:
+    from app.run.knowledge import source_block_reason
+
+    return source_block_reason(source_path, data_dir)
 
 
 def validate_document(
@@ -207,7 +190,7 @@ def validate_document(
             if orchestrators and not channel_in:
                 errors.append(_err("graph.orchestrator.looseAgent", node.id))
             elif has_chat and not channel_in and not msg_in:
-                errors.append(_err("graph.agent.noLlm", node.id))
+                errors.append(_err("graph.agent.noMessage", node.id))
         if node.type == "llm":
             provider = str(node.data.get("provider") or "ollama")
             model = str(node.data.get("model") or "").strip()
@@ -274,7 +257,12 @@ def validate_document(
                         errors.append(_err("graph.fileAccess.root", node.id))
         if node.type == "knowledge":
             path = str(node.data.get("sourcePath") or "")
-            if not _path_ok(path, data_dir):
+            reason = _knowledge_reason(path, data_dir)
+            if reason == "corpus":
+                errors.append(_err("graph.knowledge.helpCorpus", node.id))
+            elif reason == "data":
+                errors.append(_err("graph.knowledge.dataDir", node.id))
+            elif reason:
                 errors.append(_err("graph.knowledge.path", node.id))
     return errors
 
