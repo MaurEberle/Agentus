@@ -49,6 +49,12 @@ class VramProfile:
     kv_swa_bytes_per_token: int | None = None
     swa_window: int | None = None
     kv_layers: tuple[LayerKv, ...] = ()
+    expert_count: int | None = None
+    expert_used_count: int | None = None
+    routed_expert_bytes: int | None = None
+    non_expert_bytes: int | None = None
+    leading_dense_blocks: int | None = None
+    expert_layers: int | None = None
 
 
 def _positive_int(value: object) -> int | None:
@@ -348,6 +354,77 @@ def _sum_kv(layers: tuple[LayerKv, ...], num_ctx: int, on: int) -> int:
     return total
 
 
+def _clamp_leading(leading: int | None, layers: int) -> int:
+    n = leading or 0
+    if n < 0:
+        return 0
+    if n > layers:
+        return layers
+    return n
+
+
+def _attention_params(info: dict[str, Any], arch: str, n_embd: int) -> int:
+    """Q, K, V and output projection. Missing head metadata falls back to a square block."""
+    n_head = _info_int(info, arch, "attention.head_count")
+    n_kv = _info_int(info, arch, "attention.head_count_kv") or n_head
+    key = _info_int(info, arch, "attention.key_length")
+    value = _info_int(info, arch, "attention.value_length") or key
+    if n_head and n_kv and key and value:
+        return (
+            n_embd * n_head * key
+            + n_embd * n_kv * key
+            + n_embd * n_kv * value
+            + n_head * value * n_embd
+        )
+    return 4 * n_embd * n_embd
+
+
+def _moe_weight_split(
+    info: dict[str, Any], arch: str, layers: int | None, size_bytes: int | None
+) -> tuple[int, int | None, int, int, int, int] | None:
+    """Split the GGUF size into routed-expert bytes and everything else.
+
+    The ratio uses parameter counts from ``/api/show``. Shared experts and the
+    leading dense blocks stay on the non-expert side. ``expert_used_count`` is
+    not part of the size.
+    """
+    experts = _info_int(info, arch, "expert_count")
+    expert_ffn = _info_int(info, arch, "expert_feed_forward_length")
+    n_embd = _info_int(info, arch, "embedding_length")
+    if (
+        not experts
+        or experts <= 1
+        or not expert_ffn
+        or not n_embd
+        or not layers
+        or not isinstance(size_bytes, int)
+        or size_bytes <= 0
+    ):
+        return None
+    leading = _clamp_leading(_info_int(info, arch, "leading_dense_block_count"), layers)
+    expert_layers = layers - leading
+    if expert_layers < 1:
+        return None
+    routed_params = experts * 3 * n_embd * expert_ffn * expert_layers
+    shared_count = _info_int(info, arch, "expert_shared_count") or 0
+    shared_ffn = _info_int(info, arch, "expert_shared_feed_forward_length")
+    if shared_count and not shared_ffn:
+        shared_ffn = _info_int(info, arch, "feed_forward_length") or expert_ffn
+    shared_params = (
+        shared_count * 3 * n_embd * shared_ffn * expert_layers if shared_count and shared_ffn else 0
+    )
+    dense_ffn = _info_int(info, arch, "feed_forward_length") or 0
+    dense_params = 3 * n_embd * dense_ffn * leading if dense_ffn and leading else 0
+    other_params = _attention_params(info, arch, n_embd) * layers + shared_params + dense_params
+    total_params = routed_params + other_params
+    if total_params <= 0 or routed_params <= 0:
+        return None
+    routed_bytes = size_bytes * routed_params // total_params
+    non_expert_bytes = size_bytes - routed_bytes
+    used = _info_int(info, arch, "expert_used_count")
+    return experts, used, routed_bytes, non_expert_bytes, leading, expert_layers
+
+
 def _overhead_bytes(info: dict[str, Any], arch: str, layers: int | None) -> int:
     overhead = _BASE_OVERHEAD
     experts = _info_int(info, arch, "expert_count")
@@ -390,7 +467,8 @@ def parse_vram_profile(payload: object, size_bytes: int | None) -> VramProfile |
             kv_per_token, kv_swa, swa_window = _aggregates(kv_layers)
         overhead = _overhead_bytes(info, arch, layers)
     weight = size_bytes if isinstance(size_bytes, int) and size_bytes > 0 else None
-    if layers is None and weight is None and kv_per_token is None and kv_swa is None:
+    split = _moe_weight_split(info, arch, layers, weight) if arch else None
+    if layers is None and weight is None and kv_per_token is None and kv_swa is None and split is None:
         return None
     return VramProfile(
         layers=layers,
@@ -400,6 +478,14 @@ def parse_vram_profile(payload: object, size_bytes: int | None) -> VramProfile |
         kv_swa_bytes_per_token=kv_swa,
         swa_window=swa_window,
         kv_layers=kv_layers,
+        expert_count=split[0] if split else (_info_int(info, arch, "expert_count") if arch else None),
+        expert_used_count=(
+            split[1] if split else (_info_int(info, arch, "expert_used_count") if arch else None)
+        ),
+        routed_expert_bytes=split[2] if split else None,
+        non_expert_bytes=split[3] if split else None,
+        leading_dense_blocks=split[4] if split else None,
+        expert_layers=split[5] if split else None,
     )
 
 
@@ -435,6 +521,72 @@ def estimate_vram_bytes(
         kv = int(kv_bytes_for_ctx(profile, num_ctx) * frac)
     overhead = int((profile.overhead_bytes or 0) * frac)
     return weights + kv + overhead
+
+
+@dataclass(frozen=True)
+class MoeFit:
+    """Automatic placement: attention first, then as many whole expert layers as fit."""
+
+    gpu_bytes: int
+    ram_bytes: int
+    experts_on_gpu: int
+    expert_layers: int
+    attention_layers_on_gpu: int
+    non_expert_on_gpu: int
+    expert_on_gpu_bytes: int
+    kv_bytes: int
+    overhead_bytes: int
+
+
+def _fixed_gpu(profile: VramProfile, num_ctx: int, on: int, layers: int) -> tuple[int, int, int]:
+    non_expert = int((profile.non_expert_bytes or 0) * on // layers)
+    overhead = int((profile.overhead_bytes or 0) * on // layers)
+    if profile.kv_layers:
+        kv = _sum_kv(profile.kv_layers, num_ctx, on)
+    else:
+        kv = int(kv_bytes_for_ctx(profile, num_ctx) * on // layers) if layers else 0
+    return non_expert, kv, overhead
+
+
+def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | None:
+    """How many routed expert layers fit beside attention and KV.
+
+    Returns None for dense profiles and for MoE metadata that cannot be split.
+    Expert layers on the GPU never exceed the attention layers kept on the GPU.
+    """
+    layers = profile.layers or 0
+    routed = profile.routed_expert_bytes or 0
+    non_expert = profile.non_expert_bytes or 0
+    if layers < 1 or routed <= 0 or non_expert <= 0 or pool_bytes <= 0:
+        return None
+    leading = _clamp_leading(profile.leading_dense_blocks, layers)
+    expert_layers = profile.expert_layers or (layers - leading)
+    if expert_layers < 1:
+        return None
+    on = layers
+    while on > 0:
+        weights, kv, overhead = _fixed_gpu(profile, num_ctx, on, layers)
+        if weights + kv + overhead <= pool_bytes:
+            break
+        on -= 1
+    weights, kv, overhead = _fixed_gpu(profile, num_ctx, on, layers)
+    room = max(0, pool_bytes - (weights + kv + overhead))
+    cap = min(on, expert_layers)
+    experts_on = min(cap, (room * expert_layers) // routed) if routed and cap > 0 else 0
+    while experts_on > 0 and (routed * experts_on) // expert_layers > room:
+        experts_on -= 1
+    expert_on_gpu = (routed * experts_on) // expert_layers if expert_layers else 0
+    return MoeFit(
+        gpu_bytes=weights + kv + overhead + expert_on_gpu,
+        ram_bytes=routed - expert_on_gpu,
+        experts_on_gpu=experts_on,
+        expert_layers=expert_layers,
+        attention_layers_on_gpu=on,
+        non_expert_on_gpu=weights,
+        expert_on_gpu_bytes=expert_on_gpu,
+        kv_bytes=kv,
+        overhead_bytes=overhead,
+    )
 
 
 def _size_bytes(tag: str, *, base_url: str | None) -> int | None:

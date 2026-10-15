@@ -554,6 +554,39 @@ def test_gpu_max_in_payload(monkeypatch: pytest.MonkeyPatch) -> None:
     assert seen[0]["options"]["num_gpu"] == 17
 
 
+def test_moe_auto_omits_num_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    monkeypatch.setattr("app.runtime.completions.model_is_moe", lambda *a, **k: True)
+    install_transport(monkeypatch, handler)
+    complete(CompletionRequest(provider="ollama", model="mixtral:8x7b", messages=_MSG))
+    assert "num_gpu" not in (seen[0].get("options") or {})
+
+
+def test_moe_explicit_num_gpu_is_kept(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json=_chat_ok())
+
+    monkeypatch.setattr("app.runtime.completions.model_is_moe", lambda *a, **k: True)
+    install_transport(monkeypatch, handler)
+    complete(
+        CompletionRequest(
+            provider="ollama",
+            model="mixtral:8x7b",
+            messages=_MSG,
+            ollama_options={"num_gpu": 8},
+        )
+    )
+    assert seen[0]["options"]["num_gpu"] == 8
+
+
 def test_gpu_max_falls_back_to_auto(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[dict] = []
 

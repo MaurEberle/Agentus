@@ -717,7 +717,19 @@
         "vramFormula": "GPU : {{on}} dernières couches sur {{total}}. {{full}} × {{perToken}} o/jeton × {{ctx}} jetons.",
         "vramFormulaMixed": "GPU : {{on}} dernières couches sur {{total}}. {{full}} couches globales × {{ctx}} jetons.",
         "vramFormulaSwa": "GPU : {{on}} dernières couches sur {{total}}. {{full}} globales × {{ctx}} jetons, {{swa}} fenêtre glissante × fenêtre {{window}}.",
-        "vramHint": "Estimation couche par couche d’après le modèle. Le GPU prend les N dernières couches. Attention complète : tout le contexte. Fenêtre glissante : seulement sa fenêtre. Cache KV en f16."
+        "vramHint": "Estimation couche par couche d’après le modèle. Le GPU prend les N dernières couches. Attention complète : tout le contexte. Fenêtre glissante : seulement sa fenêtre. Cache KV en f16.",
+        "moeAuto": "Placer les experts automatiquement",
+        "moeForce": "Forcer toutes les couches",
+        "moeAutoHint": "{{count}} experts, {{used}} actifs par jeton. Tous les poids restent chargés. L’attention reste sur le GPU, les experts occupent le reste.",
+        "moeAutoHintNoUsed": "{{count}} experts. Tous les poids restent chargés. L’attention reste sur le GPU, les experts occupent le reste.",
+        "moeLayerWarn": "Ce choix déplace des couches entières, attention comprise.",
+        "moeUnknown": "Les poids des experts ne peuvent pas être séparés avec les métadonnées de ce modèle. L’indicateur utilise la formule dense.",
+        "moeExpertsGpu": "Experts sur le GPU {{experts}}",
+        "moeRam": "Experts en mémoire vive : {{ram}}",
+        "moeRamTight": "La mémoire vive libre est sous cette estimation. Les pages épinglées et mmap peuvent prendre davantage.",
+        "moeAttention": "L’attention reste sur les {{on}} dernières couches sur {{total}}, pour tenir dans la mémoire GPU.",
+        "moeSwa": "Avec un contexte à fenêtre glissante, Ollama peut garder tous les experts en mémoire vive même si cet indicateur voit encore de la place sur le GPU.",
+        "moeEstimate": "Estimation à partir des métadonnées et de la taille du fichier."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",

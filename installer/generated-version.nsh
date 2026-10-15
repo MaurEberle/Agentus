@@ -9,5 +9,5 @@
 !define WEBVIEW2_URL "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
 !define WEBVIEW2_SHA256 "baa78c71c5615533a1ee0c4d2ca2ea3fd24dae01965f9033ac530a61b5aa93a0"
 !define OLLAMA_NAME "OllamaSetup.exe"
-!define OLLAMA_URL "https://github.com/ollama/ollama/releases/download/v0.40.4/OllamaSetup.exe"
-!define OLLAMA_SHA256 "45fcd47d70dd047ab95736802e71a7497ef1a473a50470471fc2fb0eb90badde"
+!define OLLAMA_URL "https://github.com/ollama/ollama/releases/download/v0.40.5/OllamaSetup.exe"
+!define OLLAMA_SHA256 "ea0b50685d382bc0af164abdbf9b41bd89abb98de14fc51e4890a7176757a519"

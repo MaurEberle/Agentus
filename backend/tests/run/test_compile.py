@@ -43,6 +43,34 @@ def test_compile_legacy_num_gpu_is_ignored() -> None:
     )
     assert compiled.agents["ag"].llm.num_gpu is None
     assert compiled.agents["ag"].llm.num_gpu_percent is None
+    assert compiled.agents["ag"].llm.gpu_placement is None
+
+
+def test_compile_gpu_placement() -> None:
+    raw = mini_doc()
+    for node in raw["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["gpuPlacement"] = "auto"
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].llm.gpu_placement == "auto"
+
+    for node in raw["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["gpuPlacement"] = "layers"
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].llm.gpu_placement == "layers"
+
+    for node in raw["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["gpuPlacement"] = "cuda"
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].llm.gpu_placement is None
 
 
 def test_compile_mcp_node_on_agent() -> None:

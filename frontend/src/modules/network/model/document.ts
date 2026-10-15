@@ -54,6 +54,8 @@ export type LlmNodeData = {
   numThread?: number;
   numGpuPercent?: number;
   numGpuLayers?: number;
+  /** MoE only. "auto" omits num_gpu. "layers" sends a whole-layer offload. */
+  gpuPlacement?: 'auto' | 'layers';
 };
 
 export type AgentNodeData = {

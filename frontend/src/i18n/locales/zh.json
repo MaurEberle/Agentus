@@ -717,7 +717,19 @@
         "vramFormula": "GPU：最后 {{on}} / {{total}} 层。{{full}} × {{perToken}} 字节/token × {{ctx}} token。",
         "vramFormulaMixed": "GPU：最后 {{on}} / {{total}} 层。{{full}} 个全局层 × {{ctx}} token。",
         "vramFormulaSwa": "GPU：最后 {{on}} / {{total}} 层。{{full}} 个全局 × {{ctx}} token，{{swa}} 个滑动窗口 × 窗口 {{window}}。",
-        "vramHint": "按层根据模型数据估算。GPU 使用最后 N 层。全局注意力使用完整上下文；滑动窗口层只用其窗口。KV 缓存为 f16。"
+        "vramHint": "按层根据模型数据估算。GPU 使用最后 N 层。全局注意力使用完整上下文；滑动窗口层只用其窗口。KV 缓存为 f16。",
+        "moeAuto": "自动放置专家",
+        "moeForce": "强制全部层",
+        "moeAutoHint": "{{count}} 个专家，每个 token 激活 {{used}} 个。全部权重仍会加载。注意力留在 GPU，专家占用剩余空间。",
+        "moeAutoHintNoUsed": "{{count}} 个专家。全部权重仍会加载。注意力留在 GPU，专家占用剩余空间。",
+        "moeLayerWarn": "此选择会移动整层，包括注意力。",
+        "moeUnknown": "无法从该模型的元数据拆分专家权重。指示器按稠密模型公式计算。",
+        "moeExpertsGpu": "GPU 上的专家 {{experts}}",
+        "moeRam": "内存中的专家：{{ram}}",
+        "moeRamTight": "空闲内存低于此估计。锁定页和 mmap 可能占用更多。",
+        "moeAttention": "注意力留在最后 {{on}} / {{total}} 层，以便放入 GPU 内存。",
+        "moeSwa": "滑动窗口上下文下，即使这里仍显示 GPU 有空余，Ollama 也可能把全部专家放在内存中。",
+        "moeEstimate": "根据模型元数据和文件大小估计。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",

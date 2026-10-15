@@ -19,6 +19,7 @@ from app.runtime.urls import ollama_native_root, settings_roots
 
 
 _block_counts: dict[str, int] = {}
+_moe_flags: dict[str, bool] = {}
 
 
 def _root(base_url: str | None) -> str:
@@ -81,6 +82,56 @@ def clamp_gpu_layers(count: int, block_count: int | None) -> int:
     return n
 
 
+def _expert_count(payload: object) -> int | None:
+    """``{architecture}.expert_count``. A count of 1 is not a mixture of experts."""
+    if not isinstance(payload, dict):
+        return None
+    info = payload.get("model_info")
+    if not isinstance(info, dict):
+        return None
+    arch = info.get("general.architecture")
+    if isinstance(arch, str) and arch.strip():
+        exact = _positive_layer(info.get(f"{arch.strip()}.expert_count"))
+        if exact:
+            return exact
+    best: int | None = None
+    for key, value in info.items():
+        name = str(key)
+        if not name.endswith(".expert_count"):
+            continue
+        stem = name[: -len(".expert_count")]
+        if "." in stem:
+            continue
+        count = _positive_layer(value)
+        if count:
+            best = count if best is None else max(best, count)
+    return best
+
+
+def moe_omits_num_gpu(
+    *,
+    is_moe: bool,
+    placement: str | None,
+    offload_layers: int | None,
+    block_count: int | None,
+) -> bool:
+    """MoE automatic placement must not send a dense ``num_gpu``.
+
+    ``placement == "layers"`` is an explicit whole-layer choice. A stored count
+    below ``block_count`` is one too. A count equal to ``block_count`` is the
+    old inspector default and stays automatic.
+    """
+    if not is_moe or placement == "layers":
+        return False
+    if isinstance(block_count, int) and block_count > 0:
+        if isinstance(offload_layers, int) and offload_layers < block_count:
+            return False
+        return True
+    if isinstance(offload_layers, int) and 0 < offload_layers < 999:
+        return False
+    return True
+
+
 def ollama_num_gpu(offload: int, block_count: int | None) -> int:
     """llama.cpp ``-ngl``: repeating layers plus the output slot.
 
@@ -114,10 +165,23 @@ def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:
         payload = response_json(response)
     except Exception:
         return None
+    experts = _expert_count(payload)
+    _moe_flags[key] = bool(experts and experts > 1)
     count = parse_block_count(payload)
     if count:
         _block_counts[key] = count
     return count
+
+
+def model_is_moe(tag: str, *, base_url: str | None = None) -> bool:
+    """True after ``model_block_count`` saw ``expert_count > 1``.
+
+    A cache miss stays false so a failed ``/api/show`` keeps the dense offload.
+    """
+    name = (tag or "").strip()
+    if not name:
+        return False
+    return _moe_flags.get(f"{_root(base_url)}|{name}", False)
 
 
 def ping_ollama(*, base_url: str | None = None, timeout_sec: float = 3.0) -> PingResult:

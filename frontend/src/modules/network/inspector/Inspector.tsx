@@ -26,7 +26,14 @@ import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
-import { estimateVramParts, inferenceGpus, resolveGpuLayers } from '@/modules/network/inspector/vram';
+import {
+  estimateVramParts,
+  fitMoe,
+  hasWindowedKv,
+  inferenceGpus,
+  moeLeavesPlacementToRuntime,
+  resolveGpuLayers,
+} from '@/modules/network/inspector/vram';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -291,6 +298,16 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     enabled: Boolean(model),
   });
   const layers = stats.data?.gpuLayers && stats.data.gpuLayers > 0 ? stats.data.gpuLayers : null;
+  const expertCount = stats.data?.expertCount ?? 0;
+  const isMoe = expertCount > 1;
+  const placement = typeof node.data.gpuPlacement === 'string' ? node.data.gpuPlacement : null;
+  const auto = moeLeavesPlacementToRuntime({
+    expertCount,
+    gpuLayers: layers,
+    numGpuLayers: Number(node.data.numGpuLayers),
+    numGpuPercent: Number(node.data.numGpuPercent),
+    gpuPlacement: placement,
+  });
   const value =
     layers == null
       ? 1
@@ -298,6 +315,40 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
 
   useEffect(() => {
     if (readOnly || layers == null) return;
+    if (isMoe && auto) {
+      if (
+        node.data.gpuPlacement === 'auto' &&
+        node.data.numGpuLayers === undefined &&
+        node.data.numGpuPercent === undefined &&
+        node.data.numGpu === undefined
+      ) {
+        return;
+      }
+      editorUpdateNodeData(node.id, {
+        gpuPlacement: 'auto',
+        numGpuLayers: undefined,
+        numGpuPercent: undefined,
+        numGpu: undefined,
+      });
+      return;
+    }
+    if (isMoe) {
+      if (
+        node.data.gpuPlacement === 'layers' &&
+        node.data.numGpuLayers === value &&
+        node.data.numGpuPercent === undefined &&
+        node.data.numGpu === undefined
+      ) {
+        return;
+      }
+      editorUpdateNodeData(node.id, {
+        gpuPlacement: 'layers',
+        numGpuLayers: value,
+        numGpuPercent: undefined,
+        numGpu: undefined,
+      });
+      return;
+    }
     if (
       node.data.numGpuLayers === value &&
       node.data.numGpuPercent === undefined &&
@@ -306,7 +357,18 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
       return;
     }
     editorUpdateNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
-  }, [layers, node.data.numGpu, node.data.numGpuLayers, node.data.numGpuPercent, node.id, readOnly, value]);
+  }, [
+    auto,
+    isMoe,
+    layers,
+    node.data.gpuPlacement,
+    node.data.numGpu,
+    node.data.numGpuLayers,
+    node.data.numGpuPercent,
+    node.id,
+    readOnly,
+    value,
+  ]);
 
   if (stats.isPending && !stats.data) {
     return (
@@ -323,32 +385,95 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     );
   }
 
+  const used = stats.data?.expertUsedCount;
+  const knownSplit = (stats.data?.routedExpertBytes ?? 0) > 0;
   return (
     <Field label={t('network.inspector.llm.numGpu')}>
-      <input
-        type="range"
-        min={1}
-        max={layers}
-        step={1}
-        value={value}
-        disabled={readOnly}
-        className="w-full accent-primary"
-        onChange={(event) =>
-          editorUpdateNodeData(node.id, {
-            numGpuLayers: Number(event.target.value),
-            numGpuPercent: undefined,
-            numGpu: undefined,
-          })
-        }
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>1</span>
-        <span className="font-medium text-foreground">
-          {t('network.inspector.llm.numGpuLayers', { offload: value, total: layers })}
-        </span>
-        <span>{layers}</span>
-      </div>
-      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuHint')}</p>
+      {isMoe ? (
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={auto}
+            disabled={readOnly}
+            onCheckedChange={(checked) => {
+              if (checked === true) {
+                editorUpdateNodeData(node.id, {
+                  gpuPlacement: 'auto',
+                  numGpuLayers: undefined,
+                  numGpuPercent: undefined,
+                  numGpu: undefined,
+                });
+                return;
+              }
+              editorUpdateNodeData(node.id, {
+                gpuPlacement: 'layers',
+                numGpuLayers: layers,
+                numGpuPercent: undefined,
+                numGpu: undefined,
+              });
+            }}
+          />
+          {t('network.inspector.llm.moeAuto')}
+        </label>
+      ) : null}
+      {isMoe && auto ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={readOnly}
+          onClick={() =>
+            editorUpdateNodeData(node.id, {
+              gpuPlacement: 'layers',
+              numGpuLayers: layers,
+              numGpuPercent: undefined,
+              numGpu: undefined,
+            })
+          }
+        >
+          {t('network.inspector.llm.moeForce')}
+        </Button>
+      ) : null}
+      {isMoe && auto ? (
+        <p className="text-xs text-muted-foreground">
+          {used
+            ? t('network.inspector.llm.moeAutoHint', { count: expertCount, used })
+            : t('network.inspector.llm.moeAutoHintNoUsed', { count: expertCount })}
+        </p>
+      ) : null}
+      {isMoe && auto && !knownSplit ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.moeUnknown')}</p>
+      ) : null}
+      {auto ? null : (
+        <>
+          <input
+            type="range"
+            min={1}
+            max={layers}
+            step={1}
+            value={value}
+            disabled={readOnly}
+            className="w-full accent-primary"
+            onChange={(event) =>
+              editorUpdateNodeData(node.id, {
+                gpuPlacement: isMoe ? 'layers' : undefined,
+                numGpuLayers: Number(event.target.value),
+                numGpuPercent: undefined,
+                numGpu: undefined,
+              })
+            }
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>1</span>
+            <span className="font-medium text-foreground">
+              {t('network.inspector.llm.numGpuLayers', { offload: value, total: layers })}
+            </span>
+            <span>{layers}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {isMoe ? t('network.inspector.llm.moeLayerWarn') : t('network.inspector.llm.numGpuHint')}
+          </p>
+        </>
+      )}
     </Field>
   );
 }
@@ -368,6 +493,14 @@ function VramNeedField({ node }: { node: GraphNode }) {
   const resources = useHostResourcesQuery({ live: false });
   const ctxRaw = Number(node.data.numCtx);
   const ctx = Number.isFinite(ctxRaw) && ctxRaw > 0 ? ctxRaw : (stats.data?.contextMax ?? 0);
+  const placement = typeof node.data.gpuPlacement === 'string' ? node.data.gpuPlacement : null;
+  const auto = moeLeavesPlacementToRuntime({
+    expertCount: stats.data?.expertCount,
+    gpuLayers: stats.data?.gpuLayers,
+    numGpuLayers: Number(node.data.numGpuLayers),
+    numGpuPercent: Number(node.data.numGpuPercent),
+    gpuPlacement: placement,
+  });
   const parts = estimateVramParts({
     weightBytes: stats.data?.weightBytes,
     kvBytesPerToken: stats.data?.kvBytesPerToken,
@@ -413,10 +546,37 @@ function VramNeedField({ node }: { node: GraphNode }) {
     .map((gpu) => gpu.name?.trim())
     .filter((name): name is string => Boolean(name))
     .join(' · ');
-  const percent = parts && gpuTotal > 0 ? (parts.total / gpuTotal) * 100 : 0;
-  const over = Boolean(parts && gpuTotal > 0 && parts.total > gpuTotal);
-  const tight = Boolean(parts && gpuTotal > 0 && !over && percent >= 85);
-  const tone = meterTone(Math.min(100, percent), Boolean(parts && gpuTotal > 0));
+  const fit =
+    auto && (stats.data?.routedExpertBytes ?? 0) > 0
+      ? fitMoe({
+          nonExpertBytes: stats.data?.nonExpertBytes,
+          routedExpertBytes: stats.data?.routedExpertBytes,
+          overheadBytes: stats.data?.overheadBytes,
+          gpuLayers: stats.data?.gpuLayers,
+          kvLayers: stats.data?.kvLayers,
+          kvBytesPerToken: stats.data?.kvBytesPerToken,
+          leadingDenseBlocks: stats.data?.leadingDenseBlocks,
+          numCtx: ctx,
+          poolBytes: gpuTotal,
+        })
+      : null;
+  const need = fit ? fit.gpuBytes : (parts?.total ?? 0);
+  const weightBytes = fit ? fit.nonExpertOnGpu : (parts?.weights ?? 0);
+  const kvBytes = fit ? fit.kvBytes : (parts?.kv ?? 0);
+  const overheadBytes = fit ? fit.overheadBytes : (parts?.overhead ?? 0);
+  const percent = (fit || parts) && gpuTotal > 0 ? (need / gpuTotal) * 100 : 0;
+  const over = Boolean(!fit && parts && gpuTotal > 0 && parts.total > gpuTotal);
+  const tight = Boolean((fit || parts) && gpuTotal > 0 && !over && percent >= 85);
+  const tone = meterTone(Math.min(100, percent), Boolean((fit || parts) && gpuTotal > 0));
+  const ramTotal = resources.data?.ramTotalBytes ?? 0;
+  const ramFree = Math.max(0, ramTotal - (resources.data?.ramUsedBytes ?? 0));
+  const ramTight = Boolean(fit && fit.ramBytes > 0 && ramTotal > 0 && fit.ramBytes > ramFree);
+  const windowed = hasWindowedKv({
+    kvSwaBytesPerToken: stats.data?.kvSwaBytesPerToken,
+    swaWindow: stats.data?.swaWindow,
+    kvLayers: stats.data?.kvLayers,
+  });
+  const layerCount = stats.data?.gpuLayers ?? 0;
 
   if (stats.isPending && !stats.data) {
     return (
@@ -425,7 +585,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
       </Field>
     );
   }
-  if (!parts) return null;
+  if (!parts && !fit) return null;
 
   return (
     <Field label={t('network.inspector.llm.vram')}>
@@ -454,10 +614,10 @@ function VramNeedField({ node }: { node: GraphNode }) {
         <span className={cn('tabular-nums', over && 'font-medium text-destructive', tight && 'font-medium text-warning')}>
           {gpuTotal > 0
             ? t('network.inspector.llm.vramNeed', {
-                need: formatBytes(parts.total, locale),
+                need: formatBytes(need, locale),
                 total: formatBytes(gpuTotal, locale),
               })
-            : t('network.inspector.llm.vramNeedOnly', { need: formatBytes(parts.total, locale) })}
+            : t('network.inspector.llm.vramNeedOnly', { need: formatBytes(need, locale) })}
         </span>
         {gpuTotal > 0 ? (
           <span className="tabular-nums text-muted-foreground">{formatPercent(percent, locale)}</span>
@@ -466,15 +626,34 @@ function VramNeedField({ node }: { node: GraphNode }) {
       {gpuNames ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramPool', { names: gpuNames })}</p> : null}
       <p className="text-xs text-muted-foreground">
         {t('network.inspector.llm.vramParts', {
-          weights: formatBytes(parts.weights, locale),
-          kv: formatBytes(parts.kv, locale),
-          overhead: formatBytes(parts.overhead, locale),
+          weights: formatBytes(weightBytes, locale),
+          kv: formatBytes(kvBytes, locale),
+          overhead: formatBytes(overheadBytes, locale),
         })}
       </p>
-      {formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
+      {fit ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeExpertsGpu', { experts: formatBytes(fit.expertOnGpuBytes, locale) })}
+        </p>
+      ) : null}
+      {fit && fit.ramBytes > 0 ? (
+        <p className={cn('text-xs', ramTight ? 'text-warning' : 'text-muted-foreground')}>
+          {t('network.inspector.llm.moeRam', { ram: formatBytes(fit.ramBytes, locale) })}
+        </p>
+      ) : null}
+      {ramTight ? <p className="text-xs text-warning">{t('network.inspector.llm.moeRamTight')}</p> : null}
+      {fit && layerCount > 0 && fit.attentionLayersOnGpu < layerCount ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeAttention', { on: fit.attentionLayersOnGpu, total: layerCount })}
+        </p>
+      ) : null}
+      {fit && windowed ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.moeSwa')}</p> : null}
+      {!fit && formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
       {over ? <p className="text-xs text-destructive">{t('network.inspector.llm.vramOver')}</p> : null}
       {tight ? <p className="text-xs text-warning">{t('network.inspector.llm.vramTight')}</p> : null}
-      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramHint')}</p>
+      <p className="text-xs text-muted-foreground">
+        {fit ? t('network.inspector.llm.moeEstimate') : t('network.inspector.llm.vramHint')}
+      </p>
     </Field>
   );
 }
@@ -610,6 +789,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numGpu = undefined;
       patch.numGpuPercent = undefined;
       patch.numGpuLayers = undefined;
+      patch.gpuPlacement = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -713,6 +893,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
               numGpu: undefined,
               numGpuPercent: undefined,
               numGpuLayers: undefined,
+              gpuPlacement: undefined,
             })
           }
         />

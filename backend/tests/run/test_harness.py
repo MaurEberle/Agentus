@@ -927,6 +927,78 @@ def test_num_gpu_max_includes_output_slot(monkeypatch, api_env) -> None:
     assert options[0] == {"num_gpu": 33}
 
 
+def _finish(options: list[object]):
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        options.append(req.ollama_options)
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    return _complete
+
+
+def test_moe_full_layer_default_omits_num_gpu(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 32
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] is None
+
+
+def test_moe_partial_layers_still_send_num_gpu(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 16
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] == {"num_gpu": 17}
+
+
+def test_moe_forced_layers_send_full_offload(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 32
+            node["data"]["gpuPlacement"] = "layers"
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] == {"num_gpu": 33}
+
+
+def test_moe_auto_placement_omits_num_gpu(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["gpuPlacement"] = "auto"
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] is None or options[0] == {}
+
+
 def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None:
     from app.run.controller import get_controller
     from tests.run.test_validate import _orchestrator_doc

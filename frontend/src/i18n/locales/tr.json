@@ -717,7 +717,19 @@
         "vramFormula": "GPU: {{total}} katmanın son {{on}}. {{full}} × {{perToken}} B/jeton × {{ctx}} jeton.",
         "vramFormulaMixed": "GPU: {{total}} katmanın son {{on}}. {{full}} küresel katman × {{ctx}} jeton.",
         "vramFormulaSwa": "GPU: {{total}} katmanın son {{on}}. {{full}} küresel × {{ctx}} jeton, {{swa}} kayar pencere × pencere {{window}}.",
-        "vramHint": "Model verisinden katman katman tahmin. GPU son N katmanı alır. Tam dikkat: tüm bağlam. Kayar pencere: yalnızca penceresi. KV önbelleği f16."
+        "vramHint": "Model verisinden katman katman tahmin. GPU son N katmanı alır. Tam dikkat: tüm bağlam. Kayar pencere: yalnızca penceresi. KV önbelleği f16.",
+        "moeAuto": "Uzmanları otomatik yerleştir",
+        "moeForce": "Tüm katmanları zorla",
+        "moeAutoHint": "{{count}} uzman, belirteç başına {{used}} tanesi etkin. Tüm ağırlıklar yüklü kalır. Attention GPU’da kalır, uzmanlar kalan yeri doldurur.",
+        "moeAutoHintNoUsed": "{{count}} uzman. Tüm ağırlıklar yüklü kalır. Attention GPU’da kalır, uzmanlar kalan yeri doldurur.",
+        "moeLayerWarn": "Bu seçim katmanın tamamını taşır, attention dahil.",
+        "moeUnknown": "Uzman ağırlıkları bu modelin verisinden ayrılamıyor. Gösterge yoğun model formülünü kullanır.",
+        "moeExpertsGpu": "GPU’daki uzmanlar {{experts}}",
+        "moeRam": "RAM’deki uzmanlar: {{ram}}",
+        "moeRamTight": "Boş RAM bu tahminin altında. Sabitlenmiş sayfalar ve mmap daha fazlasını kullanabilir.",
+        "moeAttention": "Attention, GPU belleğine sığması için son {{on}} / {{total}} katmanda kalır.",
+        "moeSwa": "Kayan pencere bağlamında Ollama, göstergede GPU yeri görünse bile tüm uzmanları RAM’de tutabilir.",
+        "moeEstimate": "Model verisi ve dosya boyutundan tahmin."
       },
       "agent": {
         "hint": "LLM, araçlar ve bilgi kenarlardan gelir. Orkestratör yoksa ileti ajanı başlatır.",

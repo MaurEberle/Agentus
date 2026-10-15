@@ -717,7 +717,19 @@
         "vramFormula": "GPU: últimas {{on}} de {{total}} camadas. {{full}} × {{perToken}} B/token × {{ctx}} tokens.",
         "vramFormulaMixed": "GPU: últimas {{on}} de {{total}} camadas. {{full}} camadas globais × {{ctx}} tokens.",
         "vramFormulaSwa": "GPU: últimas {{on}} de {{total}} camadas. {{full}} globais × {{ctx}} tokens, {{swa}} janela deslizante × janela {{window}}.",
-        "vramHint": "Estimativa por camada a partir do modelo. A GPU fica com as últimas N camadas. Atenção completa: contexto inteiro. Janela deslizante: só a janela. Cache KV em f16."
+        "vramHint": "Estimativa por camada a partir do modelo. A GPU fica com as últimas N camadas. Atenção completa: contexto inteiro. Janela deslizante: só a janela. Cache KV em f16.",
+        "moeAuto": "Colocar os especialistas automaticamente",
+        "moeForce": "Forçar todas as camadas",
+        "moeAutoHint": "{{count}} especialistas, {{used}} ativos por token. Todos os pesos ficam carregados. A atenção fica na GPU e os especialistas ocupam o resto.",
+        "moeAutoHintNoUsed": "{{count}} especialistas. Todos os pesos ficam carregados. A atenção fica na GPU e os especialistas ocupam o resto.",
+        "moeLayerWarn": "Esta escolha move camadas inteiras, inclusive a atenção.",
+        "moeUnknown": "Os pesos dos especialistas não podem ser separados com os metadados deste modelo. O medidor usa a fórmula densa.",
+        "moeExpertsGpu": "Especialistas na GPU {{experts}}",
+        "moeRam": "Especialistas na RAM: {{ram}}",
+        "moeRamTight": "A RAM livre fica abaixo desta estimativa. Páginas fixadas e mmap podem ocupar mais.",
+        "moeAttention": "A atenção fica nas últimas {{on}} de {{total}} camadas para caber na memória da GPU.",
+        "moeSwa": "Com contexto de janela deslizante, o Ollama pode deixar todos os especialistas na RAM mesmo quando este medidor ainda mostra espaço na GPU.",
+        "moeEstimate": "Estimativa a partir dos metadados e do tamanho do arquivo."
       },
       "agent": {
         "hint": "LLM, ferramentas e conhecimento vêm pelas arestas. Sem orquestrador, a mensagem inicia o agente.",

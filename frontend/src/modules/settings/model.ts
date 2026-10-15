@@ -159,6 +159,11 @@ export type RuntimeModelStats = {
   swaWindow?: number;
   overheadBytes?: number;
   kvLayers?: KvLayer[];
+  expertCount?: number;
+  expertUsedCount?: number;
+  routedExpertBytes?: number;
+  nonExpertBytes?: number;
+  leadingDenseBlocks?: number;
   messageKey?: string;
 };
 export type HelpPing = { ok: boolean; messageKey?: string };

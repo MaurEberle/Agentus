@@ -1050,19 +1050,35 @@ def _ollama_options(llm, choice) -> dict | None:
         options["num_ctx"] = choice.num_ctx
     if isinstance(llm.num_thread, int) and llm.num_thread > 0:
         options["num_thread"] = llm.num_thread
-    if isinstance(llm.num_gpu, int) and llm.num_gpu > 0:
-        from app.runtime.ollama import clamp_gpu_layers, model_block_count, ollama_num_gpu
-
-        layers = model_block_count(llm.model, base_url=llm.base_url)
-        options["num_gpu"] = ollama_num_gpu(clamp_gpu_layers(llm.num_gpu, layers), layers)
-    elif isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0:
-        from app.runtime.ollama import gpu_layers_for_percent, model_block_count, ollama_num_gpu
-
-        layers = model_block_count(llm.model, base_url=llm.base_url)
-        options["num_gpu"] = ollama_num_gpu(
-            gpu_layers_for_percent(llm.num_gpu_percent, layers),
-            layers,
+    wants_layers = isinstance(llm.num_gpu, int) and llm.num_gpu > 0
+    wants_percent = isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0
+    placement = getattr(llm, "gpu_placement", None)
+    if wants_layers or wants_percent or placement == "layers":
+        from app.runtime.ollama import (
+            clamp_gpu_layers,
+            gpu_layers_for_percent,
+            model_block_count,
+            model_is_moe,
+            moe_omits_num_gpu,
+            ollama_num_gpu,
         )
+
+        layers = model_block_count(llm.model, base_url=llm.base_url)
+        if wants_layers:
+            offload = clamp_gpu_layers(llm.num_gpu, layers)
+        elif wants_percent:
+            offload = gpu_layers_for_percent(llm.num_gpu_percent, layers)
+        elif isinstance(layers, int) and layers > 0:
+            offload = layers
+        else:
+            offload = 999
+        if not moe_omits_num_gpu(
+            is_moe=model_is_moe(llm.model, base_url=llm.base_url),
+            placement=placement,
+            offload_layers=offload,
+            block_count=layers,
+        ):
+            options["num_gpu"] = ollama_num_gpu(offload, layers)
     return options or None
 
 
