@@ -426,3 +426,65 @@ def test_index_rejects_a_data_dir_root(monkeypatch, api_env, tmp_path) -> None:
     assert calls["n"] == 0
     stored = get_collection("net-data", "k-data")
     assert stored is not None and stored.state == "error"
+
+
+def test_empty_ready_collection_is_indexed_again(monkeypatch, api_env, tmp_path) -> None:
+    from app.db.network_rag import CollectionMeta, get_collection, upsert_collection
+
+    init()
+    calls = _embed_counter(monkeypatch)
+    _empty_network("net-empty")
+    folder = tmp_path / "notes"
+    folder.mkdir()
+    (folder / "note.md").write_text("# Hello\nworld", encoding="utf-8")
+    node = _knowledge_node("k-empty", folder)
+    data_dir = str(tmp_path / "appdata")
+    assert index_node("net-empty", node, data_dir=data_dir) == "ready"
+    stored = get_collection("net-empty", "k-empty")
+    assert stored is not None
+    upsert_collection(
+        CollectionMeta(
+            network_id=stored.network_id,
+            node_id=stored.node_id,
+            source_path=stored.source_path,
+            embedding_model_id=stored.embedding_model_id,
+            dimension=0,
+            state="ready",
+            updated_at=stored.updated_at,
+            content_fingerprint=stored.content_fingerprint,
+        )
+    )
+    assert index_node("net-empty", node, data_dir=data_dir) == "ready"
+    assert calls["n"] == 2
+    refreshed = get_collection("net-empty", "k-empty")
+    assert refreshed is not None and (refreshed.dimension or 0) > 0
+
+
+def test_source_limit_covers_a_typeset_book() -> None:
+    from app.common.extract import MAX_SOURCE_BYTES
+
+    assert MAX_SOURCE_BYTES >= 64 * 1024 * 1024
+
+
+def test_oversized_reindex_does_not_wipe_chunks(monkeypatch, api_env, tmp_path) -> None:
+    from app.common import extract as extract_mod
+    from app.db.network_rag import get_collection, list_chunks
+
+    init()
+    calls = _embed_counter(monkeypatch)
+    _empty_network("net-big")
+    folder = tmp_path / "books"
+    folder.mkdir()
+    (folder / "book.md").write_text("# Book\nonce upon a time", encoding="utf-8")
+    node = _knowledge_node("k-big", folder)
+    data_dir = str(tmp_path / "appdata")
+    assert index_node("net-big", node, data_dir=data_dir, force=True) == "ready"
+    kept = list_chunks("net-big", "k-big")
+    assert kept
+    monkeypatch.setattr(extract_mod, "MAX_SOURCE_BYTES", 8)
+    assert index_node("net-big", node, data_dir=data_dir, force=True) == "error"
+    assert calls["n"] == 1
+    stored = get_collection("net-big", "k-big")
+    assert stored is not None and stored.state == "error"
+    assert stored.content_fingerprint is None
+    assert list_chunks("net-big", "k-big") == kept

@@ -8,6 +8,7 @@ from pathlib import Path
 from collections.abc import Callable
 from typing import Any, Literal
 
+from app.common import extract as extract_mod
 from app.common.extract import extract_text, is_indexable
 from app.db.engine import utc_now
 from app.db.paths import RAG_DIR_NAME
@@ -165,6 +166,18 @@ def _read(path: Path) -> str:
     return extract_text(path)
 
 
+def _file_size(path: Path) -> int | None:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return None
+
+
+def _too_large(path: Path) -> bool:
+    size = _file_size(path)
+    return size is not None and size > extract_mod.MAX_SOURCE_BYTES
+
+
 def index_node(
     network_id: str,
     node: GraphNode,
@@ -193,9 +206,13 @@ def index_node(
         _mark_index_error(network_id, node.id, source, model)
         return "error"
     existing = get_collection(network_id, node.id)
+    # A previous pass can store "ready" with no vectors when every file was
+    # skipped. That must not stick just because the file bytes are unchanged.
+    stale_empty = bool(files) and existing is not None and (existing.dimension or 0) == 0
     if (
         not force
         and existing
+        and not stale_empty
         and existing.state == "ready"
         and existing.embedding_model_id == model
         and existing.content_fingerprint == fingerprint
@@ -205,7 +222,13 @@ def index_node(
         return "ready"
     tell("read")
     texts: list[tuple[str, str | None, str, str]] = []
+    saw_oversized = False
+    saw_readable = False
     for path in files:
+        if _too_large(path):
+            saw_oversized = True
+            continue
+        saw_readable = True
         raw = _read(path)
         if not raw.strip():
             continue
@@ -214,6 +237,9 @@ def index_node(
         for piece in chunk_markdown(raw, title, file_hash):
             texts.append((piece.title, piece.section, piece.text, piece.file_hash))
     if not texts:
+        if saw_oversized and not saw_readable:
+            _mark_index_error(network_id, node.id, source, model)
+            return "error"
         upsert_collection(
             CollectionMeta(
                 network_id=network_id,
