@@ -131,6 +131,10 @@
       "title": "La ejecución falló",
       "desc": "El inicio o la parada ha fallado."
     },
+    "runStartFailed": {
+      "title": "La ejecución falló",
+      "desc": "El inicio ha fallado: {{detail}}"
+    },
     "noNetwork": {
       "title": "Ninguna red seleccionada",
       "desc": "Elige primero una red en la selección rápida."
@@ -706,6 +710,7 @@
         "vramLoading": "Estimando la memoria necesaria…",
         "vramNeed": "{{need}} de {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "Se cuentan: {{names}}",
         "vramParts": "Pesos {{weights}} · contexto {{kv}} · reserva {{overhead}}",
         "vramOver": "No cabe en la memoria GPU. Baja el contexto o el offload; si no, calculará la CPU.",
         "vramTight": "Justo. Un segundo modelo o un prompt lleno puede desbordar.",
@@ -847,6 +852,7 @@
       "knowledgeRoot": "No se permite la raíz de una unidad o del sistema.",
       "knowledgeSandbox": "La ruta debe estar bajo la carpeta de datos.",
       "knowledgeHelpCorpus": "El corpus de ayuda no es conocimiento de la red.",
+      "knowledgeDataDir": "La carpeta de datos de la aplicación no es conocimiento de la red.",
       "knowledgeTarget": "Conecta el conocimiento solo al puerto knowledge del agente.",
       "cycle": "No se permiten ciclos.",
       "knowledge": {

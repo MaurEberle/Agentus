@@ -26,7 +26,7 @@ import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
-import { estimateVramParts, resolveGpuLayers } from '@/modules/network/inspector/vram';
+import { estimateVramParts, inferenceGpus, resolveGpuLayers } from '@/modules/network/inspector/vram';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
@@ -407,7 +407,12 @@ function VramNeedField({ node }: { node: GraphNode }) {
               ctx: count(ctx),
             })
       : null;
-  const gpuTotal = resources.data?.gpus?.[0]?.vramTotalBytes ?? 0;
+  const pool = inferenceGpus(resources.data?.gpus ?? []);
+  const gpuTotal = pool.reduce((sum, gpu) => sum + Math.max(0, gpu.vramTotalBytes), 0);
+  const gpuNames = pool
+    .map((gpu) => gpu.name?.trim())
+    .filter((name): name is string => Boolean(name))
+    .join(' · ');
   const percent = parts && gpuTotal > 0 ? (parts.total / gpuTotal) * 100 : 0;
   const over = Boolean(parts && gpuTotal > 0 && parts.total > gpuTotal);
   const tight = Boolean(parts && gpuTotal > 0 && !over && percent >= 85);
@@ -458,6 +463,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
           <span className="tabular-nums text-muted-foreground">{formatPercent(percent, locale)}</span>
         ) : null}
       </div>
+      {gpuNames ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramPool', { names: gpuNames })}</p> : null}
       <p className="text-xs text-muted-foreground">
         {t('network.inspector.llm.vramParts', {
           weights: formatBytes(parts.weights, locale),

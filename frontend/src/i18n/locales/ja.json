@@ -131,6 +131,10 @@
       "title": "実行に失敗しました",
       "desc": "開始または停止に失敗しました。"
     },
+    "runStartFailed": {
+      "title": "実行に失敗しました",
+      "desc": "開始に失敗しました: {{detail}}"
+    },
     "noNetwork": {
       "title": "ネットワークが未選択です",
       "desc": "先にクイック選択でネットワークを選んでください。"
@@ -706,6 +710,7 @@
         "vramLoading": "メモリ見積もり中…",
         "vramNeed": "{{need}} / {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "対象: {{names}}",
         "vramParts": "重み {{weights}} · コンテキスト {{kv}} · 予備 {{overhead}}",
         "vramOver": "GPU メモリに収まりません。コンテキストかオフロードを下げないと CPU が計算します。",
         "vramTight": "余裕がありません。別モデルや満杯のプロンプトで溢れることがあります。",
@@ -847,6 +852,7 @@
       "knowledgeRoot": "ドライブまたはシステムのルートは許可されません。",
       "knowledgeSandbox": "パスはデータフォルダー配下である必要があります。",
       "knowledgeHelpCorpus": "ヘルプコーパスはネットワーク知識ではありません。",
+      "knowledgeDataDir": "アプリのデータフォルダーはネットワーク知識ではありません。",
       "knowledgeTarget": "知識はエージェントの knowledge ポートにだけ接続してください。",
       "cycle": "循環は許可されません。",
       "knowledge": {

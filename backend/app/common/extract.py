@@ -12,7 +12,10 @@ from pathlib import Path
 
 log = logging.getLogger("agentus.extract")
 
-MAX_SOURCE_BYTES = 8 * 1024 * 1024
+# Illustrated books are often well over 8 MB. The extracted text is still
+# capped at MAX_TEXT_CHARS. Larger files are refused instead of being stored
+# as an empty, ready index.
+MAX_SOURCE_BYTES = 128 * 1024 * 1024
 MAX_TEXT_CHARS = 400_000
 
 SKIP_SUFFIXES = frozenset(

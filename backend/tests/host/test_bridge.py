@@ -64,3 +64,15 @@ def test_inject_sets_chrome_host() -> None:
     joined = "\n".join(win.js)
     assert "chromeHost" in joined
     assert "agentus-chrome-ready" in joined
+
+
+def test_open_external_allows_public_http(monkeypatch) -> None:
+    opened: list[str] = []
+    monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url) or True)
+    api = ChromeHostApi()
+    assert api.openExternal("https://example.com/docs") is True
+    assert opened == ["https://example.com/docs"]
+    assert api.openExternal("file:///C:/secret.txt") is False
+    assert api.openExternal("https://user:secret@example.com/docs") is False
+    assert api.openExternal("javascript:alert(1)") is False
+    assert opened == ["https://example.com/docs"]

@@ -16,6 +16,8 @@ _ENGTYPE_RE = re.compile(r"engtype_(.+)$", re.I)
 MICROSOFT_VENDOR = 0x1414
 KNOWN_VENDORS = {0x10DE, 0x1002, 0x8086}  # NVIDIA, AMD, Intel
 MIN_DEDICATED = 128 * 1024 * 1024
+# Integrated adapters often report a 128 MB carve-out. Real cards sit well above this.
+MIN_DISCRETE = 512 * 1024 * 1024
 BUSY_ENGINES = ("3D", "Compute")
 
 _lock = threading.Lock()
@@ -75,6 +77,46 @@ def merge_util(engine_rows: list[tuple[str, str, float]]) -> dict[str, float]:
     for (luid, _kind), total in by_type.items():
         best[luid] = max(best.get(luid, 0.0), min(100.0, total))
     return best
+
+
+def is_discrete(dedicated: int) -> bool:
+    return dedicated >= MIN_DISCRETE
+
+
+def inference_luids(adapters: list[GpuAdapter]) -> set[str]:
+    """Adapters one runtime can fill together.
+
+    Ollama and llama.cpp use every device of a single backend. Discrete cards
+    of the vendor with the most dedicated memory form that pool. A 128 MB
+    integrated adapter is not added to a real GPU, and two vendors are not
+    summed. With only integrated adapters, the largest one is the pool.
+    """
+    discrete = [adapter for adapter in adapters if is_discrete(adapter.dedicated_bytes)]
+    if discrete:
+        totals: dict[int, int] = {}
+        for adapter in discrete:
+            totals[adapter.vendor_id] = totals.get(adapter.vendor_id, 0) + adapter.dedicated_bytes
+        best = max(totals, key=lambda vendor: (totals[vendor], -vendor))
+        return {adapter.luid for adapter in discrete if adapter.vendor_id == best}
+    if not adapters:
+        return set()
+    best_adapter = max(
+        adapters,
+        key=lambda adapter: (adapter.dedicated_bytes or adapter.shared_bytes, -adapter.vendor_id),
+    )
+    return {best_adapter.luid}
+
+
+def order_gpu_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Inference GPUs first, largest dedicated memory first. Indexes stay put."""
+    return sorted(
+        rows,
+        key=lambda row: (
+            0 if row.get("inference") else 1,
+            -int(row.get("vram_total_bytes") or 0),
+            int(row.get("index") or 0),
+        ),
+    )
 
 
 def merge_vram(rows: list[tuple[str, float]]) -> dict[str, int]:
@@ -287,6 +329,7 @@ def sample_gpus() -> list[dict[str, Any]]:
                 engines, vram_rows = [], []
     util = merge_util(engines)
     vram = merge_vram(vram_rows)
+    chosen = inference_luids(adapters)
     gpus: list[dict[str, Any]] = []
     for index, adapter in enumerate(adapters):
         total = adapter.dedicated_bytes or adapter.shared_bytes
@@ -295,9 +338,11 @@ def sample_gpus() -> list[dict[str, Any]]:
             {
                 "index": index,
                 "name": adapter.name,
+                "vendor_id": adapter.vendor_id,
+                "inference": adapter.luid in chosen,
                 "util_percent": util.get(adapter.luid, 0.0),
                 "vram_used_bytes": used,
                 "vram_total_bytes": total,
             }
         )
-    return gpus
+    return order_gpu_rows(gpus)

@@ -131,6 +131,10 @@
       "title": "Run failed",
       "desc": "Start or stop failed."
     },
+    "runStartFailed": {
+      "title": "Run failed",
+      "desc": "Start failed: {{detail}}"
+    },
     "noNetwork": {
       "title": "No network selected",
       "desc": "Choose a network in the quick select first."
@@ -763,6 +767,7 @@
         "vramLoading": "Estimating memory need…",
         "vramNeed": "{{need}} of {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "Counted: {{names}}",
         "vramParts": "Weights {{weights}} · context {{kv}} · reserve {{overhead}}",
         "vramOver": "Does not fit in GPU memory. Lower context or offload, or the CPU will do the work.",
         "vramTight": "Tight. A second model or a full prompt may spill.",
@@ -905,6 +910,7 @@
       "knowledgeRoot": "Drive or system root is not allowed.",
       "knowledgeSandbox": "Path must be under the data folder.",
       "knowledgeHelpCorpus": "The help corpus is not network knowledge.",
+      "knowledgeDataDir": "The application data folder is not network knowledge.",
       "knowledgeTarget": "Connect knowledge only to the agent knowledge port.",
       "cycle": "Cycles are not allowed.",
       "knowledge": {

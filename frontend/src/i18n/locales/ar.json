@@ -131,6 +131,10 @@
       "title": "فشل التشغيل",
       "desc": "فشل البدء أو الإيقاف."
     },
+    "runStartFailed": {
+      "title": "فشل التشغيل",
+      "desc": "فشل البدء: {{detail}}"
+    },
     "noNetwork": {
       "title": "لم تُختر شبكة",
       "desc": "اختر أولًا شبكة من الاختيار السريع."
@@ -706,6 +710,7 @@
         "vramLoading": "جاري تقدير الذاكرة…",
         "vramNeed": "{{need}} من {{total}}",
         "vramNeedOnly": "{{need}}",
+        "vramPool": "المحسوبة: {{names}}",
         "vramParts": "الأوزان {{weights}} · السياق {{kv}} · احتياطي {{overhead}}",
         "vramOver": "لا تتسع لذاكرة GPU. خفّض السياق أو التفريغ وإلا تحسب المعالج.",
         "vramTight": "ضيق. نموذج ثانٍ أو موجّه ممتلئ قد يفيض.",
@@ -847,6 +852,7 @@
       "knowledgeRoot": "جذر القرص أو النظام غير مسموح.",
       "knowledgeSandbox": "يجب أن يقع المسار تحت مجلد البيانات.",
       "knowledgeHelpCorpus": "مجموعة المساعدة ليست معرفة شبكة.",
+      "knowledgeDataDir": "مجلد بيانات التطبيق ليس معرفة شبكة.",
       "knowledgeTarget": "اربط المعرفة بمنفذ knowledge للوكيل فقط.",
       "cycle": "الدورات غير مسموحة.",
       "knowledge": {

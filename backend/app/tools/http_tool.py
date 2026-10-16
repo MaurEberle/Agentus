@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ipaddress
+import socket
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
@@ -12,7 +14,8 @@ from app.tools.models import ExecuteResult
 _METHODS = frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"})
 _BODY_METHODS = frozenset({"POST", "PUT", "PATCH"})
 _REDIRECTS = frozenset({301, 302, 303, 307, 308})
-_BLOCKED_HOSTS = frozenset({"169.254.169.254", "metadata.google.internal"})
+_BLOCKED_NAMES = frozenset({"169.254.169.254", "metadata.google.internal", "localhost"})
+_CREDENTIAL_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
 _MASK_HEADER_NAMES = frozenset({"authorization", "set-cookie"})
 
 
@@ -32,6 +35,55 @@ def _clamp_int(value: object, lo: int, hi: int, default: int) -> int:
     return int(_clamp_float(value, float(lo), float(hi), float(default)))
 
 
+def _mapped(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        return ip.ipv4_mapped
+    return ip
+
+
+def _bad_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    ip = _mapped(ip)
+    return bool(ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_multicast)
+
+
+def _parse_ip(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    try:
+        return ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    if host.isdigit():
+        number = int(host)
+        if 0 <= number <= 0xFFFFFFFF:
+            return ipaddress.IPv4Address(number)
+    return None
+
+
+def _resolved_ips(host: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except socket.gaierror:
+        return []
+    found: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+    for info in infos:
+        sockaddr = info[4]
+        if not sockaddr:
+            continue
+        parsed = _parse_ip(str(sockaddr[0]))
+        if parsed is not None:
+            found.append(parsed)
+    return found
+
+
+def _host_blocked(host: str) -> bool:
+    folded = host.lower().rstrip(".")
+    if folded in _BLOCKED_NAMES or folded.endswith(".localhost"):
+        return True
+    literal = _parse_ip(folded)
+    if literal is not None:
+        return _bad_ip(literal)
+    return any(_bad_ip(ip) for ip in _resolved_ips(folded))
+
+
 def _check_url(url: str) -> str | None:
     parsed = urlparse(url)
     scheme = (parsed.scheme or "").lower()
@@ -42,9 +94,17 @@ def _check_url(url: str) -> str | None:
     host = (parsed.hostname or "").lower()
     if not host:
         return "tools.http.invalidUrl"
-    if host in _BLOCKED_HOSTS:
+    if _host_blocked(host):
         return "tools.http.blockedHost"
     return None
+
+
+def _host_of(url: str) -> str:
+    return (urlparse(url).hostname or "").lower().rstrip(".")
+
+
+def _drop_credentials(headers: dict[str, str]) -> dict[str, str]:
+    return {key: value for key, value in headers.items() if key.lower() not in _CREDENTIAL_HEADERS}
 
 
 def _with_query(url: str, query: object) -> str:
@@ -133,6 +193,8 @@ def run(
                         blocked = _check_url(nxt)
                         if blocked:
                             return _fail(blocked)
+                        if _host_of(nxt) != _host_of(current):
+                            headers = _drop_credentials(headers)
                         current = nxt
                         if response.status_code in {301, 302, 303}:
                             current_method = "GET"

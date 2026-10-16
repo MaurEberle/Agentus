@@ -144,6 +144,55 @@ def test_knowledge_drive_root() -> None:
     assert any(e.message_key == "graph.knowledge.path" for e in errors)
 
 
+def test_agent_without_message_is_not_a_missing_llm() -> None:
+    raw = mini_doc()
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e1"]
+    errors = validate_document(AgentNetworkDocument.model_validate(raw), data_dir="C:/data")
+    keys = [error.message_key for error in errors]
+    assert "graph.agent.noMessage" in keys
+    assert "graph.agent.noLlm" not in keys
+
+
+def test_knowledge_inside_data_dir(tmp_path) -> None:
+    data = tmp_path / "data"
+    nested = data / "notes"
+    nested.mkdir(parents=True)
+    raw = mini_doc()
+    raw["nodes"].append(
+        {
+            "id": "kn",
+            "type": "knowledge",
+            "position": {"x": 0, "y": 0},
+            "data": {"sourcePath": str(nested)},
+        }
+    )
+    errors = validate_document(
+        AgentNetworkDocument.model_validate(raw),
+        data_dir=str(data),
+    )
+    assert any(error.message_key == "graph.knowledge.dataDir" for error in errors)
+    assert not any(error.message_key == "graph.knowledge.path" for error in errors)
+
+
+def test_knowledge_help_corpus_folder(tmp_path) -> None:
+    corpus = tmp_path / "agentus_network_rag_documents"
+    corpus.mkdir()
+    raw = mini_doc()
+    raw["nodes"].append(
+        {
+            "id": "kn",
+            "type": "knowledge",
+            "position": {"x": 0, "y": 0},
+            "data": {"sourcePath": str(corpus)},
+        }
+    )
+    errors = validate_document(
+        AgentNetworkDocument.model_validate(raw),
+        data_dir=str(tmp_path / "data"),
+    )
+    assert any(error.message_key == "graph.knowledge.helpCorpus" for error in errors)
+
+
 def test_knowledge_outside_data_dir_ok(tmp_path) -> None:
     folder = tmp_path / "stories"
     folder.mkdir()

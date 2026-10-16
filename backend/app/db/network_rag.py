@@ -17,6 +17,7 @@ class CollectionMeta:
     dimension: int | None
     state: str
     updated_at: str | None
+    content_fingerprint: str | None = None
 
 
 @dataclass
@@ -42,6 +43,7 @@ def _collection(row: object) -> CollectionMeta:
         dimension=row["dimension"],  # type: ignore[index]
         state=row["state"],  # type: ignore[index]
         updated_at=row["updated_at"],  # type: ignore[index]
+        content_fingerprint=row["content_fingerprint"],  # type: ignore[index]
     )
 
 
@@ -78,14 +80,15 @@ def upsert_collection(meta: CollectionMeta) -> None:
             """
             INSERT INTO network_rag_collections (
               network_id, node_id, source_path, embedding_model_id,
-              dimension, state, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+              dimension, state, updated_at, content_fingerprint
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(network_id, node_id) DO UPDATE SET
               source_path = excluded.source_path,
               embedding_model_id = excluded.embedding_model_id,
               dimension = excluded.dimension,
               state = excluded.state,
-              updated_at = excluded.updated_at
+              updated_at = excluded.updated_at,
+              content_fingerprint = excluded.content_fingerprint
             """,
             (
                 meta.network_id,
@@ -95,6 +98,7 @@ def upsert_collection(meta: CollectionMeta) -> None:
                 meta.dimension,
                 meta.state,
                 meta.updated_at,
+                meta.content_fingerprint,
             ),
         )
 

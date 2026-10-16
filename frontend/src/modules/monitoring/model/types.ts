@@ -11,6 +11,8 @@ export const LOG_BUFFER_SIZE = 2000;
 export type ResourceGpu = {
   index: number;
   name?: string;
+  vendorId?: number;
+  inference?: boolean;
   utilPercent: number;
   vramUsedBytes: number;
   vramTotalBytes: number;

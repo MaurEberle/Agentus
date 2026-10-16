@@ -8,6 +8,7 @@ from pathlib import Path
 from collections.abc import Callable
 from typing import Any, Literal
 
+from app.common import extract as extract_mod
 from app.common.extract import extract_text, is_indexable
 from app.db.engine import utc_now
 from app.db.paths import RAG_DIR_NAME
@@ -65,16 +66,69 @@ def status_for_network(network_id: str) -> list[dict[str, str]]:
     ]
 
 
+def _resolved_dir(raw: str) -> Path | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        return Path(os.path.realpath(os.path.expanduser(text)))
+    except (OSError, ValueError):
+        return None
+
+
+def _is_under(child: Path, parent: Path) -> bool:
+    try:
+        child.resolve().relative_to(parent)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _path_parts(path: Path) -> list[str]:
+    return str(path).replace("\\", "/").split("/")
+
+
+def source_block_reason(source_path: str, data_dir: str) -> str | None:
+    """``path``, ``corpus``, or ``data`` when the folder must not be indexed."""
+    from app.tools.file_access_tool import is_forbidden_root
+
+    raw = (source_path or "").strip()
+    if not raw:
+        return "path"
+    expanded = os.path.expanduser(raw)
+    if not os.path.isabs(expanded):
+        return "path"
+    real = _resolved_dir(expanded)
+    if real is None or is_forbidden_root(Path(real)):
+        return "path"
+    if RAG_DIR_NAME in _path_parts(real):
+        return "corpus"
+    data = _resolved_dir(data_dir)
+    if data is not None and (real == data or _is_under(real, data)):
+        return "data"
+    return None
+
+
+def source_is_allowed(source_path: str, data_dir: str) -> bool:
+    return source_block_reason(source_path, data_dir) is None
+
+
+def _same_source(stored: str | None, source: str) -> bool:
+    left = _resolved_dir(stored or "")
+    right = _resolved_dir(source)
+    return left is not None and left == right
+
+
 def _safe_files(root: Path, data_dir: str) -> list[Path]:
-    del data_dir
     try:
         source_root = Path(os.path.realpath(root))
     except OSError:
         return []
     if not source_root.is_dir():
         return []
-    if RAG_DIR_NAME in source_root.as_posix().replace("\\", "/").split("/"):
+    if not source_is_allowed(str(source_root), data_dir):
         return []
+    data = _resolved_dir(data_dir)
     out: list[Path] = []
     for path in source_root.rglob("*"):
         if not path.is_file():
@@ -84,13 +138,44 @@ def _safe_files(root: Path, data_dir: str) -> list[Path]:
             resolved.relative_to(source_root)
         except (OSError, ValueError):
             continue
+        if data is not None and (resolved == data or _is_under(resolved, data)):
+            continue
+        if RAG_DIR_NAME in _path_parts(resolved):
+            continue
         if is_indexable(path):
             out.append(path)
     return out
 
 
+def _fingerprint(root: Path, files: list[Path]) -> str:
+    """Hash of relative path plus file bytes. Any add, delete, edit, or rename changes it."""
+    rows: list[str] = []
+    for path in files:
+        try:
+            resolved = path.resolve()
+            rel = resolved.relative_to(root).as_posix()
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except (OSError, ValueError):
+            return ""
+        rows.append(f"{rel}\t{digest}")
+    rows.sort()
+    return hashlib.sha256("\n".join(rows).encode("utf-8")).hexdigest()
+
+
 def _read(path: Path) -> str:
     return extract_text(path)
+
+
+def _file_size(path: Path) -> int | None:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return None
+
+
+def _too_large(path: Path) -> bool:
+    size = _file_size(path)
+    return size is not None and size > extract_mod.MAX_SOURCE_BYTES
 
 
 def index_node(
@@ -111,21 +196,39 @@ def index_node(
     if not source:
         return "error"
     provider, model, credential_id = _embed_args(node)
+    if not source_is_allowed(source, data_dir):
+        _mark_index_error(network_id, node.id, source, model)
+        return "error"
+    root = Path(os.path.realpath(source))
+    files = _safe_files(root, data_dir)
+    fingerprint = _fingerprint(root, files)
+    if not fingerprint and files:
+        _mark_index_error(network_id, node.id, source, model)
+        return "error"
     existing = get_collection(network_id, node.id)
+    # A previous pass can store "ready" with no vectors when every file was
+    # skipped. That must not stick just because the file bytes are unchanged.
+    stale_empty = bool(files) and existing is not None and (existing.dimension or 0) == 0
     if (
         not force
         and existing
+        and not stale_empty
         and existing.state == "ready"
         and existing.embedding_model_id == model
-        and existing.source_path == source
+        and existing.content_fingerprint == fingerprint
+        and _same_source(existing.source_path, source)
     ):
         tell("cached")
         return "ready"
     tell("read")
-    root = Path(os.path.realpath(source))
-    files = _safe_files(root, data_dir)
     texts: list[tuple[str, str | None, str, str]] = []
+    saw_oversized = False
+    saw_readable = False
     for path in files:
+        if _too_large(path):
+            saw_oversized = True
+            continue
+        saw_readable = True
         raw = _read(path)
         if not raw.strip():
             continue
@@ -134,6 +237,9 @@ def index_node(
         for piece in chunk_markdown(raw, title, file_hash):
             texts.append((piece.title, piece.section, piece.text, piece.file_hash))
     if not texts:
+        if saw_oversized and not saw_readable:
+            _mark_index_error(network_id, node.id, source, model)
+            return "error"
         upsert_collection(
             CollectionMeta(
                 network_id=network_id,
@@ -143,6 +249,7 @@ def index_node(
                 dimension=0,
                 state="ready",
                 updated_at=utc_now(),
+                content_fingerprint=fingerprint,
             )
         )
         replace_chunks(network_id, node.id, [])
@@ -159,17 +266,10 @@ def index_node(
             )
         )
     except Exception:
-        upsert_collection(
-            CollectionMeta(
-                network_id=network_id,
-                node_id=node.id,
-                source_path=source,
-                embedding_model_id=model,
-                dimension=None,
-                state="error",
-                updated_at=utc_now(),
-            )
-        )
+        _mark_index_error(network_id, node.id, source, model)
+        return "error"
+    if len(result.vectors) != len(texts):
+        _mark_index_error(network_id, node.id, source, model)
         return "error"
     chunks = [
         RagChunk(
@@ -184,7 +284,7 @@ def index_node(
             embedding_model_id=model,
             dimension=result.dimension,
         )
-        for (title, section, text, file_hash), vector in zip(texts, result.vectors, strict=False)
+        for (title, section, text, file_hash), vector in zip(texts, result.vectors, strict=True)
     ]
     upsert_collection(
         CollectionMeta(
@@ -195,11 +295,27 @@ def index_node(
             dimension=result.dimension,
             state="ready",
             updated_at=utc_now(),
+            content_fingerprint=fingerprint,
         )
     )
     replace_chunks(network_id, node.id, chunks)
     tell("ready", chunks=len(chunks))
     return "ready"
+
+
+def _mark_index_error(network_id: str, node_id: str, source: str, model: str) -> None:
+    upsert_collection(
+        CollectionMeta(
+            network_id=network_id,
+            node_id=node_id,
+            source_path=source,
+            embedding_model_id=model,
+            dimension=None,
+            state="error",
+            updated_at=utc_now(),
+            content_fingerprint=None,
+        )
+    )
 
 
 def retrieve(

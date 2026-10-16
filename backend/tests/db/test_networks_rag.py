@@ -7,6 +7,7 @@ from app.db.engine import utc_now
 from app.db.network_rag import (
     CollectionMeta,
     RagChunk,
+    get_collection,
     list_chunks,
     list_collection_states,
     replace_chunks,
@@ -46,6 +47,7 @@ def _seed_rag(network_id: str) -> None:
             dimension=2,
             state="ready",
             updated_at=utc_now(),
+            content_fingerprint="fp-1",
         )
     )
     replace_chunks(
@@ -106,3 +108,6 @@ def test_duplicate_copies_rag_with_new_chunk_ids() -> None:
     states = list_collection_states("net-2")
     assert len(states) == 1
     assert states[0].node_id == "kn-1"
+    copied_meta = get_collection("net-2", "kn-1")
+    assert copied_meta is not None
+    assert copied_meta.content_fingerprint == "fp-1"
