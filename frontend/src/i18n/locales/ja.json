@@ -260,6 +260,7 @@
       "pingOk": "ランタイムに到達できます",
       "pingFail": "ランタイムに到達できません",
       "modelNotFound": "モデルが見つからないか読み込めません: {{name}}",
+      "modelInfoFailed": "Ollama がモデル情報を返しませんでした。全層を GPU に載せずに済むよう、実行を中止しました。",
       "timeout": "モデルからの進捗がありません（{{name}}）。総時間ではなく無応答で中止しました。",
       "unreachable": "Ollama に到達できません（{{name}}）。",
       "models": "インストール済みモデル",
@@ -1433,7 +1434,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM完了（{{durationMs}} ms）"
+        "done": "LLM完了（{{durationMs}} ms）",
+        "vram": "VRAM {{model}}: 見積もり {{estimatedBytes}} バイト、使用 {{actualVramBytes}} バイト、差 {{deltaBytes}} バイト。エキスパート {{expertsOnGpu}}/{{expertLayers}}、Attention {{attentionLayersOnGpu}}、num_gpu {{numGpu}}、num_cpu_moe {{numCpuMoe}}。",
+        "modelInfo": "{{model}} のモデル情報がありません。実行を中止しました。",
+        "moeUnsplit": "{{model}} のエキスパート分割が不明です。num_gpu は送りません。"
       },
       "tool": {
         "call": "ツール {{name}}"

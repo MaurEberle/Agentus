@@ -260,6 +260,7 @@
       "pingOk": "Runtime erreichbar",
       "pingFail": "Runtime nicht erreichbar",
       "modelNotFound": "Modell nicht gefunden oder nicht ladbar: {{name}}",
+      "modelInfoFailed": "Ollama hat die Modelldaten nicht geliefert. Der Lauf wurde abgebrochen, damit das Modell nicht mit voller GPU-Offload gestartet wird.",
       "timeout": "Kein Fortschritt vom Modell ({{name}}). Abbruch nach Stille, nicht nach Gesamtdauer.",
       "unreachable": "Ollama ist nicht erreichbar ({{name}}).",
       "models": "Installierte Modelle",
@@ -1490,7 +1491,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM fertig ({{durationMs}} ms)"
+        "done": "LLM fertig ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: Schätzung {{estimatedBytes}} Bytes, belegt {{actualVramBytes}} Bytes, Differenz {{deltaBytes}} Bytes. Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "modelInfo": "Modelldaten von {{model}} fehlen. Der Lauf wurde abgebrochen.",
+        "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
       },
       "tool": {
         "call": "Werkzeug {{name}}"

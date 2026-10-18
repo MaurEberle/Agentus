@@ -260,6 +260,7 @@
       "pingOk": "运行时可达",
       "pingFail": "运行时不可达",
       "modelNotFound": "找不到或无法加载模型：{{name}}",
+      "modelInfoFailed": "Ollama 没有返回模型数据。运行已中止，以免把全部层都放到 GPU 上。",
       "timeout": "模型无进展（{{name}}）。因静默中止，而非总时长限制。",
       "unreachable": "无法访问 Ollama（{{name}}）。",
       "models": "已安装的模型",
@@ -1433,7 +1434,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM 已完成（{{durationMs}} ms）"
+        "done": "LLM 已完成（{{durationMs}} ms）",
+        "vram": "VRAM {{model}}：估计 {{estimatedBytes}} 字节，实际 {{actualVramBytes}} 字节，差值 {{deltaBytes}} 字节。专家 {{expertsOnGpu}}/{{expertLayers}}，注意力层 {{attentionLayersOnGpu}}，num_gpu {{numGpu}}，num_cpu_moe {{numCpuMoe}}。",
+        "modelInfo": "缺少 {{model}} 的模型数据。运行已中止。",
+        "moeUnsplit": "无法划分 {{model}} 的专家层。未设置 num_gpu。"
       },
       "tool": {
         "call": "工具 {{name}}"

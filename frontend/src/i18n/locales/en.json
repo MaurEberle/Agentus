@@ -260,6 +260,7 @@
       "pingOk": "Runtime reachable",
       "pingFail": "Runtime not reachable",
       "modelNotFound": "Model not found or could not be loaded: {{name}}",
+      "modelInfoFailed": "Ollama did not return the model data. The run was stopped so the model is not started with a full GPU offload.",
       "timeout": "No progress from the model ({{name}}). Aborted after silence, not a total time limit.",
       "unreachable": "Ollama is not reachable ({{name}}).",
       "models": "Installed models",
@@ -1490,7 +1491,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM finished ({{durationMs}} ms)"
+        "done": "LLM finished ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: estimate {{estimatedBytes}} bytes, used {{actualVramBytes}} bytes, delta {{deltaBytes}} bytes. Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "modelInfo": "Model data for {{model}} is missing. The run was stopped.",
+        "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
       },
       "tool": {
         "call": "Tool {{name}}"

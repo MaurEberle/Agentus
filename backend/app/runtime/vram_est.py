@@ -15,6 +15,7 @@ from app.runtime.ollama import (
     clamp_gpu_layers,
     gpu_layers_for_percent,
     list_ollama_models,
+    ollama_num_gpu,
     parse_block_count,
     tag_key,
 )
@@ -553,6 +554,8 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
 
     Returns None for dense profiles and for MoE metadata that cannot be split.
     Expert layers on the GPU never exceed the attention layers kept on the GPU.
+    ``ram_bytes`` is the routed spill plus the non-expert weights that did not
+    stay on the GPU.
     """
     layers = profile.layers or 0
     routed = profile.routed_expert_bytes or 0
@@ -576,9 +579,11 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
     while experts_on > 0 and (routed * experts_on) // expert_layers > room:
         experts_on -= 1
     expert_on_gpu = (routed * experts_on) // expert_layers if expert_layers else 0
+    non_total = profile.non_expert_bytes or 0
+    ram_bytes = max(0, non_total - weights) + max(0, routed - expert_on_gpu)
     return MoeFit(
         gpu_bytes=weights + kv + overhead + expert_on_gpu,
-        ram_bytes=routed - expert_on_gpu,
+        ram_bytes=ram_bytes,
         experts_on_gpu=experts_on,
         expert_layers=expert_layers,
         attention_layers_on_gpu=on,
@@ -586,6 +591,47 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
         expert_on_gpu_bytes=expert_on_gpu,
         kv_bytes=kv,
         overhead_bytes=overhead,
+    )
+
+
+@dataclass(frozen=True)
+class MoeOffload:
+    """Expert-layer split the run can send, plus the GPU bytes that split implies."""
+
+    num_gpu: int
+    num_cpu_moe: int
+    estimated_gpu_bytes: int
+    ram_bytes: int
+    experts_on_gpu: int
+    expert_layers: int
+    attention_layers_on_gpu: int
+
+
+def plan_moe_offload(
+    profile: VramProfile | None, *, num_ctx: int, pool_bytes: int
+) -> MoeOffload | None:
+    """Map a fit onto ``num_gpu`` and ``num_cpu_moe``.
+
+    ``num_cpu_moe`` is the leading block count whose expert tensors stay in RAM:
+    dense prefix plus every expert layer that does not fit. ``num_gpu`` is the
+    llama.cpp offload of the attention layers that fit, including the output slot.
+    """
+    if profile is None:
+        return None
+    fit = fit_moe(profile, num_ctx=num_ctx, pool_bytes=pool_bytes)
+    if fit is None:
+        return None
+    layers = profile.layers or 0
+    cpu_experts = max(0, fit.expert_layers - fit.experts_on_gpu)
+    leading = profile.leading_dense_blocks or 0
+    return MoeOffload(
+        num_gpu=ollama_num_gpu(fit.attention_layers_on_gpu, layers if layers else None),
+        num_cpu_moe=(leading + cpu_experts) if cpu_experts else 0,
+        estimated_gpu_bytes=fit.gpu_bytes,
+        ram_bytes=fit.ram_bytes,
+        experts_on_gpu=fit.experts_on_gpu,
+        expert_layers=fit.expert_layers,
+        attention_layers_on_gpu=fit.attention_layers_on_gpu,
     )
 
 

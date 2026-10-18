@@ -260,6 +260,7 @@
       "pingOk": "Çalışma zamanına erişildi",
       "pingFail": "Çalışma zamanına erişilemiyor",
       "modelNotFound": "Model bulunamadı veya yüklenemedi: {{name}}",
+      "modelInfoFailed": "Ollama model verisini vermedi. Çalıştırma, modelin tüm katmanlarının GPU'ya yüklenmemesi için durduruldu.",
       "timeout": "Modelden ilerleme yok ({{name}}). Toplam süre değil, sessizlik sonrası iptal.",
       "unreachable": "Ollama’ya erişilemiyor ({{name}}).",
       "models": "Yüklü modeller",
@@ -1433,7 +1434,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM bitti ({{durationMs}} ms)"
+        "done": "LLM bitti ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: tahmin {{estimatedBytes}} bayt, kullanılan {{actualVramBytes}} bayt, fark {{deltaBytes}} bayt. Uzmanlar {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "modelInfo": "{{model}} için model verisi yok. Çalıştırma durduruldu.",
+        "moeUnsplit": "{{model}} için uzman dağılımı bilinmiyor. num_gpu gönderilmiyor."
       },
       "tool": {
         "call": "Araç {{name}}"

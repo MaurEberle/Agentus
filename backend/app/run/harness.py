@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import traceback
 import time
 import uuid
 from collections import deque
+
+log = logging.getLogger("agentus.run")
 
 from app.common.secrets import mask_obj
 from app.db.engine import utc_now
@@ -176,10 +179,17 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
             outcome = _run_linear(ctrl, compiled, user_text or "")
     except Exception as exc:
         fail_exc = exc
+        log_message = str(exc)
+        payload = _runtime_error_payload(exc)
+        if isinstance(exc, RuntimeApiError) and exc.error_key == "runtime.modelInfoFailed":
+            log_message = "run.llm.modelInfo"
+            detail = {"model": exc.detail or ""}
+            payload = {**(payload or {}), **detail}
+            log.error("ollama model info failed model=%s", exc.detail or "")
         emit_log(
             "error",
-            str(exc),
-            payload=_runtime_error_payload(exc),
+            log_message,
+            payload=payload,
             stack=traceback.format_exc(),
         )
         outcome = "failed"
@@ -780,6 +790,7 @@ def _agent_turn(
                     },
                 ),
             )
+            _log_vram_compare(agent.llm, options, choice, llm_node_id)
             result = _with_salvaged_tools(result, offered)
             if result.tool_calls:
                 thinks = 0
@@ -1042,6 +1053,120 @@ def _static_context_max(num_ctx: int | None) -> int | None:
     return None
 
 
+def _inference_pool_bytes() -> int:
+    from app.run.resources import latest
+
+    gpus = list(latest().gpus or [])
+    pool = [gpu for gpu in gpus if gpu.inference]
+    if not pool:
+        pool = [gpu for gpu in gpus if gpu.vram_total_bytes >= 512 * 1024 * 1024]
+    if not pool and gpus:
+        pool = [max(gpus, key=lambda gpu: gpu.vram_total_bytes)]
+    return sum(max(0, gpu.vram_total_bytes) for gpu in pool)
+
+
+def _display_count(value: object) -> str | int:
+    if isinstance(value, bool) or value is None:
+        return "—"
+    if isinstance(value, int):
+        return value
+    return "—"
+
+
+def _moe_auto_options(llm, choice, layers: int | None) -> dict:
+    """Pass the expert-layer count without forcing a dense full offload.
+
+    Current Ollama ignores unknown options, including ``num_cpu_moe``. Sending
+    ``num_gpu`` at the same time would pin whole layers and undo automatic
+    expert placement. The expert count is still sent. ``num_gpu`` is set only
+    when attention itself does not fit, or when every expert layer fits and a
+    full offload matches the estimate.
+    """
+    from app.runtime.vram_est import plan_moe_offload, vram_profile
+
+    profile = vram_profile(llm.model, base_url=llm.base_url)
+    num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
+    plan = (
+        plan_moe_offload(profile, num_ctx=num_ctx, pool_bytes=_inference_pool_bytes())
+        if profile is not None
+        else None
+    )
+    if plan is None:
+        emit_log(
+            "warn",
+            "run.llm.moeUnsplit",
+            node_id=getattr(llm, "node_id", None),
+            payload={"model": llm.model},
+        )
+        return {}
+    out: dict = {}
+    attention = plan.attention_layers_on_gpu
+    if attention <= 0:
+        out["num_gpu"] = 0
+    elif isinstance(layers, int) and layers > 0 and attention < layers:
+        out["num_gpu"] = plan.num_gpu
+    elif plan.num_cpu_moe <= 0:
+        out["num_gpu"] = plan.num_gpu
+    if plan.num_cpu_moe > 0:
+        out["num_cpu_moe"] = plan.num_cpu_moe
+    return out
+
+
+def _log_vram_compare(llm, options, choice, node_id: str) -> None:
+    if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
+        return
+    try:
+        from app.runtime.ollama import loaded_memory
+        from app.runtime.vram_est import estimate_vram_bytes, plan_moe_offload, vram_profile
+
+        profile = vram_profile(llm.model, base_url=llm.base_url)
+        num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
+        opts = options if isinstance(options, dict) else {}
+        num_gpu = opts.get("num_gpu")
+        num_cpu = opts.get("num_cpu_moe")
+        plan = (
+            plan_moe_offload(profile, num_ctx=num_ctx, pool_bytes=_inference_pool_bytes())
+            if profile is not None
+            else None
+        )
+        estimated: int | None
+        if plan is not None and (isinstance(num_cpu, int) or "num_gpu" not in opts):
+            estimated = plan.estimated_gpu_bytes
+        elif profile is not None:
+            gpu = num_gpu if isinstance(num_gpu, int) and num_gpu > 0 else None
+            estimated = estimate_vram_bytes(profile, num_ctx=num_ctx, num_gpu=gpu)
+        else:
+            estimated = None
+        size, size_vram = loaded_memory(llm.model, base_url=llm.base_url)
+        if estimated is None and size_vram is None:
+            return
+        delta = None if estimated is None or size_vram is None else size_vram - estimated
+        payload = {
+            "model": llm.model,
+            "estimatedBytes": _display_count(estimated),
+            "actualVramBytes": _display_count(size_vram),
+            "actualBytes": _display_count(size),
+            "deltaBytes": _display_count(delta),
+            "expertsOnGpu": plan.experts_on_gpu if plan else "—",
+            "expertLayers": plan.expert_layers if plan else "—",
+            "attentionLayersOnGpu": plan.attention_layers_on_gpu if plan else "—",
+            "numGpu": _display_count(num_gpu),
+            "numCpuMoe": _display_count(num_cpu),
+        }
+        emit_log("info", "run.llm.vram", node_id=node_id, payload=payload)
+        log.info(
+            "vram compare model=%s estimated=%s actual_vram=%s delta=%s num_gpu=%s num_cpu_moe=%s",
+            llm.model,
+            estimated,
+            size_vram,
+            delta,
+            num_gpu,
+            num_cpu,
+        )
+    except Exception:
+        log.exception("vram compare failed model=%s", getattr(llm, "model", ""))
+
+
 def _ollama_options(llm, choice) -> dict | None:
     if llm.provider != "ollama":
         return None
@@ -1053,32 +1178,35 @@ def _ollama_options(llm, choice) -> dict | None:
     wants_layers = isinstance(llm.num_gpu, int) and llm.num_gpu > 0
     wants_percent = isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0
     placement = getattr(llm, "gpu_placement", None)
-    if wants_layers or wants_percent or placement == "layers":
-        from app.runtime.ollama import (
-            clamp_gpu_layers,
-            gpu_layers_for_percent,
-            model_block_count,
-            model_is_moe,
-            moe_omits_num_gpu,
-            ollama_num_gpu,
-        )
+    from app.runtime.ollama import (
+        clamp_gpu_layers,
+        gpu_layers_for_percent,
+        model_block_count,
+        model_is_moe,
+        moe_omits_num_gpu,
+        ollama_num_gpu,
+    )
 
-        layers = model_block_count(llm.model, base_url=llm.base_url)
-        if wants_layers:
-            offload = clamp_gpu_layers(llm.num_gpu, layers)
-        elif wants_percent:
-            offload = gpu_layers_for_percent(llm.num_gpu_percent, layers)
-        elif isinstance(layers, int) and layers > 0:
-            offload = layers
-        else:
-            offload = 999
-        if not moe_omits_num_gpu(
-            is_moe=model_is_moe(llm.model, base_url=llm.base_url),
-            placement=placement,
-            offload_layers=offload,
-            block_count=layers,
-        ):
-            options["num_gpu"] = ollama_num_gpu(offload, layers)
+    is_moe = model_is_moe(llm.model, base_url=llm.base_url)
+    layers = model_block_count(llm.model, base_url=llm.base_url)
+    offload = None
+    if wants_layers:
+        offload = clamp_gpu_layers(llm.num_gpu, layers)
+    elif wants_percent:
+        offload = gpu_layers_for_percent(llm.num_gpu_percent, layers)
+    elif placement == "layers" and isinstance(layers, int) and layers > 0:
+        offload = layers
+    elif placement == "layers":
+        offload = 999
+    if is_moe and moe_omits_num_gpu(
+        is_moe=True,
+        placement=placement,
+        offload_layers=offload,
+        block_count=layers,
+    ):
+        options.update(_moe_auto_options(llm, choice, layers))
+    elif offload is not None:
+        options["num_gpu"] = ollama_num_gpu(offload, layers)
     return options or None
 
 
@@ -1724,6 +1852,7 @@ def _orchestrator_action(
                     },
                 ),
             )
+            _log_vram_compare(llm, options, choice, llm_node_id)
             if result.tool_calls and rounds < MAX_ORCHESTRATOR_TOOL_ROUNDS and offered:
                 rounds += 1
                 model_retries = 0

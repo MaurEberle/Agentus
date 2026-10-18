@@ -260,6 +260,7 @@
       "pingOk": "Runtime acessível",
       "pingFail": "Runtime inacessível",
       "modelNotFound": "Modelo não encontrado ou não carregável: {{name}}",
+      "modelInfoFailed": "O Ollama não devolveu os dados do modelo. A execução foi interrompida para não o iniciar com offload total na GPU.",
       "timeout": "Sem progresso do modelo ({{name}}). Interrompido após silêncio, não por duração total.",
       "unreachable": "O Ollama não está acessível ({{name}}).",
       "models": "Modelos instalados",
@@ -1433,7 +1434,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM concluído ({{durationMs}} ms)"
+        "done": "LLM concluído ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: estimativa {{estimatedBytes}} bytes, usado {{actualVramBytes}} bytes, diferença {{deltaBytes}} bytes. Especialistas {{expertsOnGpu}}/{{expertLayers}}, atenção {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "modelInfo": "Faltam os dados do modelo {{model}}. A execução foi interrompida.",
+        "moeUnsplit": "A divisão de especialistas de {{model}} é desconhecida. num_gpu não é enviado."
       },
       "tool": {
         "call": "Ferramenta {{name}}"

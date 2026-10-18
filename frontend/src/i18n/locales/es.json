@@ -260,6 +260,7 @@
       "pingOk": "Runtime accesible",
       "pingFail": "Runtime no accesible",
       "modelNotFound": "Modelo no encontrado o no se pudo cargar: {{name}}",
+      "modelInfoFailed": "Ollama no entregó los datos del modelo. La ejecución se detuvo para no iniciarlo con una carga completa en la GPU.",
       "timeout": "Sin progreso del modelo ({{name}}). Abortado por silencio, no por un límite de duración total.",
       "unreachable": "Ollama no está accesible ({{name}}).",
       "models": "Modelos instalados",
@@ -1433,7 +1434,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM finalizado ({{durationMs}} ms)"
+        "done": "LLM finalizado ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: estimación {{estimatedBytes}} bytes, usado {{actualVramBytes}} bytes, diferencia {{deltaBytes}} bytes. Expertos {{expertsOnGpu}}/{{expertLayers}}, atención {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "modelInfo": "Faltan los datos del modelo {{model}}. La ejecución se detuvo.",
+        "moeUnsplit": "No se puede repartir los expertos de {{model}}. No se envía num_gpu."
       },
       "tool": {
         "call": "Herramienta {{name}}"

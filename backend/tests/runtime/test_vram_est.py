@@ -1,4 +1,10 @@
-from app.runtime.vram_est import estimate_vram_bytes, fit_moe, kv_bytes_for_ctx, parse_vram_profile
+from app.runtime.vram_est import (
+    estimate_vram_bytes,
+    fit_moe,
+    kv_bytes_for_ctx,
+    parse_vram_profile,
+    plan_moe_offload,
+)
 
 
 def test_mla_glm_kv_matches_llama_log() -> None:
@@ -321,7 +327,12 @@ def test_moe_fit_keeps_attention_and_spills_experts() -> None:
     assert fit is not None
     assert fit.attention_layers_on_gpu == 24
     assert 0 < fit.experts_on_gpu < fit.expert_layers
-    assert fit.ram_bytes > 0
+    assert fit.ram_bytes == (
+        (profile.routed_expert_bytes or 0)
+        - fit.expert_on_gpu_bytes
+        + (profile.non_expert_bytes or 0)
+        - fit.non_expert_on_gpu
+    )
     assert fit.gpu_bytes <= pool
     assert (
         fit.non_expert_on_gpu + fit.expert_on_gpu_bytes + fit.kv_bytes + fit.overhead_bytes
@@ -379,4 +390,21 @@ def test_moe_fit_drops_experts_when_the_pool_cannot_hold_attention() -> None:
     assert fit.attention_layers_on_gpu == 0
     assert fit.experts_on_gpu == 0
     assert fit.gpu_bytes == 0
-    assert fit.ram_bytes == profile.routed_expert_bytes
+    assert fit.ram_bytes == (profile.routed_expert_bytes or 0) + (profile.non_expert_bytes or 0)
+
+
+def test_plan_moe_offload_names_the_cpu_expert_layers() -> None:
+    profile = parse_vram_profile(_qwen_moe(), 20_000_000_000)
+    assert profile is not None
+    plan = plan_moe_offload(profile, num_ctx=1024, pool_bytes=8 * 1024**3)
+    assert plan is not None
+    assert plan.attention_layers_on_gpu == 24
+    assert 0 < plan.experts_on_gpu < plan.expert_layers
+    assert plan.num_cpu_moe == plan.expert_layers - plan.experts_on_gpu
+    assert plan.num_gpu == 25
+    tight = plan_moe_offload(profile, num_ctx=1024, pool_bytes=1024 * 1024)
+    assert tight is not None
+    assert tight.attention_layers_on_gpu == 0
+    assert tight.num_gpu == 0
+    assert tight.num_cpu_moe == tight.expert_layers
+    assert tight.ram_bytes == (profile.routed_expert_bytes or 0) + (profile.non_expert_bytes or 0)

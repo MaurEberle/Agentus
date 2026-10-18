@@ -254,7 +254,7 @@ export function fitMoe(opts: {
   const expertOnGpu = Math.floor((routed * expertsOn) / expertLayers);
   return {
     gpuBytes: base.weights + base.kv + base.overhead + expertOnGpu,
-    ramBytes: routed - expertOnGpu,
+    ramBytes: Math.max(0, non - base.weights) + Math.max(0, routed - expertOnGpu),
     expertsOnGpu: expertsOn,
     expertLayers,
     attentionLayersOnGpu: on,

@@ -539,10 +539,13 @@ class RunController:
             seen.add(tag)
             if tag not in installed and f"{tag}:latest" not in installed:
                 raise AppError("runtime.modelNotFound", status_code=409, message=tag)
+            _require_model_show(tag)
         if compiled.orchestrator and compiled.orchestrator.llm.provider == "ollama":
             tag = compiled.orchestrator.llm.model
             if tag and tag not in seen and tag not in installed and f"{tag}:latest" not in installed:
                 raise AppError("runtime.modelNotFound", status_code=409, message=tag)
+            if tag and tag not in seen:
+                _require_model_show(tag)
         set_help_degraded(False)
         release_others(settings, compiled, current=None)
         return False
@@ -593,6 +596,21 @@ class RunController:
     def abort_chat(self) -> None:
         self.abort_generation.set()
         self.flush_chat(generating=False)
+
+
+def _require_model_show(tag: str) -> None:
+    """Refuse to start when Ollama cannot describe the model.
+
+    Guessing a dense full offload after a failed ``/api/show`` loads MoE
+    weights onto the GPU and crashes the run.
+    """
+    from app.runtime.errors import RuntimeApiError
+    from app.runtime.ollama import model_is_moe
+
+    try:
+        model_is_moe(tag)
+    except RuntimeApiError as exc:
+        raise AppError(exc.error_key, status_code=409, message=tag) from exc
 
 
 def node_label(compiled: CompiledGraph | None, node_id: str | None) -> str | None:

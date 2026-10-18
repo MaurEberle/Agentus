@@ -320,9 +320,10 @@ def _ollama_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
 def _apply_gpu_max(req: CompletionRequest, options: dict[str, Any]) -> dict[str, Any]:
     if "num_gpu" in options:
         return options
-    layers = model_block_count(req.model, base_url=req.base_url)
+    # A failed show raises. Do not invent a dense full offload for an unknown model.
     if model_is_moe(req.model, base_url=req.base_url):
         return options
+    layers = model_block_count(req.model, base_url=req.base_url)
     options["num_gpu"] = ollama_num_gpu(layers, layers) if layers else 999
     return options
 

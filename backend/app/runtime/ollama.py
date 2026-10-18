@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Iterable
 from typing import Any
@@ -14,12 +15,15 @@ from app.runtime.errors import (
     raise_transport,
     response_json,
 )
+
+log = logging.getLogger("agentus.runtime")
 from app.runtime.models import OllamaModel, PingResult
 from app.runtime.urls import ollama_native_root, settings_roots
 
 
 _block_counts: dict[str, int] = {}
 _moe_flags: dict[str, bool] = {}
+_show_seen: set[str] = set()
 
 
 def _root(base_url: str | None) -> str:
@@ -149,39 +153,83 @@ def ollama_num_gpu(offload: int, block_count: int | None) -> int:
     return min(max(1, n), block_count) + 1
 
 
-def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:
-    name = (tag or "").strip()
-    if not name:
-        return None
-    key = f"{_root(base_url)}|{name}"
-    cached = _block_counts.get(key)
-    if cached:
-        return cached
-    url = f"{_root(base_url)}/api/show"
-    try:
-        with client(timeout_sec=5.0) as http:
-            response = http.post(url, json={"model": name})
-        raise_for_status(response)
-        payload = response_json(response)
-    except Exception:
-        return None
+def _cache_key(tag: str, base_url: str | None) -> str:
+    return f"{_root(base_url)}|{(tag or '').strip()}"
+
+
+def _remember_show(key: str, payload: object) -> None:
     experts = _expert_count(payload)
     _moe_flags[key] = bool(experts and experts > 1)
     count = parse_block_count(payload)
     if count:
         _block_counts[key] = count
-    return count
+    _show_seen.add(key)
+
+
+def _fetch_show(tag: str, base_url: str | None) -> object:
+    url = f"{_root(base_url)}/api/show"
+    try:
+        with client(timeout_sec=5.0) as http:
+            response = http.post(url, json={"model": tag})
+        raise_for_status(response)
+        return response_json(response)
+    except RuntimeApiError:
+        raise
+    except Exception as exc:
+        if is_transport_error(exc):
+            raise_transport(exc)
+        raise RuntimeApiError("runtime.modelInfoFailed", detail=tag) from exc
+
+
+def ensure_model_show(tag: str, *, base_url: str | None = None, required: bool = False) -> bool:
+    """Read ``/api/show`` once. A required failure raises ``runtime.modelInfoFailed``."""
+    name = (tag or "").strip()
+    if not name:
+        if required:
+            raise RuntimeApiError("runtime.modelInfoFailed")
+        return False
+    key = _cache_key(name, base_url)
+    if key in _show_seen:
+        return True
+    try:
+        payload = _fetch_show(name, base_url)
+    except RuntimeApiError as exc:
+        log.error("ollama /api/show failed model=%s key=%s", name, exc.error_key)
+        if not required:
+            return False
+        if exc.error_key == "runtime.modelInfoFailed":
+            raise
+        raise RuntimeApiError("runtime.modelInfoFailed", status=exc.status, detail=name) from exc
+    _remember_show(key, payload)
+    return True
+
+
+def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:
+    name = (tag or "").strip()
+    if not name:
+        return None
+    key = _cache_key(name, base_url)
+    cached = _block_counts.get(key)
+    if cached:
+        return cached
+    if not ensure_model_show(name, base_url=base_url, required=False):
+        return None
+    return _block_counts.get(key)
 
 
 def model_is_moe(tag: str, *, base_url: str | None = None) -> bool:
-    """True after ``model_block_count`` saw ``expert_count > 1``.
+    """True when ``/api/show`` reports ``expert_count > 1``.
 
-    A cache miss stays false so a failed ``/api/show`` keeps the dense offload.
+    Fetches the show payload itself. A failed show raises
+    ``runtime.modelInfoFailed`` instead of looking like a dense model.
     """
     name = (tag or "").strip()
     if not name:
         return False
-    return _moe_flags.get(f"{_root(base_url)}|{name}", False)
+    key = _cache_key(name, base_url)
+    if key not in _show_seen:
+        ensure_model_show(name, base_url=base_url, required=True)
+    return bool(_moe_flags.get(key, False))
 
 
 def ping_ollama(*, base_url: str | None = None, timeout_sec: float = 3.0) -> PingResult:
@@ -254,6 +302,35 @@ def list_loaded_models(*, base_url: str | None = None) -> list[str]:
         if isinstance(name, str) and name:
             names.append(name)
     return names
+
+
+def loaded_memory(tag: str, *, base_url: str | None = None) -> tuple[int | None, int | None]:
+    """Resident ``(size, size_vram)`` from ``/api/ps``. Missing model is ``(None, None)``."""
+    url = f"{_root(base_url)}/api/ps"
+    try:
+        with client(timeout_sec=5.0) as http:
+            response = http.get(url)
+        raise_for_status(response)
+        payload = response_json(response)
+    except Exception:
+        return None, None
+    models = payload.get("models") if isinstance(payload, dict) else None
+    if not isinstance(models, list):
+        return None, None
+    wanted = tag_key(tag)
+    for item in models:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name") or item.get("model")
+        if not isinstance(name, str) or tag_key(name) != wanted:
+            continue
+        size = item.get("size")
+        vram = item.get("size_vram")
+        return (
+            int(size) if isinstance(size, int) else None,
+            int(vram) if isinstance(vram, int) else None,
+        )
+    return None, None
 
 
 def ensure_loaded(

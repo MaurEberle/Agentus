@@ -985,6 +985,27 @@ def test_moe_forced_layers_send_full_offload(monkeypatch, api_env) -> None:
     assert options[0] == {"num_gpu": 33}
 
 
+def test_moe_auto_sends_expert_layer_count(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+    from tests.runtime.test_vram_est import _qwen_moe
+    from app.runtime.vram_est import parse_vram_profile
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    profile = parse_vram_profile(_qwen_moe(), 20_000_000_000)
+    assert profile is not None
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 24)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    monkeypatch.setattr("app.runtime.vram_est.vram_profile", lambda *a, **k: profile)
+    monkeypatch.setattr("app.run.harness._inference_pool_bytes", lambda: 8 * 1024**3)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    sent = options[0]
+    assert isinstance(sent, dict)
+    assert sent["num_cpu_moe"] > 0
+    assert "num_gpu" not in sent
+
+
 def test_moe_auto_placement_omits_num_gpu(monkeypatch, api_env) -> None:
     from tests.run.test_validate import _orchestrator_doc
 

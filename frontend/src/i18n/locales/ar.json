@@ -260,6 +260,7 @@
       "pingOk": "وقت التشغيل متاح",
       "pingFail": "وقت التشغيل غير متاح",
       "modelNotFound": "النموذج غير موجود أو لا يمكن تحميله: {{name}}",
+      "modelInfoFailed": "لم يُرجع Ollama بيانات النموذج. أُوقف التشغيل حتى لا تُحمَّل كل الطبقات على معالج الرسوم.",
       "timeout": "لا تقدم من النموذج ({{name}}). أُلغي بعد الصمت لا بعد مدة إجمالية.",
       "unreachable": "Ollama غير متاح ({{name}}).",
       "models": "النماذج المثبّتة",
@@ -1433,7 +1434,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "انتهى LLM ({{durationMs}} مللي ثانية)"
+        "done": "انتهى LLM ({{durationMs}} مللي ثانية)",
+        "vram": "VRAM {{model}}: تقدير {{estimatedBytes}} بايت، المستخدم {{actualVramBytes}} بايت، الفرق {{deltaBytes}} بايت. الخبراء {{expertsOnGpu}}/{{expertLayers}}، الانتباه {{attentionLayersOnGpu}}، num_gpu {{numGpu}}، num_cpu_moe {{numCpuMoe}}.",
+        "modelInfo": "بيانات النموذج {{model}} غير متوفرة. أُوقف التشغيل.",
+        "moeUnsplit": "تعذّر تقسيم خبراء {{model}}. لم يُضبط num_gpu."
       },
       "tool": {
         "call": "أداة {{name}}"

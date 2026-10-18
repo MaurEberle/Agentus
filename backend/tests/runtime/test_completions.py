@@ -28,6 +28,7 @@ _MSG = [ChatMessage(role="user", content="hi")]
 @pytest.fixture(autouse=True)
 def _stub_block_count(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.runtime.completions.model_block_count", lambda *a, **k: 16)
+    monkeypatch.setattr("app.runtime.completions.model_is_moe", lambda *a, **k: False)
 
 
 def _chat_ok(content: str = "hello", tool_calls: object | None = None) -> dict:

@@ -260,6 +260,7 @@
       "pingOk": "Runtime joignable",
       "pingFail": "Runtime injoignable",
       "modelNotFound": "Modèle introuvable ou non chargeable : {{name}}",
+      "modelInfoFailed": "Ollama n'a pas fourni les données du modèle. L'exécution a été arrêtée pour ne pas charger toutes les couches sur le GPU.",
       "timeout": "Aucun progrès du modèle ({{name}}). Abandon après silence, pas après une durée totale.",
       "unreachable": "Ollama n’est pas joignable ({{name}}).",
       "models": "Modèles installés",
@@ -1433,7 +1434,10 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM terminé ({{durationMs}} ms)"
+        "done": "LLM terminé ({{durationMs}} ms)",
+        "vram": "VRAM {{model}} : estimation {{estimatedBytes}} octets, utilisé {{actualVramBytes}} octets, écart {{deltaBytes}} octets. Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "modelInfo": "Données du modèle {{model}} manquantes. L'exécution a été arrêtée.",
+        "moeUnsplit": "La répartition des experts de {{model}} est inconnue. num_gpu n'est pas envoyé."
       },
       "tool": {
         "call": "Outil {{name}}"

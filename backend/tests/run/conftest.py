@@ -78,6 +78,9 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
         "app.runtime.ollama.list_ollama_models",
         lambda *a, **k: [OllamaModel(name="llama3.2:1b", size_bytes=None)],
     )
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: False)
+    monkeypatch.setattr("app.runtime.vram_est.vram_profile", lambda *a, **k: None)
+    monkeypatch.setattr("app.runtime.ollama.loaded_memory", lambda *a, **k: (None, None))
     monkeypatch.setattr("app.runtime.ollama.unload", lambda *a, **k: unloads.append(a[0] if a else ""))
 
     def _keep_only(keep, **kwargs):
