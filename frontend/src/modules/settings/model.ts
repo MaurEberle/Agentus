@@ -16,7 +16,10 @@ export const CREDENTIAL_KINDS = [
   'anthropic',
   'gemini',
   'openai_compat',
-  'web_search',
+  'brave',
+  'tavily',
+  'exa',
+  'searxng',
   'github',
   'azure',
   'gitlab',
@@ -55,8 +58,15 @@ export function credentialMatchesProvider(kind: string, provider: string): boole
   return kind === provider || kind === 'token';
 }
 
+export const SEARCH_PROVIDERS = ['brave', 'tavily', 'exa', 'searxng'] as const;
+export type SearchProvider = (typeof SEARCH_PROVIDERS)[number];
+
+export function credentialMatchesSearchProvider(credentialKind: string, provider: string): boolean {
+  return credentialKind === (provider || 'brave');
+}
+
 export function credentialMatchesToolKind(credentialKind: string, toolKind: string): boolean {
-  if (toolKind === 'web_search') return credentialKind === 'web_search';
+  if (toolKind === 'web_search') return credentialMatchesSearchProvider(credentialKind, 'brave');
   return true;
 }
 
@@ -77,6 +87,8 @@ export type HelpChatSettings = {
   embeddingModel?: string;
   embeddingCredentialId?: string;
   webSearchEnabled: boolean;
+  webSearchProvider?: SearchProvider | string;
+  webSearchBaseUrl?: string;
   webSearchCredentialId?: string;
   fallbackModel?: string;
 };
@@ -242,6 +254,8 @@ export function helpChatSnapshot(help: HelpChatSettings): string {
       ? optionalText(help.embeddingCredentialId)
       : '',
     webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchProvider: help.webSearchProvider || 'brave',
+    webSearchBaseUrl: optionalText(help.webSearchBaseUrl),
     webSearchCredentialId: optionalText(help.webSearchCredentialId),
     fallbackModel: optionalText(help.fallbackModel),
   });
@@ -261,6 +275,8 @@ export function helpChatWritePayload(help: HelpChatSettings) {
     embeddingModel: optionalText(help.embeddingModel),
     embeddingCredentialId: embeddingCredentialId || null,
     webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchProvider: help.webSearchProvider || 'brave',
+    webSearchBaseUrl: optionalText(help.webSearchBaseUrl) || null,
     webSearchCredentialId: webSearchCredentialId || null,
     fallbackModel: optionalText(help.fallbackModel) || null,
   };
@@ -277,6 +293,7 @@ export function defaultHelpChat(): HelpChatSettings {
     embeddingProvider: 'ollama',
     embeddingModel: 'nomic-embed-text',
     webSearchEnabled: false,
+    webSearchProvider: 'brave',
     fallbackModel: 'llama3.2:1b',
   };
 }

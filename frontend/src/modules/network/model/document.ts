@@ -76,6 +76,9 @@ export type ToolNodeData = {
   displayName?: string;
   kind: ToolKind;
   credentialId?: string;
+  searchProvider?: 'brave' | 'tavily' | 'exa' | 'searxng';
+  searchBaseUrl?: string;
+  maxResults?: number;
   method?: string;
   url?: string;
   rootPath?: string;

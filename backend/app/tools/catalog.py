@@ -146,7 +146,7 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
 
 _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     "http": "Fetch an http or https URL and return status, headers, and body.",
-    "web_search": "Search the web via Brave Search and return titles, URLs, and snippets.",
+    "web_search": "Search the web and return titles, URLs, and snippets. The provider is chosen in the tool settings.",
     "datetime": (
         "Work with instants. action now returns the current time. "
         "add shifts at (or now) by days, hours, and minutes; negative values subtract. "
@@ -195,7 +195,7 @@ def list_first_party_tools() -> list[CatalogTool]:
             kind="web_search",
             description=_MODEL_DESCRIPTIONS["web_search"],
             json_schema=WEB_SEARCH_SCHEMA,
-            credential_kind="web_search",
+            credential_kind=None,
             title_key="tools.kind.webSearch",
             description_key="tools.kind.webSearch.desc",
         ),

@@ -59,8 +59,10 @@ def init() -> Bootstrap:
     except Exception:
         pass
     try:
+        from app.db.credentials import migrate_web_search_kind
         from app.mcp.retire_filesystem import retire_filesystem_mcp
 
+        migrate_web_search_kind()
         retire_filesystem_mcp()
     except Exception:
         pass

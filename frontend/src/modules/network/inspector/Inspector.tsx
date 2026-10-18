@@ -40,7 +40,7 @@ import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
   credentialMatchesProvider,
-  credentialMatchesToolKind,
+  credentialMatchesSearchProvider,
   embeddingNeedsCredential,
   isCloudCatalogProvider,
   isEmbeddingModelName,
@@ -1069,8 +1069,11 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   const credentials = useEditorCredentialsQuery();
   const kind = String(node.data.kind ?? 'datetime');
   const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access'] as const;
+  const searchProvider = String(node.data.searchProvider ?? 'brave');
   const items = credentials.data?.items ?? [];
-  const matching = items.filter((item) => credentialMatchesToolKind(item.kind, kind));
+  const matching = items.filter((item) =>
+    kind === 'web_search' ? credentialMatchesSearchProvider(item.kind, searchProvider) : true,
+  );
   const credentialId = String(node.data.credentialId ?? '');
   const listedId = matching.some((item) => item.id === credentialId) ? credentialId : 'none';
 
@@ -1078,7 +1081,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
     if (readOnly || kind !== 'web_search' || !credentials.data) return;
     if (!credentialId) return;
     const ok = (credentials.data.items ?? []).some(
-      (item) => item.id === credentialId && item.kind === 'web_search',
+      (item) => item.id === credentialId && credentialMatchesSearchProvider(item.kind, searchProvider),
     );
     if (!ok) editorUpdateNodeData(node.id, { credentialId: undefined });
   }, [kind, credentialId, credentials.data, readOnly, node.id]);
@@ -1093,7 +1096,10 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
             const patch: Record<string, unknown> = { kind: value };
             if (value === 'web_search') {
               const current = items.find((item) => item.id === node.data.credentialId);
-              if (!current || current.kind !== 'web_search') patch.credentialId = undefined;
+              const provider = String(node.data.searchProvider ?? 'brave');
+              if (!current || !credentialMatchesSearchProvider(current.kind, provider)) {
+                patch.credentialId = undefined;
+              }
             }
             editorUpdateNodeData(node.id, patch);
           }}
@@ -1128,7 +1134,8 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
           </Field>
         </>
       ) : null}
-      {kind === 'http' || kind === 'web_search' ? (
+      {kind === 'web_search' ? <WebSearchFields node={node} readOnly={readOnly} items={items} /> : null}
+      {kind === 'http' ? (
         <Field label={t('network.inspector.tool.credential')}>
           <Select
             value={listedId}
@@ -1353,6 +1360,103 @@ const FILE_ACTIONS = [
   'tree',
 ] as const;
 const FILE_WRITE_ACTIONS = new Set(['write', 'mkdir', 'edit', 'move']);
+const SEARCH_PROVIDERS = ['brave', 'tavily', 'exa', 'searxng'] as const;
+
+function WebSearchFields({
+  node,
+  readOnly,
+  items,
+}: {
+  node: GraphNode;
+  readOnly: boolean;
+  items: { id: string; name: string; kind: string }[];
+}) {
+  const { t } = useTranslation();
+  const provider = String(node.data.searchProvider ?? 'brave');
+  const matching = items.filter((item) => item.kind === provider);
+  const credentialId = String(node.data.credentialId ?? '');
+  const listedId = matching.some((item) => item.id === credentialId) ? credentialId : 'none';
+  const maxResults = Number(node.data.maxResults ?? 5);
+
+  return (
+    <>
+      <Field label={t('network.inspector.tool.searchProvider')}>
+        <Select
+          value={provider}
+          disabled={readOnly}
+          onValueChange={(value) => {
+            const current = items.find((item) => item.id === node.data.credentialId);
+            editorUpdateNodeData(node.id, {
+              searchProvider: value,
+              credentialId: current && current.kind === value ? current.id : undefined,
+              searchBaseUrl: value === 'searxng' ? node.data.searchBaseUrl : undefined,
+            });
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SEARCH_PROVIDERS.map((item) => (
+              <SelectItem key={item} value={item}>
+                {t(`network.inspector.tool.searchProviderName.${item}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      {provider === 'searxng' ? (
+        <Field label={t('network.inspector.tool.searchBaseUrl')}>
+          <Input
+            value={String(node.data.searchBaseUrl ?? '')}
+            disabled={readOnly}
+            spellCheck={false}
+            autoComplete="off"
+            placeholder="https://"
+            onChange={(event) => editorUpdateNodeData(node.id, { searchBaseUrl: event.target.value })}
+          />
+        </Field>
+      ) : null}
+      <Field label={t('network.inspector.tool.maxResults')}>
+        <Input
+          type="number"
+          min={1}
+          max={10}
+          value={Number.isFinite(maxResults) ? maxResults : 5}
+          disabled={readOnly}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            editorUpdateNodeData(node.id, {
+              maxResults: Number.isFinite(next) ? Math.max(1, Math.min(10, next)) : 5,
+            });
+          }}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">{t(`network.inspector.tool.searchHint.${provider}`)}</p>
+      <Field label={t('network.inspector.tool.credential')}>
+        <Select
+          value={listedId}
+          disabled={readOnly}
+          onValueChange={(value) =>
+            editorUpdateNodeData(node.id, { credentialId: value === 'none' ? undefined : value })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t('network.inspector.llm.credentialEmpty')}</SelectItem>
+            {matching.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+    </>
+  );
+}
 
 function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();

@@ -19,6 +19,12 @@ def _row(row: Any) -> dict[str, Any]:
     }
 
 
+def migrate_web_search_kind() -> None:
+    """Brave used to be stored as the generic kind web_search."""
+    with transaction("settings") as conn:
+        conn.execute("UPDATE credentials SET kind = 'brave' WHERE kind = 'web_search'")
+
+
 def list_credentials() -> list[dict[str, Any]]:
     with locked("settings") as conn:
         rows = conn.execute(
