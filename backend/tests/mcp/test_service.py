@@ -60,6 +60,18 @@ def test_github_disable_keeps_default_credential(api_env) -> None:
     assert listed[0].enabled is False
 
 
+def test_unavailable_recipe_cannot_be_enabled(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="slack"))
+    assert item.enabled is False
+    with pytest.raises(AppError) as err:
+        set_enabled(item.id, True)
+    assert err.value.message_key == "mcp.unavailable"
+    with pytest.raises(AppError) as created:
+        create_server(McpServerCreate(recipe_id="gitlab", enabled=True))
+    assert created.value.message_key == "mcp.unavailable"
+
+
 def test_custom_without_command_or_url(api_env) -> None:
     init()
     with pytest.raises(AppError) as err:

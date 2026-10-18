@@ -1,5 +1,6 @@
 {
   "id": "postgres",
+  "available": false,
   "titleKey": "mcp.recipe.postgres",
   "transport": "stdio",
   "runtime": "npx",

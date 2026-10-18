@@ -325,6 +325,7 @@
       "servers": "Konfigurierte Server",
       "empty": "Noch keine MCP-Server.",
       "enable": "Aktivieren",
+      "comingSoon": "Bald verfügbar",
       "reset": "Deaktivieren",
       "secretNew": "Neues Secret (optional)",
       "secretName": "Name für den neuen Zugang",
@@ -501,7 +502,8 @@
     "call": {
       "failed": "MCP-Aufruf fehlgeschlagen."
     },
-    "notFound": "MCP-Server nicht gefunden."
+    "notFound": "MCP-Server nicht gefunden.",
+    "unavailable": "Dieses Rezept ist bald verfügbar."
   },
   "graph": {
     "mcp": {

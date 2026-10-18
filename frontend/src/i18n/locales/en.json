@@ -325,6 +325,7 @@
       "servers": "Configured servers",
       "empty": "No MCP servers yet.",
       "enable": "Enable",
+      "comingSoon": "Coming soon",
       "reset": "Disable",
       "secretNew": "New secret (optional)",
       "secretName": "Name for the new credential",
@@ -501,7 +502,8 @@
     "call": {
       "failed": "MCP call failed."
     },
-    "notFound": "MCP server not found."
+    "notFound": "MCP server not found.",
+    "unavailable": "This recipe is coming soon."
   },
   "graph": {
     "mcp": {

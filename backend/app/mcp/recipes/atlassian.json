@@ -1,5 +1,6 @@
 {
   "id": "atlassian",
+  "available": false,
   "titleKey": "mcp.recipe.atlassian",
   "transport": "stdio",
   "runtime": "npx",

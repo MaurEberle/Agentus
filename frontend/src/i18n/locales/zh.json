@@ -324,6 +324,7 @@
       "servers": "已配置的服务器",
       "empty": "尚无 MCP 服务器。",
       "enable": "启用",
+      "comingSoon": "即将推出",
       "added": "已添加",
       "custom": "自定义",
       "customCreate": "自定义服务器",
@@ -1585,7 +1586,8 @@
     "call": {
       "failed": "MCP 调用失败。"
     },
-    "notFound": "未找到 MCP 服务器。"
+    "notFound": "未找到 MCP 服务器。",
+    "unavailable": "此配方即将推出。"
   },
   "graph": {
     "mcp": {

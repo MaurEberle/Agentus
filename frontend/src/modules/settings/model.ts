@@ -134,6 +134,7 @@ export type McpRecipe = {
   rootOnNode?: boolean;
   runtime?: string;
   notes?: string;
+  available?: boolean;
 };
 
 export type McpServerListItem = {

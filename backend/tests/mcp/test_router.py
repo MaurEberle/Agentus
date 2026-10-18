@@ -14,6 +14,11 @@ def test_recipes_endpoint(client: TestClient) -> None:
     assert "fetch" not in ids
     assert len(ids) == 13
     assert "excel" in ids
+    by_id = {item["id"]: item for item in response.json()["items"]}
+    assert by_id["github"]["available"] is True
+    assert by_id["git"]["available"] is True
+    assert by_id["excel"]["available"] is True
+    assert by_id["slack"]["available"] is False
     assert "office" not in ids
     assert "pdf" not in ids
 

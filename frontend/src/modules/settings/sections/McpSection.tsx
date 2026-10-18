@@ -251,28 +251,39 @@ export function McpSection() {
         <div className="grid gap-2 sm:grid-cols-2">
           {recipes.map((recipe) => {
             const active = serversByRecipe.get(recipe.id);
+            const soon = recipe.available === false;
             return (
               <div
                 key={recipe.id}
                 className={cn(
                   'flex flex-col gap-2 rounded-md border p-3 transition-colors',
-                  active ? 'border-primary/50 bg-primary/5' : 'hover:bg-accent/60',
+                  soon
+                    ? 'border-muted-foreground/20 bg-muted'
+                    : active
+                      ? 'border-primary/50 bg-primary/5'
+                      : 'hover:bg-accent/60',
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
+                  <div className={cn('min-w-0', soon && 'text-muted-foreground opacity-50 grayscale')}>
                     <p className="text-sm font-medium">{recipeTitle(t, recipe)}</p>
                     <p className="text-xs text-muted-foreground">{t(`settings.mcp.hint.${recipe.id}`)}</p>
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={active ? 'secondary' : 'outline'}
-                      onClick={() => (active ? openPreset(recipe, active) : void activateRecipe(recipe))}
-                    >
-                      {active ? t('settings.common.edit') : t('settings.mcp.enable')}
-                    </Button>
+                    {soon ? (
+                      <Badge variant="secondary" className="bg-muted-foreground/15 text-muted-foreground">
+                        {t('settings.mcp.comingSoon')}
+                      </Badge>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={active ? 'secondary' : 'outline'}
+                        onClick={() => (active ? openPreset(recipe, active) : void activateRecipe(recipe))}
+                      >
+                        {active ? t('settings.common.edit') : t('settings.mcp.enable')}
+                      </Button>
+                    )}
                     {active ? (
                       <Button
                         type="button"
@@ -286,7 +297,7 @@ export function McpSection() {
                     ) : null}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className={cn('flex flex-wrap gap-1', soon && 'opacity-40 grayscale')}>
                   <Badge variant="secondary">{recipe.transport}</Badge>
                   {recipe.runtime && recipe.runtime !== 'none' ? (
                     <Badge variant="secondary">{recipe.runtime}</Badge>
@@ -343,7 +354,9 @@ export function McpSection() {
                     <TableCell>
                       <Switch
                         checked={server.enabled}
+                        disabled={recipe?.available === false && !server.enabled}
                         onCheckedChange={(checked) => {
+                          if (recipe?.available === false && checked === true) return;
                           if (checked === true) {
                             void setMcpEnabled(server.id, true)
                               .then(() => notify({ titleKey: 'settings.notify.mcpSaved', variant: 'success' }))
@@ -362,7 +375,7 @@ export function McpSection() {
                       </Badge>
                     </TableCell>
                     <TableCell className="space-x-2 text-right">
-                      {recipe ? (
+                      {recipe && recipe.available !== false ? (
                         <Button type="button" size="sm" variant="ghost" onClick={() => openPreset(recipe, server)}>
                           {t('settings.common.edit')}
                         </Button>

@@ -1,5 +1,6 @@
 {
   "id": "linear",
+  "available": false,
   "titleKey": "mcp.recipe.linear",
   "transport": "http",
   "runtime": "none",

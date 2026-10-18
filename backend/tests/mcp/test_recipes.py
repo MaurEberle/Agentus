@@ -60,3 +60,9 @@ def test_excel_stdio_transport() -> None:
 def test_azure_starts_server() -> None:
     recipe = next(r for r in load_recipes() if r.id == "azure")
     assert recipe.args[-2:] == ["server", "start"]
+
+
+def test_only_shipped_recipes_are_available() -> None:
+    recipes = load_recipes()
+    available = {r.id for r in recipes if r.available}
+    assert available == {"github", "git", "excel"}

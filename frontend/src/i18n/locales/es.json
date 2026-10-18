@@ -324,6 +324,7 @@
       "servers": "Servidores configurados",
       "empty": "Aún no hay servidores MCP.",
       "enable": "Activar",
+      "comingSoon": "Próximamente",
       "added": "Añadido",
       "custom": "Personalizado",
       "customCreate": "Servidor propio",
@@ -1585,7 +1586,8 @@
     "call": {
       "failed": "La llamada MCP ha fallado."
     },
-    "notFound": "Servidor MCP no encontrado."
+    "notFound": "Servidor MCP no encontrado.",
+    "unavailable": "Esta receta estará disponible pronto."
   },
   "graph": {
     "mcp": {

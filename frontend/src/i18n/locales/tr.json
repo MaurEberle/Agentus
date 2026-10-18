@@ -324,6 +324,7 @@
       "servers": "Yapılandırılmış sunucular",
       "empty": "Henüz MCP sunucusu yok.",
       "enable": "Etkinleştir",
+      "comingSoon": "Yakında",
       "added": "Eklendi",
       "custom": "Özel",
       "customCreate": "Özel sunucu",
@@ -1585,7 +1586,8 @@
     "call": {
       "failed": "MCP çağrısı başarısız."
     },
-    "notFound": "MCP sunucusu bulunamadı."
+    "notFound": "MCP sunucusu bulunamadı.",
+    "unavailable": "Bu tarif yakında kullanılabilir."
   },
   "graph": {
     "mcp": {

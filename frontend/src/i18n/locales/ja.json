@@ -324,6 +324,7 @@
       "servers": "設定済みサーバー",
       "empty": "MCPサーバーはまだありません。",
       "enable": "有効化",
+      "comingSoon": "近日公開",
       "added": "追加済み",
       "custom": "カスタム",
       "customCreate": "独自サーバー",
@@ -1585,7 +1586,8 @@
     "call": {
       "failed": "MCP の呼び出しに失敗しました。"
     },
-    "notFound": "MCP サーバーが見つかりません。"
+    "notFound": "MCP サーバーが見つかりません。",
+    "unavailable": "このレシピは近日公開です。"
   },
   "graph": {
     "mcp": {

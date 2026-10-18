@@ -1,5 +1,6 @@
 {
   "id": "gitlab",
+  "available": false,
   "titleKey": "mcp.recipe.gitlab",
   "transport": "stdio",
   "runtime": "npx",

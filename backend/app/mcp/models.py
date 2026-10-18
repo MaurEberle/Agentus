@@ -25,6 +25,7 @@ class McpRecipe(ApiModel):
     root_on_node: bool = Field(default=False, alias="rootOnNode")
     runtime: str = "none"
     notes: str | None = None
+    available: bool = True
 
 
 class McpServerListItem(ApiModel):
