@@ -391,6 +391,10 @@ def _moe_weight_split(
     """
     experts = _info_int(info, arch, "expert_count")
     expert_ffn = _info_int(info, arch, "expert_feed_forward_length")
+    # Llama-arch merges publish expert_count but keep the FFN width on
+    # feed_forward_length. Without that fallback the file is estimated as dense.
+    if not expert_ffn:
+        expert_ffn = _info_int(info, arch, "feed_forward_length")
     n_embd = _info_int(info, arch, "embedding_length")
     if (
         not experts

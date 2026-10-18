@@ -787,7 +787,8 @@
         "moeRamTight": "Free system RAM is below this estimate. Pinned pages and mmap can take more.",
         "moeAttention": "Attention stays on the last {{on}} of {{total}} layers so it fits in GPU memory.",
         "moeSwa": "With a sliding-window context, Ollama may keep every expert in system RAM even when this meter still shows free GPU space.",
-        "moeEstimate": "Estimate from model metadata and file size."
+        "moeEstimate": "Estimate from model metadata and file size.",
+        "moeAutoFit": "Automatic expert placement would use {{gpu}} on the GPU and leave {{ram}} in memory."
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",

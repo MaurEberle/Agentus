@@ -547,7 +547,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
     .filter((name): name is string => Boolean(name))
     .join(' · ');
   const fit =
-    auto && (stats.data?.routedExpertBytes ?? 0) > 0
+    (stats.data?.routedExpertBytes ?? 0) > 0
       ? fitMoe({
           nonExpertBytes: stats.data?.nonExpertBytes,
           routedExpertBytes: stats.data?.routedExpertBytes,
@@ -560,17 +560,18 @@ function VramNeedField({ node }: { node: GraphNode }) {
           poolBytes: gpuTotal,
         })
       : null;
-  const need = fit ? fit.gpuBytes : (parts?.total ?? 0);
-  const weightBytes = fit ? fit.nonExpertOnGpu : (parts?.weights ?? 0);
-  const kvBytes = fit ? fit.kvBytes : (parts?.kv ?? 0);
-  const overheadBytes = fit ? fit.overheadBytes : (parts?.overhead ?? 0);
-  const percent = (fit || parts) && gpuTotal > 0 ? (need / gpuTotal) * 100 : 0;
-  const over = Boolean(!fit && parts && gpuTotal > 0 && parts.total > gpuTotal);
-  const tight = Boolean((fit || parts) && gpuTotal > 0 && !over && percent >= 85);
-  const tone = meterTone(Math.min(100, percent), Boolean((fit || parts) && gpuTotal > 0));
+  const placed = auto ? fit : null;
+  const need = placed ? placed.gpuBytes : (parts?.total ?? 0);
+  const weightBytes = placed ? placed.nonExpertOnGpu : (parts?.weights ?? 0);
+  const kvBytes = placed ? placed.kvBytes : (parts?.kv ?? 0);
+  const overheadBytes = placed ? placed.overheadBytes : (parts?.overhead ?? 0);
+  const percent = (placed || parts) && gpuTotal > 0 ? (need / gpuTotal) * 100 : 0;
+  const over = Boolean(!placed && parts && gpuTotal > 0 && parts.total > gpuTotal);
+  const tight = Boolean((placed || parts) && gpuTotal > 0 && !over && percent >= 85);
+  const tone = meterTone(Math.min(100, percent), Boolean((placed || parts) && gpuTotal > 0));
   const ramTotal = resources.data?.ramTotalBytes ?? 0;
   const ramFree = Math.max(0, ramTotal - (resources.data?.ramUsedBytes ?? 0));
-  const ramTight = Boolean(fit && fit.ramBytes > 0 && ramTotal > 0 && fit.ramBytes > ramFree);
+  const ramTight = Boolean(placed && placed.ramBytes > 0 && ramTotal > 0 && placed.ramBytes > ramFree);
   const windowed = hasWindowedKv({
     kvSwaBytesPerToken: stats.data?.kvSwaBytesPerToken,
     swaWindow: stats.data?.swaWindow,
@@ -585,7 +586,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
       </Field>
     );
   }
-  if (!parts && !fit) return null;
+  if (!parts && !placed) return null;
 
   return (
     <Field label={t('network.inspector.llm.vram')}>
@@ -631,28 +632,36 @@ function VramNeedField({ node }: { node: GraphNode }) {
           overhead: formatBytes(overheadBytes, locale),
         })}
       </p>
-      {fit ? (
+      {placed ? (
         <p className="text-xs text-muted-foreground">
-          {t('network.inspector.llm.moeExpertsGpu', { experts: formatBytes(fit.expertOnGpuBytes, locale) })}
+          {t('network.inspector.llm.moeExpertsGpu', { experts: formatBytes(placed.expertOnGpuBytes, locale) })}
         </p>
       ) : null}
-      {fit && fit.ramBytes > 0 ? (
+      {!auto && fit ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeAutoFit', {
+            gpu: formatBytes(fit.gpuBytes, locale),
+            ram: formatBytes(fit.ramBytes, locale),
+          })}
+        </p>
+      ) : null}
+      {placed && placed.ramBytes > 0 ? (
         <p className={cn('text-xs', ramTight ? 'text-warning' : 'text-muted-foreground')}>
-          {t('network.inspector.llm.moeRam', { ram: formatBytes(fit.ramBytes, locale) })}
+          {t('network.inspector.llm.moeRam', { ram: formatBytes(placed.ramBytes, locale) })}
         </p>
       ) : null}
       {ramTight ? <p className="text-xs text-warning">{t('network.inspector.llm.moeRamTight')}</p> : null}
-      {fit && layerCount > 0 && fit.attentionLayersOnGpu < layerCount ? (
+      {placed && layerCount > 0 && placed.attentionLayersOnGpu < layerCount ? (
         <p className="text-xs text-muted-foreground">
-          {t('network.inspector.llm.moeAttention', { on: fit.attentionLayersOnGpu, total: layerCount })}
+          {t('network.inspector.llm.moeAttention', { on: placed.attentionLayersOnGpu, total: layerCount })}
         </p>
       ) : null}
-      {fit && windowed ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.moeSwa')}</p> : null}
-      {!fit && formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
+      {placed && windowed ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.moeSwa')}</p> : null}
+      {!placed && formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
       {over ? <p className="text-xs text-destructive">{t('network.inspector.llm.vramOver')}</p> : null}
       {tight ? <p className="text-xs text-warning">{t('network.inspector.llm.vramTight')}</p> : null}
       <p className="text-xs text-muted-foreground">
-        {fit ? t('network.inspector.llm.moeEstimate') : t('network.inspector.llm.vramHint')}
+        {placed ? t('network.inspector.llm.moeEstimate') : t('network.inspector.llm.vramHint')}
       </p>
     </Field>
   );

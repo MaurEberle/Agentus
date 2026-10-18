@@ -730,7 +730,8 @@
         "moeRamTight": "La RAM libre está por debajo de esta estimación. Las páginas fijadas y mmap pueden ocupar más.",
         "moeAttention": "La atención queda en las últimas {{on}} de {{total}} capas para caber en la memoria GPU.",
         "moeSwa": "Con contexto de ventana deslizante, Ollama puede dejar todos los expertos en la RAM aunque aquí aún haya espacio en la GPU.",
-        "moeEstimate": "Estimación a partir de los metadatos y del tamaño del archivo."
+        "moeEstimate": "Estimación a partir de los metadatos y del tamaño del archivo.",
+        "moeAutoFit": "La colocación automática de expertos usaría {{gpu}} en la GPU y dejaría {{ram}} en la memoria."
       },
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",

@@ -730,7 +730,8 @@
         "moeRamTight": "空闲内存低于此估计。锁定页和 mmap 可能占用更多。",
         "moeAttention": "注意力留在最后 {{on}} / {{total}} 层，以便放入 GPU 内存。",
         "moeSwa": "滑动窗口上下文下，即使这里仍显示 GPU 有空余，Ollama 也可能把全部专家放在内存中。",
-        "moeEstimate": "根据模型元数据和文件大小估计。"
+        "moeEstimate": "根据模型元数据和文件大小估计。",
+        "moeAutoFit": "自动放置专家会在 GPU 上使用 {{gpu}}，其余 {{ram}} 留在内存。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",

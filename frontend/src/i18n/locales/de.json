@@ -787,7 +787,8 @@
         "moeRamTight": "Der freie Arbeitsspeicher liegt unter dieser Schätzung. Festgehaltene Seiten und mmap können noch mehr brauchen.",
         "moeAttention": "Attention bleibt auf den letzten {{on}} von {{total}} Schichten, damit sie in den GPU-Speicher passt.",
         "moeSwa": "Bei Sliding-Window-Kontext kann Ollama alle Experten in den Arbeitsspeicher legen, auch wenn hier noch GPU-Platz frei ist.",
-        "moeEstimate": "Schätzung aus den Modelldaten und der Dateigröße."
+        "moeEstimate": "Schätzung aus den Modelldaten und der Dateigröße.",
+        "moeAutoFit": "Automatische Expertenplatzierung würde {{gpu}} auf der GPU brauchen und {{ram}} im Arbeitsspeicher lassen."
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",

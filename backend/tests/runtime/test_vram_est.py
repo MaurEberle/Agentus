@@ -361,6 +361,37 @@ def test_moe_shared_experts_and_leading_dense_stay_off_the_routed_side() -> None
     assert leading.leading_dense_blocks == 4
 
 
+def test_llama_moe_uses_feed_forward_length_when_expert_ffn_is_absent() -> None:
+    payload = {
+        "model_info": {
+            "general.architecture": "llama",
+            "llama.block_count": 32,
+            "llama.context_length": 32768,
+            "llama.embedding_length": 4096,
+            "llama.expert_count": 4,
+            "llama.expert_used_count": 4,
+            "llama.feed_forward_length": 14336,
+            "llama.attention.head_count": 32,
+            "llama.attention.head_count_kv": 8,
+            "llama.attention.key_length": 128,
+            "llama.attention.value_length": 128,
+        }
+    }
+    size = 14_000_000_000
+    profile = parse_vram_profile(payload, size)
+    assert profile is not None
+    assert profile.expert_count == 4
+    assert profile.routed_expert_bytes is not None
+    assert profile.non_expert_bytes is not None
+    assert profile.routed_expert_bytes > profile.non_expert_bytes
+    assert profile.routed_expert_bytes + profile.non_expert_bytes == size
+    fit = fit_moe(profile, num_ctx=32768, pool_bytes=8 * 1024**3)
+    assert fit is not None
+    assert fit.gpu_bytes <= 8 * 1024**3
+    assert fit.ram_bytes > 0
+    assert fit.experts_on_gpu < fit.expert_layers
+
+
 def test_moe_without_expert_ffn_keeps_the_dense_fraction() -> None:
     payload = {
         "model_info": {

@@ -730,7 +730,8 @@
         "moeRamTight": "La mémoire vive libre est sous cette estimation. Les pages épinglées et mmap peuvent prendre davantage.",
         "moeAttention": "L’attention reste sur les {{on}} dernières couches sur {{total}}, pour tenir dans la mémoire GPU.",
         "moeSwa": "Avec un contexte à fenêtre glissante, Ollama peut garder tous les experts en mémoire vive même si cet indicateur voit encore de la place sur le GPU.",
-        "moeEstimate": "Estimation à partir des métadonnées et de la taille du fichier."
+        "moeEstimate": "Estimation à partir des métadonnées et de la taille du fichier.",
+        "moeAutoFit": "Le placement automatique des experts utiliserait {{gpu}} sur le GPU et laisserait {{ram}} en mémoire."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",
