@@ -1485,6 +1485,8 @@
         "think": "Agent denkt (kein Ergebnis).",
         "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",
         "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
+        "emptyStop": "Leere Antwort verworfen ({{attempt}}/{{max}}). Der Auftrag geht weiter.",
+        "emptyStops": "Aufgabe unvollständig: fünf leere Antworten hintereinander.",
         "truncated": "Antwort abgeschnitten; kein Ergebnis."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",

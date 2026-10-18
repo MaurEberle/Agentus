@@ -9,6 +9,9 @@ MAX_AGENT_THINKS = 128
 MAX_SHORT_THINKS = 5
 # After a successful write/delete, a think this small is the result, not another round.
 MAX_CLOSING_THINK_TOKENS = 16
+# Consecutive empty replies after a successful write or delete.
+# Each one asks the model to continue. The last one ends the run as incomplete.
+MAX_EMPTY_STOPS = 5
 # Failed tool calls in one agent invocation. Successful calls are unbounded.
 MAX_FAILED_TOOL_CALLS = 10
 # Same truncated tool-call JSON from llama-server. Then it counts as one failed tool.

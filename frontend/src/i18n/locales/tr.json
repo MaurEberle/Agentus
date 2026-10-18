@@ -1428,6 +1428,8 @@
         "think": "Ajan düşünüyor (sonuç değil).",
         "thinkLimit": "Sonuçsuz çok fazla düşünme adımı.",
         "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu.",
+        "emptyStop": "Boş yanıt atıldı ({{attempt}}/{{max}}). Görev sürüyor.",
+        "emptyStops": "Görev eksik: art arda beş boş yanıt.",
         "truncated": "Yanıt kesildi; sonuç değil."
       },
       "knowledge": "Bilgi araması ({{count}} sonuç)",

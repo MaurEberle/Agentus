@@ -1428,6 +1428,8 @@
         "think": "L’agent réfléchit (ce n’est pas un résultat).",
         "thinkLimit": "Trop d’étapes de réflexion sans résultat.",
         "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes.",
+        "emptyStop": "Réponse vide écartée ({{attempt}}/{{max}}). La tâche continue.",
+        "emptyStops": "Tâche incomplète : cinq réponses vides d’affilée.",
         "truncated": "Réponse tronquée ; ce n’est pas un résultat."
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",

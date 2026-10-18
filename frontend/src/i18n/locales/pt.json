@@ -1428,6 +1428,8 @@
         "think": "O agente está a pensar (não é um resultado).",
         "thinkLimit": "Demasiados passos de pensamento sem resultado.",
         "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos.",
+        "emptyStop": "Resposta vazia descartada ({{attempt}}/{{max}}). A tarefa continua.",
+        "emptyStops": "Tarefa incompleta: cinco respostas vazias seguidas.",
         "truncated": "Resposta cortada; não é um resultado."
       },
       "knowledge": "Pesquisa de conhecimento ({{count}} resultados)",

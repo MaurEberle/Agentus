@@ -2081,6 +2081,187 @@ def test_linear_write_then_short_think_succeeds(monkeypatch, api_env) -> None:
     assert steps.get("end") == "done"
 
 
+def _empty_stop() -> CompletionResult:
+    return CompletionResult(
+        content=None,
+        reasoning="",
+        usage=CompletionUsage(prompt_tokens=32, completion_tokens=1),
+        model="test",
+        finish_reason="stop",
+    )
+
+
+def test_linear_empty_stop_after_write_continues(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    saw_note = {"n": 0}
+    wrote_second = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "The last reply was empty" in blob and wrote_second["n"] == 0:
+            saw_note["n"] += 1
+            wrote_second["n"] = 1
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="2",
+                        name="file_access",
+                        arguments='{"action":"write","path":"b.txt","content":"two"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if not any(message.role == "tool" for message in req.messages):
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"one"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if executed["n"] == 1:
+            return _empty_stop()
+        return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 2
+    assert saw_note["n"] == 1
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.emptyStop") == 1
+    assert "run.agent.emptyStops" not in messages
+    assert "run.failed" not in messages
+
+
+def test_linear_five_empty_stops_fail_the_run(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs, list_steps
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": "tiger.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        agent_n["n"] += 1
+        if not any(message.role == "tool" for message in req.messages):
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"tiger.txt","content":"hi"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return _empty_stop()
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.agent.emptyStops"
+    assert executed["n"] == 1
+    assert agent_n["n"] == 6
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "tiger.txt" not in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.emptyStop") == 4
+    assert messages.count("run.agent.emptyStops") == 1
+    assert "run.succeeded" not in messages
+    assert "run.agent.done" not in messages
+    assert "run.failed" in messages
+    steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
+    assert steps.get("ag") == "error"
+    assert steps.get("end") != "done"
+
+
+def test_orchestrator_empty_stops_are_an_anomaly(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    agent_n = {"n": 0}
+    prompts: list[str] = []
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            prompts.append(blob)
+            if "empty stops" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="stop",
+            )
+        return _empty_stop()
+
+    stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
+    assert stored["outcome"] == "succeeded"
+    assert agent_n["n"] == 6
+    assert stored["memory"]["calls"][0]["error"] == "empty stops"
+    assert stored["memory"]["calls"][0]["finished"] is False
+    assert any("empty stops" in item for item in prompts)
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "Schreiber is done." not in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.emptyStop") == 4
+    assert "run.agent.emptyStops" in messages
+
+
 def test_write_then_long_think_then_second_write(monkeypatch, api_env) -> None:
     from app.runtime.models import ToolCall
     from app.tools.models import ExecuteResult

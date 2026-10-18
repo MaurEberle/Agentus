@@ -22,6 +22,7 @@ from app.run.limits import (
     MAX_AGENT_INVOCATIONS,
     MAX_AGENT_THINKS,
     MAX_CLOSING_THINK_TOKENS,
+    MAX_EMPTY_STOPS,
     MAX_SHORT_THINKS,
     MAX_CONTROL_REPAIRS,
     MAX_FAILED_TOOL_CALLS,
@@ -91,6 +92,10 @@ _TOOL_ANSWER = (
 _TOOL_DONE = (
     "The file work succeeded. Write a short visible result for the next node. "
     "Do not think again."
+)
+_EMPTY_STOP_NOTE = (
+    "The last reply was empty and was discarded. The task is not finished. "
+    "Call a tool with a tool call and continue the remaining work."
 )
 _TOOL_JSON_NOTE = (
     "The last tool call to {name} was discarded: its JSON arguments were truncated. "
@@ -502,6 +507,29 @@ def _agent_tool_failures_stop(
     return False
 
 
+def _agent_empty_stops_stop(
+    ctrl: RunController,
+    agent_id: str,
+    record: AgentRecord | None,
+    stops: int,
+) -> bool:
+    """True: orchestrator anomaly (break). False: fail the linear run."""
+    emit_log(
+        "warn",
+        "run.agent.emptyStops",
+        node_id=agent_id,
+        payload={"stops": stops},
+    )
+    if record is not None:
+        record.error = "empty stops"
+        return True
+    _set_node(ctrl, agent_id, "error", error="run.agent.emptyStops")
+    ctrl.fail_message = "run.agent.emptyStops"
+    ctrl.fail_class = "unknown"
+    ctrl.last_error_node_id = agent_id
+    return False
+
+
 def _agent_turn(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -564,6 +592,7 @@ def _agent_turn(
     nudges = 0
     thinks = 0
     short_thinks = 0
+    empty_stops = 0
     content = ""
     best_visible = ""
     offered = tools
@@ -795,6 +824,7 @@ def _agent_turn(
             if result.tool_calls:
                 thinks = 0
                 short_thinks = 0
+                empty_stops = 0
                 _set_node(ctrl, agent_id, "running", wait="tool")
                 messages.append(
                     LlmMessage(
@@ -870,6 +900,7 @@ def _agent_turn(
                     short_thinks += 1
                 else:
                     short_thinks = 0
+                    empty_stops = 0
                 emit_log(
                     "info",
                     "run.agent.think",
@@ -925,7 +956,22 @@ def _agent_turn(
                 messages.append(LlmMessage(role="user", content=_TOOL_USE_NOTE))
                 continue
             if wrote_ok and not (content or "").strip():
-                content = _think_as_result("", wrote_paths, "")
+                empty_stops += 1
+                if empty_stops < MAX_EMPTY_STOPS:
+                    emit_log(
+                        "warn",
+                        "run.agent.emptyStop",
+                        node_id=agent_id,
+                        payload={"attempt": empty_stops, "max": MAX_EMPTY_STOPS},
+                    )
+                    _set_system_note(messages, _TOOL_DONE, _TOOL_REQUIRED)
+                    messages.append(LlmMessage(role="user", content=_EMPTY_STOP_NOTE))
+                    _set_node(ctrl, agent_id, "running", wait="llm")
+                    continue
+                if _agent_empty_stops_stop(ctrl, agent_id, record, empty_stops):
+                    content = ""
+                    break
+                return None
             if not wrote_ok and len(visible_text(content or "")) < len(best_visible):
                 content = best_visible
             break
@@ -1548,7 +1594,7 @@ def _orchestrator_call(
         if record.error == "too many tool failures":
             memory.set_anomaly(record)
             return "ran"
-        if record.error in {"too many thinks", "think loop"}:
+        if record.error in {"too many thinks", "think loop", "empty stops"}:
             memory.set_anomaly(record)
             return "ran"
         if record.error:
