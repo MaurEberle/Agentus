@@ -730,7 +730,8 @@
         "moeRamTight": "La mémoire vive libre est sous cette estimation. Les pages épinglées et mmap peuvent prendre davantage.",
         "moeAttention": "L’attention reste sur les {{on}} dernières couches sur {{total}}, pour tenir dans la mémoire GPU.",
         "moeSwa": "Avec un contexte à fenêtre glissante, Ollama peut garder tous les experts en mémoire vive même si cet indicateur voit encore de la place sur le GPU.",
-        "moeEstimate": "Estimation à partir des métadonnées et de la taille du fichier.",
+        "moeEstimate": "Estimation à partir des métadonnées et de la taille du fichier. Elle est recalculée pour chaque taille de contexte.",
+        "moeKvFormula": "KV : {{full}} couches × {{perToken}} o/token × {{ctx}} jetons.",
         "moeAutoFit": "Le placement automatique des experts utiliserait {{gpu}} sur le GPU et laisserait {{ram}} en mémoire."
       },
       "agent": {
@@ -1436,7 +1437,7 @@
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM terminé ({{durationMs}} ms)",
-        "vram": "VRAM {{model}} : estimation {{estimatedBytes}} octets, utilisé {{actualVramBytes}} octets, écart {{deltaBytes}} octets. Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "vram": "VRAM {{model}} : estimation {{estimated}}, utilisé {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Données du modèle {{model}} manquantes. L'exécution a été arrêtée.",
         "moeUnsplit": "La répartition des experts de {{model}} est inconnue. num_gpu n'est pas envoyé."
       },

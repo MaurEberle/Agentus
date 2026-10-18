@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 from collections.abc import Callable, Generator, Iterator
 from typing import Any
@@ -33,6 +34,7 @@ from app.runtime.models import (
     ToolCall,
 )
 from app.runtime.ollama import model_block_count, model_is_moe, ollama_num_gpu
+from app.runtime.ollama_gen import RunnerGenTail, ollama_server_log
 from app.runtime.urls import completions_url, responses_url, settings_roots
 
 log = logging.getLogger("agentus.runtime")
@@ -409,6 +411,17 @@ def _read_body(response: Any) -> str:
             return str(response.text or "")
         except Exception:
             return ""
+
+
+def _close_stream(state: dict[str, Any]) -> None:
+    http = state.get("http")
+    close = getattr(http, "close", None)
+    if close is None:
+        return
+    try:
+        close()
+    except Exception:
+        return
 
 
 def _stream_error(error_key: str, detail: str | None = None) -> StreamEvent:
@@ -823,7 +836,12 @@ def _emit_native_chunk(
     return events, finish
 
 
-def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
+def complete_stream(
+    req: CompletionRequest,
+    *,
+    on_tokens: Callable[[int, float | None], None] | None = None,
+    should_abort: Callable[[], bool] | None = None,
+) -> Iterator[StreamEvent]:
     try:
         secret = _auth_secret(req.provider, req.secret, req.credential_id)
         url = _request_url(req)
@@ -834,7 +852,14 @@ def complete_stream(req: CompletionRequest) -> Iterator[StreamEvent]:
     current = req
     for attempt in range(2):
         payload = _payload(current, stream=True)
-        outcome = yield from _stream_once(url, headers, payload, current)
+        outcome = yield from _stream_once(
+            url,
+            headers,
+            payload,
+            current,
+            on_tokens=on_tokens,
+            should_abort=should_abort,
+        )
         if outcome == "retry" and attempt == 0:
             log.info("ollama gpu max failed, retrying with auto model=%s", req.model)
             current = _retry_gpu_auto(current)
@@ -847,13 +872,60 @@ def _stream_once(
     headers: dict[str, str],
     payload: dict[str, Any],
     req: CompletionRequest,
+    *,
+    on_tokens: Callable[[int, float | None], None] | None = None,
+    should_abort: Callable[[], bool] | None = None,
 ) -> Generator[StreamEvent, None, str]:
     acc: dict[int, dict[str, str]] = {}
     usage: CompletionUsage | None = None
     finish: str | None = None
     emitted = False
+    # The body read has no socket deadline. A quiet tool-call argument still
+    # produces runner tokens; the watch below closes the client only when
+    # neither the socket nor those tokens move.
+    stop = threading.Event()
+    state: dict[str, Any] = {
+        "activity": time.monotonic(),
+        "http": None,
+        "timed_out": False,
+        "aborted": False,
+    }
+    state_lock = threading.Lock()
+    limit = req.timeout_sec if req.timeout_sec and req.timeout_sec > 0 else 180.0
+
+    def touch() -> None:
+        with state_lock:
+            state["activity"] = time.monotonic()
+
+    def watch() -> None:
+        tail = RunnerGenTail(ollama_server_log() if req.provider == "ollama" else None)
+        while not stop.wait(0.4):
+            if should_abort is not None and should_abort():
+                with state_lock:
+                    state["aborted"] = True
+                _close_stream(state)
+                return
+            try:
+                if tail.poll() and tail.tokens > 0:
+                    touch()
+                    if on_tokens is not None:
+                        on_tokens(tail.tokens, tail.rate)
+            except Exception:
+                log.exception("runner token tail failed model=%s", req.model)
+            with state_lock:
+                quiet = time.monotonic() - float(state["activity"])
+            if quiet >= limit:
+                with state_lock:
+                    state["timed_out"] = True
+                _close_stream(state)
+                return
+
+    thread = threading.Thread(target=watch, name="llm-stream-idle", daemon=True)
     try:
-        with client(timeout_sec=req.timeout_sec) as http:
+        with client(timeout_sec=req.timeout_sec, unbounded_read=True) as http:
+            with state_lock:
+                state["http"] = http
+            thread.start()
             with http.stream("POST", url, json=payload, headers=headers) as response:
                 if response.status_code != 200:
                     err_text = _read_body(response)
@@ -862,6 +934,7 @@ def _stream_once(
                     yield _stream_error(map_http_status(response.status_code), err_text)
                     return "done"
                 for line in response.iter_lines():
+                    touch()
                     text = line.decode("utf-8") if isinstance(line, bytes) else str(line)
                     text = text.strip()
                     if not text:
@@ -922,11 +995,23 @@ def _stream_once(
         yield _stream_error(exc.error_key, exc.detail)
         return "done"
     except Exception as exc:
-        if is_timeout_error(exc) or is_transport_error(exc):
+        with state_lock:
+            aborted = bool(state["aborted"])
+            timed_out = bool(state["timed_out"])
+        if aborted:
+            return "done"
+        if timed_out or is_timeout_error(exc):
+            yield _stream_error("runtime.timeout", f"{type(exc).__name__}: {exc}")
+            return "done"
+        if is_transport_error(exc):
             yield _stream_error(transport_error_key(exc), f"{type(exc).__name__}: {exc}")
             return "done"
         yield _stream_error("runtime.badRequest", f"{type(exc).__name__}: {exc}")
         return "done"
+    finally:
+        stop.set()
+        if thread.ident is not None:
+            thread.join(timeout=1.0)
     yield StreamEvent(
         kind="done",
         finish_reason=finish,
@@ -946,7 +1031,12 @@ def complete_live(
     should_abort: Callable[[], bool] | None = None,
     on_progress: Callable[[int, float], None] | None = None,
 ) -> CompletionResult:
-    """Stream a completion. ``timeout_sec`` is idle time without a chunk, not total duration."""
+    """Stream a completion.
+
+    ``timeout_sec`` is how long the call may sit with neither a socket chunk
+    nor runner token progress. Tokens the runner already counted keep it open
+    and update ``on_progress``.
+    """
     texts: list[str] = []
     reasons: list[str] = []
     tool_calls: list[ToolCall] = []
@@ -962,17 +1052,27 @@ def complete_live(
 
     def _emit(out: int) -> None:
         nonlocal last_progress, emitted_progress
-        if on_progress is None:
-            return
         now = time.perf_counter()
         if emitted_progress and now - last_progress < 0.25:
             return
         elapsed = max(now - started, 0.05)
         last_progress = now
         emitted_progress = True
-        on_progress(out, out / elapsed)
+        note(out, out / elapsed)
 
-    for event in complete_stream(req):
+    lock = threading.Lock()
+    seen = 0
+
+    def note(count: int, rate: float | None) -> None:
+        nonlocal seen
+        with lock:
+            if count <= seen:
+                return
+            seen = count
+        if on_progress is not None and count > 0:
+            on_progress(count, 0.0 if rate is None else rate)
+
+    for event in complete_stream(req, on_tokens=note, should_abort=should_abort):
         if should_abort and should_abort():
             raise RuntimeApiError("run.cancelled")
         if event.kind == "delta":
@@ -997,21 +1097,26 @@ def complete_live(
                 detail=event.error_detail,
             )
         elif event.kind == "done":
+            if should_abort and should_abort():
+                raise RuntimeApiError("run.cancelled")
             if event.tool_calls:
                 tool_calls = event.tool_calls
             if _usage_nonzero(event.usage):
                 usage = event.usage
             finish = event.finish_reason
+    if should_abort and should_abort():
+        raise RuntimeApiError("run.cancelled")
     estimated_out = _estimate()
-    if usage is None or (usage.completion_tokens == 0 and estimated_out):
+    if usage is None or (usage.completion_tokens == 0 and (estimated_out or seen)):
         usage = CompletionUsage(
             prompt_tokens=usage.prompt_tokens if usage else 0,
-            completion_tokens=estimated_out,
+            completion_tokens=max(estimated_out, seen),
         )
     out = usage.completion_tokens if usage and usage.completion_tokens else estimated_out
-    if on_progress is not None and out:
+    out = max(out, seen)
+    if out:
         elapsed = max(time.perf_counter() - started, 0.05)
-        on_progress(out, out / elapsed)
+        note(out, out / elapsed)
     return CompletionResult(
         content="".join(texts) or None,
         reasoning="".join(reasons) or None,

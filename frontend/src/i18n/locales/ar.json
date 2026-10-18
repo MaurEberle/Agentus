@@ -730,7 +730,8 @@
         "moeRamTight": "الذاكرة الحرة أقل من هذا التقدير. الصفحات المثبتة وmmap قد تستهلك أكثر.",
         "moeAttention": "يبقى الانتباه على آخر {{on}} من {{total}} طبقة حتى يسع في ذاكرة معالج الرسوم.",
         "moeSwa": "مع سياق النافذة المنزلقة قد يُبقي Ollama كل الخبراء في الذاكرة حتى لو أظهر المؤشر مساحة حرة على معالج الرسوم.",
-        "moeEstimate": "تقدير من بيانات النموذج وحجم الملف.",
+        "moeEstimate": "تقدير من بيانات النموذج وحجم الملف. يُعاد حسابه عند كل حجم للسياق.",
+        "moeKvFormula": "KV: {{full}} طبقات × {{perToken}} بايت/رمز × {{ctx}} رمزاً.",
         "moeAutoFit": "الوضع التلقائي للخبراء يستخدم {{gpu}} على معالج الرسوم ويترك {{ram}} في الذاكرة."
       },
       "agent": {
@@ -1436,7 +1437,7 @@
       "llm": {
         "start": "LLM {{model}}",
         "done": "انتهى LLM ({{durationMs}} مللي ثانية)",
-        "vram": "VRAM {{model}}: تقدير {{estimatedBytes}} بايت، المستخدم {{actualVramBytes}} بايت، الفرق {{deltaBytes}} بايت. الخبراء {{expertsOnGpu}}/{{expertLayers}}، الانتباه {{attentionLayersOnGpu}}، num_gpu {{numGpu}}، num_cpu_moe {{numCpuMoe}}.",
+        "vram": "VRAM {{model}}: تقدير {{estimated}}، المستخدم {{used}}، {{delta}} ({{percent}}). الخبراء {{expertsOnGpu}}/{{expertLayers}}، الانتباه {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "بيانات النموذج {{model}} غير متوفرة. أُوقف التشغيل.",
         "moeUnsplit": "تعذّر تقسيم خبراء {{model}}. لم يُضبط num_gpu."
       },

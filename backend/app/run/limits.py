@@ -19,7 +19,8 @@ MAX_ORCHESTRATOR_TOOL_ROUNDS = 2
 MAX_CONTROL_REPAIRS = 2
 # One same-prompt retry when the model died before any tool succeeded.
 MAX_SAME_RETRIES = 1
-# Idle gap between stream chunks (or first byte). Not a total run duration.
+# Silence with neither a stream chunk nor runner token progress.
+# A live generation keeps the request open. Not a cap on the answer length.
 STREAM_IDLE_TIMEOUT_SEC = 180.0
 RESOURCES_INTERVAL_SEC = 1.5
 SSE_QUEUE_MAX = 1000

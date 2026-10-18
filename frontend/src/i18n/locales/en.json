@@ -787,7 +787,8 @@
         "moeRamTight": "Free system RAM is below this estimate. Pinned pages and mmap can take more.",
         "moeAttention": "Attention stays on the last {{on}} of {{total}} layers so it fits in GPU memory.",
         "moeSwa": "With a sliding-window context, Ollama may keep every expert in system RAM even when this meter still shows free GPU space.",
-        "moeEstimate": "Estimate from model metadata and file size.",
+        "moeEstimate": "Estimate from model metadata and file size. It is recalculated for every context size.",
+        "moeKvFormula": "KV: {{full}} layers × {{perToken}} B/token × {{ctx}} tokens.",
         "moeAutoFit": "Automatic expert placement would use {{gpu}} on the GPU and leave {{ram}} in memory."
       },
       "agent": {
@@ -1493,7 +1494,7 @@
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)",
-        "vram": "VRAM {{model}}: estimate {{estimatedBytes}} bytes, used {{actualVramBytes}} bytes, delta {{deltaBytes}} bytes. Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "vram": "VRAM {{model}}: estimate {{estimated}}, used {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Model data for {{model}} is missing. The run was stopped.",
         "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
       },

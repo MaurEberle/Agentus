@@ -9,22 +9,30 @@ import httpx
 USER_AGENT = "Agentus-Network/1.0"
 
 
-def client(*, timeout_sec: float = 15.0, **kwargs: Any) -> httpx.Client:
+def client(
+    *,
+    timeout_sec: float = 15.0,
+    unbounded_read: bool = False,
+    **kwargs: Any,
+) -> httpx.Client:
     """Return a configured ``httpx.Client`` (context-manager capable).
 
     ``follow_redirects`` is always false — the http tool follows redirects itself.
     Extra kwargs go to ``httpx.Client`` (e.g. ``transport=`` in tests).
+    ``unbounded_read`` waits on the body until the caller closes the client.
+    The LLM stream uses that so a live generation is not cut off at the first
+    quiet gap; its own idle watch closes the client.
     """
     kwargs.pop("follow_redirects", None)
     kwargs.pop("timeout", None)
     headers = httpx.Headers(kwargs.pop("headers", None))
     headers["User-Agent"] = USER_AGENT
     # Long read waits (LLM generate) must not also block connect for minutes.
-    if timeout_sec > 15.0:
+    if unbounded_read or timeout_sec > 15.0:
         timeout: float | httpx.Timeout = httpx.Timeout(
             connect=10.0,
-            read=timeout_sec,
-            write=min(60.0, timeout_sec),
+            read=None if unbounded_read else timeout_sec,
+            write=min(60.0, max(timeout_sec, 15.0)),
             pool=10.0,
         )
     else:

@@ -787,7 +787,8 @@
         "moeRamTight": "Der freie Arbeitsspeicher liegt unter dieser Schätzung. Festgehaltene Seiten und mmap können noch mehr brauchen.",
         "moeAttention": "Attention bleibt auf den letzten {{on}} von {{total}} Schichten, damit sie in den GPU-Speicher passt.",
         "moeSwa": "Bei Sliding-Window-Kontext kann Ollama alle Experten in den Arbeitsspeicher legen, auch wenn hier noch GPU-Platz frei ist.",
-        "moeEstimate": "Schätzung aus den Modelldaten und der Dateigröße.",
+        "moeEstimate": "Schätzung aus den Modelldaten und der Dateigröße. Sie wird bei jeder Kontextgröße neu gerechnet.",
+        "moeKvFormula": "KV: {{full}} Schichten × {{perToken}} B/Token × {{ctx}} Tokens.",
         "moeAutoFit": "Automatische Expertenplatzierung würde {{gpu}} auf der GPU brauchen und {{ram}} im Arbeitsspeicher lassen."
       },
       "agent": {
@@ -1493,7 +1494,7 @@
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM fertig ({{durationMs}} ms)",
-        "vram": "VRAM {{model}}: Schätzung {{estimatedBytes}} Bytes, belegt {{actualVramBytes}} Bytes, Differenz {{deltaBytes}} Bytes. Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "vram": "VRAM {{model}}: Schätzung {{estimated}}, belegt {{used}}, {{delta}} ({{percent}}). Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Modelldaten von {{model}} fehlen. Der Lauf wurde abgebrochen.",
         "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
       },

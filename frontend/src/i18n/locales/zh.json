@@ -730,7 +730,8 @@
         "moeRamTight": "空闲内存低于此估计。锁定页和 mmap 可能占用更多。",
         "moeAttention": "注意力留在最后 {{on}} / {{total}} 层，以便放入 GPU 内存。",
         "moeSwa": "滑动窗口上下文下，即使这里仍显示 GPU 有空余，Ollama 也可能把全部专家放在内存中。",
-        "moeEstimate": "根据模型元数据和文件大小估计。",
+        "moeEstimate": "根据模型元数据和文件大小估计。上下文大小每次变化都会重新计算。",
+        "moeKvFormula": "KV：{{full}} 层 × {{perToken}} B/token × {{ctx}} token。",
         "moeAutoFit": "自动放置专家会在 GPU 上使用 {{gpu}}，其余 {{ram}} 留在内存。"
       },
       "agent": {
@@ -1436,7 +1437,7 @@
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM 已完成（{{durationMs}} ms）",
-        "vram": "VRAM {{model}}：估计 {{estimatedBytes}} 字节，实际 {{actualVramBytes}} 字节，差值 {{deltaBytes}} 字节。专家 {{expertsOnGpu}}/{{expertLayers}}，注意力层 {{attentionLayersOnGpu}}，num_gpu {{numGpu}}，num_cpu_moe {{numCpuMoe}}。",
+        "vram": "VRAM {{model}}：估计 {{estimated}}，实际 {{used}}，{{delta}}（{{percent}}）。专家 {{expertsOnGpu}}/{{expertLayers}}，注意力层 {{attentionLayersOnGpu}}{{placement}}。",
         "modelInfo": "缺少 {{model}} 的模型数据。运行已中止。",
         "moeUnsplit": "无法划分 {{model}} 的专家层。未设置 num_gpu。"
       },

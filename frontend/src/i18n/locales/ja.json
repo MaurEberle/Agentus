@@ -730,7 +730,8 @@
         "moeRamTight": "空きメモリがこの見積もりを下回っています。ピン留めと mmap でさらに増えることがあります。",
         "moeAttention": "Attention は GPU メモリに収まるよう、末尾 {{on}} / {{total}} 層に残ります。",
         "moeSwa": "スライディングウィンドウのコンテキストでは、ここに GPU の空きが見えても、Ollama がすべてのエキスパートをメモリに置くことがあります。",
-        "moeEstimate": "モデルのメタデータとファイルサイズからの見積もりです。",
+        "moeEstimate": "モデルのメタデータとファイルサイズからの見積もりです。コンテキストサイズが変わるたびに再計算します。",
+        "moeKvFormula": "KV: {{full}} 層 × {{perToken}} B/トークン × {{ctx}} トークン。",
         "moeAutoFit": "エキスパートの自動配置なら GPU は {{gpu}}、残り {{ram}} はメモリです。"
       },
       "agent": {
@@ -1436,7 +1437,7 @@
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM完了（{{durationMs}} ms）",
-        "vram": "VRAM {{model}}: 見積もり {{estimatedBytes}} バイト、使用 {{actualVramBytes}} バイト、差 {{deltaBytes}} バイト。エキスパート {{expertsOnGpu}}/{{expertLayers}}、Attention {{attentionLayersOnGpu}}、num_gpu {{numGpu}}、num_cpu_moe {{numCpuMoe}}。",
+        "vram": "VRAM {{model}}: 見積もり {{estimated}}、使用 {{used}}、{{delta}}（{{percent}}）。エキスパート {{expertsOnGpu}}/{{expertLayers}}、Attention {{attentionLayersOnGpu}}{{placement}}。",
         "modelInfo": "{{model}} のモデル情報がありません。実行を中止しました。",
         "moeUnsplit": "{{model}} のエキスパート分割が不明です。num_gpu は送りません。"
       },

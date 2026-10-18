@@ -128,4 +128,5 @@ class RuntimeModelStats(ApiModel):
     routed_expert_bytes: int | None = Field(default=None, alias="routedExpertBytes")
     non_expert_bytes: int | None = Field(default=None, alias="nonExpertBytes")
     leading_dense_blocks: int | None = Field(default=None, alias="leadingDenseBlocks")
+    projector_bytes: int | None = Field(default=None, alias="projectorBytes")
     message_key: str | None = Field(default=None, alias="messageKey")

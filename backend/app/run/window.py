@@ -61,7 +61,8 @@ def choose_window(
     """Pick the smallest window that holds ``need`` and honors the node wish.
 
     ``preferred`` (node numCtx) is the working size: at least this large, never
-    above the model architecture. The ladder steps up and does not step down.
+    above the model architecture, and not kept at a larger resident window.
+    The ladder steps up and does not step down inside one run.
     Thinking models start at 16384 when no larger wish is set and the cap
     allows. Cloud providers are not sent ``num_ctx``.
     """
@@ -90,7 +91,13 @@ def choose_window(
     floor = wish or 0
     if isinstance(raised, int) and raised > floor:
         floor = raised
-    sticky = max(raised or 0, loaded or 0)
+    # An explicit context is the working size. A model still loaded at a larger
+    # window is reloaded, so automatic placement follows the new context.
+    # Without a wish, the resident window stays (the ladder does not step down).
+    if wish is not None:
+        sticky = raised or 0
+    else:
+        sticky = max(raised or 0, loaded or 0)
     fitting = [step for step in steps if step >= need and step >= floor]
     if fitting:
         chosen = min(fitting)

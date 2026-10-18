@@ -164,6 +164,7 @@ export type RuntimeModelStats = {
   routedExpertBytes?: number;
   nonExpertBytes?: number;
   leadingDenseBlocks?: number;
+  projectorBytes?: number;
   messageKey?: string;
 };
 export type HelpPing = { ok: boolean; messageKey?: string };

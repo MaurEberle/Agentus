@@ -166,6 +166,9 @@ export type MoeFit = {
   expertOnGpuBytes: number;
   kvBytes: number;
   overheadBytes: number;
+  /** Full-attention layers inside the GPU slice, and their shared bytes/token. */
+  fullLayers: number;
+  bytesPerToken: number;
 };
 
 /** MoE with no explicit partial layer choice. The runtime then omits num_gpu. */
@@ -213,7 +216,27 @@ function kvBytesForOn(
 }
 
 const FIT_MARGIN = 1024 * 1024 * 1024;
+const DEVICE_HOLD = 1024 * 1024 * 1024;
 const COMPUTE_RESERVE = 256 * 1024 * 1024;
+const PS_OVERHEAD = 256 * 1024 * 1024;
+
+function kvShape(
+  kvLayers: KvLayer[],
+  on: number,
+): { full: number; bytesPerToken: number } {
+  const start = Math.max(0, kvLayers.length - Math.min(on, kvLayers.length));
+  let full = 0;
+  const rates: number[] = [];
+  for (let i = start; i < kvLayers.length; i += 1) {
+    const bpt = kvLayers[i]?.bytesPerToken ?? 0;
+    const win = kvLayers[i]?.window ?? 0;
+    if (bpt <= 0 || win > 0) continue;
+    full += 1;
+    rates.push(bpt);
+  }
+  const uniform = rates.length > 0 && rates.every((value) => value === rates[0]) ? rates[0] : 0;
+  return { full, bytesPerToken: uniform };
+}
 
 /** Same integer fit as backend fit_moe. The byte split arrives already computed. */
 export function fitMoe(opts: {
@@ -224,6 +247,7 @@ export function fitMoe(opts: {
   kvLayers?: KvLayer[] | null;
   kvBytesPerToken?: number | null;
   leadingDenseBlocks?: number | null;
+  projectorBytes?: number | null;
   numCtx: number;
   poolBytes: number;
 }): MoeFit | null {
@@ -240,37 +264,44 @@ export function fitMoe(opts: {
   if (expertLayers < 1) return null;
   const perToken = opts.kvBytesPerToken ?? 0;
   const ctx = Number.isFinite(opts.numCtx) && opts.numCtx > 0 ? opts.numCtx : 0;
-  const budget = pool - FIT_MARGIN - COMPUTE_RESERVE;
-  if (budget <= 0) {
-    return {
-      gpuBytes: 0,
-      ramBytes: non + routed,
-      expertsOnGpu: 0,
-      expertLayers,
-      attentionLayersOnGpu: 0,
-      nonExpertOnGpu: 0,
-      expertOnGpuBytes: 0,
-      kvBytes: 0,
-      overheadBytes: 0,
-    };
-  }
-  const fixed = (on: number) => {
-    const weights = Math.floor((non * on) / layers);
-    const kv = kvBytesForOn(kvLayers, perToken, on, layers, ctx);
+  let projector = opts.projectorBytes ?? 0;
+  if (!Number.isFinite(projector) || projector < 0) projector = 0;
+  const empty = {
+    gpuBytes: 0,
+    ramBytes: non + routed,
+    expertsOnGpu: 0,
+    expertLayers,
+    attentionLayersOnGpu: 0,
+    nonExpertOnGpu: 0,
+    expertOnGpuBytes: 0,
+    kvBytes: 0,
+    overheadBytes: 0,
+    fullLayers: 0,
+    bytesPerToken: 0,
+  };
+  const usable = pool - DEVICE_HOLD - FIT_MARGIN - projector;
+  if (usable <= 0) return empty;
+  const fixed = (count: number) => {
+    const weights = Math.floor((non * count) / layers);
+    const kv = kvBytesForOn(kvLayers, perToken, count, layers, ctx);
     return { weights, kv, total: weights + kv };
   };
   let on = layers;
-  while (on > 0 && fixed(on).total > budget) on -= 1;
+  while (on > 0 && fixed(on).total + COMPUTE_RESERVE > usable) on -= 1;
   const base = fixed(on);
-  const room = Math.max(0, budget - base.total);
+  const room = Math.max(0, usable - (base.total + COMPUTE_RESERVE));
   const cap = Math.min(on, expertLayers);
   const perLayer = Math.floor(routed / expertLayers);
-  let expertsOn = cap > 0 && perLayer > 0 ? Math.min(cap, Math.floor(room / perLayer)) : 0;
+  const expertsOn = cap > 0 && perLayer > 0 ? Math.min(cap, Math.floor(room / perLayer)) : 0;
   let expertOnGpu = perLayer * expertsOn;
-  const partial = Math.floor((2 * perLayer) / 3);
-  if (expertsOn < cap && partial > 0 && room - expertOnGpu >= partial) expertOnGpu += partial;
+  const gate = Math.floor((2 * perLayer) / 3);
+  const up = Math.floor(perLayer / 3);
+  if (expertsOn < cap && gate > 0 && room - expertOnGpu >= gate) expertOnGpu += gate;
+  else if (expertsOn < cap && up > 0 && room - expertOnGpu >= up) expertOnGpu += up;
+  const shape = kvShape(kvLayers, on);
+  const overhead = COMPUTE_RESERVE + PS_OVERHEAD;
   return {
-    gpuBytes: base.weights + base.kv + COMPUTE_RESERVE + expertOnGpu,
+    gpuBytes: base.weights + base.kv + overhead + expertOnGpu,
     ramBytes: Math.max(0, non - base.weights) + Math.max(0, routed - expertOnGpu),
     expertsOnGpu: expertsOn,
     expertLayers,
@@ -278,6 +309,8 @@ export function fitMoe(opts: {
     nonExpertOnGpu: base.weights,
     expertOnGpuBytes: expertOnGpu,
     kvBytes: base.kv,
-    overheadBytes: COMPUTE_RESERVE,
+    overheadBytes: overhead,
+    fullLayers: shape.full,
+    bytesPerToken: shape.bytesPerToken,
   };
 }

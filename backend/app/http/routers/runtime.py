@@ -110,6 +110,7 @@ def runtime_model_stats(
         routed_expert_bytes=getattr(profile, "routed_expert_bytes", None) if profile else None,
         non_expert_bytes=getattr(profile, "non_expert_bytes", None) if profile else None,
         leading_dense_blocks=getattr(profile, "leading_dense_blocks", None) if profile else None,
+        projector_bytes=(profile.projector_bytes or None) if profile else None,
     )
 
 

@@ -424,6 +424,54 @@ def test_moe_fit_drops_experts_when_the_pool_cannot_hold_attention() -> None:
     assert fit.ram_bytes == (profile.routed_expert_bytes or 0) + (profile.non_expert_bytes or 0)
 
 
+def test_qwen35_fit_tracks_context_against_the_measured_card() -> None:
+    """Qwen3.6-35B-A3B on the 7.72 GiB card. KV is exact; experts fall as context grows."""
+    payload = {
+        "model_info": {
+            "general.architecture": "qwen35moe",
+            "qwen35moe.block_count": 40,
+            "qwen35moe.context_length": 262144,
+            "qwen35moe.embedding_length": 2048,
+            "qwen35moe.attention.head_count": 16,
+            "qwen35moe.attention.head_count_kv": 2,
+            "qwen35moe.attention.key_length": 256,
+            "qwen35moe.attention.value_length": 256,
+            "qwen35moe.expert_count": 256,
+            "qwen35moe.expert_used_count": 8,
+            "qwen35moe.expert_feed_forward_length": 512,
+            "qwen35moe.expert_shared_feed_forward_length": 512,
+            "qwen35moe.full_attention_interval": 4,
+            "qwen35moe.ssm.conv_kernel": 4,
+            "qwen35moe.ssm.state_size": 128,
+            "qwen35moe.ssm.group_count": 16,
+            "qwen35moe.ssm.inner_size": 4096,
+        },
+        "projector_info": {
+            "general.parameter_count": 446_571_248,
+            "general.file_type": 1,
+        },
+    }
+    profile = parse_vram_profile(payload, 20_689_662_826)
+    assert profile is not None
+    assert profile.projector_bytes == 446_571_248 * 2
+    assert profile.kv_bytes_per_token == 10 * 2048
+    pool = 8_294_236_160
+    at_43k = fit_moe(profile, num_ctx=43008, pool_bytes=pool)
+    at_55k = fit_moe(profile, num_ctx=55296, pool_bytes=pool)
+    at_84k = fit_moe(profile, num_ctx=83968, pool_bytes=pool)
+    assert at_43k is not None and at_55k is not None and at_84k is not None
+    assert at_84k.kv_bytes == 10 * 2048 * 83968 + sum(layer.fixed_bytes for layer in profile.kv_layers)
+    assert at_43k.kv_bytes < at_55k.kv_bytes < at_84k.kv_bytes
+    assert at_43k.expert_on_gpu_bytes > at_55k.expert_on_gpu_bytes > at_84k.expert_on_gpu_bytes
+    assert len({at_43k.gpu_bytes, at_55k.gpu_bytes, at_84k.gpu_bytes}) == 3
+    assert abs(at_84k.gpu_bytes - 5_482_542_529) / 5_482_542_529 < 0.05
+    assert abs(at_43k.gpu_bytes - 5_603_223_140) / 5_603_223_140 < 0.08
+    assert (
+        at_84k.non_expert_on_gpu + at_84k.expert_on_gpu_bytes + at_84k.kv_bytes + at_84k.overhead_bytes
+        == at_84k.gpu_bytes
+    )
+
+
 def test_plan_moe_offload_names_the_cpu_expert_layers() -> None:
     profile = parse_vram_profile(_qwen_moe(), 20_000_000_000)
     assert profile is not None

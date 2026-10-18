@@ -56,6 +56,7 @@ class VramProfile:
     non_expert_bytes: int | None = None
     leading_dense_blocks: int | None = None
     expert_layers: int | None = None
+    projector_bytes: int = 0
 
 
 def _positive_int(value: object) -> int | None:
@@ -502,6 +503,7 @@ def parse_vram_profile(payload: object, size_bytes: int | None) -> VramProfile |
         non_expert_bytes=split[3] if split else None,
         leading_dense_blocks=split[4] if split else None,
         expert_layers=split[5] if split else None,
+        projector_bytes=_projector_bytes(payload),
     )
 
 
@@ -564,19 +566,41 @@ def _fixed_gpu(profile: VramProfile, num_ctx: int, on: int, layers: int) -> tupl
     return non_expert, kv, overhead
 
 
-# llama.cpp leaves this much free VRAM and reserves a flat compute buffer.
-# The Qwen3.6 load used 5.22 GiB against a 7.49 GiB fill-the-card estimate.
+# llama.cpp --fit leaves this much device memory free. Ollama replaces it
+# with projector weights plus the same 1 GiB when a vision projector is offloaded.
 _FIT_MARGIN = 1024 * 1024 * 1024
+# CUDA already holds about 1 GiB that the Windows dedicated-memory counter
+# still reports as free. The Qwen3.6 card showed 7.72 GiB here and 6.84 GiB free in CUDA.
+_DEVICE_HOLD = 1024 * 1024 * 1024
 _COMPUTE_RESERVE = 256 * 1024 * 1024
+# /api/ps size_vram was 248 MiB above the buffer sum on both measured Qwen loads.
+_PS_OVERHEAD = 256 * 1024 * 1024
+
+
+def _projector_bytes(payload: dict[str, Any]) -> int:
+    """F16/F32 byte size of a separate mmproj. Missing projector is zero."""
+    info = payload.get("projector_info")
+    if not isinstance(info, dict):
+        return 0
+    count = _positive_int(info.get("general.parameter_count"))
+    if not count:
+        return 0
+    file_type = info.get("general.file_type")
+    width = 4 if file_type == 0 else 2
+    return count * width
+
+
+def _fit_margin(profile: VramProfile) -> int:
+    return _FIT_MARGIN + max(0, profile.projector_bytes)
 
 
 def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | None:
-    """How many routed expert layers fit beside the dense tensors and KV.
+    """How many routed expert layers fit beside the dense tensors and this context.
 
-    llama.cpp keeps every dense tensor on the GPU, then adds whole expert
-    layers and, when it fits, the up and gate matrices of one more layer.
-    The down matrix of that layer stays in RAM. A 1 GiB margin and the
-    compute buffer are reserved before those layers are counted.
+    The count is redone for every ``num_ctx``. KV and the recurrent state grow
+    with that context and push expert tensors off the GPU. llama.cpp keeps the
+    dense tensors, then whole expert layers, then the gate fraction of one more
+    layer (up and gate) or, if that does not fit, only its up matrix.
     """
     layers = profile.layers or 0
     routed = profile.routed_expert_bytes or 0
@@ -587,8 +611,8 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
     expert_layers = profile.expert_layers or (layers - leading)
     if expert_layers < 1:
         return None
-    budget = pool_bytes - _FIT_MARGIN - _COMPUTE_RESERVE
-    if budget <= 0:
+    usable = pool_bytes - _DEVICE_HOLD - _fit_margin(profile)
+    if usable <= 0:
         return MoeFit(
             gpu_bytes=0,
             ram_bytes=non_expert + routed,
@@ -603,23 +627,26 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
     on = layers
     while on > 0:
         weights, kv, _overhead = _fixed_gpu(profile, num_ctx, on, layers)
-        if weights + kv <= budget:
+        if weights + kv + _COMPUTE_RESERVE <= usable:
             break
         on -= 1
     weights, kv, _overhead = _fixed_gpu(profile, num_ctx, on, layers)
-    room = max(0, budget - (weights + kv))
+    room = max(0, usable - (weights + kv + _COMPUTE_RESERVE))
     cap = min(on, expert_layers)
     per_layer = routed // expert_layers if expert_layers else 0
     experts_on = min(cap, room // per_layer) if per_layer and cap > 0 else 0
     expert_on_gpu = per_layer * experts_on
-    # Up and gate are about two thirds of an expert layer. The down matrix stays in RAM.
-    partial = (2 * per_layer) // 3
-    if experts_on < cap and partial > 0 and room - expert_on_gpu >= partial:
-        expert_on_gpu += partial
+    gate = (2 * per_layer) // 3
+    up = per_layer // 3
+    if experts_on < cap and gate > 0 and room - expert_on_gpu >= gate:
+        expert_on_gpu += gate
+    elif experts_on < cap and up > 0 and room - expert_on_gpu >= up:
+        expert_on_gpu += up
     non_total = profile.non_expert_bytes or 0
     ram_bytes = max(0, non_total - weights) + max(0, routed - expert_on_gpu)
+    overhead = _COMPUTE_RESERVE + _PS_OVERHEAD
     return MoeFit(
-        gpu_bytes=weights + kv + _COMPUTE_RESERVE + expert_on_gpu,
+        gpu_bytes=weights + kv + overhead + expert_on_gpu,
         ram_bytes=ram_bytes,
         experts_on_gpu=experts_on,
         expert_layers=expert_layers,
@@ -627,7 +654,7 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
         non_expert_on_gpu=weights,
         expert_on_gpu_bytes=expert_on_gpu,
         kv_bytes=kv,
-        overhead_bytes=_COMPUTE_RESERVE,
+        overhead_bytes=overhead,
     )
 
 

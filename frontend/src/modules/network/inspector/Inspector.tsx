@@ -556,6 +556,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
           kvLayers: stats.data?.kvLayers,
           kvBytesPerToken: stats.data?.kvBytesPerToken,
           leadingDenseBlocks: stats.data?.leadingDenseBlocks,
+          projectorBytes: stats.data?.projectorBytes,
           numCtx: ctx,
           poolBytes: gpuTotal,
         })
@@ -657,6 +658,15 @@ function VramNeedField({ node }: { node: GraphNode }) {
         </p>
       ) : null}
       {placed && windowed ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.moeSwa')}</p> : null}
+      {placed && placed.fullLayers > 0 && placed.bytesPerToken > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeKvFormula', {
+            full: placed.fullLayers,
+            perToken: count(placed.bytesPerToken),
+            ctx: count(ctx),
+          })}
+        </p>
+      ) : null}
       {!placed && formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
       {over ? <p className="text-xs text-destructive">{t('network.inspector.llm.vramOver')}</p> : null}
       {tight ? <p className="text-xs text-warning">{t('network.inspector.llm.vramTight')}</p> : null}

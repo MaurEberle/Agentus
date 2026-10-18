@@ -1135,6 +1135,7 @@ def _log_vram_compare(llm, options, choice, node_id: str) -> None:
             "attentionLayersOnGpu": plan.attention_layers_on_gpu if plan else "—",
             "numGpu": _display_count(num_gpu),
             "numCpuMoe": _display_count(num_cpu),
+            "numCtx": num_ctx,
         }
         emit_log("info", "run.llm.vram", node_id=node_id, payload=payload)
         log.info(

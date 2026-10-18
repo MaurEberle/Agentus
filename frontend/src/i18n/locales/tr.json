@@ -730,7 +730,8 @@
         "moeRamTight": "Boş RAM bu tahminin altında. Sabitlenmiş sayfalar ve mmap daha fazlasını kullanabilir.",
         "moeAttention": "Attention, GPU belleğine sığması için son {{on}} / {{total}} katmanda kalır.",
         "moeSwa": "Kayan pencere bağlamında Ollama, göstergede GPU yeri görünse bile tüm uzmanları RAM’de tutabilir.",
-        "moeEstimate": "Model verisi ve dosya boyutundan tahmin.",
+        "moeEstimate": "Model verisi ve dosya boyutundan tahmin. Her bağlam boyutunda yeniden hesaplanır.",
+        "moeKvFormula": "KV: {{full}} katman × {{perToken}} B/token × {{ctx}} token.",
         "moeAutoFit": "Otomatik uzman yerleştirme GPU'da {{gpu}} kullanır ve {{ram}} bellekte bırakır."
       },
       "agent": {
@@ -1436,7 +1437,7 @@
       "llm": {
         "start": "LLM {{model}}",
         "done": "LLM bitti ({{durationMs}} ms)",
-        "vram": "VRAM {{model}}: tahmin {{estimatedBytes}} bayt, kullanılan {{actualVramBytes}} bayt, fark {{deltaBytes}} bayt. Uzmanlar {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}, num_gpu {{numGpu}}, num_cpu_moe {{numCpuMoe}}.",
+        "vram": "VRAM {{model}}: tahmin {{estimated}}, kullanılan {{used}}, {{delta}} ({{percent}}). Uzmanlar {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "{{model}} için model verisi yok. Çalıştırma durduruldu.",
         "moeUnsplit": "{{model}} için uzman dağılımı bilinmiyor. num_gpu gönderilmiyor."
       },
