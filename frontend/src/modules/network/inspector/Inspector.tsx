@@ -16,7 +16,6 @@ import {
   useEditorNetworksQuery,
   useMcpServersQuery,
   reindexNetworkKnowledge,
-  testLlmConnection,
 } from '@/modules/network/api';
 import { uniqueTags } from '@/modules/networks/model/filter';
 import { useHostResourcesQuery, useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
@@ -801,7 +800,6 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
   const [advanced, setAdvanced] = useState(false);
-  const [pinging, setPinging] = useState(false);
   const provider = String(node.data.provider ?? 'ollama');
   const model = String(node.data.model ?? '');
   const credentialId = String(node.data.credentialId ?? '') || undefined;
@@ -875,24 +873,6 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       }
     }
     editorUpdateNodeData(node.id, patch);
-  }
-
-  async function ping() {
-    setPinging(true);
-    try {
-      const result = await testLlmConnection({
-        provider,
-        model,
-        baseUrl: String(node.data.baseUrl ?? '') || undefined,
-        credentialId,
-      });
-      notify({
-        titleKey: result.messageKey ?? (result.ok ? 'network.inspector.llm.pingOk' : 'network.inspector.llm.pingFail'),
-        variant: result.ok ? 'success' : 'error',
-      });
-    } finally {
-      setPinging(false);
-    }
   }
 
   const credentialField =
@@ -984,17 +964,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           <VramNeedField node={node} />
         </>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pinging || !model || modelLocked}
-          loading={pinging}
-          onClick={() => void ping()}
-        >
-          {t('network.inspector.llm.ping')}
-        </Button>
+      <div className="pt-1">
         <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setAdvanced((v) => !v)}>
           {t('network.inspector.llm.advanced')}
         </button>

@@ -48,18 +48,6 @@ export async function listToolCatalog(): Promise<{ groups: ToolCatalogGroup[] }>
   return apiFetch('/tools/catalog');
 }
 
-export async function testLlmConnection(input: {
-  provider: string;
-  model: string;
-  baseUrl?: string;
-  credentialId?: string;
-}) {
-  return apiFetch<{ ok: boolean; messageKey?: string }>('/runtime/test-llm', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
 export async function reindexNetworkKnowledge(networkId: string, nodeId: string) {
   return apiFetch<{ state: 'ready' | 'error' | 'indexing'; messageKey?: string }>(
     `/networks/${networkId}/knowledge/${nodeId}/reindex`,
