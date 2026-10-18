@@ -218,6 +218,44 @@ def test_salvage_tool_calls_from_xml() -> None:
     assert salvage_tool_calls('{"action":"think","text":"x"}</arg_value></tool_call>') == []
 
 
+def test_broken_action_markup_is_a_call() -> None:
+    raw = (
+        "Gut, die Struktur steht.\n"
+        "<tool_call> <function=action> call </parameter> "
+        "<parameter=agent> Senior </parameter> "
+        "<parameter=task> Schreibe src/hooks/useTodos.ts </parameter> "
+        "</tool_call>"
+    )
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "Senior"
+    assert parsed["task"] == "Schreibe src/hooks/useTodos.ts"
+    assert reject_reason(raw) is None
+
+
+def test_broken_think_markup_is_a_think() -> None:
+    raw = (
+        "<tool_call><function=action> think </parameter>"
+        "<parameter=text>Als Nächstes Senior.</parameter></tool_call>"
+    )
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "think"
+    assert parsed["text"] == "Als Nächstes Senior."
+    assert reject_reason(raw) is None
+
+
+def test_markup_call_without_agent_is_unreadable() -> None:
+    raw = "<tool_call><function=action> call </parameter></tool_call>"
+    assert parse_orchestrator_action(raw)["action"] == "reply"
+    assert reject_reason(raw) == "unreadable"
+
+
+def test_file_tool_markup_stays_a_reply() -> None:
+    raw = "<function=file_access><parameter=path>a.txt</parameter></function>"
+    assert parse_orchestrator_action(raw)["action"] == "reply"
+    assert reject_reason(raw) is None
+
+
 def test_match_agent_role_alias() -> None:
     roster = [
         ("agent-senior", "Senior"),

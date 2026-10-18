@@ -110,6 +110,9 @@ def parse_orchestrator_action(raw: str) -> dict[str, str]:
     prose = _salvage_prose_call(text)
     if prose is not None:
         return prose
+    markup = _salvage_markup_action(text)
+    if markup is not None:
+        return markup
     return {"action": "reply", "text": text, "agent": "", "task": "", "source": ""}
 
 
@@ -139,6 +142,8 @@ def looks_like_control(text: str) -> bool:
     if folded.startswith("{") or folded.startswith("```"):
         return True
     if folded.startswith("call "):
+        return True
+    if "<function=action" in folded or "<parameter=agent>" in folded or "<parameter=action>" in folded:
         return True
     return '"action"' in folded and any(f'"{name}"' in folded for name in _ACTIONS)
 
@@ -183,6 +188,41 @@ _PROSE_CALL = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _PROSE_CALL_BARE = re.compile(r"^call\s+([^\s,.:;]+)\s*$", re.IGNORECASE)
+
+
+_MARKUP_ACTION = re.compile(
+    r"<function=action>\s*(ask|call|reply|finish|think)\b",
+    re.IGNORECASE,
+)
+_MARKUP_PARAM = re.compile(
+    r"<parameter=([^>\s/]+)>(.*?)</parameter>",
+    re.DOTALL | re.IGNORECASE,
+)
+_MAX_MARKUP_TASK = 8000
+
+
+def _salvage_markup_action(text: str) -> dict[str, str] | None:
+    """Read a model that writes the control object as broken tool-call tags."""
+    raw = text or ""
+    if "<function=action" not in raw.lower() and "<parameter=" not in raw.lower():
+        return None
+    params = {key.strip().lower(): value.strip() for key, value in _MARKUP_PARAM.findall(raw)}
+    head = _MARKUP_ACTION.search(raw)
+    kind = head.group(1).lower() if head else params.get("action", "").lower()
+    if kind not in _ACTIONS:
+        return None
+    if kind == "call":
+        agent = params.get("agent", "").strip()
+        if not agent:
+            return None
+        task = params.get("task", "").strip()
+        if len(task) > _MAX_MARKUP_TASK:
+            task = task[:_MAX_MARKUP_TASK]
+        return _action("call", "", agent, task, params.get("source", "").strip())
+    spoken = params.get("text", "").strip()
+    if kind != "finish" and not spoken:
+        return None
+    return _action(kind, spoken, "", "", "")
 
 
 def _salvage_prose_call(text: str) -> dict[str, str] | None:
