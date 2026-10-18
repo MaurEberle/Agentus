@@ -3,6 +3,26 @@ from __future__ import annotations
 from app.host.bridge import ChromeHostApi, inject_chrome_host
 
 
+class _SaveWindow:
+    def __init__(self, result: object) -> None:
+        self.result = result
+        self.save_filename = ""
+        self.file_types: tuple[str, ...] = ()
+
+    def create_file_dialog(
+        self,
+        kind: object,
+        directory: str = "",
+        allow_multiple: bool = False,
+        save_filename: str = "",
+        file_types: tuple[str, ...] = (),
+    ) -> object:
+        del kind, directory, allow_multiple
+        self.save_filename = save_filename
+        self.file_types = tuple(file_types)
+        return self.result
+
+
 class FakeWindow:
     def __init__(self) -> None:
         self.minimized = False
@@ -50,6 +70,40 @@ def test_pick_folder_cancel() -> None:
     win.dialog_result = None
     api._window = win
     assert api.pickFolder() is None
+
+
+def test_save_file_dialog_writes_json(tmp_path) -> None:
+    from webview.util import parse_file_type
+
+    target = tmp_path / "netz.json"
+    api = ChromeHostApi()
+    win = _SaveWindow((str(target),))
+    api._window = win
+    saved = api.saveFile(r"..\netz.json", '{"name": "mini"}\n', "json")
+    assert saved == str(target)
+    assert target.read_text(encoding="utf-8") == '{"name": "mini"}\n'
+    assert win.save_filename == "netz.json"
+    assert parse_file_type(win.file_types[0])[1] == "*.json"
+
+
+def test_save_file_cancel_writes_nothing(tmp_path) -> None:
+    target = tmp_path / "netz.json"
+    api = ChromeHostApi()
+    api._window = _SaveWindow(None)
+    assert api.saveFile("netz.json", "{}", "json") is None
+    assert not target.exists()
+
+
+def test_save_file_writes_zip_bytes(tmp_path) -> None:
+    import base64
+
+    target = tmp_path / "netze.zip"
+    api = ChromeHostApi()
+    api._window = _SaveWindow((str(target),))
+    payload = base64.b64encode(b"PK\x03\x04").decode("ascii")
+    saved = api.saveFile("netze.zip", payload, "zip")
+    assert saved == str(target)
+    assert target.read_bytes() == b"PK\x03\x04"
 
 
 def test_request_attention_without_native() -> None:

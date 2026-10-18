@@ -85,7 +85,8 @@ Geçerli/Geçersiz rozet olarak görünür. Geçersiz ağlar kaydedilebilir ama 
 - **Farklı kaydet:** yeni belge, açık olan olur.
 - **Aç:** kayıtlı bir ağ; arama ve sıralama. Toplu işlem ve silme yalnızca kitaplıkta.
 - **Çoğalt:** yalnızca zaten kayıtlı belgede; kopyayı açar.
-- **Dışa aktar:** açık grafiğin indirilmesi. `credentialId` içerir, anahtar içermez. Kitaplıkta içe aktarma ekli sırları atar.
+- **Dışa aktar:** iletişim, ardından açık grafiğin JSON’u (`schemaVersion` 1). `credentialId` içerir, anahtar içermez.
+- **İçe aktar:** bir JSON dosyası için iletişim. Yeni bir ağ olur. Kullanılan bir ad değiştirilir veya dosya atlanır.
 
 Kaydetmeden çıkış: Kaydet / At / İptal iletişim kutusu.
 
@@ -97,4 +98,4 @@ Eylemler: Yeni (düzenleyici), Aç, Çoğalt, Yeniden adlandır, Etiket koy, **E
 
 Silme çalışma alanı kaydını kaldırır; diskteki bilgi kaynak dosyalarını, yardım derlemini ve geçmiş çalıştırmalarını kaldırmaz. **Çalışan** bir ağ atlanır. Etkin ağı silmek hızlı seçimi boşaltır.
 
-İçe aktarma: ad çakışan dosyalar yeniden adlandırılır veya atlanır. Desteklenmeyen şema sürümleri reddedilir.
+İçe aktarma: önizlemeli iletişim. Aynı ad: yeniden adlandır veya atla. Başka bir schemaVersion reddedilir. Gizliler atılır.

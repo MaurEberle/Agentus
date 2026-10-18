@@ -2,12 +2,16 @@ import type { AgentNetworkDocument, GraphEdge, GraphNode } from '@/modules/netwo
 import { cloneDocument, migrateMcpNodes, newId } from '@/modules/network/model/document';
 import { agentIdFromChannel, channelHandle, normalizeChannelEdges } from '@/modules/network/schema/channels';
 
-const SECRET_KEYS = /^(secret|password|token|apiKey|authorization|bearer)$/i;
+const SECRET_FOLDED = new Set(['secret', 'password', 'token', 'apikey', 'authorization', 'bearer']);
+
+export function isSecretKey(key: string): boolean {
+  return SECRET_FOLDED.has(key.toLowerCase().replace(/[_-]/g, ''));
+}
 
 export function stripSecrets<T extends Record<string, unknown>>(data: T): T {
   const next = { ...data };
   for (const key of Object.keys(next)) {
-    if (SECRET_KEYS.test(key)) delete next[key];
+    if (isSecretKey(key)) delete next[key];
   }
   return next;
 }
@@ -70,14 +74,4 @@ function retargetChannel(handle: string, idMap: Map<string, string>): string {
   if (!agentId) return handle;
   const next = idMap.get(agentId);
   return next ? channelHandle(next) : handle;
-}
-
-export function downloadJson(filename: string, payload: unknown) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }

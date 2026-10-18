@@ -18,6 +18,7 @@ from app.run.graph_models import AgentNetworkDocument
 from app.run.knowledge import index_node, status_for_network
 from app.run.mcp_bridge import validation_kwargs
 from app.run.validate import validate_document
+from app.networks.transfer import to_export
 from app.settings.service import load_settings
 
 
@@ -215,16 +216,20 @@ def export_network(network_id: str) -> dict[str, Any]:
     row = get_network(network_id)
     if row is None:
         raise AppError("networks.notFound", status_code=404)
-    doc = dict(row.document)
-    doc["id"] = row.id
-    doc["exportedAt"] = utc_now()
-    return doc
+    document = dict(row.document)
+    document.setdefault("schemaVersion", 1)
+    return to_export(document)
+
+
+def export_document(document: dict[str, Any]) -> dict[str, Any]:
+    """Sanitize an open graph for download. Nothing is stored."""
+    return to_export(document)
 
 
 def import_network(document: dict[str, Any]) -> dict[str, Any]:
-    raw = dict(document)
-    raw.pop("id", None)
-    return create_network(raw)
+    payload = to_export(document)
+    payload.pop("exportedAt", None)
+    return create_network(payload)
 
 
 def reindex_knowledge(network_id: str, node_id: str) -> dict[str, str]:

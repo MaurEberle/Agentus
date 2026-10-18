@@ -85,7 +85,8 @@ Valid/invalid shows as a badge. Invalid networks can be saved but should not be 
 - **Save as:** new document, becomes the open one.
 - **Load:** one saved network; search and sort. Bulk and delete only in the library.
 - **Duplicate:** only when the document is already saved; opens the copy.
-- **Export:** download of the open graph. Includes `credentialId`, never keys. Library import discards secrets that slipped into a file.
+- **Export:** dialog, then JSON of the open graph (`schemaVersion` 1). Includes `credentialId`, never keys.
+- **Import:** dialog for a JSON file. It becomes a new network. A name already in use is renamed, or the file is skipped.
 
 Leaving with unsaved changes: Save / Discard / Cancel.
 
@@ -97,4 +98,4 @@ Actions: New (editor), Open, Duplicate, Rename, Set tags, **Set active** (only o
 
 Delete removes the workspace entry, not your knowledge source files on disk, not the help corpus, and not history runs. A **running** network is skipped. Deleting the active network clears quick select.
 
-Import: rename or skip name collisions. Unsupported schema versions are rejected.
+Import: dialog with a preview. Same name: rename or skip. Another schemaVersion is rejected. Secrets are discarded.

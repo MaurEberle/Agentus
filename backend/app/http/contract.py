@@ -54,6 +54,7 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("POST", "/api/networks/:id/duplicate", NETWORKS),
     ContractRoute("POST", "/api/networks/:id/validate", NETWORKS),
     ContractRoute("GET", "/api/networks/:id/export", NETWORKS),
+    ContractRoute("POST", "/api/networks/export", NETWORKS),
     ContractRoute("POST", "/api/networks/import", NETWORKS),
     ContractRoute("POST", "/api/networks/:id/knowledge/:nodeId/reindex", NETWORKS),
     ContractRoute("GET", "/api/settings", SETTINGS),

@@ -73,6 +73,15 @@ export async function exportNetwork(id: string): Promise<AgentNetworkDocument & 
   return apiFetch<AgentNetworkDocument & { exportedAt: string }>(`/networks/${id}/export`);
 }
 
+export async function previewExport(
+  document: AgentNetworkDocument,
+): Promise<AgentNetworkDocument & { exportedAt: string }> {
+  return apiFetch<AgentNetworkDocument & { exportedAt: string }>('/networks/export', {
+    method: 'POST',
+    body: JSON.stringify(document),
+  });
+}
+
 export async function importNetwork(document: AgentNetworkDocument): Promise<AgentNetworkDocument> {
   const created = await apiFetch<AgentNetworkDocument>('/networks/import', {
     method: 'POST',

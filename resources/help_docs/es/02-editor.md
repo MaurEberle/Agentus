@@ -85,7 +85,8 @@ Válido/Inválido se ve como insignia. Las redes inválidas se pueden guardar, p
 - **Guardar como:** documento nuevo, se convierte en el abierto.
 - **Abrir:** una red guardada; búsqueda y orden. Acciones masivas y borrar solo en la biblioteca.
 - **Duplicar:** solo con documento ya guardado; abre la copia.
-- **Exportar:** descarga del grafo abierto. Incluye `credentialId`, no claves. La importación en la biblioteca descarta secretos adjuntos.
+- **Exportar:** diálogo y luego JSON del grafo abierto (`schemaVersion` 1). Incluye `credentialId`, no claves.
+- **Importar:** diálogo para un archivo JSON. Se crea una red nueva. Un nombre ya usado se cambia, o se omite el archivo.
 
 Salir sin guardar: diálogo Guardar / Descartar / Cancelar.
 
@@ -97,4 +98,4 @@ Acciones: Nuevo (editor), Abrir, Duplicar, Renombrar, Poner etiquetas, **Definir
 
 Borrar quita la entrada del espacio de trabajo, no tus archivos de conocimiento en disco, ni el corpus de ayuda ni las ejecuciones del historial. Una red **en ejecución** se omite. Borrar la red activa vacía la selección rápida.
 
-Importar: archivos con colisión de nombre se renombran o se omiten. Las versiones de esquema no soportadas se rechazan.
+Importar: diálogo con vista previa. Mismo nombre: renombrar u omitir. Otra schemaVersion se rechaza. Los secretos se descartan.

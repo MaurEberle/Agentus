@@ -26,12 +26,19 @@ import {
   duplicateNetwork,
   updateNetwork,
   useEditorNetworkQuery,
+  useEditorNetworksQuery,
   validateNetwork,
 } from '@/modules/network/api';
 import { FlowCanvas } from '@/modules/network/canvas/FlowCanvas';
 import { Inspector } from '@/modules/network/inspector/Inspector';
 import { LoadDialog } from '@/modules/network/library/LoadDialog';
-import { downloadJson, duplicateNodes, exportDocument } from '@/modules/network/model/serialize';
+import type { AgentNetworkDocument } from '@/modules/network/model/document';
+import { duplicateNodes } from '@/modules/network/model/serialize';
+import { saveExportFile } from '@/lib/saveFile';
+import { ExportDialog } from '@/modules/networks/dialogs/ExportDialog';
+import { ImportDialog } from '@/modules/networks/dialogs/ImportDialog';
+import { importNetwork, previewExport } from '@/modules/networks/api';
+import { exportFileStem, exportStamp } from '@/modules/networks/model/importDoc';
 import { Palette } from '@/modules/network/palette/Palette';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { Ribbon } from '@/modules/network/ribbon/Ribbon';
@@ -95,6 +102,10 @@ function NetworkEditor() {
   const [paletteCollapsed, setPaletteCollapsed] = useLocalFlag('agentus.network.paletteCollapsed');
   const [inspectorCollapsed, setInspectorCollapsed] = useLocalFlag('agentus.network.inspectorCollapsed');
   const [loadOpen, setLoadOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const library = useEditorNetworksQuery();
   const [nameOpen, setNameOpen] = useState(false);
   const [nameValue, setNameValue] = useState('');
   const [nameMode, setNameMode] = useState<'save' | 'saveAs'>('save');
@@ -379,10 +390,45 @@ function NetworkEditor() {
     }
   }
 
-  function exportOpen() {
-    const payload = exportDocument(document);
-    const filename = `${(document.name || 'network').replace(/[^\w-]+/g, '_')}.json`;
-    downloadJson(filename, payload);
+  async function confirmExport() {
+    setTransferBusy(true);
+    try {
+      const payload = await previewExport(useNetworkEditor.getState().document);
+      const name = payload.name || document.name || 'network';
+      const written = await saveExportFile(
+        `${exportFileStem(name)}-${exportStamp()}.json`,
+        new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json' }),
+      );
+      if (!written) return;
+      setExportOpen(false);
+      notify({ titleKey: 'networks.notify.exported', variant: 'success' });
+    } catch {
+      notify({ titleKey: 'networks.notify.error', variant: 'error' });
+    } finally {
+      setTransferBusy(false);
+    }
+  }
+
+  function confirmImport(documents: AgentNetworkDocument[]) {
+    const documentToImport = documents[0];
+    if (!documentToImport) return;
+    setTransferBusy(true);
+    void importNetwork(documentToImport)
+      .then((created) => {
+        setImportOpen(false);
+        notify({
+          titleKey: 'networks.notify.imported',
+          values: { count: '1' },
+          variant: 'success',
+        });
+        if (created.id) openLoaded(created.id);
+      })
+      .catch(() => {
+        notify({ titleKey: 'networks.notify.error', variant: 'error' });
+      })
+      .finally(() => {
+        setTransferBusy(false);
+      });
   }
 
   async function runValidate() {
@@ -455,7 +501,8 @@ function NetworkEditor() {
         }}
         onLoad={() => setLoadOpen(true)}
         onDuplicate={() => void duplicate()}
-        onExport={exportOpen}
+        onImport={() => setImportOpen(true)}
+        onExport={() => setExportOpen(true)}
         onValidate={() => void runValidate()}
         onLibrary={requestLibrary}
       />
@@ -556,6 +603,27 @@ function NetworkEditor() {
         </SheetContent>
       </Sheet>
       <LoadDialog open={loadOpen} onOpenChange={setLoadOpen} onOpen={openLoaded} />
+      <ExportDialog
+        open={exportOpen}
+        items={[
+          {
+            name: document.name,
+            nodeCount: document.nodes.length,
+            edgeCount: document.edges.length,
+          },
+        ]}
+        busy={transferBusy}
+        onClose={() => setExportOpen(false)}
+        onConfirm={() => void confirmExport()}
+      />
+      <ImportDialog
+        open={importOpen}
+        multiple={false}
+        existingNames={(library.data?.items ?? []).map((item) => item.name)}
+        busy={transferBusy}
+        onClose={() => setImportOpen(false)}
+        onImport={confirmImport}
+      />
       <Dialog open={nameOpen} onOpenChange={setNameOpen}>
         <DialogContent closeLabel={t('network.dialog.close')}>
           <DialogHeader>

@@ -6,9 +6,7 @@ import {
   type GraphNode,
   type NodeType,
 } from '@/modules/network/model/document';
-import { sanitizeDocument } from '@/modules/network/model/serialize';
-
-const SECRET_KEYS = /^(secret|password|token|apiKey|authorization|bearer)$/i;
+import { isSecretKey, sanitizeDocument } from '@/modules/network/model/serialize';
 
 export type ImportParseOk = {
   fileName: string;
@@ -42,7 +40,7 @@ function stripSecretsDeep(value: unknown): { value: unknown; stripped: boolean }
   const next: Record<string, unknown> = {};
   let stripped = false;
   for (const [key, child] of Object.entries(record)) {
-    if (SECRET_KEYS.test(key)) {
+    if (isSecretKey(key)) {
       stripped = true;
       continue;
     }
@@ -101,6 +99,7 @@ function asEdges(value: unknown): GraphEdge[] | null {
 export function parseImportJson(fileName: string, raw: unknown): ImportParseResult {
   if (!raw || typeof raw !== 'object') return { fileName, errorKey: 'networks.import.unreadable' };
   const record = raw as Record<string, unknown>;
+  if (!('schemaVersion' in record)) return { fileName, errorKey: 'networks.import.unreadable' };
   if (record.schemaVersion !== SCHEMA_VERSION) return { fileName, errorKey: 'networks.import.schema' };
   const nodes = asNodes(record.nodes);
   const edges = asEdges(record.edges);
