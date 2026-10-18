@@ -1480,7 +1480,7 @@
       "agent": {
         "start": "Agent gestartet",
         "done": "Agent fertig",
-        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen beendet",
+        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen hintereinander beendet",
         "toolJson": "Werkzeugaufruf {{name}} verworfen: JSON-Argumente unvollständig (Versuch {{attempt}}/{{max}}).",
         "think": "Agent denkt (kein Ergebnis).",
         "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",

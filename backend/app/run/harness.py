@@ -833,6 +833,7 @@ def _agent_turn(
                         tool_calls=result.tool_calls,
                     )
                 )
+                hit_failure_limit = False
                 for call in result.tool_calls:
                     body, _fact, ok_call = _dispatch_tool(
                         ctrl,
@@ -846,6 +847,7 @@ def _agent_turn(
                         reuse=reuse,
                     )
                     if ok_call:
+                        failed_tools = 0
                         tool_ok = True
                         if _fact is not None and _fact.action in {"write", "delete"}:
                             wrote_ok = True
@@ -863,16 +865,19 @@ def _agent_turn(
                             name=call.name or None,
                         )
                     )
+                    if failed_tools >= MAX_FAILED_TOOL_CALLS:
+                        if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
+                            content = result.content or ""
+                            hit_failure_limit = True
+                            break
+                        return None
+                if hit_failure_limit:
+                    break
                 if wrote_ok:
                     _set_system_note(messages, _TOOL_REQUIRED, _TOOL_DONE)
                     _set_system_note(messages, _TOOL_ANSWER, _TOOL_DONE)
                 elif tool_ok and not file_prep:
                     _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
-                if failed_tools >= MAX_FAILED_TOOL_CALLS:
-                    if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
-                        content = result.content or ""
-                        break
-                    return None
                 continue
             truncated = _result_truncated(result)
             think_body = agent_think_text(

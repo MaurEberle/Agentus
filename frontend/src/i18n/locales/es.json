@@ -1423,7 +1423,7 @@
       "agent": {
         "start": "Agente iniciado",
         "done": "Agente finalizado",
-        "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas",
+        "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas seguidas",
         "toolJson": "Llamada a herramienta {{name}} descartada: argumentos JSON incompletos (intento {{attempt}}/{{max}}).",
         "think": "El agente está pensando (no es un resultado).",
         "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",

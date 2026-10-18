@@ -12,7 +12,7 @@ MAX_CLOSING_THINK_TOKENS = 16
 # Consecutive empty replies after a successful write or delete.
 # Each one asks the model to continue. The last one ends the run as incomplete.
 MAX_EMPTY_STOPS = 5
-# Failed tool calls in one agent invocation. Successful calls are unbounded.
+# Consecutive failed tool calls in one agent invocation. A success resets the count.
 MAX_FAILED_TOOL_CALLS = 10
 # Same truncated tool-call JSON from llama-server. Then it counts as one failed tool.
 MAX_TOOL_JSON_ATTEMPTS = 3

@@ -1480,7 +1480,7 @@
       "agent": {
         "start": "Agent started",
         "done": "Agent finished",
-        "toolFailures": "Agent stopped after {{failed}} failed tool calls",
+        "toolFailures": "Agent stopped after {{failed}} failed tool calls in a row",
         "toolJson": "Discarded tool call {{name}}: incomplete JSON arguments (attempt {{attempt}}/{{max}}).",
         "think": "Agent is thinking (not a result).",
         "thinkLimit": "Too many think turns without a result.",

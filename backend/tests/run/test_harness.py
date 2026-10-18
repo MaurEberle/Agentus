@@ -1706,6 +1706,112 @@ def test_agent_stops_after_ten_failed_tools(monkeypatch, api_env) -> None:
     assert "run.agent.toolFailures" in messages
 
 
+def _file_calls(start: int, count: int, *, ok_at: int | None = None) -> list:
+    from app.runtime.models import ToolCall
+
+    calls = []
+    for offset in range(count):
+        index = start + offset
+        name = "ok.txt" if ok_at == index else f"f{index}.txt"
+        calls.append(
+            ToolCall(
+                id=f"c{index}",
+                name="file_access",
+                arguments=f'{{"action":"write","path":"{name}","content":"x"}}',
+            )
+        )
+    return calls
+
+
+def test_failed_tool_streak_resets_after_a_success(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        path = str(args.get("path") or "")
+        if path == "ok.txt":
+            return ExecuteResult(ok=True, result={"path": path, "bytes": 1})
+        return ExecuteResult(ok=False, result="denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        if any(message.role == "tool" for message in req.messages) and agent_n["n"] >= 3:
+            return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            calls = _file_calls(0, 9)
+        elif agent_n["n"] == 2:
+            calls = _file_calls(9, 1, ok_at=9)
+        else:
+            calls = _file_calls(10, 9)
+        return CompletionResult(
+            content=None,
+            tool_calls=calls,
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 19
+    assert agent_n["n"] == 3
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.agent.toolFailures" not in messages
+    assert "run.failed" not in messages
+
+
+def test_ten_failures_in_a_row_still_stop_after_a_success(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs, list_steps
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        path = str(args.get("path") or "")
+        if path == "ok.txt":
+            return ExecuteResult(ok=True, result={"path": path, "bytes": 1})
+        return ExecuteResult(ok=False, result="denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            calls = _file_calls(0, 9)
+        elif agent_n["n"] == 2:
+            calls = _file_calls(9, 1, ok_at=9)
+        else:
+            calls = _file_calls(10, 10)
+        return CompletionResult(
+            content=None,
+            tool_calls=calls,
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.agent.toolFailures"
+    assert executed["n"] == 20
+    assert agent_n["n"] == 3
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.agent.toolFailures" in messages
+    assert "run.succeeded" not in messages
+    steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
+    assert steps.get("ag") == "error"
+
+
 def test_tool_agent_think_then_calls(monkeypatch, api_env) -> None:
     from app.db.runs import list_logs
     from app.runtime.models import ToolCall
