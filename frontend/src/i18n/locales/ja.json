@@ -778,6 +778,8 @@
           "search": "検索",
           "tree": "ツリー"
         },
+        "dateHint": "IANA タイムゾーンの現在時刻を出します。既定は UTC です。ある時刻を日・時・分だけ前後にずらせます。二つの時刻の間隔は秒・時・日で返します。内訳は日付、時刻、曜日で、月曜が 1 です。同じ時刻を別のタイムゾーンでも出せます。",
+        "calculatorHint": "+ - * / // % ** と括弧の式を計算します。** の指数は 20 までです。定数は pi と e です。関数は sqrt、cbrt、abs、round、floor、ceil、min、max、log、ln、log10、exp、sin、cos、tan、factorial です。log と ln は自然対数で、log は底を取れます。sin、cos、tan はラジアンです。factorial は 0 から 20 の整数だけです。",
         "credential": "資格情報",
         "mcpServer": "MCPサーバー",
         "mcpEmpty": "サーバーなし",

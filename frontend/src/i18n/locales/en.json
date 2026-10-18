@@ -835,6 +835,8 @@
           "search": "Search",
           "tree": "Tree"
         },
+        "dateHint": "Shows the current time in an IANA time zone, default UTC. An instant can be shifted by days, hours, and minutes, including backwards. The gap between two instants comes back in seconds, hours, and days. Parts are the date, the clock time, and the weekday; Monday is 1. The same instant can be shown in another time zone.",
+        "calculatorHint": "Evaluates an expression with + - * / // % ** and parentheses. The ** exponent must be at most 20. Constants are pi and e. Functions: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log and ln are natural logarithms; log can take a base. sin, cos, and tan use radians. factorial only accepts integers from 0 to 20.",
         "credential": "Credential",
         "mcpServer": "MCP server",
         "mcpEmpty": "No server",

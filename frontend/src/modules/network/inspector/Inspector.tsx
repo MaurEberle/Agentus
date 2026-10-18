@@ -1152,6 +1152,12 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
         </Field>
       ) : null}
       {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
+      {kind === 'datetime' ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.tool.dateHint')}</p>
+      ) : null}
+      {kind === 'calculator' ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.tool.calculatorHint')}</p>
+      ) : null}
     </>
   );
 }

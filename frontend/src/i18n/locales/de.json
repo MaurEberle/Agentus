@@ -835,6 +835,8 @@
           "search": "Suchen",
           "tree": "Baum"
         },
+        "dateHint": "Zeigt die aktuelle Zeit in einer IANA-Zeitzone, Standard ist UTC. Ein Zeitpunkt lässt sich um Tage, Stunden und Minuten verschieben, auch rückwärts. Der Abstand zweier Zeitpunkte kommt in Sekunden, Stunden und Tagen. Bestandteile sind Datum, Uhrzeit und Wochentag, Montag ist 1. Dieselbe Zeit lässt sich in eine andere Zeitzone umrechnen.",
+        "calculatorHint": "Rechnet einen Ausdruck mit + − * / // % ** und Klammern. Der Exponent von ** darf höchstens 20 sein. Konstanten sind pi und e. Funktionen: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log und ln sind der natürliche Logarithmus, log kann eine Basis nehmen. sin, cos und tan rechnen im Bogenmaß. factorial nur für ganze Zahlen von 0 bis 20.",
         "credential": "Zugang",
         "mcpServer": "MCP-Server",
         "mcpEmpty": "Kein Server",

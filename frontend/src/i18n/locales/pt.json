@@ -778,6 +778,8 @@
           "search": "Procurar",
           "tree": "Árvore"
         },
+        "dateHint": "Mostra a hora atual num fuso IANA; o padrão é UTC. Um instante pode avançar ou recuar dias, horas e minutos. A distância entre dois instantes vem em segundos, horas e dias. As partes são data, hora e dia da semana; segunda-feira é 1. O mesmo instante pode ser visto noutro fuso.",
+        "calculatorHint": "Calcula uma expressão com + - * / // % ** e parênteses. O expoente de ** é no máximo 20. Constantes: pi e e. Funções: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log e ln são o logaritmo natural; log pode ter uma base. sin, cos e tan usam radianos. factorial só aceita inteiros de 0 a 20.",
         "credential": "Credencial",
         "mcpServer": "Servidor MCP",
         "mcpEmpty": "Sem servidor",

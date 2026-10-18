@@ -778,6 +778,8 @@
           "search": "Chercher",
           "tree": "Arbre"
         },
+        "dateHint": "Affiche l’heure actuelle dans un fuseau IANA, UTC par défaut. Un instant peut être décalé de jours, d’heures et de minutes, aussi vers le passé. L’écart entre deux instants revient en secondes, heures et jours. Les composants sont la date, l’heure et le jour ; lundi vaut 1. Le même instant peut être affiché dans un autre fuseau.",
+        "calculatorHint": "Calcule une expression avec + - * / // % ** et des parenthèses. L’exposant de ** vaut au plus 20. Constantes : pi et e. Fonctions : sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log et ln sont le logarithme naturel ; log peut prendre une base. sin, cos et tan sont en radians. factorial n’accepte que les entiers de 0 à 20.",
         "credential": "Identifiant",
         "mcpServer": "Serveur MCP",
         "mcpEmpty": "Aucun serveur",

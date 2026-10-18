@@ -778,6 +778,8 @@
           "search": "Buscar",
           "tree": "Árbol"
         },
+        "dateHint": "Muestra la hora actual en una zona IANA; por defecto UTC. Un instante se puede desplazar días, horas y minutos, también hacia atrás. La diferencia entre dos instantes sale en segundos, horas y días. Las partes son fecha, hora y día de la semana; el lunes es 1. El mismo instante se puede ver en otra zona.",
+        "calculatorHint": "Calcula una expresión con + - * / // % ** y paréntesis. El exponente de ** puede ser como máximo 20. Constantes: pi y e. Funciones: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log y ln son el logaritmo natural; log puede llevar base. sin, cos y tan usan radianes. factorial solo admite enteros de 0 a 20.",
         "credential": "Credencial",
         "mcpServer": "Servidor MCP",
         "mcpEmpty": "Sin servidor",

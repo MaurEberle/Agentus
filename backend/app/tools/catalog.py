@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from app.tools.datetime_tool import DATE_ACTION_ORDER
 from app.tools.file_access_tool import FILE_ACTION_ORDER
 from app.tools.kinds import FIRST_PARTY_KINDS, FirstPartyKind
 from app.tools.models import CatalogGroup, CatalogTool
@@ -45,7 +46,22 @@ DATETIME_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
+        "action": {
+            "type": "string",
+            "enum": list(DATE_ACTION_ORDER),
+            "description": "now, add, diff, parts, or convert. Default now.",
+        },
         "timezone": {"type": "string", "description": "IANA timezone, default UTC"},
+        "at": {
+            "type": "string",
+            "description": "ISO-8601 instant for add, parts, and convert. Naive values use timezone. Default is now.",
+        },
+        "toTimezone": {"type": "string", "description": "convert: target IANA timezone"},
+        "start": {"type": "string", "description": "diff: start ISO-8601"},
+        "end": {"type": "string", "description": "diff: end ISO-8601"},
+        "days": {"type": "integer", "description": "add: whole days, negative subtracts"},
+        "hours": {"type": "integer", "description": "add: hours, negative subtracts"},
+        "minutes": {"type": "integer", "description": "add: minutes, negative subtracts"},
     },
 }
 
@@ -131,7 +147,14 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
 _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     "http": "Fetch an http or https URL and return status, headers, and body.",
     "web_search": "Search the web via Brave Search and return titles, URLs, and snippets.",
-    "datetime": "Return the current time in an IANA timezone (default UTC).",
+    "datetime": (
+        "Work with instants. action now returns the current time. "
+        "add shifts at (or now) by days, hours, and minutes; negative values subtract. "
+        "diff returns seconds, hours, and days between start and end. "
+        "parts splits an instant into year, month, day, hour, minute, second, weekday, and weekdayIndex (Monday is 1). "
+        "convert shows the same instant in toTimezone. "
+        "timezone is an IANA name, default UTC. at, start, and end are ISO-8601; naive values use timezone."
+    ),
     "calculator": (
         "Evaluate an arithmetic expression. Operators: + - * / // % ** and parentheses. "
         "The ** exponent must be at most 20. Names: pi, e. "

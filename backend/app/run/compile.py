@@ -118,19 +118,29 @@ def _gpu_percent(data: dict) -> int | None:
     return None
 
 
-def _chosen_file_actions(data: dict) -> list[str] | None:
-    from app.tools.file_access_tool import FILE_ACTION_ORDER
-
-    raw = data.get("fileActions")
+def _chosen_actions(data: dict, key: str, order: tuple[str, ...]) -> list[str] | None:
+    raw = data.get(key)
     if not isinstance(raw, list):
         return None
     picked = {str(item) for item in raw}
-    return [name for name in FILE_ACTION_ORDER if name in picked]
+    return [name for name in order if name in picked]
+
+
+def _merge_actions(
+    current: list[str] | None, chosen: list[str] | None, saw: bool
+) -> tuple[list[str] | None, bool]:
+    if not saw:
+        return chosen, True
+    if current is None or chosen is None:
+        return None, True
+    return list(dict.fromkeys([*current, *chosen])), True
 
 
 def _compile_tools(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str
 ) -> tuple[list[str], list[tuple[str, list[str] | None, str | None]], list[str] | None]:
+    from app.tools.file_access_tool import FILE_ACTION_ORDER
+
     tool_kinds: list[str] = []
     mcp: list[tuple[str, list[str] | None, str | None]] = []
     file_actions: list[str] | None = None
@@ -158,14 +168,9 @@ def _compile_tools(
         if kind:
             tool_kinds.append(kind)
         if kind == "file_access":
-            chosen = _chosen_file_actions(tool.data)
-            if not saw_file:
-                file_actions = chosen
-                saw_file = True
-            elif file_actions is None or chosen is None:
-                file_actions = None
-            else:
-                file_actions = list(dict.fromkeys([*file_actions, *chosen]))
+            file_actions, saw_file = _merge_actions(
+                file_actions, _chosen_actions(tool.data, "fileActions", FILE_ACTION_ORDER), saw_file
+            )
     return tool_kinds, mcp, file_actions
 
 

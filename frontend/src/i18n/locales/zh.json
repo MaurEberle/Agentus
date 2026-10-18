@@ -778,6 +778,8 @@
           "search": "搜索",
           "tree": "目录树"
         },
+        "dateHint": "显示某个 IANA 时区的当前时间，默认是 UTC。可以把一个时刻按天、小时和分钟前后移动。两个时刻的间隔以秒、小时和天返回。分量包括日期、钟点和星期，星期一是 1。同一个时刻可以换到另一个时区。",
+        "calculatorHint": "计算带 + - * / // % ** 和括号的表达式。** 的指数最多为 20。常数是 pi 和 e。函数：sqrt、cbrt、abs、round、floor、ceil、min、max、log、ln、log10、exp、sin、cos、tan、factorial。log 和 ln 是自然对数，log 可以带底数。sin、cos、tan 使用弧度。factorial 只接受 0 到 20 的整数。",
         "credential": "凭据",
         "mcpServer": "MCP 服务器",
         "mcpEmpty": "无服务器",
