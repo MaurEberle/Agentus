@@ -199,6 +199,14 @@
       "createTitle": "Zugang anlegen",
       "editTitle": "Zugang ersetzen",
       "empty": "Noch keine Zugänge.",
+      "emptyGroup": "In dieser Gruppe noch keine Zugänge.",
+      "groups": "Art des Zugangs",
+      "group": {
+        "llm": "LLM",
+        "search": "Websuche",
+        "mcp": "MCP",
+        "custom": "Eigen"
+      },
       "name": "Name",
       "kind": "Art",
       "mask": "Maske",
@@ -235,7 +243,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Token"
+        "token": "Token",
+        "custom": "Eigen"
       },
       "kindHint": {
         "xai": "API-Key von xAI.",
@@ -255,8 +264,18 @@
         "atlassian": "Atlassian Cloud API-Token (Jira/Confluence).",
         "linear": "Linear API-Key.",
         "postgres": "Postgres-Verbindungszeichenfolge (nicht die App-Datenbanken).",
-        "token": "Allgemeiner API-Key oder Bearer-Token (Context7, Sentry u. a.)."
-      }
+        "token": "Allgemeiner API-Key oder Bearer-Token (Context7, Sentry u. a.).",
+        "custom": "Bearer-Token, zusätzliche Header oder Umgebungsvariablen."
+      },
+      "bearer": "Bearer",
+      "bearerHint": "Wird als Authorization: Bearer gesendet.",
+      "headerName": "Header",
+      "headerValue": "Wert",
+      "addHeader": "Header hinzufügen",
+      "envName": "Variable",
+      "envValue": "Wert",
+      "addEnv": "Variable hinzufügen",
+      "customInvalid": "Der eigene Zugang braucht einen Bearer, einen Header oder eine Variable."
     },
     "runtime": {
       "lead": "Lokale Ollama-URL. Prüfung und Modellliste laufen über die App-API, nicht direkt aus dem Browser.",

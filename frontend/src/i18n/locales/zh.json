@@ -199,6 +199,14 @@
       "createTitle": "添加凭据",
       "editTitle": "替换凭据",
       "empty": "尚无凭据。",
+      "emptyGroup": "此分组尚无凭据。",
+      "groups": "凭据分组",
+      "group": {
+        "llm": "LLM",
+        "search": "网页搜索",
+        "mcp": "MCP",
+        "custom": "自定义"
+      },
       "name": "名称",
       "kind": "类型",
       "mask": "掩码",
@@ -227,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "令牌"
+        "token": "令牌",
+        "custom": "自定义"
       },
       "kindHint": {
         "xai": "xAI 的 API 密钥。",
@@ -247,8 +256,18 @@
         "atlassian": "Atlassian Cloud API 令牌（Jira/Confluence）。",
         "linear": "Linear API 密钥。",
         "postgres": "Postgres 连接字符串（不要指向应用数据库）。",
-        "token": "通用 API 密钥或 Bearer 令牌（Context7、Sentry 等）。"
+        "token": "通用 API 密钥或 Bearer 令牌（Context7、Sentry 等）。",
+        "custom": "Bearer 令牌、额外请求头或环境变量。"
       },
+      "bearer": "Bearer",
+      "bearerHint": "以 Authorization: Bearer 发送。",
+      "headerName": "请求头",
+      "headerValue": "值",
+      "addHeader": "添加请求头",
+      "envName": "变量",
+      "envValue": "值",
+      "addEnv": "添加变量",
+      "customInvalid": "自定义凭据需要 Bearer、请求头或变量。",
       "inUseMcpHint": "在 MCP 服务器上改用其他凭据，或删除该服务器。然后即可移除此凭据。",
       "usedBy": {
         "helpChatLlm": "帮助聊天（对话）",

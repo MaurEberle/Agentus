@@ -166,8 +166,9 @@ def run(
     raw_headers = argv.get("headers")
     if isinstance(raw_headers, dict):
         headers = {str(k): str(v) for k, v in raw_headers.items()}
-    if secret and not any(k.lower() == "authorization" for k in headers):
-        headers["Authorization"] = f"Bearer {secret}"
+    from app.common.custom_credential import apply_http_secret
+
+    headers = apply_http_secret(secret, headers)
     body = argv.get("body") if method in _BODY_METHODS else None
     content = None if body is None else str(body)
 

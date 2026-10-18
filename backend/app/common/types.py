@@ -29,6 +29,7 @@ CredentialKind = Literal[
     "linear",
     "postgres",
     "token",
+    "custom",
 ]
 CREDENTIAL_KINDS: tuple[CredentialKind, ...] = get_args(CredentialKind)
 

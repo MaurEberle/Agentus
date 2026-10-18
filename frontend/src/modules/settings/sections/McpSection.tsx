@@ -65,6 +65,7 @@ type CustomForm = {
   command: string;
   args: string;
   url: string;
+  credentialId: string;
 };
 
 const emptyCustom = (): CustomForm => ({
@@ -73,6 +74,7 @@ const emptyCustom = (): CustomForm => ({
   command: '',
   args: '',
   url: '',
+  credentialId: '',
 });
 
 function recipeTitle(t: (key: string, opts?: { defaultValue?: string }) => string, recipe: McpRecipe) {
@@ -215,6 +217,7 @@ export function McpSection() {
         command: custom.transport === 'stdio' ? custom.command : undefined,
         args: custom.transport === 'stdio' ? custom.args.split(/\s+/).filter(Boolean) : undefined,
         url: custom.transport === 'http' ? custom.url : undefined,
+        credentialIds: custom.credentialId ? [custom.credentialId] : undefined,
         enabled: false,
       });
       notify({ titleKey: 'settings.notify.mcpSaved', variant: 'success' });
@@ -598,6 +601,28 @@ export function McpSection() {
                   />
                 </div>
               )}
+              <div className="grid gap-1.5">
+                <Label>{t('settings.credentials.group.custom')}</Label>
+                <Select
+                  value={custom.credentialId || 'none'}
+                  onValueChange={(value) => setCustom({ ...custom, credentialId: value === 'none' ? '' : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('settings.helpChat.credentialEmpty')}</SelectItem>
+                    {credentials
+                      .filter((item) => item.kind === 'custom')
+                      .map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('settings.credentials.kindHint.custom')}</p>
+              </div>
             </div>
           ) : null}
           <DialogFooter>

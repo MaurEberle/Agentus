@@ -199,6 +199,14 @@
       "createTitle": "Kimlik bilgisi ekle",
       "editTitle": "Kimlik bilgisini değiştir",
       "empty": "Henüz kimlik bilgisi yok.",
+      "emptyGroup": "Bu grupta henüz kimlik bilgisi yok.",
+      "groups": "Kimlik grubu",
+      "group": {
+        "llm": "LLM",
+        "search": "Web araması",
+        "mcp": "MCP",
+        "custom": "Özel"
+      },
       "name": "Ad",
       "kind": "Tür",
       "mask": "Maske",
@@ -227,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Belirteç"
+        "token": "Belirteç",
+        "custom": "Özel"
       },
       "kindHint": {
         "xai": "xAI API anahtarı.",
@@ -247,8 +256,18 @@
         "atlassian": "Atlassian Cloud API jetonu (Jira/Confluence).",
         "linear": "Linear API anahtarı.",
         "postgres": "Postgres bağlantı dizesi (uygulama veritabanları değil).",
-        "token": "Genel API anahtarı veya Bearer jetonu (Context7, Sentry vb.)."
+        "token": "Genel API anahtarı veya Bearer jetonu (Context7, Sentry vb.).",
+        "custom": "Bearer jetonu, ek başlıklar veya ortam değişkenleri."
       },
+      "bearer": "Bearer",
+      "bearerHint": "Authorization: Bearer olarak gönderilir.",
+      "headerName": "Başlık",
+      "headerValue": "Değer",
+      "addHeader": "Başlık ekle",
+      "envName": "Değişken",
+      "envValue": "Değer",
+      "addEnv": "Değişken ekle",
+      "customInvalid": "Özel erişim bir Bearer, bir başlık veya bir değişken gerektirir.",
       "inUseMcpHint": "MCP sunucusunda başka bir kimlik ata veya sunucuyu sil. Sonra bu kimliği kaldırabilirsin.",
       "usedBy": {
         "helpChatLlm": "Yardım sohbeti (sohbet)",

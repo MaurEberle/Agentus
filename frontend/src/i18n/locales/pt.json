@@ -199,6 +199,14 @@
       "createTitle": "Adicionar credencial",
       "editTitle": "Substituir credencial",
       "empty": "Ainda não há credenciais.",
+      "emptyGroup": "Ainda não há credenciais neste grupo.",
+      "groups": "Grupo de credenciais",
+      "group": {
+        "llm": "LLM",
+        "search": "Pesquisa web",
+        "mcp": "MCP",
+        "custom": "Próprio"
+      },
       "name": "Nome",
       "kind": "Tipo",
       "mask": "Máscara",
@@ -227,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Token"
+        "token": "Token",
+        "custom": "Próprio"
       },
       "kindHint": {
         "xai": "Chave API da xAI.",
@@ -247,8 +256,18 @@
         "atlassian": "Token API Atlassian Cloud (Jira/Confluence).",
         "linear": "Chave API Linear.",
         "postgres": "Cadeia de ligação Postgres (não as bases da app).",
-        "token": "Chave API ou token Bearer genérico (Context7, Sentry, etc.)."
+        "token": "Chave API ou token Bearer genérico (Context7, Sentry, etc.).",
+        "custom": "Token Bearer, cabeçalhos extra ou variáveis de ambiente."
       },
+      "bearer": "Bearer",
+      "bearerHint": "Enviado como Authorization: Bearer.",
+      "headerName": "Cabeçalho",
+      "headerValue": "Valor",
+      "addHeader": "Adicionar cabeçalho",
+      "envName": "Variável",
+      "envValue": "Valor",
+      "addEnv": "Adicionar variável",
+      "customInvalid": "Um acesso próprio precisa de um Bearer, um cabeçalho ou uma variável.",
       "inUseMcpHint": "Atribui outra credencial no servidor MCP ou elimina o servidor. Depois podes remover esta credencial.",
       "usedBy": {
         "helpChatLlm": "Chat de ajuda (chat)",

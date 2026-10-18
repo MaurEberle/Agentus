@@ -717,6 +717,12 @@ def _spawn_env(row: dict[str, Any], recipe: Any) -> tuple[dict[str, str], dict[s
     kinds = list(recipe.credential_kinds) if recipe else []
     env_map = dict(recipe.env_from_kind) if recipe else {}
     ids = list(row.get("credential_ids") or [])
+    if recipe is None:
+        from app.common.custom_credential import apply_process_secret
+
+        for cred_id in ids:
+            apply_process_secret(vault_get(str(cred_id)), env, headers)
+        return env, headers
     for index, kind in enumerate(kinds):
         if index >= len(ids):
             break

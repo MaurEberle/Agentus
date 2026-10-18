@@ -29,9 +29,30 @@ export const CREDENTIAL_KINDS = [
   'linear',
   'postgres',
   'token',
+  'custom',
 ] as const;
 
 export type CredentialKind = (typeof CREDENTIAL_KINDS)[number];
+
+export const CREDENTIAL_GROUPS = ['llm', 'search', 'mcp', 'custom'] as const;
+export type CredentialGroup = (typeof CREDENTIAL_GROUPS)[number];
+
+export const CREDENTIAL_KINDS_BY_GROUP: Record<CredentialGroup, readonly CredentialKind[]> = {
+  llm: ['xai', 'openai', 'anthropic', 'gemini', 'openai_compat'],
+  search: ['brave', 'tavily', 'exa', 'searxng'],
+  mcp: ['github', 'azure', 'gitlab', 'slack', 'notion', 'atlassian', 'linear', 'postgres', 'token'],
+  custom: ['custom'],
+};
+
+/** Kinds whose MCP recipe can be enabled. Git and Excel need no credential. */
+export const SELECTABLE_MCP_CREDENTIAL_KINDS: readonly CredentialKind[] = ['github'];
+
+export function credentialGroup(kind: string): CredentialGroup | null {
+  for (const group of CREDENTIAL_GROUPS) {
+    if ((CREDENTIAL_KINDS_BY_GROUP[group] as readonly string[]).includes(kind)) return group;
+  }
+  return null;
+}
 
 export const LLM_PROVIDERS = ['ollama', 'xai', 'openai', 'anthropic', 'gemini'] as const;
 

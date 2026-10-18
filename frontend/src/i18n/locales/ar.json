@@ -199,6 +199,14 @@
       "createTitle": "إضافة اعتماد",
       "editTitle": "استبدال الاعتماد",
       "empty": "لا توجد بيانات اعتماد بعد.",
+      "emptyGroup": "لا توجد بيانات اعتماد في هذه المجموعة بعد.",
+      "groups": "مجموعة بيانات الاعتماد",
+      "group": {
+        "llm": "LLM",
+        "search": "بحث الويب",
+        "mcp": "MCP",
+        "custom": "مخصص"
+      },
       "name": "الاسم",
       "kind": "النوع",
       "mask": "القناع",
@@ -227,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "رمز"
+        "token": "رمز",
+        "custom": "مخصص"
       },
       "kindHint": {
         "xai": "مفتاح API من xAI.",
@@ -247,8 +256,18 @@
         "atlassian": "رمز Atlassian Cloud API (Jira/Confluence).",
         "linear": "مفتاح Linear API.",
         "postgres": "سلسلة اتصال Postgres (وليس قواعد التطبيق).",
-        "token": "مفتاح API عام أو رمز Bearer (Context7 وSentry وغيرهما)."
+        "token": "مفتاح API عام أو رمز Bearer (Context7 وSentry وغيرهما).",
+        "custom": "رمز Bearer أو ترويسات إضافية أو متغيرات بيئة."
       },
+      "bearer": "Bearer",
+      "bearerHint": "يُرسل كـ Authorization: Bearer.",
+      "headerName": "ترويسة",
+      "headerValue": "قيمة",
+      "addHeader": "إضافة ترويسة",
+      "envName": "متغير",
+      "envValue": "قيمة",
+      "addEnv": "إضافة متغير",
+      "customInvalid": "الوصول المخصص يحتاج إلى Bearer أو ترويسة أو متغير.",
       "inUseMcpHint": "عيّن اعتمادًا آخر على خادم MCP أو احذف الخادم. بعدها يمكنك إزالة هذا الاعتماد.",
       "usedBy": {
         "helpChatLlm": "دردشة المساعدة (الدردشة)",

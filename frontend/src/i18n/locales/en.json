@@ -199,6 +199,14 @@
       "createTitle": "Add credential",
       "editTitle": "Replace credential",
       "empty": "No credentials yet.",
+      "emptyGroup": "No credentials in this group yet.",
+      "groups": "Credential group",
+      "group": {
+        "llm": "LLM",
+        "search": "Web search",
+        "mcp": "MCP",
+        "custom": "Custom"
+      },
       "name": "Name",
       "kind": "Kind",
       "mask": "Mask",
@@ -235,7 +243,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Token"
+        "token": "Token",
+        "custom": "Custom"
       },
       "kindHint": {
         "xai": "API key from xAI.",
@@ -255,8 +264,18 @@
         "atlassian": "Atlassian Cloud API token (Jira/Confluence).",
         "linear": "Linear API key.",
         "postgres": "Postgres connection string (not the app databases).",
-        "token": "Generic API key or bearer token (Context7, Sentry, and similar)."
-      }
+        "token": "Generic API key or bearer token (Context7, Sentry, and similar).",
+        "custom": "Bearer token, extra headers, or environment variables."
+      },
+      "bearer": "Bearer",
+      "bearerHint": "Sent as Authorization: Bearer.",
+      "headerName": "Header",
+      "headerValue": "Value",
+      "addHeader": "Add header",
+      "envName": "Variable",
+      "envValue": "Value",
+      "addEnv": "Add variable",
+      "customInvalid": "A custom credential needs a bearer token, a header, or a variable."
     },
     "runtime": {
       "lead": "Local Ollama URL. Ping and model list go through the app API, not from the browser to Ollama.",

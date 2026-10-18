@@ -199,6 +199,14 @@
       "createTitle": "Ajouter un identifiant",
       "editTitle": "Remplacer l’identifiant",
       "empty": "Aucun identifiant pour le moment.",
+      "emptyGroup": "Aucun identifiant dans ce groupe pour le moment.",
+      "groups": "Groupe d’identifiants",
+      "group": {
+        "llm": "LLM",
+        "search": "Recherche web",
+        "mcp": "MCP",
+        "custom": "Personnel"
+      },
       "name": "Nom",
       "kind": "Type",
       "mask": "Masque",
@@ -227,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Jeton"
+        "token": "Jeton",
+        "custom": "Personnel"
       },
       "kindHint": {
         "xai": "Clé API xAI.",
@@ -247,8 +256,18 @@
         "atlassian": "Jeton API Atlassian Cloud (Jira/Confluence).",
         "linear": "Clé API Linear.",
         "postgres": "Chaîne de connexion Postgres (pas les bases de l’app).",
-        "token": "Clé API ou jeton Bearer générique (Context7, Sentry, etc.)."
+        "token": "Clé API ou jeton Bearer générique (Context7, Sentry, etc.).",
+        "custom": "Jeton Bearer, en-têtes supplémentaires ou variables d’environnement."
       },
+      "bearer": "Bearer",
+      "bearerHint": "Envoyé comme Authorization: Bearer.",
+      "headerName": "En-tête",
+      "headerValue": "Valeur",
+      "addHeader": "Ajouter un en-tête",
+      "envName": "Variable",
+      "envValue": "Valeur",
+      "addEnv": "Ajouter une variable",
+      "customInvalid": "Un accès personnel exige un Bearer, un en-tête ou une variable.",
       "inUseMcpHint": "Attribuez un autre identifiant au serveur MCP, ou supprimez ce serveur. Ensuite vous pourrez retirer cet identifiant.",
       "usedBy": {
         "helpChatLlm": "Chat d’aide (chat)",

@@ -199,6 +199,14 @@
       "createTitle": "資格情報を追加",
       "editTitle": "資格情報を置き換え",
       "empty": "資格情報はまだありません。",
+      "emptyGroup": "このグループにはまだ資格情報がありません。",
+      "groups": "資格情報のグループ",
+      "group": {
+        "llm": "LLM",
+        "search": "ウェブ検索",
+        "mcp": "MCP",
+        "custom": "独自"
+      },
       "name": "名前",
       "kind": "種類",
       "mask": "マスク",
@@ -227,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "トークン"
+        "token": "トークン",
+        "custom": "独自"
       },
       "kindHint": {
         "xai": "xAI の API キー。",
@@ -247,8 +256,18 @@
         "atlassian": "Atlassian Cloud API トークン（Jira/Confluence）。",
         "linear": "Linear API キー。",
         "postgres": "Postgres の接続文字列（アプリのデータベースは不可）。",
-        "token": "汎用 API キーまたは Bearer トークン（Context7、Sentry など）。"
+        "token": "汎用 API キーまたは Bearer トークン（Context7、Sentry など）。",
+        "custom": "Bearer トークン、追加ヘッダー、または環境変数。"
       },
+      "bearer": "Bearer",
+      "bearerHint": "Authorization: Bearer として送ります。",
+      "headerName": "ヘッダー",
+      "headerValue": "値",
+      "addHeader": "ヘッダーを追加",
+      "envName": "変数",
+      "envValue": "値",
+      "addEnv": "変数を追加",
+      "customInvalid": "独自の資格情報には Bearer、ヘッダー、または変数が必要です。",
       "inUseMcpHint": "MCPサーバーで別の認証情報に切り替えるか、サーバーを削除してください。その後この認証情報を外せます。",
       "usedBy": {
         "helpChatLlm": "ヘルプチャット（チャット）",
