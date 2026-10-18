@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from app.tools.file_access_tool import FILE_ACTION_ORDER
 from app.tools.kinds import FIRST_PARTY_KINDS, FirstPartyKind
 from app.tools.models import CatalogGroup, CatalogTool
 
@@ -64,7 +65,7 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
     "properties": {
         "action": {
             "type": "string",
-            "enum": ["list", "stat", "read", "write", "mkdir", "delete"],
+            "enum": list(FILE_ACTION_ORDER),
             "description": "Filesystem operation under the configured root",
         },
         "path": {
@@ -84,6 +85,37 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
             "type": "boolean",
             "description": "Create missing parent directories for mkdir",
         },
+        "head": {"type": "integer", "description": "read: return only the first N lines"},
+        "tail": {"type": "integer", "description": "read: return only the last N lines"},
+        "paths": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "read_many: file paths under the root",
+        },
+        "destination": {
+            "type": "string",
+            "description": "move: destination path under the root",
+        },
+        "pattern": {
+            "type": "string",
+            "description": "search: glob matched against the relative path and the file name",
+        },
+        "oldText": {"type": "string", "description": "edit: text to replace, must occur once"},
+        "newText": {"type": "string", "description": "edit: replacement text"},
+        "edits": {
+            "type": "array",
+            "description": "edit: several oldText/newText pairs, applied in order",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["oldText", "newText"],
+                "properties": {
+                    "oldText": {"type": "string"},
+                    "newText": {"type": "string"},
+                },
+            },
+        },
+        "dryRun": {"type": "boolean", "description": "edit: report the change without writing"},
     },
 }
 
@@ -92,7 +124,7 @@ _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     "web_search": "Search the web via Brave Search and return titles, URLs, and snippets.",
     "datetime": "Return the current time in an IANA timezone (default UTC).",
     "calculator": "Evaluate a basic arithmetic expression and return the number.",
-    "file_access": "Read and write files and directories under the configured root. Actions: list, stat, read, write, mkdir, delete.",
+    "file_access": "Read and write files under the configured root. Actions: list, stat, read (optional head or tail), read_many, write (creates missing parent folders), mkdir, delete, edit (oldText/newText or edits), move (destination), search (pattern), tree.",
 }
 
 _mcp_provider: Callable[[], list[CatalogGroup]] | None = None
@@ -172,20 +204,42 @@ def list_catalog_groups() -> list[CatalogGroup]:
     return groups
 
 
-def openai_tools_for_kinds(kinds: list[str]) -> list[dict[str, Any]]:
+def _file_access_parameters(actions: list[str] | None) -> tuple[dict[str, Any], str]:
+    schema = dict(FILE_ACCESS_SCHEMA)
+    properties = dict(schema.get("properties") or {})
+    action = dict(properties.get("action") or {})
+    chosen = list(FILE_ACTION_ORDER) if actions is None else [name for name in FILE_ACTION_ORDER if name in actions]
+    action["enum"] = chosen
+    properties["action"] = action
+    schema["properties"] = properties
+    description = _MODEL_DESCRIPTIONS["file_access"]
+    if actions is not None:
+        description = "File actions under the configured root: " + ", ".join(chosen) + "."
+    return schema, description
+
+
+def openai_tools_for_kinds(
+    kinds: list[str], *, file_actions: list[str] | None = None
+) -> list[dict[str, Any]]:
     by_name = {tool.name: tool for tool in list_first_party_tools()}
     out: list[dict[str, Any]] = []
     for kind in kinds:
         tool = by_name.get(kind)
         if tool is None or tool.json_schema is None:
             continue
+        parameters = tool.json_schema
+        description = tool.description or _MODEL_DESCRIPTIONS[tool.name]  # type: ignore[index]
+        if kind == "file_access":
+            if file_actions is not None and not file_actions:
+                continue
+            parameters, description = _file_access_parameters(file_actions)
         out.append(
             {
                 "type": "function",
                 "function": {
                     "name": tool.name,
-                    "description": tool.description or _MODEL_DESCRIPTIONS[tool.name],  # type: ignore[index]
-                    "parameters": tool.json_schema,
+                    "description": description,
+                    "parameters": parameters,
                 },
             }
         )

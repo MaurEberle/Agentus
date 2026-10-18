@@ -107,7 +107,8 @@ _FINISH_FILES_NOTE = (
 )
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
 _TRUNCATED_REASONS = frozenset({"length", "max_tokens", "truncated"})
-_FILE_PREP_ACTIONS = frozenset({"read", "list", "stat", "mkdir"})
+_FILE_MUTATIONS = frozenset({"write", "delete", "edit", "move"})
+_FILE_PREP_ACTIONS = frozenset({"read", "list", "stat", "mkdir", "search", "tree", "read_many"})
 
 
 def _control_raw(result: CompletionResult) -> str:
@@ -349,9 +350,11 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
 
 
 def _tool_schemas(
-    kinds: list[str], mcp_pairs: list[tuple[str, list[str] | None, str | None]]
+    kinds: list[str],
+    mcp_pairs: list[tuple[str, list[str] | None, str | None]],
+    file_actions: list[str] | None = None,
 ) -> list[dict]:
-    tools = openai_tools_for_kinds(kinds)
+    tools = openai_tools_for_kinds(kinds, file_actions=file_actions)
     bridge = get_mcp()
     if bridge and mcp_pairs:
         from app.run.mcp_bridge import mcp_openai_tools
@@ -576,7 +579,7 @@ def _agent_turn(
         )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
-    tools = _tool_schemas(agent.tool_kinds, agent.mcp)
+    tools = _tool_schemas(agent.tool_kinds, agent.mcp, agent.file_actions)
     system = system + "\n\n" + (_AGENT_THINK_TOOLS if tools else _AGENT_THINK)
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
@@ -604,7 +607,7 @@ def _agent_turn(
         for fact in record.files:
             if not fact.ok:
                 continue
-            if fact.action in {"write", "delete"}:
+            if fact.action in _FILE_MUTATIONS:
                 wrote_ok = True
                 if fact.path:
                     wrote_paths.append(fact.path)
@@ -849,7 +852,7 @@ def _agent_turn(
                     if ok_call:
                         failed_tools = 0
                         tool_ok = True
-                        if _fact is not None and _fact.action in {"write", "delete"}:
+                        if _fact is not None and _fact.action in _FILE_MUTATIONS:
                             wrote_ok = True
                             if _fact.path:
                                 wrote_paths.append(_fact.path)
@@ -1445,7 +1448,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             name = str(node.data.get("displayName") or node.data.get("role") or agent_id).strip() or agent_id
             instructions = str(node.data.get("systemPrompt") or "")
         roster.append((agent_id, name, instructions))
-    tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp)
+    tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp, orch.file_actions)
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
     thinks = 0
@@ -1622,7 +1625,7 @@ def _orchestrator_call(
         visible = visible_text(text or "")
         if text and not visible:
             memory.reject(text, "empty")
-        wrote = any(fact.ok and fact.action in {"write", "delete"} for fact in record.files)
+        wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
         if not visible and not record.tool_ok:
             record.error = "empty result"
             memory.set_anomaly(record)
@@ -1653,7 +1656,7 @@ def _tool_work_unverified(memory: RunMemory) -> bool:
     if not called:
         return False
     if any(
-        fact.ok and fact.action in {"write", "delete"}
+        fact.ok and fact.action in _FILE_MUTATIONS
         for rec in called
         for fact in rec.files
     ):

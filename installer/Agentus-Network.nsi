@@ -381,6 +381,30 @@ Section "Ollama (falls fehlend)" SecOllama
   Call WaitOllama
 SectionEnd
 
+Section "uv (falls fehlend)" SecUv
+  IfFileExists "$INSTDIR\uv\uvx.exe" uv_done
+  Push "uvx missing, download + extract"
+  Call LogLine
+  InitPluginsDir
+  SetOutPath "$PLUGINSDIR"
+  File "fetch-url.ps1"
+  File "install-uv.ps1"
+  nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\fetch-url.ps1" -Url "${UV_URL}" -OutFile "$TEMP\${UV_NAME}" -Sha256 "${UV_SHA256}"'
+  Pop $1
+  Push "uv download exit $1"
+  Call LogLine
+  IfFileExists "$TEMP\${UV_NAME}" 0 uv_done
+  CreateDirectory "$INSTDIR\uv"
+  nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\install-uv.ps1" -Zip "$TEMP\${UV_NAME}" -Dest "$INSTDIR\uv"'
+  Pop $1
+  Push "uv extract exit $1"
+  Call LogLine
+  IfFileExists "$INSTDIR\uv\uvx.exe" 0 uv_done
+  SetOutPath "$INSTDIR\uv"
+  File "install-uv.ps1"
+  uv_done:
+SectionEnd
+
 Section "Standardmodelle pullen" SecModels
   IfSilent 0 do_model_pull
     ${If} $InstallModels != "1"
@@ -413,6 +437,9 @@ SectionEnd
 
 Section "Uninstall"
   nsExec::ExecToLog 'taskkill /IM ${PRODUCT_EXE} /F'
+  IfFileExists "$INSTDIR\uv\install-uv.ps1" 0 uv_un_skip
+  nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\uv\install-uv.ps1" -Remove -Dest "$INSTDIR\uv"'
+  uv_un_skip:
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk"
   RMDir "$SMPROGRAMS\${PRODUCT_NAME}"
   Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
@@ -442,5 +469,6 @@ FunctionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Desktop-Verknüpfung"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecWebView} "WebView2 Evergreen, falls fehlend"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecOllama} "Offizielles Ollama-Setup, falls fehlend"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecUv} "uv/uvx 0.13.1 neben der App, falls fehlend"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecModels} "nomic-embed-text und llama3.2:1b"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END

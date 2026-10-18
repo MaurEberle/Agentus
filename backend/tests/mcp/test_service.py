@@ -23,15 +23,6 @@ def test_create_github_disabled(api_env) -> None:
     assert listed[0].enabled is False
 
 
-def test_filesystem_enable_without_root(api_env) -> None:
-    init()
-    item = create_server(McpServerCreate(recipe_id="filesystem"))
-    enabled = set_enabled(item.id, True)
-    assert enabled.enabled is True
-    assert enabled.tool_names
-    assert "read_file" in enabled.tool_names
-
-
 def test_excel_enable_without_root(api_env) -> None:
     init()
     item = create_server(McpServerCreate(recipe_id="excel", enabled=True))

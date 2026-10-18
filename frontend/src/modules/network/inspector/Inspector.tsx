@@ -1333,11 +1333,26 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   );
 }
 
+const FILE_ACTIONS = [
+  'list',
+  'stat',
+  'read',
+  'read_many',
+  'write',
+  'mkdir',
+  'delete',
+  'edit',
+  'move',
+  'search',
+  'tree',
+] as const;
+const FILE_WRITE_ACTIONS = new Set(['write', 'mkdir', 'edit', 'move']);
+
 function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const [picking, setPicking] = useState(false);
-  const allowWrite = node.data.allowWrite !== false;
-  const allowDelete = node.data.allowDelete !== false;
+  const stored = Array.isArray(node.data.fileActions) ? node.data.fileActions.map(String) : null;
+  const selected = new Set(stored ?? FILE_ACTIONS);
 
   function applyPath(path: string) {
     const trimmed = path.trim();
@@ -1377,22 +1392,29 @@ function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boole
         </div>
       </Field>
       <p className="text-xs text-muted-foreground">{t('network.inspector.tool.fileAccessHint')}</p>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox
-          checked={allowWrite}
-          disabled={readOnly}
-          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowWrite: value === true })}
-        />
-        {t('network.inspector.tool.allowWrite')}
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox
-          checked={allowDelete}
-          disabled={readOnly}
-          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowDelete: value === true })}
-        />
-        {t('network.inspector.tool.allowDelete')}
-      </label>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">{t('network.inspector.tool.fileActions')}</p>
+        {FILE_ACTIONS.map((action) => (
+          <label key={action} className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={selected.has(action)}
+              disabled={readOnly}
+              onCheckedChange={(value) => {
+                const next = new Set(selected);
+                if (value === true) next.add(action);
+                else next.delete(action);
+                const ordered = FILE_ACTIONS.filter((item) => next.has(item));
+                editorUpdateNodeData(node.id, {
+                  fileActions: ordered.length === FILE_ACTIONS.length ? undefined : [...ordered],
+                  allowWrite: ordered.some((item) => FILE_WRITE_ACTIONS.has(item)),
+                  allowDelete: ordered.includes('delete'),
+                });
+              }}
+            />
+            {t(`network.inspector.tool.fileAction.${action}`)}
+          </label>
+        ))}
+      </div>
     </>
   );
 }

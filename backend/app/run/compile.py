@@ -33,6 +33,7 @@ class CompiledOrchestrator:
     finals: list[str]
     tool_kinds: list[str] = field(default_factory=list)
     mcp: list[tuple[str, list[str] | None, str | None]] = field(default_factory=list)
+    file_actions: list[str] | None = None
 
 
 @dataclass
@@ -44,6 +45,7 @@ class CompiledAgent:
     mcp: list[tuple[str, list[str] | None, str | None]]
     knowledge_node_ids: list[str]
     outbound_message: list[str]
+    file_actions: list[str] | None = None
 
 
 @dataclass
@@ -116,11 +118,23 @@ def _gpu_percent(data: dict) -> int | None:
     return None
 
 
+def _chosen_file_actions(data: dict) -> list[str] | None:
+    from app.tools.file_access_tool import FILE_ACTION_ORDER
+
+    raw = data.get("fileActions")
+    if not isinstance(raw, list):
+        return None
+    picked = {str(item) for item in raw}
+    return [name for name in FILE_ACTION_ORDER if name in picked]
+
+
 def _compile_tools(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str
-) -> tuple[list[str], list[tuple[str, list[str] | None]]]:
+) -> tuple[list[str], list[tuple[str, list[str] | None, str | None]], list[str] | None]:
     tool_kinds: list[str] = []
     mcp: list[tuple[str, list[str] | None, str | None]] = []
+    file_actions: list[str] | None = None
+    saw_file = False
     for edge in doc.edges:
         if edge.target != node_id or edge.target_handle != "tool":
             continue
@@ -143,7 +157,16 @@ def _compile_tools(
         kind = str(tool.data.get("kind") or "")
         if kind:
             tool_kinds.append(kind)
-    return tool_kinds, mcp
+        if kind == "file_access":
+            chosen = _chosen_file_actions(tool.data)
+            if not saw_file:
+                file_actions = chosen
+                saw_file = True
+            elif file_actions is None or chosen is None:
+                file_actions = None
+            else:
+                file_actions = list(dict.fromkeys([*file_actions, *chosen]))
+    return tool_kinds, mcp, file_actions
 
 
 def _compile_orchestrator(
@@ -169,7 +192,7 @@ def _compile_orchestrator(
             agents.append(target.id)
         elif edge.source_handle == "message":
             finals.append(target.id)
-    tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
+    tool_kinds, mcp, file_actions = _compile_tools(doc, by_id, node.id)
     return CompiledOrchestrator(
         node_id=node.id,
         system_prompt=str(node.data.get("systemPrompt") or ""),
@@ -178,6 +201,7 @@ def _compile_orchestrator(
         finals=finals,
         tool_kinds=tool_kinds,
         mcp=mcp,
+        file_actions=file_actions,
     )
 
 
@@ -205,7 +229,7 @@ def compile_document(
         if node.type != "agent":
             continue
         llm = _compile_llm(doc, by_id, node.id)
-        tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
+        tool_kinds, mcp, file_actions = _compile_tools(doc, by_id, node.id)
         knowledge_ids = [
             e.source
             for e in doc.edges
@@ -222,6 +246,7 @@ def compile_document(
             llm=llm,
             tool_kinds=tool_kinds,
             mcp=mcp,
+            file_actions=file_actions,
             knowledge_node_ids=knowledge_ids,
             outbound_message=outbound,
         )

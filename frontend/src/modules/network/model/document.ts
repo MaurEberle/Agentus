@@ -81,6 +81,8 @@ export type ToolNodeData = {
   rootPath?: string;
   allowWrite?: boolean;
   allowDelete?: boolean;
+  /** Unset means every file action. A list is the subset the agent may call. */
+  fileActions?: string[];
 };
 
 export type McpNodeData = {

@@ -270,12 +270,29 @@ export function useRuntimeModelsQuery(params: RuntimeModelsParams & { enabled?: 
   });
 }
 
+/** Local files are the built-in file tool. Fetch overlaps HTTP. */
+const RETIRED_MCP_RECIPES = new Set(['filesystem', 'fetch']);
+
 export function useMcpRecipesQuery() {
-  return useQuery({ queryKey: ['mcp', 'recipes'], queryFn: listMcpRecipes });
+  return useQuery({
+    queryKey: ['mcp', 'recipes'],
+    queryFn: listMcpRecipes,
+    select: (data) => ({
+      ...data,
+      items: data.items.filter((item) => !RETIRED_MCP_RECIPES.has(item.id)),
+    }),
+  });
 }
 
 export function useMcpServersQuery() {
-  return useQuery({ queryKey: ['mcp', 'servers'], queryFn: listMcpServers });
+  return useQuery({
+    queryKey: ['mcp', 'servers'],
+    queryFn: listMcpServers,
+    select: (data) => ({
+      ...data,
+      items: data.items.filter((item) => !item.recipeId || !RETIRED_MCP_RECIPES.has(item.recipeId)),
+    }),
+  });
 }
 
 export function useStoresQuery() {
