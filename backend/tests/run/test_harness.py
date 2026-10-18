@@ -1000,9 +1000,8 @@ def test_moe_auto_sends_expert_layer_count(monkeypatch, api_env) -> None:
     monkeypatch.setattr("app.run.harness._inference_pool_bytes", lambda: 8 * 1024**3)
     stored = _drive(monkeypatch, _finish(options), doc=doc)
     assert stored["outcome"] == "succeeded"
-    sent = options[0]
-    assert isinstance(sent, dict)
-    assert sent["num_cpu_moe"] > 0
+    sent = options[0] or {}
+    assert "num_cpu_moe" not in sent
     assert "num_gpu" not in sent
 
 

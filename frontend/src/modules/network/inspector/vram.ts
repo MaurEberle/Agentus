@@ -212,6 +212,9 @@ function kvBytesForOn(
   return Math.floor((kvBytesPerToken * ctx * on) / layers);
 }
 
+const FIT_MARGIN = 1024 * 1024 * 1024;
+const COMPUTE_RESERVE = 256 * 1024 * 1024;
+
 /** Same integer fit as backend fit_moe. The byte split arrives already computed. */
 export function fitMoe(opts: {
   nonExpertBytes?: number | null;
@@ -235,25 +238,39 @@ export function fitMoe(opts: {
   if (leading > layers) leading = layers;
   const expertLayers = layers - leading;
   if (expertLayers < 1) return null;
-  const overheadTotal = opts.overheadBytes ?? 0;
   const perToken = opts.kvBytesPerToken ?? 0;
   const ctx = Number.isFinite(opts.numCtx) && opts.numCtx > 0 ? opts.numCtx : 0;
+  const budget = pool - FIT_MARGIN - COMPUTE_RESERVE;
+  if (budget <= 0) {
+    return {
+      gpuBytes: 0,
+      ramBytes: non + routed,
+      expertsOnGpu: 0,
+      expertLayers,
+      attentionLayersOnGpu: 0,
+      nonExpertOnGpu: 0,
+      expertOnGpuBytes: 0,
+      kvBytes: 0,
+      overheadBytes: 0,
+    };
+  }
   const fixed = (on: number) => {
     const weights = Math.floor((non * on) / layers);
-    const overhead = Math.floor((overheadTotal * on) / layers);
     const kv = kvBytesForOn(kvLayers, perToken, on, layers, ctx);
-    return { weights, overhead, kv, total: weights + overhead + kv };
+    return { weights, kv, total: weights + kv };
   };
   let on = layers;
-  while (on > 0 && fixed(on).total > pool) on -= 1;
+  while (on > 0 && fixed(on).total > budget) on -= 1;
   const base = fixed(on);
-  const room = Math.max(0, pool - base.total);
+  const room = Math.max(0, budget - base.total);
   const cap = Math.min(on, expertLayers);
-  let expertsOn = cap > 0 ? Math.min(cap, Math.floor((room * expertLayers) / routed)) : 0;
-  while (expertsOn > 0 && Math.floor((routed * expertsOn) / expertLayers) > room) expertsOn -= 1;
-  const expertOnGpu = Math.floor((routed * expertsOn) / expertLayers);
+  const perLayer = Math.floor(routed / expertLayers);
+  let expertsOn = cap > 0 && perLayer > 0 ? Math.min(cap, Math.floor(room / perLayer)) : 0;
+  let expertOnGpu = perLayer * expertsOn;
+  const partial = Math.floor((2 * perLayer) / 3);
+  if (expertsOn < cap && partial > 0 && room - expertOnGpu >= partial) expertOnGpu += partial;
   return {
-    gpuBytes: base.weights + base.kv + base.overhead + expertOnGpu,
+    gpuBytes: base.weights + base.kv + COMPUTE_RESERVE + expertOnGpu,
     ramBytes: Math.max(0, non - base.weights) + Math.max(0, routed - expertOnGpu),
     expertsOnGpu: expertsOn,
     expertLayers,
@@ -261,6 +278,6 @@ export function fitMoe(opts: {
     nonExpertOnGpu: base.weights,
     expertOnGpuBytes: expertOnGpu,
     kvBytes: base.kv,
-    overheadBytes: base.overhead,
+    overheadBytes: COMPUTE_RESERVE,
   };
 }

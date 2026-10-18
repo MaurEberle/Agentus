@@ -1074,42 +1074,25 @@ def _display_count(value: object) -> str | int:
 
 
 def _moe_auto_options(llm, choice, layers: int | None) -> dict:
-    """Pass the expert-layer count without forcing a dense full offload.
+    """Leave GPU placement to llama.cpp.
 
-    Current Ollama ignores unknown options, including ``num_cpu_moe``. Sending
-    ``num_gpu`` at the same time would pin whole layers and undo automatic
-    expert placement. The expert count is still sent. ``num_gpu`` is set only
-    when attention itself does not fit, or when every expert layer fits and a
-    full offload matches the estimate.
+    Ollama 0.40 ignores ``num_cpu_moe`` and honors ``num_gpu``. Sending a
+    partial ``num_gpu`` disables that fitter. The Qwen3.6 run then loaded
+    12 of 41 layers, and the next attempt used ``num_gpu`` 0. The inspector
+    estimate predicts the fitter. It is not sent as a layer command.
     """
-    from app.runtime.vram_est import plan_moe_offload, vram_profile
+    from app.runtime.vram_est import vram_profile
 
+    del choice, layers
     profile = vram_profile(llm.model, base_url=llm.base_url)
-    num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
-    plan = (
-        plan_moe_offload(profile, num_ctx=num_ctx, pool_bytes=_inference_pool_bytes())
-        if profile is not None
-        else None
-    )
-    if plan is None:
+    if profile is None or not profile.routed_expert_bytes:
         emit_log(
             "warn",
             "run.llm.moeUnsplit",
             node_id=getattr(llm, "node_id", None),
             payload={"model": llm.model},
         )
-        return {}
-    out: dict = {}
-    attention = plan.attention_layers_on_gpu
-    if attention <= 0:
-        out["num_gpu"] = 0
-    elif isinstance(layers, int) and layers > 0 and attention < layers:
-        out["num_gpu"] = plan.num_gpu
-    elif plan.num_cpu_moe <= 0:
-        out["num_gpu"] = plan.num_gpu
-    if plan.num_cpu_moe > 0:
-        out["num_cpu_moe"] = plan.num_cpu_moe
-    return out
+    return {}
 
 
 def _log_vram_compare(llm, options, choice, node_id: str) -> None:

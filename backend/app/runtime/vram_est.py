@@ -175,6 +175,7 @@ def _classify_layer(
     arch: str,
     window: int | None,
     interval: int | None,
+    interval_is_recurrent: bool,
     mla: bool,
 ) -> str:
     if index >= kv_end:
@@ -191,7 +192,8 @@ def _classify_layer(
         elif arch in {"gemma3", "gemma3n"} and window:
             kind = "swa" if (index + 1) % 6 != 0 else "full"
         elif interval and interval > 1:
-            kind = "full" if index % interval == 0 else "skip"
+            # Qwen3.5-style hybrids: the other layers are DeltaNet, not empty.
+            kind = "full" if index % interval == 0 else ("recurrent" if interval_is_recurrent else "skip")
         elif window and not mla:
             kind = "swa"
         else:
@@ -298,6 +300,7 @@ def _build_kv_layers(info: dict[str, Any], arch: str, layers: int) -> tuple[Laye
             arch=arch,
             window=window,
             interval=interval,
+            interval_is_recurrent=bool(_info_int(info, arch, "ssm.inner_size")),
             mla=mla,
         )
         if kind == "skip":
@@ -425,6 +428,14 @@ def _moe_weight_split(
     if total_params <= 0 or routed_params <= 0:
         return None
     routed_bytes = size_bytes * routed_params // total_params
+    # MXFP4 experts sit near 4.5 bits. A uniform parameter split gives those
+    # bytes to the experts and starves the denser attention and embedding
+    # tensors. The measured Qwen3.6 load kept 2.4 GiB of dense weights on GPU.
+    expert_cap = routed_params * 9 // 16
+    # Only when experts stay the majority. A synthetic file that is far
+    # heavier than its expert params keeps the uniform split.
+    if 0 < expert_cap < routed_bytes and expert_cap > size_bytes - expert_cap:
+        routed_bytes = expert_cap
     non_expert_bytes = size_bytes - routed_bytes
     used = _info_int(info, arch, "expert_used_count")
     return experts, used, routed_bytes, non_expert_bytes, leading, expert_layers
@@ -553,13 +564,19 @@ def _fixed_gpu(profile: VramProfile, num_ctx: int, on: int, layers: int) -> tupl
     return non_expert, kv, overhead
 
 
-def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | None:
-    """How many routed expert layers fit beside attention and KV.
+# llama.cpp leaves this much free VRAM and reserves a flat compute buffer.
+# The Qwen3.6 load used 5.22 GiB against a 7.49 GiB fill-the-card estimate.
+_FIT_MARGIN = 1024 * 1024 * 1024
+_COMPUTE_RESERVE = 256 * 1024 * 1024
 
-    Returns None for dense profiles and for MoE metadata that cannot be split.
-    Expert layers on the GPU never exceed the attention layers kept on the GPU.
-    ``ram_bytes`` is the routed spill plus the non-expert weights that did not
-    stay on the GPU.
+
+def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | None:
+    """How many routed expert layers fit beside the dense tensors and KV.
+
+    llama.cpp keeps every dense tensor on the GPU, then adds whole expert
+    layers and, when it fits, the up and gate matrices of one more layer.
+    The down matrix of that layer stays in RAM. A 1 GiB margin and the
+    compute buffer are reserved before those layers are counted.
     """
     layers = profile.layers or 0
     routed = profile.routed_expert_bytes or 0
@@ -570,23 +587,39 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
     expert_layers = profile.expert_layers or (layers - leading)
     if expert_layers < 1:
         return None
+    budget = pool_bytes - _FIT_MARGIN - _COMPUTE_RESERVE
+    if budget <= 0:
+        return MoeFit(
+            gpu_bytes=0,
+            ram_bytes=non_expert + routed,
+            experts_on_gpu=0,
+            expert_layers=expert_layers,
+            attention_layers_on_gpu=0,
+            non_expert_on_gpu=0,
+            expert_on_gpu_bytes=0,
+            kv_bytes=0,
+            overhead_bytes=0,
+        )
     on = layers
     while on > 0:
-        weights, kv, overhead = _fixed_gpu(profile, num_ctx, on, layers)
-        if weights + kv + overhead <= pool_bytes:
+        weights, kv, _overhead = _fixed_gpu(profile, num_ctx, on, layers)
+        if weights + kv <= budget:
             break
         on -= 1
-    weights, kv, overhead = _fixed_gpu(profile, num_ctx, on, layers)
-    room = max(0, pool_bytes - (weights + kv + overhead))
+    weights, kv, _overhead = _fixed_gpu(profile, num_ctx, on, layers)
+    room = max(0, budget - (weights + kv))
     cap = min(on, expert_layers)
-    experts_on = min(cap, (room * expert_layers) // routed) if routed and cap > 0 else 0
-    while experts_on > 0 and (routed * experts_on) // expert_layers > room:
-        experts_on -= 1
-    expert_on_gpu = (routed * experts_on) // expert_layers if expert_layers else 0
+    per_layer = routed // expert_layers if expert_layers else 0
+    experts_on = min(cap, room // per_layer) if per_layer and cap > 0 else 0
+    expert_on_gpu = per_layer * experts_on
+    # Up and gate are about two thirds of an expert layer. The down matrix stays in RAM.
+    partial = (2 * per_layer) // 3
+    if experts_on < cap and partial > 0 and room - expert_on_gpu >= partial:
+        expert_on_gpu += partial
     non_total = profile.non_expert_bytes or 0
     ram_bytes = max(0, non_total - weights) + max(0, routed - expert_on_gpu)
     return MoeFit(
-        gpu_bytes=weights + kv + overhead + expert_on_gpu,
+        gpu_bytes=weights + kv + _COMPUTE_RESERVE + expert_on_gpu,
         ram_bytes=ram_bytes,
         experts_on_gpu=experts_on,
         expert_layers=expert_layers,
@@ -594,7 +627,7 @@ def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | 
         non_expert_on_gpu=weights,
         expert_on_gpu_bytes=expert_on_gpu,
         kv_bytes=kv,
-        overhead_bytes=overhead,
+        overhead_bytes=_COMPUTE_RESERVE,
     )
 
 
