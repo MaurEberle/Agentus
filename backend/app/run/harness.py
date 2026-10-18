@@ -1100,9 +1100,9 @@ def _log_vram_compare(llm, options, choice, node_id: str) -> None:
         return
     try:
         from app.runtime.ollama import loaded_memory
-        from app.runtime.vram_est import estimate_vram_bytes, plan_moe_offload, vram_profile
+        from app.runtime.vram_est import estimate_vram_bytes, plan_moe_offload, vram_profile, with_kv_cache
 
-        profile = vram_profile(llm.model, base_url=llm.base_url)
+        profile = with_kv_cache(vram_profile(llm.model, base_url=llm.base_url), getattr(llm, "kv_cache_type", None))
         num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
         opts = options if isinstance(options, dict) else {}
         num_gpu = opts.get("num_gpu")
@@ -1159,6 +1159,8 @@ def _ollama_options(llm, choice) -> dict | None:
         options["num_ctx"] = choice.num_ctx
     if isinstance(llm.num_thread, int) and llm.num_thread > 0:
         options["num_thread"] = llm.num_thread
+    if getattr(llm, "kv_cache_type", None) == "q8_0":
+        options["kv_cache_type"] = "q8_0"
     wants_layers = isinstance(llm.num_gpu, int) and llm.num_gpu > 0
     wants_percent = isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0
     placement = getattr(llm, "gpu_placement", None)

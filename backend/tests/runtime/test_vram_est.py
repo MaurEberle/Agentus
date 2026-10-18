@@ -4,6 +4,7 @@ from app.runtime.vram_est import (
     kv_bytes_for_ctx,
     parse_vram_profile,
     plan_moe_offload,
+    with_kv_cache,
 )
 
 
@@ -470,6 +471,19 @@ def test_qwen35_fit_tracks_context_against_the_measured_card() -> None:
         at_84k.non_expert_on_gpu + at_84k.expert_on_gpu_bytes + at_84k.kv_bytes + at_84k.overhead_bytes
         == at_84k.gpu_bytes
     )
+
+
+def test_q8_kv_cache_halves_token_bytes_and_keeps_recurrent_state() -> None:
+    profile = parse_vram_profile(_qwen_moe(), 20_000_000_000)
+    assert profile is not None
+    assert profile.kv_bytes_per_token
+    scaled = with_kv_cache(profile, "q8_0")
+    assert scaled is not None
+    assert scaled.kv_bytes_per_token == profile.kv_bytes_per_token // 2
+    assert with_kv_cache(profile, None) is profile
+    fixed = [layer.fixed_bytes for layer in profile.kv_layers]
+    assert [layer.fixed_bytes for layer in scaled.kv_layers] == fixed
+    assert kv_bytes_for_ctx(scaled, 1024) < kv_bytes_for_ctx(profile, 1024)
 
 
 def test_plan_moe_offload_names_the_cpu_expert_layers() -> None:

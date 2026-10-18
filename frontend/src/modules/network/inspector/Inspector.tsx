@@ -31,8 +31,10 @@ import {
   fitMoe,
   hasWindowedKv,
   inferenceGpus,
+  kvCacheScale,
   moeLeavesPlacementToRuntime,
   resolveGpuLayers,
+  scaleKvLayers,
 } from '@/modules/network/inspector/vram';
 import {
   EMBEDDING_PROVIDERS,
@@ -501,14 +503,24 @@ function VramNeedField({ node }: { node: GraphNode }) {
     numGpuPercent: Number(node.data.numGpuPercent),
     gpuPlacement: placement,
   });
+  const kvScale = kvCacheScale(node.data.kvCacheType);
+  const kvLayers = scaleKvLayers(stats.data?.kvLayers, kvScale);
+  const kvPerToken =
+    stats.data?.kvBytesPerToken && kvScale !== 1
+      ? Math.round(stats.data.kvBytesPerToken * kvScale)
+      : stats.data?.kvBytesPerToken;
+  const kvSwaPerToken =
+    stats.data?.kvSwaBytesPerToken && kvScale !== 1
+      ? Math.round(stats.data.kvSwaBytesPerToken * kvScale)
+      : stats.data?.kvSwaBytesPerToken;
   const parts = estimateVramParts({
     weightBytes: stats.data?.weightBytes,
-    kvBytesPerToken: stats.data?.kvBytesPerToken,
-    kvSwaBytesPerToken: stats.data?.kvSwaBytesPerToken,
+    kvBytesPerToken: kvPerToken,
+    kvSwaBytesPerToken: kvSwaPerToken,
     swaWindow: stats.data?.swaWindow,
     overheadBytes: stats.data?.overheadBytes,
     gpuLayers: stats.data?.gpuLayers,
-    kvLayers: stats.data?.kvLayers,
+    kvLayers,
     numCtx: ctx,
     numGpuLayers: Number(node.data.numGpuLayers),
     numGpuPercent: Number(node.data.numGpuPercent),
@@ -553,8 +565,8 @@ function VramNeedField({ node }: { node: GraphNode }) {
           routedExpertBytes: stats.data?.routedExpertBytes,
           overheadBytes: stats.data?.overheadBytes,
           gpuLayers: stats.data?.gpuLayers,
-          kvLayers: stats.data?.kvLayers,
-          kvBytesPerToken: stats.data?.kvBytesPerToken,
+          kvLayers,
+          kvBytesPerToken: kvPerToken,
           leadingDenseBlocks: stats.data?.leadingDenseBlocks,
           projectorBytes: stats.data?.projectorBytes,
           numCtx: ctx,
@@ -677,19 +689,52 @@ function VramNeedField({ node }: { node: GraphNode }) {
   );
 }
 
+function standardThreads(threads: number): number {
+  return Math.max(1, Math.round(threads / 2));
+}
+
+function KvCacheField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const value = node.data.kvCacheType === 'q8_0' ? 'q8_0' : 'f16';
+  return (
+    <Field label={t('network.inspector.llm.kvCache')}>
+      <Select
+        value={value}
+        disabled={readOnly}
+        onValueChange={(next) =>
+          editorUpdateNodeData(node.id, { kvCacheType: next === 'q8_0' ? 'q8_0' : 'f16' })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="f16">{t('network.inspector.llm.kvCacheF16')}</SelectItem>
+          <SelectItem value="q8_0">{t('network.inspector.llm.kvCacheQ8')}</SelectItem>
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.kvCacheHint')}</p>
+    </Field>
+  );
+}
+
 function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const resources = useHostResourcesQuery({ live: false });
   const threads = resources.data?.cpuThreads ?? resources.data?.cpuCores ?? null;
-  const cores = resources.data?.cpuCores ?? threads;
   const current = Number(node.data.numThread);
+  const touched = node.data.numThreadTouched === true;
+  const standard = threads == null ? 1 : standardThreads(threads);
 
   useEffect(() => {
-    if (readOnly || threads == null || cores == null) return;
-    if (!Number.isFinite(current) || current < 1 || current > threads) {
-      editorUpdateNodeData(node.id, { numThread: cores });
+    if (readOnly || threads == null) return;
+    const missing = !Number.isFinite(current) || current < 1 || current > threads;
+    // Full load was the old automatic default. A value the user picked stays.
+    const oldFullDefault = !touched && current === threads;
+    if (missing || oldFullDefault) {
+      editorUpdateNodeData(node.id, { numThread: standard, numThreadTouched: true });
     }
-  }, [cores, current, node.id, readOnly, threads]);
+  }, [current, node.id, readOnly, standard, threads, touched]);
 
   if (resources.isPending && !resources.data) {
     return (
@@ -698,7 +743,7 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
       </Field>
     );
   }
-  if (threads == null || cores == null) {
+  if (threads == null) {
     return (
       <Field label={t('network.inspector.llm.numThread')}>
         <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadUnavailable')}</p>
@@ -706,7 +751,7 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
     );
   }
 
-  const value = Number.isFinite(current) ? Math.min(threads, Math.max(1, current)) : cores;
+  const value = Number.isFinite(current) ? Math.min(threads, Math.max(1, current)) : standard;
 
   return (
     <Field label={t('network.inspector.llm.numThread')}>
@@ -718,7 +763,9 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
         value={value}
         disabled={readOnly}
         className="w-full accent-primary"
-        onChange={(event) => editorUpdateNodeData(node.id, { numThread: Number(event.target.value) })}
+        onChange={(event) =>
+          editorUpdateNodeData(node.id, { numThread: Number(event.target.value), numThreadTouched: true })
+        }
       />
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>1</span>
@@ -809,6 +856,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numGpuPercent = undefined;
       patch.numGpuLayers = undefined;
       patch.gpuPlacement = undefined;
+      patch.kvCacheType = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -923,6 +971,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       {model && !modelLocked ? <ContextWindowField node={node} readOnly={readOnly} /> : null}
       {provider === 'ollama' && model && !modelLocked ? (
         <>
+          <KvCacheField node={node} readOnly={readOnly} />
           <CpuThreadField node={node} readOnly={readOnly} />
           <GpuOffloadField node={node} readOnly={readOnly} />
           <VramNeedField node={node} />

@@ -8,7 +8,7 @@ state does not grow with context.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from app.runtime.ollama import (
@@ -504,6 +504,28 @@ def parse_vram_profile(payload: object, size_bytes: int | None) -> VramProfile |
         leading_dense_blocks=split[4] if split else None,
         expert_layers=split[5] if split else None,
         projector_bytes=_projector_bytes(payload),
+    )
+
+
+def with_kv_cache(profile: VramProfile | None, kind: str | None) -> VramProfile | None:
+    """q8_0 stores each KV element in one byte. Recurrent state stays f32."""
+    if profile is None or kind != "q8_0":
+        return profile
+    layers = tuple(
+        LayerKv(
+            bytes_per_token=layer.bytes_per_token // 2,
+            window=layer.window,
+            fixed_bytes=layer.fixed_bytes,
+        )
+        for layer in profile.kv_layers
+    )
+    return replace(
+        profile,
+        kv_layers=layers,
+        kv_bytes_per_token=None if profile.kv_bytes_per_token is None else profile.kv_bytes_per_token // 2,
+        kv_swa_bytes_per_token=(
+            None if profile.kv_swa_bytes_per_token is None else profile.kv_swa_bytes_per_token // 2
+        ),
     )
 
 

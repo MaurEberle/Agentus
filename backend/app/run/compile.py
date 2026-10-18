@@ -17,6 +17,7 @@ class CompiledLlm:
     max_tokens: int | None
     num_ctx: int | None
     num_thread: int | None
+    kv_cache_type: str | None
     num_gpu: int | None
     num_gpu_percent: int | None
     node_id: str
@@ -72,6 +73,7 @@ def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id
         max_tokens=data.get("maxTokens"),
         num_ctx=_positive_int(data, "numCtx"),
         num_thread=_positive_int(data, "numThread"),
+        kv_cache_type=_kv_cache_type(data),
         num_gpu=_positive_int(data, "numGpuLayers"),
         num_gpu_percent=_gpu_percent(data),
         node_id=llm_node.id if llm_node else "",
@@ -87,6 +89,12 @@ def _positive_int(data: dict, key: str) -> int | None:
         return raw
     if isinstance(raw, float) and raw > 0:
         return int(raw)
+    return None
+
+
+def _kv_cache_type(data: dict) -> str | None:
+    if data.get("kvCacheType") == "q8_0":
+        return "q8_0"
     return None
 
 

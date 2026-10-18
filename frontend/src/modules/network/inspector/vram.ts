@@ -50,6 +50,21 @@ export function resolveGpuLayers(
   return total;
 }
 
+/** q8_0 stores each KV element in one byte. f16 uses two. Recurrent state stays put. */
+export function kvCacheScale(type: unknown): number {
+  return type === 'q8_0' ? 0.5 : 1;
+}
+
+export function scaleKvLayers(layers: KvLayer[] | null | undefined, scale: number): KvLayer[] | undefined {
+  if (!layers) return undefined;
+  if (scale === 1) return layers;
+  return layers.map((layer) => ({
+    ...layer,
+    bytesPerToken:
+      layer.bytesPerToken && layer.bytesPerToken > 0 ? Math.round(layer.bytesPerToken * scale) : layer.bytesPerToken,
+  }));
+}
+
 export type KvLayer = {
   bytesPerToken?: number;
   window?: number | null;

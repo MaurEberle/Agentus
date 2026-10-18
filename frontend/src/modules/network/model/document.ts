@@ -52,6 +52,8 @@ export type LlmNodeData = {
   maxTokens?: number;
   numCtx?: number;
   numThread?: number;
+  /** Ollama KV cache. Unset means f16. q8_0 halves the token cache. */
+  kvCacheType?: 'f16' | 'q8_0';
   numGpuPercent?: number;
   numGpuLayers?: number;
   /** MoE only. "auto" omits num_gpu. "layers" sends a whole-layer offload. */

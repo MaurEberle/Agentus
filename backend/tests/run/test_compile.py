@@ -24,6 +24,7 @@ def test_compile_num_thread_and_num_ctx() -> None:
             node["data"]["numCtx"] = 8192
             node["data"]["numGpuPercent"] = 50
             node["data"]["numGpuLayers"] = 24
+            node["data"]["kvCacheType"] = "q8_0"
     compiled = compile_document(
         AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
     )
@@ -31,6 +32,7 @@ def test_compile_num_thread_and_num_ctx() -> None:
     assert compiled.agents["ag"].llm.num_ctx == 8192
     assert compiled.agents["ag"].llm.num_gpu == 24
     assert compiled.agents["ag"].llm.num_gpu_percent == 50
+    assert compiled.agents["ag"].llm.kv_cache_type == "q8_0"
 
 
 def test_compile_legacy_num_gpu_is_ignored() -> None:
