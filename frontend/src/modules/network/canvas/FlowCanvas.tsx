@@ -242,6 +242,8 @@ export function FlowCanvas({
         multiSelectionKeyCode="Shift"
         selectionOnDrag
         panOnDrag={[1]}
+        panOnScroll
+        zoomOnPinch
         colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
         proOptions={{ hideAttribution: true }}
         className="network-flow h-full bg-background"
