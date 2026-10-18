@@ -54,7 +54,16 @@ CALCULATOR_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
     "required": ["expression"],
     "properties": {
-        "expression": {"type": "string", "minLength": 1, "maxLength": 200},
+        "expression": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": (
+                "Arithmetic expression. Operators + - * / // % ** and parentheses. "
+                "Functions sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. "
+                "Names pi and e."
+            ),
+        },
     },
 }
 
@@ -123,7 +132,13 @@ _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     "http": "Fetch an http or https URL and return status, headers, and body.",
     "web_search": "Search the web via Brave Search and return titles, URLs, and snippets.",
     "datetime": "Return the current time in an IANA timezone (default UTC).",
-    "calculator": "Evaluate a basic arithmetic expression and return the number.",
+    "calculator": (
+        "Evaluate an arithmetic expression. Operators: + - * / // % ** and parentheses. "
+        "The ** exponent must be at most 20. Names: pi, e. "
+        "Functions: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. "
+        "log(x) and ln(x) are natural; log(x, base) takes a base. "
+        "sin, cos, tan use radians. factorial takes an integer from 0 to 20."
+    ),
     "file_access": "Read and write files under the configured root. Actions: list, stat, read (optional head or tail), read_many, write (creates missing parent folders), mkdir, delete, edit (oldText/newText or edits), move (destination), search (pattern), tree.",
 }
 
