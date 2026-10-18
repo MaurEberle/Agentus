@@ -14,6 +14,7 @@ from app.run.graph_models import (
     normalize_mcp_nodes,
 )
 from app.run.models import ValidationError
+from app.run.router_rules import branch_match, branch_pattern, branch_rows, pattern_error
 from app.tools.file_access_tool import is_forbidden_root
 from app.tools.kinds import FIRST_PARTY_KINDS
 
@@ -47,6 +48,71 @@ def _orchestrator_edge_ok(edge: GraphEdge, dst: GraphNode) -> bool:
 
 def _err(key: str, node_id: str | None = None) -> ValidationError:
     return ValidationError(node_id=node_id, message_key=key)
+
+
+def _fed_by_orchestrator(doc: AgentNetworkDocument, router_id: str) -> bool:
+    by_id = {node.id: node for node in doc.nodes}
+    return any(
+        edge.target == router_id
+        and edge.target_handle == "message"
+        and edge.source_handle == "message"
+        and (src := by_id.get(edge.source)) is not None
+        and src.type == "orchestrator"
+        for edge in doc.edges
+    )
+
+
+def _router_target_types(doc: AgentNetworkDocument, router_id: str) -> set[str]:
+    if _fed_by_orchestrator(doc, router_id):
+        return {"end"}
+    return {"agent", "router", "end"}
+
+
+def _orchestrator_reaches_end(doc: AgentNetworkDocument, orch_id: str, by_id: dict[str, GraphNode]) -> bool:
+    for edge in doc.edges:
+        if edge.source != orch_id or edge.source_handle != "message":
+            continue
+        target = by_id.get(edge.target)
+        if target is None:
+            continue
+        if target.type == "end":
+            return True
+        if target.type != "router":
+            continue
+        outs = [item for item in doc.edges if item.source == target.id]
+        if outs and all(
+            (dst := by_id.get(item.target)) is not None and dst.type == "end" for item in outs
+        ):
+            return True
+    return False
+
+
+def _router_node_errors(doc: AgentNetworkDocument, node: GraphNode) -> list[ValidationError]:
+    errors: list[ValidationError] = []
+    names: list[str] = []
+    handles: list[str] = []
+    for row in branch_rows(node.data):
+        handle = str(row.get("id") or "").strip()
+        name = str(row.get("name") or "").strip()
+        if not handle or handle == "default" or not name:
+            errors.append(_err("graph.router.name", node.id))
+            continue
+        handles.append(handle)
+        names.append(name.casefold())
+        problem = pattern_error(branch_match(row), branch_pattern(row))
+        if problem:
+            errors.append(_err(problem, node.id))
+    if len(names) != len(set(names)):
+        errors.append(_err("graph.router.name", node.id))
+    outs: dict[str, int] = {}
+    for edge in doc.edges:
+        if edge.source != node.id:
+            continue
+        outs[edge.source_handle] = outs.get(edge.source_handle, 0) + 1
+    required = ["default", *handles]
+    if any(outs.get(handle, 0) != 1 for handle in required) or any(handle not in required for handle in outs):
+        errors.append(_err("graph.router.edge", node.id))
+    return errors
 
 
 def _has_cycle(doc: AgentNetworkDocument) -> bool:
@@ -117,13 +183,7 @@ def validate_document(
             errors.append(_err("graph.orchestrator.noChat", orch.id))
         if any(e.target != orch.id for e in chat_edges):
             errors.append(_err("graph.orchestrator.fanout", chats[0].id if chats else orch.id))
-        if not any(
-            e.source == orch.id
-            and e.source_handle == "message"
-            and by_id.get(e.target) is not None
-            and by_id[e.target].type == "end"
-            for e in doc.edges
-        ):
+        if not _orchestrator_reaches_end(doc, orch.id, by_id):
             errors.append(_err("graph.orchestrator.noEnd", orch.id))
         llm_in = [e for e in doc.edges if e.target == orch.id and e.target_handle == "llm"]
         if len(llm_in) != 1:
@@ -139,7 +199,10 @@ def validate_document(
         if not src or not dst:
             continue
         if src.type == "router":
-            pass
+            allowed = _router_target_types(doc, src.id)
+            if edge.target_handle != "message" or dst.type not in allowed:
+                key = "graph.router.orchestrator" if _fed_by_orchestrator(doc, src.id) else "graph.router.target"
+                errors.append(_err(key, src.id))
         elif src.type == "orchestrator":
             if not _orchestrator_edge_ok(edge, dst):
                 errors.append(_err("graph.edge.invalid", src.id))
@@ -191,6 +254,8 @@ def validate_document(
                 errors.append(_err("graph.orchestrator.looseAgent", node.id))
             elif has_chat and not channel_in and not msg_in:
                 errors.append(_err("graph.agent.noMessage", node.id))
+        if node.type == "router":
+            errors.extend(_router_node_errors(doc, node))
         if node.type == "llm":
             provider = str(node.data.get("provider") or "ollama")
             model = str(node.data.get("model") or "").strip()

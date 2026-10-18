@@ -20,7 +20,7 @@ export function defaultData(type: NodeType): Record<string, unknown> {
     case 'router':
       return {
         displayName: '',
-        branches: [{ id: newId('br'), name: 'A', condition: '' }],
+        branches: [{ id: newId('br'), name: 'A', match: 'contains', pattern: '' }],
       };
     case 'end':
       return { displayName: '' };

@@ -32,7 +32,7 @@ Enquanto corre **exactamente esta** rede: faixa **Só de leitura** — primeiro 
 | Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros. Saída **Ferramenta**. |
 | MCP | `mcp` | Um servidor criado e **ativado** nas **Definições**. Saída **Ferramenta**, como um nó de ferramenta. |
 | Conhecimento | `knowledge` | Pasta com ficheiros para a rede. Saída **Conhecimento**, só para o porto Conhecimento do agente. |
-| Router | `router` | Bifurca a mensagem segundo condições (primeira linha / ramos com nome) mais saída predefinida. |
+| Router | `router` | Envia a mensagem para uma só saída. Os ramos são testados por ordem: contém, começa por, primeira linha, expressão regular. O padrão apanha o resto. Depois do orquestrador, as saídas só vão para fins. |
 | Fim | `end` | Encerramento. **Pelo menos um.** |
 
 ## Ligações

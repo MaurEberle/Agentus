@@ -669,7 +669,7 @@
       "knowledge": "Conocimiento",
       "knowledgeHint": "Carpeta de origen, solo al puerto knowledge del agente.",
       "router": "Enrutador",
-      "routerHint": "Bifurca mensajes según condiciones.",
+      "routerHint": "Envía el mensaje a la primera rama que coincida. El estándar recoge el resto.",
       "end": "Fin",
       "endHint": "Al menos uno. Cierra la ejecución.",
       "mcp": "MCP",
@@ -839,10 +839,18 @@
         "reindexHint": "Reconstruye el índice tras cambiar los embeddings."
       },
       "router": {
+        "hint": "Gana el primer acierto. No importan mayúsculas, salvo en la expresión regular.",
         "branches": "Ramas",
         "branchName": "Nombre",
-        "condition": "Condición",
-        "add": "Añadir rama"
+        "pattern": "Patrón",
+        "add": "Añadir rama",
+        "defaultHint": "Cuando ninguna rama coincide.",
+        "match": {
+          "contains": "contiene",
+          "startsWith": "empieza por",
+          "firstLine": "la primera línea es",
+          "regex": "expresión regular"
+        }
       },
       "chat": {
         "hint": "Conversación de la ejecución. Un orquestador puede preguntar aquí hasta que termine la ejecución.",
@@ -912,7 +920,13 @@
       "orchestratorLlm": "El orquestador necesita exactamente una arista LLM.",
       "orchestratorChat": "El chat debe conectarse al orquestador.",
       "orchestratorFanout": "Con orquestador, el chat se conecta solo al orquestador.",
-      "orchestratorEnd": "El orquestador necesita una arista de mensaje hacia un fin.",
+      "orchestratorEnd": "El orquestador necesita un mensaje hacia un fin, directo o por un enrutador que solo lleve a fines.",
+      "routerName": "Los nombres de rama deben existir y ser únicos.",
+      "routerPattern": "Cada rama necesita un patrón de como máximo 200 caracteres.",
+      "routerRegex": "El patrón no es una expresión regular válida.",
+      "routerEdge": "Cada rama y el estándar necesitan exactamente una arista.",
+      "routerTarget": "Un enrutador lleva a un agente, un enrutador o un fin.",
+      "routerOrchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
       "orchestratorLooseAgent": "Con orquestador, cada agente necesita un canal desde él.",
       "agentMode": "Un agente está en la cadena o en el orquestador.",
       "agentChannel": "Un agente tiene como máximo un canal.",
@@ -1525,7 +1539,7 @@
       "tool": {
         "call": "Herramienta {{name}}"
       },
-      "router": "Enrutador → {{target}}",
+      "router": "Enrutador {{branch}} → {{target}}",
       "end": "Fin alcanzado",
       "succeeded": "Ejecución correcta",
       "failed": "Ejecución fallida",
@@ -1635,6 +1649,15 @@
       "disabled": "Este servidor MCP está desactivado.",
       "root": "Este servidor MCP necesita una ruta raíz en Ajustes.",
       "unavailable": "MCP no está disponible en esta instalación."
+    },
+    "router": {
+      "name": "Los nombres de rama deben existir y ser únicos.",
+      "pattern": "Cada rama necesita un patrón de como máximo 200 caracteres.",
+      "regex": "El patrón no es una expresión regular válida.",
+      "edge": "Cada rama y el estándar necesitan exactamente una arista.",
+      "target": "Un enrutador lleva a un agente, un enrutador o un fin.",
+      "orchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
+      "noEdge": "El enrutador no tiene una arista coincidente"
     }
   }
 }

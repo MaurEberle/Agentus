@@ -669,7 +669,7 @@
       "knowledge": "知识",
       "knowledgeHint": "源文件夹，仅连接到智能体 knowledge 端口。",
       "router": "路由器",
-      "routerHint": "按条件分支消息。",
+      "routerHint": "把消息送到第一个命中的分支。其余由默认出口接收。",
       "end": "结束",
       "endHint": "至少一个。结束运行。",
       "mcp": "MCP",
@@ -839,10 +839,18 @@
         "reindexHint": "更改嵌入后请重建索引。"
       },
       "router": {
+        "hint": "第一个命中生效。除正则表达式外忽略大小写。",
         "branches": "分支",
         "branchName": "名称",
-        "condition": "条件",
-        "add": "添加分支"
+        "pattern": "模式",
+        "add": "添加分支",
+        "defaultHint": "没有分支命中时。",
+        "match": {
+          "contains": "包含",
+          "startsWith": "开头是",
+          "firstLine": "第一行是",
+          "regex": "正则表达式"
+        }
       },
       "chat": {
         "hint": "运行中的对话。编排器可以在这里追问，直到它结束运行。",
@@ -912,7 +920,13 @@
       "orchestratorLlm": "编排器需要恰好一条 LLM 边。",
       "orchestratorChat": "聊天必须连接到编排器。",
       "orchestratorFanout": "有编排器时，聊天只连接编排器。",
-      "orchestratorEnd": "编排器需要一条指向结束的消息边。",
+      "orchestratorEnd": "编排器需要一条通向结束的消息，可以直接连接，或经过只通向结束的路由器。",
+      "routerName": "分支名称必须填写且不能重复。",
+      "routerPattern": "每个分支都需要一个最多 200 个字符的模式。",
+      "routerRegex": "该模式不是有效的正则表达式。",
+      "routerEdge": "每个分支和默认出口都需要恰好一条边。",
+      "routerTarget": "路由器通向智能体、路由器或结束。",
+      "routerOrchestrator": "编排器之后的路由器只能通向结束。",
       "orchestratorLooseAgent": "有编排器时，每个智能体都需要来自它的一条通道。",
       "agentMode": "智能体要么在链中，要么接在编排器上。",
       "agentChannel": "每个智能体最多一条通道。",
@@ -1525,7 +1539,7 @@
       "tool": {
         "call": "工具 {{name}}"
       },
-      "router": "路由器 → {{target}}",
+      "router": "路由器 {{branch}} → {{target}}",
       "end": "已到达结束",
       "succeeded": "运行成功",
       "failed": "运行失败",
@@ -1635,6 +1649,15 @@
       "disabled": "此 MCP 服务器已停用。",
       "root": "此 MCP 服务器需要在设置中指定根路径。",
       "unavailable": "此安装中没有 MCP。"
+    },
+    "router": {
+      "name": "分支名称必须填写且不能重复。",
+      "pattern": "每个分支都需要一个最多 200 个字符的模式。",
+      "regex": "该模式不是有效的正则表达式。",
+      "edge": "每个分支和默认出口都需要恰好一条边。",
+      "target": "路由器通向智能体、路由器或结束。",
+      "orchestrator": "编排器之后的路由器只能通向结束。",
+      "noEdge": "路由器没有匹配的边"
     }
   }
 }

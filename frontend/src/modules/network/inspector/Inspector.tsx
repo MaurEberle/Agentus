@@ -20,8 +20,15 @@ import {
 } from '@/modules/network/api';
 import { uniqueTags } from '@/modules/networks/model/filter';
 import { useHostResourcesQuery, useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
-import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
-import { newId } from '@/modules/network/model/document';
+import {
+  ROUTER_MATCHES,
+  newId,
+  routerMatchOf,
+  routerPatternOf,
+  type GraphNode,
+  type RouterMatch,
+  type ValidationIssue,
+} from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
@@ -1745,53 +1752,92 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
 
 function RouterFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
-  const branches = Array.isArray(node.data.branches) ? (node.data.branches as Array<{ id: string; name: string; condition: string }>) : [];
+  const branches = Array.isArray(node.data.branches)
+    ? (node.data.branches as Array<{ id: string; name?: string; match?: string; pattern?: string; condition?: string }>)
+    : [];
 
-  function update(next: typeof branches) {
-    editorUpdateNodeData(node.id, { branches: next });
+  function stored(next: typeof branches) {
+    editorUpdateNodeData(node.id, {
+      branches: next.map((branch) => ({
+        id: branch.id,
+        name: branch.name ?? '',
+        match: routerMatchOf(branch.match),
+        pattern: routerPatternOf(branch),
+      })),
+    });
   }
 
   return (
     <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{t('network.inspector.router.hint')}</p>
       <p className="text-sm font-medium">{t('network.inspector.router.branches')}</p>
-      {branches.map((branch, index) => (
-        <div key={branch.id} className="grid gap-1 rounded-md border p-2">
-          <Input
-            value={branch.name}
-            disabled={readOnly}
-            placeholder={t('network.inspector.router.branchName')}
-            onChange={(event) =>
-              update(branches.map((item, i) => (i === index ? { ...item, name: event.target.value } : item)))
-            }
-          />
-          <Input
-            value={branch.condition}
-            disabled={readOnly}
-            placeholder={t('network.inspector.router.condition')}
-            onChange={(event) =>
-              update(branches.map((item, i) => (i === index ? { ...item, condition: event.target.value } : item)))
-            }
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={readOnly || branches.length < 1}
-            onClick={() => update(branches.filter((item) => item.id !== branch.id))}
-          >
-            {t('network.context.delete')}
-          </Button>
-        </div>
-      ))}
+      {branches.map((branch, index) => {
+        const match = routerMatchOf(branch.match);
+        return (
+          <div key={branch.id} className="grid gap-1.5 rounded-md border p-2">
+            <Input
+              value={branch.name ?? ''}
+              disabled={readOnly}
+              placeholder={t('network.inspector.router.branchName')}
+              onChange={(event) =>
+                stored(branches.map((item, i) => (i === index ? { ...item, name: event.target.value } : item)))
+              }
+            />
+            <Select
+              value={match}
+              disabled={readOnly}
+              onValueChange={(next) =>
+                stored(
+                  branches.map((item, i) =>
+                    i === index ? { ...item, match: next as RouterMatch } : item,
+                  ),
+                )
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROUTER_MATCHES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {t(`network.inspector.router.match.${item}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={routerPatternOf(branch)}
+              disabled={readOnly}
+              placeholder={t('network.inspector.router.pattern')}
+              onChange={(event) =>
+                stored(branches.map((item, i) => (i === index ? { ...item, pattern: event.target.value } : item)))
+              }
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={readOnly}
+              onClick={() => stored(branches.filter((item) => item.id !== branch.id))}
+            >
+              {t('network.context.delete')}
+            </Button>
+          </div>
+        );
+      })}
       <Button
         type="button"
         size="sm"
         variant="outline"
         disabled={readOnly}
-        onClick={() => update([...branches, { id: newId('br'), name: '', condition: '' }])}
+        onClick={() => stored([...branches, { id: newId('br'), name: '', match: 'contains', pattern: '' }])}
       >
         {t('network.inspector.router.add')}
       </Button>
+      <div className="rounded-md border border-dashed p-2">
+        <p className="text-sm font-medium">{t('network.ports.default')}</p>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.router.defaultHint')}</p>
+      </div>
     </div>
   );
 }

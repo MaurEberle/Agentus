@@ -669,7 +669,7 @@
       "knowledge": "Conhecimento",
       "knowledgeHint": "Pasta de origem, só para o porto knowledge do agente.",
       "router": "Router",
-      "routerHint": "Encaminha mensagens por condições.",
+      "routerHint": "Envia a mensagem ao primeiro ramo que corresponder. O padrão apanha o resto.",
       "end": "Fim",
       "endHint": "Pelo menos um. Termina a execução.",
       "mcp": "MCP",
@@ -839,10 +839,18 @@
         "reindexHint": "Reconstrua o índice após alterar os embeddings."
       },
       "router": {
+        "hint": "O primeiro acerto ganha. Maiúsculas são ignoradas, exceto na expressão regular.",
         "branches": "Ramos",
         "branchName": "Nome",
-        "condition": "Condição",
-        "add": "Adicionar ramo"
+        "pattern": "Padrão",
+        "add": "Adicionar ramo",
+        "defaultHint": "Quando nenhum ramo corresponde.",
+        "match": {
+          "contains": "contém",
+          "startsWith": "começa por",
+          "firstLine": "a primeira linha é",
+          "regex": "expressão regular"
+        }
       },
       "chat": {
         "hint": "Conversa da execução. Um orquestrador pode perguntar aqui até terminar a execução.",
@@ -912,7 +920,13 @@
       "orchestratorLlm": "O orquestrador precisa de exatamente uma aresta LLM.",
       "orchestratorChat": "O chat tem de ligar ao orquestrador.",
       "orchestratorFanout": "Com orquestrador, o chat liga-se apenas a ele.",
-      "orchestratorEnd": "O orquestrador precisa de uma aresta de mensagem para um fim.",
+      "orchestratorEnd": "O orquestrador precisa de uma mensagem para um fim, direta ou por um router que só leve a fins.",
+      "routerName": "Os nomes dos ramos têm de existir e ser únicos.",
+      "routerPattern": "Cada ramo precisa de um padrão com no máximo 200 caracteres.",
+      "routerRegex": "O padrão não é uma expressão regular válida.",
+      "routerEdge": "Cada ramo e o padrão precisam de exatamente uma aresta.",
+      "routerTarget": "Um router leva a um agente, um router ou um fim.",
+      "routerOrchestrator": "Um router depois do orquestrador só leva a fins.",
       "orchestratorLooseAgent": "Com orquestrador, cada agente precisa de um canal a partir dele.",
       "agentMode": "Um agente está na cadeia ou no orquestrador.",
       "agentChannel": "Um agente tem no máximo um canal.",
@@ -1525,7 +1539,7 @@
       "tool": {
         "call": "Ferramenta {{name}}"
       },
-      "router": "Router → {{target}}",
+      "router": "Router {{branch}} → {{target}}",
       "end": "Fim alcançado",
       "succeeded": "Execução com êxito",
       "failed": "Execução falhou",
@@ -1635,6 +1649,15 @@
       "disabled": "Este servidor MCP está desativado.",
       "root": "Este servidor MCP precisa de um caminho raiz nas Definições.",
       "unavailable": "O MCP não está disponível nesta instalação."
+    },
+    "router": {
+      "name": "Os nomes dos ramos têm de existir e ser únicos.",
+      "pattern": "Cada ramo precisa de um padrão com no máximo 200 caracteres.",
+      "regex": "O padrão não é uma expressão regular válida.",
+      "edge": "Cada ramo e o padrão precisam de exatamente uma aresta.",
+      "target": "Um router leva a um agente, um router ou um fim.",
+      "orchestrator": "Um router depois do orquestrador só leva a fins.",
+      "noEdge": "O router não tem aresta correspondente"
     }
   }
 }

@@ -32,7 +32,7 @@ Düğümler paletten sürüklenir. Kartlar kompakt kalır; formlar denetçidedir
 | Araç | `tool` | First-party: HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi. Çıkış **Araç**. |
 | MCP | `mcp` | **Ayarlar**’da oluşturulup **etkinleştirilen** bir sunucu. Çıkış **Araç**, bir araç düğümü gibi. |
 | Bilgi | `knowledge` | Ağ için dosya klasörü. Çıkış **Bilgi**, yalnızca ajanın Bilgi bağlantı noktasına. |
-| Yönlendirici | `router` | İletiyi koşullara göre ayırır (ilk satır / adlı dallar) artı varsayılan çıkış. |
+| Yönlendirici | `router` | İletiyi tam bir çıkışa gönderir. Dallar sırayla bakılır: içerir, şununla başlar, ilk satır, düzenli ifade. Varsayılan gerisini alır. Orkestratörden sonra çıkışlar yalnızca bitişlere gider. |
 | Son | `end` | Bitiş. **En az bir.** |
 
 ## Bağlantılar

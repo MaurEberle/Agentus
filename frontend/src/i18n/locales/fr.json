@@ -669,7 +669,7 @@
       "knowledge": "Connaissances",
       "knowledgeHint": "Dossier source, uniquement vers le port knowledge de l’agent.",
       "router": "Routeur",
-      "routerHint": "Aiguille les messages selon des conditions.",
+      "routerHint": "Envoie le message à la première branche qui correspond. La sortie par défaut prend le reste.",
       "end": "Fin",
       "endHint": "Au moins un. Termine l’exécution.",
       "mcp": "MCP",
@@ -839,10 +839,18 @@
         "reindexHint": "Reconstruire l’index après un changement d’embeddings."
       },
       "router": {
+        "hint": "Le premier résultat l’emporte. La casse est ignorée, sauf pour l’expression régulière.",
         "branches": "Branches",
         "branchName": "Nom",
-        "condition": "Condition",
-        "add": "Ajouter une branche"
+        "pattern": "Motif",
+        "add": "Ajouter une branche",
+        "defaultHint": "Quand aucune branche ne correspond.",
+        "match": {
+          "contains": "contient",
+          "startsWith": "commence par",
+          "firstLine": "la première ligne est",
+          "regex": "expression régulière"
+        }
       },
       "chat": {
         "hint": "Conversation de l’exécution. Un orchestrateur peut poser des questions ici jusqu’à ce qu’il termine l’exécution.",
@@ -912,7 +920,13 @@
       "orchestratorLlm": "L’orchestrateur a besoin d’exactement une arête LLM.",
       "orchestratorChat": "Le chat doit être relié à l’orchestrateur.",
       "orchestratorFanout": "Avec un orchestrateur, le chat ne se relie qu’à lui.",
-      "orchestratorEnd": "L’orchestrateur a besoin d’une arête message vers une fin.",
+      "orchestratorEnd": "L’orchestrateur a besoin d’un message vers une fin, directement ou via un routeur qui ne mène qu’à des fins.",
+      "routerName": "Les noms de branche doivent être remplis et uniques.",
+      "routerPattern": "Chaque branche a besoin d’un motif d’au plus 200 caractères.",
+      "routerRegex": "Le motif n’est pas une expression régulière valide.",
+      "routerEdge": "Chaque branche et la sortie par défaut ont besoin d’exactement une arête.",
+      "routerTarget": "Un routeur mène à un agent, un routeur ou une fin.",
+      "routerOrchestrator": "Un routeur après l’orchestrateur ne mène qu’à des fins.",
       "orchestratorLooseAgent": "Avec un orchestrateur, chaque agent a besoin d’un canal depuis lui.",
       "agentMode": "Un agent est soit dans la chaîne, soit sur l’orchestrateur.",
       "agentChannel": "Un agent a au plus un canal.",
@@ -1525,7 +1539,7 @@
       "tool": {
         "call": "Outil {{name}}"
       },
-      "router": "Routeur → {{target}}",
+      "router": "Routeur {{branch}} → {{target}}",
       "end": "Fin atteinte",
       "succeeded": "Exécution réussie",
       "failed": "Exécution échouée",
@@ -1635,6 +1649,15 @@
       "disabled": "Ce serveur MCP est désactivé.",
       "root": "Ce serveur MCP a besoin d’un chemin racine dans Paramètres.",
       "unavailable": "MCP n’est pas disponible dans cette installation."
+    },
+    "router": {
+      "name": "Les noms de branche doivent être remplis et uniques.",
+      "pattern": "Chaque branche a besoin d’un motif d’au plus 200 caractères.",
+      "regex": "Le motif n’est pas une expression régulière valide.",
+      "edge": "Chaque branche et la sortie par défaut ont besoin d’exactement une arête.",
+      "target": "Un routeur mène à un agent, un routeur ou une fin.",
+      "orchestrator": "Un routeur après l’orchestrateur ne mène qu’à des fins.",
+      "noEdge": "Le routeur n’a pas d’arête correspondante"
     }
   }
 }

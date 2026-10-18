@@ -32,7 +32,7 @@ Pendant que **précisément ce** réseau tourne : bannière **Lecture seule** �
 | Outil | `tool` | First-party : HTTP, recherche web, date/heure, calculatrice, accès aux fichiers. Sortie **Outil**. |
 | MCP | `mcp` | Un serveur créé et **activé** dans **Paramètres**. Sortie **Outil**, comme un nœud outil. |
 | Connaissances | `knowledge` | Dossier de fichiers pour le réseau. Sortie **Connaissances**, uniquement vers le port Connaissances de l’agent. |
-| Routeur | `router` | Branche le message selon des conditions (première ligne / branches nommées) plus sortie par défaut. |
+| Routeur | `router` | Envoie le message vers une seule sortie. Les branches sont testées dans l’ordre : contient, commence par, première ligne, expression régulière. La sortie par défaut prend le reste. Après l’orchestrateur, les sorties ne mènent qu’à des fins. |
 | Fin | `end` | Clôture. **Au moins une.** |
 
 ## Connexions

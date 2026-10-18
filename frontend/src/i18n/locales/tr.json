@@ -669,7 +669,7 @@
       "knowledge": "Bilgi",
       "knowledgeHint": "Kaynak klasör, yalnızca ajan knowledge bağlantı noktasına.",
       "router": "Yönlendirici",
-      "routerHint": "İletileri koşullara göre ayırır.",
+      "routerHint": "İletiyi ilk eşleşen dala gönderir. Varsayılan gerisini alır.",
       "end": "Son",
       "endHint": "En az bir tane. Çalıştırmayı bitirir.",
       "mcp": "MCP",
@@ -839,10 +839,18 @@
         "reindexHint": "Gömme değiştirdikten sonra dizini yeniden oluşturun."
       },
       "router": {
+        "hint": "İlk eşleşme kazanır. Büyük-küçük harf yok sayılır, düzenli ifade dışında.",
         "branches": "Dallar",
         "branchName": "Ad",
-        "condition": "Koşul",
-        "add": "Dal ekle"
+        "pattern": "Desen",
+        "add": "Dal ekle",
+        "defaultHint": "Hiçbir dal eşleşmezse.",
+        "match": {
+          "contains": "içerir",
+          "startsWith": "şununla başlar",
+          "firstLine": "ilk satır",
+          "regex": "düzenli ifade"
+        }
       },
       "chat": {
         "hint": "Çalışmanın sohbeti. Bir orkestratör, çalışmayı bitirene kadar burada soru sorabilir.",
@@ -912,7 +920,13 @@
       "orchestratorLlm": "Orkestratör tam olarak bir LLM kenarına ihtiyaç duyar.",
       "orchestratorChat": "Sohbet orkestratöre bağlanmalıdır.",
       "orchestratorFanout": "Orkestratör varken sohbet yalnızca ona bağlanır.",
-      "orchestratorEnd": "Orkestratörün bitişe bir ileti kenarı olmalıdır.",
+      "orchestratorEnd": "Orkestratörün bitişe bir iletisi olmalı, doğrudan veya yalnızca bitişlere giden bir yönlendirici üzerinden.",
+      "routerName": "Dal adları dolu ve benzersiz olmalı.",
+      "routerPattern": "Her dalın en fazla 200 karakterlik bir deseni olmalı.",
+      "routerRegex": "Desen geçerli bir düzenli ifade değil.",
+      "routerEdge": "Her dal ve varsayılan tam olarak bir kenar ister.",
+      "routerTarget": "Bir yönlendirici bir aracıya, bir yönlendiriciye veya bir bitişe gider.",
+      "routerOrchestrator": "Orkestratörden sonraki yönlendirici yalnızca bitişlere gider.",
       "orchestratorLooseAgent": "Orkestratör varken her ajanın ondan bir kanalı olmalıdır.",
       "agentMode": "Bir ajan ya zincirdedir ya da orkestratördedir.",
       "agentChannel": "Bir ajanın en fazla bir kanalı olur.",
@@ -1525,7 +1539,7 @@
       "tool": {
         "call": "Araç {{name}}"
       },
-      "router": "Yönlendirici → {{target}}",
+      "router": "Yönlendirici {{branch}} → {{target}}",
       "end": "Sona ulaşıldı",
       "succeeded": "Çalıştırma başarılı",
       "failed": "Çalıştırma başarısız",
@@ -1635,6 +1649,15 @@
       "disabled": "Bu MCP sunucusu kapalı.",
       "root": "Bu MCP sunucusunun Ayarlar’da bir kök yolu olmalı.",
       "unavailable": "Bu kurulumda MCP yok."
+    },
+    "router": {
+      "name": "Dal adları dolu ve benzersiz olmalı.",
+      "pattern": "Her dalın en fazla 200 karakterlik bir deseni olmalı.",
+      "regex": "Desen geçerli bir düzenli ifade değil.",
+      "edge": "Her dal ve varsayılan tam olarak bir kenar ister.",
+      "target": "Bir yönlendirici bir aracıya, bir yönlendiriciye veya bir bitişe gider.",
+      "orchestrator": "Orkestratörden sonraki yönlendirici yalnızca bitişlere gider.",
+      "noEdge": "Yönlendiricide eşleşen kenar yok"
     }
   }
 }

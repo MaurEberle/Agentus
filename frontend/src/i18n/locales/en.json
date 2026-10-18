@@ -530,6 +530,15 @@
       "disabled": "This MCP server is disabled.",
       "root": "This MCP server needs a root path in Settings.",
       "unavailable": "MCP is not available in this install."
+    },
+    "router": {
+      "name": "Branch names must be set and unique.",
+      "pattern": "Each branch needs a pattern of at most 200 characters.",
+      "regex": "The pattern is not a valid regular expression.",
+      "edge": "Each branch and Default need exactly one edge.",
+      "target": "A router leads to an agent, a router, or an end.",
+      "orchestrator": "A router after the orchestrator leads only to ends.",
+      "noEdge": "Router has no matching edge"
     }
   },
   "helpChat": {
@@ -729,7 +738,7 @@
       "knowledge": "Knowledge",
       "knowledgeHint": "Source folder, only to the agent knowledge port.",
       "router": "Router",
-      "routerHint": "Branches messages by condition.",
+      "routerHint": "Sends the message to the first matching branch. Default catches the rest.",
       "end": "End",
       "endHint": "At least one. Finishes the run."
     },
@@ -916,10 +925,18 @@
         "reindexHint": "Rebuild the index after changing embeddings."
       },
       "router": {
+        "hint": "The first match wins. Letter case is ignored, except for a regular expression.",
         "branches": "Branches",
         "branchName": "Name",
-        "condition": "Condition",
-        "add": "Add branch"
+        "pattern": "Pattern",
+        "add": "Add branch",
+        "defaultHint": "When no branch matches.",
+        "match": {
+          "contains": "contains",
+          "startsWith": "starts with",
+          "firstLine": "first line is",
+          "regex": "regular expression"
+        }
       },
       "chat": {
         "hint": "The run conversation. An orchestrator can ask follow-ups here until it ends the run.",
@@ -975,7 +992,13 @@
       "orchestratorLlm": "The orchestrator needs exactly one LLM edge.",
       "orchestratorChat": "The chat must connect to the orchestrator.",
       "orchestratorFanout": "With an orchestrator, the chat connects only to the orchestrator.",
-      "orchestratorEnd": "The orchestrator needs a message edge to an end node.",
+      "orchestratorEnd": "The orchestrator needs a message to an end, directly or through a router that only leads to ends.",
+      "routerName": "Branch names must be set and unique.",
+      "routerPattern": "Each branch needs a pattern of at most 200 characters.",
+      "routerRegex": "The pattern is not a valid regular expression.",
+      "routerEdge": "Each branch and Default need exactly one edge.",
+      "routerTarget": "A router leads to an agent, a router, or an end.",
+      "routerOrchestrator": "A router after the orchestrator leads only to ends.",
       "orchestratorLooseAgent": "With an orchestrator, every agent needs a channel from it.",
       "agentMode": "An agent is either in the chain or on the orchestrator.",
       "agentChannel": "An agent has at most one channel.",
@@ -1588,7 +1611,7 @@
       "tool": {
         "call": "Tool {{name}}"
       },
-      "router": "Router → {{target}}",
+      "router": "Router {{branch}} → {{target}}",
       "end": "End reached",
       "succeeded": "Run succeeded",
       "failed": "Run failed",

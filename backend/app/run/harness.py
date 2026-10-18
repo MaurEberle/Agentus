@@ -13,6 +13,7 @@ from app.db.engine import utc_now
 from app.db.runs import insert_call, upsert_step
 from app.db.vault import get as vault_get
 from app.run.compile import CompiledGraph
+from app.run.router_rules import resolve_route
 from app.run.controller import RunController, emit_log, node_label
 from app.run.wait_ask import excerpt as ask_excerpt
 from app.run.knowledge import retrieve
@@ -252,18 +253,11 @@ def _queue_get(ctrl: RunController) -> str | None:
     return None
 
 
-def _route(compiled: CompiledGraph, router_id: str, text: str) -> str | None:
-    line = text.splitlines()[0].strip() if text else ""
-    edges = compiled.routers.get(router_id) or []
-    for handle, target in edges:
-        if handle == line:
-            return target
-        elif handle == "default":
-            return target
-    # for handle, target in edges:
-    #     if handle == "default":
-    #         return target
-    return edges[0][1] if edges else None
+def _route(compiled: CompiledGraph, router_id: str, text: str) -> tuple[str | None, str]:
+    router = compiled.routers.get(router_id)
+    if router is None:
+        return None, "default"
+    return resolve_route(router, text)
 
 
 def _fail_step_limit(ctrl: RunController, node_id: str) -> str:
@@ -318,16 +312,20 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
             emit_log("debug", "run.end", node_id=node_id)
             continue
         if node.type == "router":
-            target = _route(compiled, node_id, payload)
+            target, branch = _route(compiled, node_id, payload)
             if target is None:
-                emit_log("error", "graph.router.noEdge", node_id=node_id)
+                emit_log("error", "graph.router.noEdge", node_id=node_id, payload={"branch": branch})
+                ctrl.fail_message = "graph.router.noEdge"
+                ctrl.last_error_node_id = node_id
+                _set_node(ctrl, node_id, "error", error="graph.router.noEdge")
                 return "failed"
             emit_log(
                 "info",
                 "run.router",
                 node_id=node_id,
-                payload={"target": target},
+                payload={"target": target, "branch": branch},
             )
+            _set_node(ctrl, node_id, "done")
             pending.append((target, payload))
             continue
         if node.type != "agent":
@@ -1689,9 +1687,16 @@ def _finish_targets(ctrl: RunController, compiled: CompiledGraph, orch, text: st
             _set_node(ctrl, target, "done")
             emit_log("debug", "run.end", node_id=target)
         elif node.type == "router":
-            nxt = _route(compiled, target, text)
+            nxt, branch = _route(compiled, target, text)
+            emit_log(
+                "info",
+                "run.router",
+                node_id=target,
+                payload={"target": nxt or "", "branch": branch},
+            )
             end = compiled.by_id.get(nxt or "")
             if end is not None and end.type == "end":
+                _set_node(ctrl, target, "done")
                 _set_node(ctrl, end.id, "done")
                 emit_log("debug", "run.end", node_id=end.id)
     _set_node(ctrl, orch.node_id, "done")

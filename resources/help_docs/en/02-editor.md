@@ -32,7 +32,7 @@ While **this** network is running: **read-only** banner — stop it in the heade
 | Tool | `tool` | First-party: HTTP, web search, date/time, calculator, file access. Output **tool**. |
 | MCP | `mcp` | One server created and **enabled** in **Settings**. Output **tool**, same as a tool node. |
 | Knowledge | `knowledge` | Folder of files for the network. Output **knowledge**, only to the agent knowledge port. |
-| Router | `router` | Branches the message by conditions (first line / named branches) plus a default output. |
+| Router | `router` | Sends the message to exactly one output. Branches are checked in order: contains, starts with, first line, regular expression. Default catches the rest. After the orchestrator, outputs lead only to ends. |
 | End | `end` | Finish. **At least one.** |
 
 ## Connections

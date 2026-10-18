@@ -29,11 +29,28 @@ export type PortDef = {
   label?: string;
 };
 
+export const ROUTER_MATCHES = ['contains', 'startsWith', 'firstLine', 'regex'] as const;
+
+export type RouterMatch = (typeof ROUTER_MATCHES)[number];
+
 export type RouterBranch = {
   id: string;
   name: string;
-  condition: string;
+  match?: RouterMatch;
+  pattern?: string;
+  /** Older graphs stored the pattern in condition. */
+  condition?: string;
 };
+
+export function routerMatchOf(value: unknown): RouterMatch {
+  return ROUTER_MATCHES.includes(value as RouterMatch) ? (value as RouterMatch) : 'contains';
+}
+
+export function routerPatternOf(branch: { pattern?: unknown; condition?: unknown }): string {
+  if (typeof branch.pattern === 'string') return branch.pattern;
+  if (typeof branch.condition === 'string') return branch.condition;
+  return '';
+}
 
 export type ChatInputData = {
   displayName?: string;

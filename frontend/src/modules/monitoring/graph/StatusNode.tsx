@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { asGraphNode, type PortDef } from '@/modules/network/model/document';
 import { handleTopPercent, nodeMinHeightPx, rfHandleId } from '@/modules/network/canvas/handles';
-import { portI18nKey, portsFor, routerBranchName, type PortContext } from '@/modules/network/schema/ports';
+import { portI18nKey, portsFor, routerBranchName, routerOutletLabel, type PortContext } from '@/modules/network/schema/ports';
 import type { NodeRuntimeStatus, WaitReason } from '@/modules/monitoring/model/types';
 
 const ICONS: Record<string, typeof Bot> = {
@@ -162,7 +162,11 @@ function ViewHandle({
   active: boolean;
 }) {
   const { t } = useTranslation();
-  const name = port.label ?? (graph ? routerBranchName(graph, port.id) : undefined) ?? t(portI18nKey(port));
+  const name =
+    (graph ? routerOutletLabel(graph, port.id, t) : undefined) ??
+    port.label ??
+    (graph ? routerBranchName(graph, port.id) : undefined) ??
+    t(portI18nKey(port));
   return (
     <Handle
       id={rfHandleId(port)}

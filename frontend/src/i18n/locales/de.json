@@ -530,6 +530,15 @@
       "disabled": "Dieser MCP-Server ist deaktiviert.",
       "root": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
       "unavailable": "MCP ist in dieser Installation nicht verfügbar."
+    },
+    "router": {
+      "name": "Zweig-Namen müssen gesetzt und eindeutig sein.",
+      "pattern": "Jeder Zweig braucht ein Muster, höchstens 200 Zeichen.",
+      "regex": "Das Muster ist kein gültiger regulärer Ausdruck.",
+      "edge": "Jeder Zweig und der Standard brauchen genau eine Kante.",
+      "target": "Ein Router führt zu einem Agenten, einem Router oder einem Ende.",
+      "orchestrator": "Ein Router hinter dem Orchestrator führt nur zu Enden.",
+      "noEdge": "Router ohne passende Kante"
     }
   },
   "helpChat": {
@@ -729,7 +738,7 @@
       "knowledge": "Wissen",
       "knowledgeHint": "Quellenordner, nur zum Agenten-Port knowledge.",
       "router": "Router",
-      "routerHint": "Verzweigt Nachrichten nach Bedingungen.",
+      "routerHint": "Schickt die Nachricht an den ersten passenden Zweig. Der Standard fängt den Rest.",
       "end": "Ende",
       "endHint": "Mindestens eines. Abschluss des Laufs."
     },
@@ -916,10 +925,18 @@
         "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen."
       },
       "router": {
+        "hint": "Der erste Treffer gewinnt. Groß- und Kleinschreibung spielt keine Rolle, außer beim regulären Ausdruck.",
         "branches": "Zweige",
         "branchName": "Name",
-        "condition": "Bedingung",
-        "add": "Zweig hinzufügen"
+        "pattern": "Muster",
+        "add": "Zweig hinzufügen",
+        "defaultHint": "Wenn kein Zweig passt.",
+        "match": {
+          "contains": "enthält",
+          "startsWith": "beginnt mit",
+          "firstLine": "erste Zeile ist",
+          "regex": "regulärer Ausdruck"
+        }
       },
       "chat": {
         "hint": "Gespräch des Laufs. Ein Orchestrator kann hier nachfragen, bis er den Lauf beendet.",
@@ -975,7 +992,13 @@
       "orchestratorLlm": "Der Orchestrator braucht genau eine LLM-Kante.",
       "orchestratorChat": "Der Chat muss an den Orchestrator angeschlossen sein.",
       "orchestratorFanout": "Mit Orchestrator geht der Chat nur an den Orchestrator.",
-      "orchestratorEnd": "Der Orchestrator braucht eine Nachricht-Kante zum Ende.",
+      "orchestratorEnd": "Der Orchestrator braucht eine Nachricht zum Ende, direkt oder über einen Router, der nur auf Enden zeigt.",
+      "routerName": "Zweig-Namen müssen gesetzt und eindeutig sein.",
+      "routerPattern": "Jeder Zweig braucht ein Muster, höchstens 200 Zeichen.",
+      "routerRegex": "Das Muster ist kein gültiger regulärer Ausdruck.",
+      "routerEdge": "Jeder Zweig und der Standard brauchen genau eine Kante.",
+      "routerTarget": "Ein Router führt zu einem Agenten, einem Router oder einem Ende.",
+      "routerOrchestrator": "Ein Router hinter dem Orchestrator führt nur zu Enden.",
       "orchestratorLooseAgent": "Mit Orchestrator braucht jeder Agent einen Kanal von ihm.",
       "agentMode": "Ein Agent hängt entweder in der Kette oder am Orchestrator.",
       "agentChannel": "Ein Agent hat höchstens einen Kanal.",
@@ -1588,7 +1611,7 @@
       "tool": {
         "call": "Werkzeug {{name}}"
       },
-      "router": "Router → {{target}}",
+      "router": "Router {{branch}} → {{target}}",
       "end": "Ende erreicht",
       "succeeded": "Lauf erfolgreich",
       "failed": "Lauf fehlgeschlagen",

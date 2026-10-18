@@ -32,7 +32,7 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 | Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. Ausgang **Werkzeug**. |
 | MCP | `mcp` | Ein in den **Einstellungen** angelegter und **aktiver** Server. Ausgang **Werkzeug**, wie ein Werkzeug-Knoten. |
 | Wissen | `knowledge` | Ordner mit Dateien für das Netz. Ausgang **Wissen**, nur zum Agent-Anschluss Wissen. |
-| Router | `router` | Verzweigt die Nachricht nach Bedingungen (erste Zeile / benannte Zweige) plus Standard-Ausgang. |
+| Router | `router` | Schickt die Nachricht an genau einen Ausgang. Zweige prüfen der Reihe nach: enthält, beginnt mit, erste Zeile, regulärer Ausdruck. Der Standard fängt den Rest. Hinter dem Orchestrator führen die Ausgänge nur zu Enden. |
 | Ende | `end` | Abschluss. **Mindestens eines.** |
 
 ## Verbindungen

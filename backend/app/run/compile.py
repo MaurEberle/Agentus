@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument, GraphNode, is_mcp_node, normalize_mcp_nodes
+from app.run.router_rules import CompiledRouter, rules_from_data
 
 
 @dataclass
@@ -57,7 +58,7 @@ class CompiledGraph:
     orchestrator: CompiledOrchestrator | None
     chat_input: GraphNode | None
     end_ids: list[str]
-    routers: dict[str, list[tuple[str, str]]]
+    routers: dict[str, CompiledRouter]
     topo_agents: list[str]
     by_id: dict[str, GraphNode] = field(default_factory=dict)
 
@@ -218,15 +219,16 @@ def compile_document(
     chats = [n for n in doc.nodes if n.type == "chat_input"]
     chat_input = chats[0] if chats else None
     end_ids = [n.id for n in doc.nodes if n.type == "end"]
-    routers: dict[str, list[tuple[str, str]]] = {}
+    routers: dict[str, CompiledRouter] = {}
     for node in doc.nodes:
         if node.type != "router":
             continue
-        routers[node.id] = [
-            (e.source_handle, e.target)
-            for e in doc.edges
-            if e.source == node.id
-        ]
+        targets: dict[str, str] = {}
+        for edge in doc.edges:
+            if edge.source != node.id or edge.source_handle in targets:
+                continue
+            targets[edge.source_handle] = edge.target
+        routers[node.id] = CompiledRouter(rules=rules_from_data(node.data), targets=targets)
 
     agents: dict[str, CompiledAgent] = {}
     orchestrator = _compile_orchestrator(doc, by_id)

@@ -32,7 +32,7 @@ Mientras corre **exactamente esta** red: banner **Solo lectura** — primero det
 | Herramienta | `tool` | First-party: HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos. Salida **Herramienta**. |
 | MCP | `mcp` | Un servidor creado y **activado** en **Ajustes**. Salida **Herramienta**, como un nodo de herramienta. |
 | Conocimiento | `knowledge` | Carpeta con archivos para la red. Salida **Conocimiento**, solo al puerto Conocimiento del agente. |
-| Enrutador | `router` | Bifurca el mensaje según condiciones (primera línea / ramas con nombre) más salida por defecto. |
+| Enrutador | `router` | Envía el mensaje a una sola salida. Las ramas se comprueban en orden: contiene, empieza por, primera línea, expresión regular. El estándar recoge el resto. Tras el orquestador, las salidas solo van a fines. |
 | Fin | `end` | Cierre. **Al menos uno.** |
 
 ## Conexiones
