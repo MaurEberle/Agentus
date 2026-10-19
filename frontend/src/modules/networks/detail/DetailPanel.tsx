@@ -10,9 +10,11 @@ import { ReadonlyGraph } from '@/modules/networks/detail/ReadonlyGraph';
 export function DetailPanel({
   items,
   onOpen,
+  layoutWidth = 0,
 }: {
   items: NetworkListItem[];
   onOpen: (id: string) => void;
+  layoutWidth?: number;
 }) {
   const { t, i18n } = useTranslation();
   if (items.length === 0) {
@@ -67,8 +69,8 @@ export function DetailPanel({
         </Button>
       </div>
       </div>
-      <div className="min-h-64 flex-1 border-t">
-        <ReadonlyGraph id={item.id} />
+      <div className="min-h-64 min-w-0 flex-1 overflow-hidden border-t">
+        <ReadonlyGraph id={item.id} layoutWidth={layoutWidth} />
       </div>
     </div>
   );

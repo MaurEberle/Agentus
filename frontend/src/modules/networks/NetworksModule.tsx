@@ -306,7 +306,7 @@ export function NetworksModule() {
           ) : null}
           {isDesktop ? (
             <aside className="hidden min-h-0 shrink-0 flex-col md:flex" style={{ width: detailWidth }}>
-              <DetailPanel items={selected} onOpen={openEditor} />
+              <DetailPanel items={selected} onOpen={openEditor} layoutWidth={detailWidth} />
             </aside>
           ) : null}
         </div>

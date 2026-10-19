@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -6,6 +6,8 @@ import {
   MarkerType,
   ReactFlow,
   ReactFlowProvider,
+  useNodesInitialized,
+  useReactFlow,
   type Edge,
   type Node,
 } from '@xyflow/react';
@@ -18,9 +20,12 @@ import { asPortContext } from '@/modules/network/schema/ports';
 
 const nodeTypes = { network: NetworkNode };
 
-function Canvas({ id }: { id: string }) {
+function Canvas({ id, layoutWidth }: { id: string; layoutWidth: number }) {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
+  const { fitView } = useReactFlow();
+  const ready = useNodesInitialized();
+  const paneRef = useRef<HTMLDivElement>(null);
   const query = useEditorNetworkQuery(id);
   const document = query.data;
   const portContext = useMemo(
@@ -62,6 +67,26 @@ function Canvas({ id }: { id: string }) {
     });
   }, [document, portContext]);
 
+  useEffect(() => {
+    const pane = paneRef.current;
+    if (!pane || !ready) return;
+    let frame = 0;
+    const fit = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        if (pane.clientWidth < 24 || pane.clientHeight < 24) return;
+        void fitView();
+      });
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(pane);
+    fit();
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [fitView, layoutWidth, ready]);
+
   if (query.isLoading) {
     return <p className="p-3 text-sm text-muted-foreground">{t('networks.detail.graphLoading')}</p>;
   }
@@ -70,41 +95,42 @@ function Canvas({ id }: { id: string }) {
   }
 
   return (
-    <ReactFlow
-      className="network-flow h-full w-full bg-background"
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      elementsSelectable={false}
-      panOnDrag
-      panOnScroll
-      zoomOnPinch
-      zoomOnScroll
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-      onInit={(instance) => {
-        void instance.fitView({ padding: 0.2, duration: 0 });
-      }}
-      colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
-      proOptions={{ hideAttribution: true }}
-      deleteKeyCode={[]}
-      minZoom={0.2}
-      maxZoom={1.5}
-    >
-      <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-      <Controls showInteractive={false} />
-    </ReactFlow>
+    <div ref={paneRef} className="h-full min-h-64 w-full min-w-0 overflow-hidden">
+      <ReactFlow
+        className="network-flow h-full w-full bg-background"
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={(changes) => {
+          if (changes.some((change) => change.type === 'dimensions')) {
+            void fitView();
+          }
+        }}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={false}
+        panOnDrag
+        panOnScroll
+        zoomOnPinch
+        zoomOnScroll
+        fitView
+        colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
+        proOptions={{ hideAttribution: true }}
+        deleteKeyCode={[]}
+        minZoom={0.2}
+        maxZoom={1.5}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+        <Controls showInteractive={false} />
+      </ReactFlow>
+    </div>
   );
 }
 
-export function ReadonlyGraph({ id }: { id: string }) {
+export function ReadonlyGraph({ id, layoutWidth = 0 }: { id: string; layoutWidth?: number }) {
   return (
     <ReactFlowProvider key={id}>
-      <div className="h-full min-h-64">
-        <Canvas id={id} />
-      </div>
+      <Canvas id={id} layoutWidth={layoutWidth} />
     </ReactFlowProvider>
   );
 }
