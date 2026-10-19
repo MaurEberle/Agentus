@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument, GraphNode, is_mcp_node, normalize_mcp_nodes
+from app.run.limits import DEFAULT_AGENT_MISS_LIMIT, MAX_AGENT_MISS_LIMIT
 from app.run.router_rules import CompiledRouter, rules_from_data
 
 
@@ -35,6 +36,7 @@ class CompiledOrchestrator:
     tool_kinds: list[str] = field(default_factory=list)
     mcp: list[tuple[str, list[str] | None, str | None]] = field(default_factory=list)
     file_actions: list[str] | None = None
+    agent_miss_limit: int = DEFAULT_AGENT_MISS_LIMIT
 
 
 @dataclass
@@ -175,6 +177,21 @@ def _compile_tools(
     return tool_kinds, mcp, file_actions
 
 
+def _agent_miss_limit(data: dict) -> int:
+    raw = data.get("agentMissLimit")
+    if isinstance(raw, bool) or raw is None or raw == "":
+        return DEFAULT_AGENT_MISS_LIMIT
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_AGENT_MISS_LIMIT
+    if value < 1:
+        return 1
+    if value > MAX_AGENT_MISS_LIMIT:
+        return MAX_AGENT_MISS_LIMIT
+    return value
+
+
 def _compile_orchestrator(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode]
 ) -> CompiledOrchestrator | None:
@@ -208,6 +225,7 @@ def _compile_orchestrator(
         tool_kinds=tool_kinds,
         mcp=mcp,
         file_actions=file_actions,
+        agent_miss_limit=_agent_miss_limit(node.data),
     )
 
 

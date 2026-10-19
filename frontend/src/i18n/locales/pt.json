@@ -774,7 +774,9 @@
       },
       "orchestrator": {
         "hint": "Um LLM por uma aresta. O chat chega aqui. Cada agente tem o seu canal. A saída de mensagem continua a ser o fim. Chama ele próprio as ferramentas ligadas.",
-        "systemPrompt": "Prompt de sistema"
+        "systemPrompt": "Prompt de sistema",
+        "agentMissLimit": "Falhas por agente",
+        "agentMissLimitHint": "Quantas vezes um agente com acesso a ficheiros pode terminar uma tarefa sem escrever, editar ou apagar. Depois o orquestrador assume essa tarefa. A predefinição é 3."
       },
       "tool": {
         "kind": "Tipo",
@@ -1556,7 +1558,13 @@
         "think": "O orquestrador está a pensar (não conta como passo).",
         "thinkLimit": "Demasiados turnos de pensamento sem uma chamada.",
         "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos.",
-        "window": "O prompt não cabe em nenhuma janela de contexto."
+        "window": "O prompt não cabe em nenhuma janela de contexto.",
+        "toolThink": "Cinco chamadas de ferramenta falharam. Ronda de pensamento {{round}}.",
+        "toolFailures": "Orquestrador interrompido após duas rondas de pensamento falhadas",
+        "takeoverStart": "{{agent}} gastou {{misses}} tentativas de ficheiro sem alteração. O orquestrador assume.",
+        "takeoverBlocked": "Chamada a {{agent}} recusada. O orquestrador tem de escrever o ficheiro.",
+        "takeover": "{{agent}} atingiu o limite de tentativas. O orquestrador não escreveu nenhum ficheiro.",
+        "takeoverNoTool": "{{agent}} atingiu o limite de tentativas. O orquestrador não tem ferramenta de ficheiros."
       }
     },
     "graph": {

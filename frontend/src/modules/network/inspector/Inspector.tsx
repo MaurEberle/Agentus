@@ -1015,6 +1015,26 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
           onChange={(event) => editorUpdateNodeData(node.id, { systemPrompt: event.target.value })}
         />
       </Field>
+      <Field label={t('network.inspector.orchestrator.agentMissLimit')}>
+        <Input
+          type="number"
+          min={1}
+          max={8}
+          value={node.data.agentMissLimit == null ? 3 : String(node.data.agentMissLimit)}
+          disabled={readOnly}
+          onChange={(event) => {
+            const raw = event.target.value;
+            if (raw === '') {
+              editorUpdateNodeData(node.id, { agentMissLimit: undefined });
+              return;
+            }
+            const next = Math.round(Number(raw));
+            if (!Number.isFinite(next)) return;
+            editorUpdateNodeData(node.id, { agentMissLimit: Math.max(1, Math.min(8, next)) });
+          }}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.agentMissLimitHint')}</p>
     </>
   );
 }

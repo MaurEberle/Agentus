@@ -138,7 +138,10 @@ def test_instructions_mention_connected_tools() -> None:
     assert "You have tools: file_access." in text
     assert "not the tool result" in text
     assert "instead of calling an agent" in text
-    assert "At most two tool rounds" in text
+    assert "You may call tools as often as you need" in text
+    assert "Five failed tool calls in a row start a think round" in text
+    assert "Two failed think rounds in a row stop the run" in text
+    assert "At most two tool rounds" not in text
 
 
 def test_match_agent_by_id_or_name() -> None:
@@ -254,6 +257,40 @@ def test_file_tool_markup_stays_a_reply() -> None:
     raw = "<function=file_access><parameter=path>a.txt</parameter></function>"
     assert parse_orchestrator_action(raw)["action"] == "reply"
     assert reject_reason(raw) is None
+    read = (
+        "<tool_call><function=file_access><parameter=action>read</parameter>"
+        "<parameter=path>todo-app/src/lib/types.ts</parameter></function></tool_call>"
+    )
+    assert parse_orchestrator_action(read)["action"] == "reply"
+    assert reject_reason(read) is None
+    assert salvage_tool_calls(read, ["file_access"])[0].name == "file_access"
+
+
+def test_function_call_markup_is_a_call() -> None:
+    raw = (
+        "<tool_call>\n<function=call>\n"
+        "<parameter=agent>\nSenior\n</parameter>\n"
+        "<parameter=task>\nSchreibe todo-app/src/components/TodoItem/TodoItem.tsx\n</parameter>\n"
+        "</function>\n</tool_call>"
+    )
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "call"
+    assert parsed["agent"] == "Senior"
+    assert "TodoItem.tsx" in parsed["task"]
+    assert reject_reason(raw) is None
+    assert salvage_tool_calls(raw, ["file_access"]) == []
+
+
+def test_takeover_instructions_replace_the_agent_rule() -> None:
+    text = orchestrator_instructions(
+        "leite",
+        [("ag", "Schreiber", "schreibe")],
+        ["file_access"],
+        takeover=True,
+    )
+    assert "Takeover is active" in text
+    assert "Do not call the closed agent" in text
+    assert "At most two tool rounds" not in text
 
 
 def test_match_agent_role_alias() -> None:

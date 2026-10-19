@@ -774,7 +774,9 @@
       },
       "orchestrator": {
         "hint": "Un LLM par une arête. Le chat arrive ici. Chaque agent a son canal. La sortie message reste la fin. Il appelle lui-même les outils branchés.",
-        "systemPrompt": "Invite système"
+        "systemPrompt": "Invite système",
+        "agentMissLimit": "Échecs par agent",
+        "agentMissLimitHint": "Nombre de fois qu’un agent avec accès aux fichiers peut terminer une tâche sans écrire, modifier ou supprimer. L’orchestrateur reprend alors cette tâche. La valeur par défaut est 3."
       },
       "tool": {
         "kind": "Type",
@@ -1556,7 +1558,13 @@
         "think": "L’orchestrateur réfléchit (ne compte pas comme une étape).",
         "thinkLimit": "Trop de tours de réflexion sans appel.",
         "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes.",
-        "window": "L’invite ne tient dans aucune fenêtre de contexte."
+        "window": "L’invite ne tient dans aucune fenêtre de contexte.",
+        "toolThink": "Cinq appels d’outil ont échoué. Tour de réflexion {{round}}.",
+        "toolFailures": "Orchestrateur arrêté après deux tours de réflexion en échec",
+        "takeoverStart": "{{agent}} a utilisé {{misses}} essais de fichier sans modification. L’orchestrateur prend le relais.",
+        "takeoverBlocked": "Appel de {{agent}} refusé. L’orchestrateur doit écrire le fichier.",
+        "takeover": "{{agent}} a atteint la limite d’essais. L’orchestrateur n’a pas écrit de fichier.",
+        "takeoverNoTool": "{{agent}} a atteint la limite d’essais. L’orchestrateur n’a pas d’outil de fichiers."
       }
     },
     "graph": {

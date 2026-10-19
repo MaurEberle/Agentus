@@ -841,7 +841,9 @@
       },
       "orchestrator": {
         "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang. Angeschlossene Werkzeuge ruft er selbst auf.",
-        "systemPrompt": "Systemprompt"
+        "systemPrompt": "Systemprompt",
+        "agentMissLimit": "Fehlversuche je Agent",
+        "agentMissLimitHint": "So oft darf ein Agent mit Dateizugriff einen Auftrag ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 3."
       },
       "tool": {
         "kind": "Art",
@@ -1628,7 +1630,13 @@
         "think": "Orchestrator denkt (zählt nicht als Schritt).",
         "thinkLimit": "Zu viele Denkschritte ohne Auftrag.",
         "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
-        "window": "Der Prompt passt in kein Kontextfenster."
+        "window": "Der Prompt passt in kein Kontextfenster.",
+        "toolThink": "Fünf Werkzeugaufrufe fehlgeschlagen. Denkrunde {{round}}.",
+        "toolFailures": "Orchestrator nach zwei gescheiterten Denkrunden beendet",
+        "takeoverStart": "{{agent}} hat {{misses}} Dateiversuche ohne Änderung verbraucht. Der Orchestrator übernimmt.",
+        "takeoverBlocked": "Aufruf von {{agent}} abgelehnt. Der Orchestrator muss die Datei selbst schreiben.",
+        "takeover": "{{agent}} hat das Versuchslimit erreicht. Der Orchestrator hat keine Datei geschrieben.",
+        "takeoverNoTool": "{{agent}} hat das Versuchslimit erreicht. Am Orchestrator hängt kein Dateiwerkzeug."
       }
     },
     "mcp": {

@@ -774,7 +774,9 @@
       },
       "orchestrator": {
         "hint": "Bir LLM kenarı. Sohbet buraya gelir. Her ajanın kendi kanalı vardır. İleti çıkışı bitiştir. Bağlı araçları kendisi çağırır.",
-        "systemPrompt": "Sistem istemi"
+        "systemPrompt": "Sistem istemi",
+        "agentMissLimit": "Aracı başına başarısız deneme",
+        "agentMissLimitHint": "Dosya erişimi olan bir aracı, yazmadan, değiştirmeden veya silmeden bir görevi kaç kez bitirebilir. Sonra orkestratör bu görevi üstlenir. Varsayılan 3."
       },
       "tool": {
         "kind": "Tür",
@@ -1556,7 +1558,13 @@
         "think": "Orkestratör düşünüyor (adım sayılmaz).",
         "thinkLimit": "Çağrı olmadan çok fazla düşünme turu.",
         "thinkLoop": "1 jetonluk düşünme döngüsü {{thinks}} adımdan sonra durduruldu.",
-        "window": "İstem hiçbir bağlam penceresine sığmıyor."
+        "window": "İstem hiçbir bağlam penceresine sığmıyor.",
+        "toolThink": "Beş araç çağrısı başarısız. Düşünme turu {{round}}.",
+        "toolFailures": "Orkestratör art arda iki başarısız düşünme turundan sonra durdu",
+        "takeoverStart": "{{agent}}, değişiklik olmadan {{misses}} dosya denemesi kullandı. Orkestratör devralır.",
+        "takeoverBlocked": "{{agent}} çağrısı reddedildi. Dosyayı orkestratör yazmalı.",
+        "takeover": "{{agent}} deneme sınırına ulaştı. Orkestratör dosya yazmadı.",
+        "takeoverNoTool": "{{agent}} deneme sınırına ulaştı. Orkestratörde dosya aracı yok."
       }
     },
     "graph": {

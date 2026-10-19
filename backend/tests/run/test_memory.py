@@ -108,6 +108,31 @@ def test_tool_agent_text_is_a_source() -> None:
     assert "EIGENE-PROSA" not in own
 
 
+def test_three_file_misses_open_takeover_until_a_write() -> None:
+    memory = RunMemory()
+    memory.miss_limit = 3
+    assert memory.note_file_attempt(agent_id="ag", name="Senior", task="lies", wrote=False) is False
+    assert memory.note_file_attempt(agent_id="ag", name="Senior", task="lies", wrote=True) is False
+    assert memory.misses["ag"] == 0
+    for _ in range(2):
+        assert memory.note_file_attempt(agent_id="ag", name="Senior", task="schreib", wrote=False) is False
+    assert memory.note_file_attempt(agent_id="ag", name="Senior", task="schreib", wrote=False) is True
+    blob = memory.prompt_text("system")
+    assert "Takeover for Senior (ag) after 3 file attempts" in blob
+    assert "task: schreib" in blob
+    assert memory.refuses_agent("Senior", [("ag", "Senior")]) is True
+    assert memory.refuses_agent("Andere", [("ag", "Senior"), ("b", "Andere")]) is False
+    memory.clear_anomaly()
+    assert "Takeover for Senior" in memory.prompt_text("system")
+    memory.note_own_tool(
+        ToolEvent(name="file_access", arguments="{}", ok=True, result="ok"),
+        FileFact(tool="file_access", action="write", path="a.txt", ok=True),
+    )
+    assert memory.takeover is None
+    assert memory.misses["ag"] == 0
+    assert memory.to_dict()["takeover"] is None
+
+
 def test_one_writer_is_attached_automatically() -> None:
     memory = RunMemory()
     writer = memory.begin_call("w", "Autor", "schreib", False)

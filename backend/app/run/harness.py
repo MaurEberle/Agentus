@@ -28,10 +28,12 @@ from app.run.limits import (
     MAX_CONTROL_REPAIRS,
     MAX_FAILED_TOOL_CALLS,
     MAX_TOOL_JSON_ATTEMPTS,
+    MAX_ORCHESTRATOR_FAILED_THINKS,
+    MAX_ORCHESTRATOR_FAILED_TOOLS,
     MAX_ORCHESTRATOR_STEPS,
     MAX_ORCHESTRATOR_THINKS,
-    MAX_ORCHESTRATOR_TOOL_ROUNDS,
     MAX_SAME_RETRIES,
+    MAX_TAKEOVER_THINKS,
     LAST_MESSAGE_MAX,
     STREAM_IDLE_TIMEOUT_SEC,
     SUBSTANTIAL_RESULT_CHARS,
@@ -70,6 +72,10 @@ _REPAIR_NOTE = (
     "Reply with one JSON object only. The task must be a short instruction. Do not paste an agent result."
 )
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
+_TOOL_THINK_NOTE = (
+    "Five tool calls failed in a row. Think, then decide with one JSON object or a working tool call. "
+    "Do not repeat the same failed call."
+)
 _AGENT_THINK = (
     "You may think first with {\"action\":\"think\",\"text\":\"...\"} or a think block. "
     "Think is not the result and is not shown to the user. After think, write the visible result."
@@ -275,6 +281,39 @@ def _fail_think_limit(ctrl: RunController, node_id: str) -> str:
     ctrl.fail_class = "orchestrator"
     ctrl.last_error_node_id = node_id
     _set_node(ctrl, node_id, "error", error="run.orchestrator.thinkLimit")
+    return "failed"
+
+
+def _fail_orch_tools(ctrl: RunController, node_id: str, failed: int) -> dict[str, str]:
+    emit_log(
+        "error",
+        "run.orchestrator.toolFailures",
+        node_id=node_id,
+        payload={"failed": failed},
+    )
+    ctrl.fail_message = "run.orchestrator.toolFailures"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error="run.orchestrator.toolFailures")
+    return {"action": "failed-tools"}
+
+
+def _fail_takeover(ctrl: RunController, node_id: str, memory: RunMemory, *, no_tool: bool = False) -> str:
+    item = memory.takeover
+    name = item.name if item else ""
+    task = item.task if item else ""
+    misses = memory.misses.get(item.agent_id, 0) if item else 0
+    key = "run.orchestrator.takeoverNoTool" if no_tool else "run.orchestrator.takeover"
+    emit_log(
+        "error",
+        key,
+        node_id=node_id,
+        payload={"agent": name, "misses": misses, "task": task[:300]},
+    )
+    ctrl.fail_message = key
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error=key)
     return "failed"
 
 
@@ -1435,6 +1474,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     if orch is None:
         return "failed"
     memory = RunMemory()
+    memory.miss_limit = orch.agent_miss_limit
     if user_text:
         memory.add_user(user_text)
     roster: list[tuple[str, str, str]] = []
@@ -1453,8 +1493,13 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     short_thinks = 0
     spoke = False
     while not ctrl.stop_event.is_set():
-        offered = tool_schemas if memory.allow_own_tools else []
-        system = orchestrator_instructions(orch.system_prompt, roster, _function_names(offered))
+        offered = tool_schemas if memory.allow_own_tools or memory.takeover is not None else []
+        system = orchestrator_instructions(
+            orch.system_prompt,
+            roster,
+            _function_names(offered),
+            takeover=memory.takeover is not None,
+        )
         action = _orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
         tokens = _pop_tokens(action)
         memory.clear_anomaly()
@@ -1463,6 +1508,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             return "cancelled" if ctrl.stop_event.is_set() else "failed"
         if action.get("action") == "failed-window":
             _set_node(ctrl, orch.node_id, "error", error="run.orchestrator.window")
+            return "failed"
+        if action.get("action") == "failed-tools":
             return "failed"
         if action.get("action") == "unreadable":
             ctrl.fail_message = "run.orchestrator.unreadable"
@@ -1489,6 +1536,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 _store_memory(ctrl, memory)
                 _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
                 return _fail_think_loop(ctrl, orch.node_id, short_thinks)
+            if memory.takeover and thinks > MAX_TAKEOVER_THINKS:
+                _store_memory(ctrl, memory)
+                _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _fail_takeover(ctrl, orch.node_id, memory)
             if thinks >= MAX_ORCHESTRATOR_THINKS:
                 _store_memory(ctrl, memory)
                 _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
@@ -1517,16 +1568,36 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             spoke = False
             thinks = 0
             short_thinks = 0
+            if memory.refuses_agent(action.get("agent") or "", names):
+                memory.takeover_rejects += 1
+                closed = memory.takeover
+                emit_log(
+                    "warn",
+                    "run.orchestrator.takeoverBlocked",
+                    node_id=orch.node_id,
+                    payload={"agent": closed.name if closed else ""},
+                )
+                if memory.takeover_rejects >= 2:
+                    _store_memory(ctrl, memory)
+                    return _fail_takeover(ctrl, orch.node_id, memory)
+                memory.add_note("That agent is closed for this task. Use your tools. Do not call it.")
+                continue
             if steps >= MAX_ORCHESTRATOR_STEPS:
                 _store_memory(ctrl, memory)
                 return _fail_step_limit(ctrl, orch.node_id)
             outcome = _orchestrator_call(ctrl, compiled, memory, names, action, user_text)
             if outcome == "cancelled":
                 return "cancelled"
+            if memory.takeover_unarmed:
+                _store_memory(ctrl, memory)
+                return _fail_takeover(ctrl, orch.node_id, memory, no_tool=True)
             if outcome == "ran":
                 steps += 1
             continue
         if kind == "finish":
+            if memory.takeover:
+                _store_memory(ctrl, memory)
+                return _fail_takeover(ctrl, orch.node_id, memory)
             if _tool_work_unverified(memory) and not memory.finish_warned:
                 memory.finish_warned = True
                 memory.add_note(_FINISH_FILES_NOTE)
@@ -1537,6 +1608,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             _finish_targets(ctrl, compiled, orch, text)
             _store_memory(ctrl, memory)
             return "succeeded"
+        if memory.takeover:
+            _store_memory(ctrl, memory)
+            return _fail_takeover(ctrl, orch.node_id, memory)
         if text.strip():
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
@@ -1547,6 +1621,39 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     _store_memory(ctrl, memory)
     _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
     return "cancelled"
+
+
+def _count_file_attempt(
+    compiled: CompiledGraph,
+    memory: RunMemory,
+    agent,
+    record: AgentRecord,
+) -> None:
+    if "file_access" not in (agent.tool_kinds or []):
+        return
+    wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
+    opened = memory.note_file_attempt(
+        agent_id=agent.node_id,
+        name=record.name,
+        task=record.task,
+        wrote=wrote,
+    )
+    if not opened:
+        return
+    orch = compiled.orchestrator
+    if orch is None or "file_access" not in (orch.tool_kinds or []):
+        memory.takeover_unarmed = True
+        return
+    emit_log(
+        "info",
+        "run.orchestrator.takeoverStart",
+        node_id=orch.node_id,
+        payload={
+            "agent": record.name,
+            "misses": memory.misses.get(agent.node_id, 0),
+            "task": (record.task or "")[:300],
+        },
+    )
 
 
 def _orchestrator_call(
@@ -1574,6 +1681,11 @@ def _orchestrator_call(
     name = dict(names).get(agent_id, agent_id)
     record = memory.begin_call(agent_id, name, task, has_tools)
     memory.allow_own_tools = True
+
+    def _ran() -> str:
+        _count_file_attempt(compiled, memory, agent, record)
+        return "ran"
+
     orch = compiled.orchestrator
     if orch is not None:
         _set_node(ctrl, orch.node_id, "waiting")
@@ -1596,13 +1708,13 @@ def _orchestrator_call(
             return "cancelled" if ctrl.stop_event.is_set() else "ran"
         if record.error == "prompt does not fit":
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         if record.error == "too many tool failures":
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         if record.error in {"too many thinks", "think loop", "empty stops"}:
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         if record.error:
             if record.tool_ok and not continued:
                 continued = True
@@ -1619,7 +1731,7 @@ def _orchestrator_call(
                 record.error = ""
                 continue
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         visible = visible_text(text or "")
         if text and not visible:
             memory.reject(text, "empty")
@@ -1627,17 +1739,17 @@ def _orchestrator_call(
         if not visible and not record.tool_ok:
             record.error = "empty result"
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         record.text = visible
         if has_tools and not record.tool_ok:
             record.error = "no tool used"
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         if not visible and not wrote:
             record.error = "empty result"
             emit_log("warn", "run.agent.empty", node_id=agent_id)
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         record.finished = True
         if any(not fact.ok for fact in record.files):
             record.error = "tool failed"
@@ -1645,7 +1757,7 @@ def _orchestrator_call(
         else:
             _publish_progress(ctrl, name, record)
             memory.add_note(f"Status already shown to the user: {name} finished.")
-        return "ran"
+        return _ran()
     return "cancelled"
 
 
@@ -1767,7 +1879,6 @@ def _orchestrator_action(
         return None
     repairs = 0
     model_retries = 0
-    rounds = 0
     offered = list(tools)
     messages = memory.orchestrator_messages(system)
     mcp = get_mcp()
@@ -1898,8 +2009,8 @@ def _orchestrator_action(
                 ),
             )
             _log_vram_compare(llm, options, choice, llm_node_id)
-            if result.tool_calls and rounds < MAX_ORCHESTRATOR_TOOL_ROUNDS and offered:
-                rounds += 1
+            result = _with_salvaged_tools(result, offered)
+            if result.tool_calls and offered:
                 model_retries = 0
                 memory.allow_own_tools = False
                 _set_node(ctrl, orch.node_id, "running", wait="tool")
@@ -1939,9 +2050,33 @@ def _orchestrator_action(
                             name=call.name or None,
                         )
                     )
-                if rounds >= MAX_ORCHESTRATOR_TOOL_ROUNDS:
-                    offered = []
-                    messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
+                    if ok_tool:
+                        memory.orch_failed_tools = 0
+                        memory.orch_failed_thinks = 0
+                        continue
+                    memory.orch_failed_tools += 1
+                    if memory.orch_failed_tools < MAX_ORCHESTRATOR_FAILED_TOOLS:
+                        continue
+                    if memory.orch_failed_thinks >= MAX_ORCHESTRATOR_FAILED_THINKS:
+                        action = _fail_orch_tools(
+                            ctrl, orch.node_id, memory.orch_failed_tools
+                        )
+                        return action
+                    memory.orch_failed_thinks += 1
+                    memory.orch_failed_tools = 0
+                    memory.allow_own_tools = True
+                    emit_log(
+                        "warn",
+                        "run.orchestrator.toolThink",
+                        node_id=orch.node_id,
+                        payload={
+                            "failed": MAX_ORCHESTRATOR_FAILED_TOOLS,
+                            "round": memory.orch_failed_thinks,
+                        },
+                    )
+                    memory.add_note(_TOOL_THINK_NOTE)
+                    messages.append(LlmMessage(role="user", content=_TOOL_THINK_NOTE))
+                    break
                 continue
             if result.tool_calls:
                 offered = []
@@ -2020,6 +2155,9 @@ def _orchestrator_action(
                     }
                     return _tag_tokens(action, result, out_final)
                 parsed["agent"] = agent_id
+            if kind in {"call", "ask", "reply", "finish"}:
+                memory.orch_failed_tools = 0
+                memory.orch_failed_thinks = 0
             action = parsed
             return _tag_tokens(action, result, out_final)
         return None

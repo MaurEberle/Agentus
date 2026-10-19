@@ -85,6 +85,8 @@ export type AgentNodeData = {
 export type OrchestratorNodeData = {
   displayName?: string;
   systemPrompt?: string;
+  /** File attempts without a write, edit, or delete before the orchestrator takes the task. */
+  agentMissLimit?: number;
 };
 
 export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access';

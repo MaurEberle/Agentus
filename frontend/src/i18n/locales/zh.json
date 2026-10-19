@@ -774,7 +774,9 @@
       },
       "orchestrator": {
         "hint": "一条 LLM 连线。聊天进入这里。每个智能体有自己的通道。消息输出仍指向结束。已连接的工具由它自己调用。",
-        "systemPrompt": "系统提示"
+        "systemPrompt": "系统提示",
+        "agentMissLimit": "每个智能体的失败次数",
+        "agentMissLimitHint": "有文件访问权限的智能体可以在不写入、不修改、不删除的情况下结束任务的次数。超过后由编排器接手该任务。默认是 3。"
       },
       "tool": {
         "kind": "类型",
@@ -1556,7 +1558,13 @@
         "think": "编排器正在思考（不计入步骤）。",
         "thinkLimit": "没有任务的思考轮次过多。",
         "thinkLoop": "1 token 思考循环在 {{thinks}} 步后已停止。",
-        "window": "提示词无法放入任何上下文窗口。"
+        "window": "提示词无法放入任何上下文窗口。",
+        "toolThink": "五次工具调用失败。思考轮次 {{round}}。",
+        "toolFailures": "编排器在连续两轮思考失败后已停止",
+        "takeoverStart": "{{agent}} 已用完 {{misses}} 次未改动文件的尝试。编排器接手。",
+        "takeoverBlocked": "已拒绝调用 {{agent}}。编排器必须自己写文件。",
+        "takeover": "{{agent}} 达到尝试上限。编排器没有写入文件。",
+        "takeoverNoTool": "{{agent}} 达到尝试上限。编排器没有文件工具。"
       }
     },
     "graph": {

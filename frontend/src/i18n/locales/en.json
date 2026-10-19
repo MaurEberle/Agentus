@@ -841,7 +841,9 @@
       },
       "orchestrator": {
         "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end. It calls tools on the tool port.",
-        "systemPrompt": "System prompt"
+        "systemPrompt": "System prompt",
+        "agentMissLimit": "Misses per agent",
+        "agentMissLimitHint": "How often an agent with file access may finish a task without writing, editing, or deleting a file. The orchestrator then does that task. The default is 3."
       },
       "tool": {
         "kind": "Kind",
@@ -1628,7 +1630,13 @@
         "think": "Orchestrator is thinking (does not count as a step).",
         "thinkLimit": "Too many think turns without a call.",
         "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
-        "window": "The prompt does not fit any context window."
+        "window": "The prompt does not fit any context window.",
+        "toolThink": "Five tool calls failed. Think round {{round}}.",
+        "toolFailures": "Orchestrator stopped after two failed think rounds",
+        "takeoverStart": "{{agent}} used {{misses}} file attempts without a change. The orchestrator takes over.",
+        "takeoverBlocked": "Call to {{agent}} was refused. The orchestrator must write the file.",
+        "takeover": "{{agent}} reached the attempt limit. The orchestrator did not write a file.",
+        "takeoverNoTool": "{{agent}} reached the attempt limit. The orchestrator has no file tool."
       }
     },
     "mcp": {
