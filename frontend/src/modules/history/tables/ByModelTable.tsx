@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { COL_FIT, COL_TEXT, HistoryGrid, HistoryRow, historyCellClass, historyHeadClass } from '@/modules/history/HistoryGrid';
 import { formatDuration, formatInt, formatPercent } from '@/modules/history/model/format';
 import type { ModelAggRow } from '@/modules/history/model/types';
 
@@ -39,38 +39,40 @@ export function ByModelTable({ rows }: { rows: ModelAggRow[] }) {
     return <p className="p-4 text-sm text-muted-foreground">{t('history.empty.filtered')}</p>;
   }
 
+  const columns = [COL_TEXT, COL_FIT, COL_FIT, COL_FIT, COL_FIT, COL_FIT, COL_FIT, COL_FIT, COL_FIT].join(' ');
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <HeadButton label={t('history.table.model')} onClick={() => toggle('model')} />
-          <TableHead>{t('history.table.provider')}</TableHead>
-          <HeadButton label={t('history.table.calls')} onClick={() => toggle('calls')} />
-          <HeadButton label={t('history.table.ok')} onClick={() => toggle('ok')} />
-          <HeadButton label={t('history.table.callErrors')} onClick={() => toggle('error')} />
-          <HeadButton label={t('history.table.errorRate')} onClick={() => toggle('errorRate')} />
-          <HeadButton label={t('history.table.median')} onClick={() => toggle('medianMs')} />
-          <HeadButton label={t('history.table.tokensIn')} onClick={() => toggle('tokensIn')} />
-          <HeadButton label={t('history.table.tokensOut')} onClick={() => toggle('tokensOut')} />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sorted.map((row) => (
-          <TableRow key={`${row.provider}:${row.model}`}>
-            <TableCell className="font-mono text-xs">{row.model}</TableCell>
-            <TableCell>{t(`history.provider.${row.provider}`)}</TableCell>
-            <TableCell className="tabular-nums">{formatInt(row.calls, locale)}</TableCell>
-            <TableCell className="tabular-nums">{formatInt(row.ok, locale)}</TableCell>
-            <TableCell className="tabular-nums">{formatInt(row.error, locale)}</TableCell>
-            <TableCell className="tabular-nums">{formatPercent(row.errorRate * 100, locale)}</TableCell>
-            <TableCell className="tabular-nums">{row.medianMs === null ? '—' : formatDuration(row.medianMs)}</TableCell>
-            <TableCell className="tabular-nums">{row.tokensIn === null ? '—' : formatInt(row.tokensIn, locale)}</TableCell>
-            <TableCell className="tabular-nums">{row.tokensOut === null ? '—' : formatInt(row.tokensOut, locale)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <HistoryGrid columns={columns}>
+      <HistoryRow className="hover:bg-transparent">
+        <HeadButton label={t('history.table.model')} onClick={() => toggle('model')} />
+        <div className={historyHeadClass} title={t('history.table.provider')}>{t('history.table.provider')}</div>
+        <HeadButton label={t('history.table.calls')} onClick={() => toggle('calls')} />
+        <HeadButton label={t('history.table.ok')} onClick={() => toggle('ok')} />
+        <HeadButton label={t('history.table.callErrors')} onClick={() => toggle('error')} />
+        <HeadButton label={t('history.table.errorRate')} onClick={() => toggle('errorRate')} />
+        <HeadButton label={t('history.table.median')} onClick={() => toggle('medianMs')} />
+        <HeadButton label={t('history.table.tokensIn')} onClick={() => toggle('tokensIn')} />
+        <HeadButton label={t('history.table.tokensOut')} onClick={() => toggle('tokensOut')} />
+      </HistoryRow>
+      {sorted.map((row) => (
+        <HistoryRow key={`${row.provider}:${row.model}`}>
+          <div className={cnCell('font-mono text-xs')} title={row.model}>{row.model}</div>
+          <div className={historyCellClass}>{t(`history.provider.${row.provider}`)}</div>
+          <div className={cnCell('tabular-nums')}>{formatInt(row.calls, locale)}</div>
+          <div className={cnCell('tabular-nums')}>{formatInt(row.ok, locale)}</div>
+          <div className={cnCell('tabular-nums')}>{formatInt(row.error, locale)}</div>
+          <div className={cnCell('tabular-nums')}>{formatPercent(row.errorRate * 100, locale)}</div>
+          <div className={cnCell('tabular-nums')}>{row.medianMs === null ? '—' : formatDuration(row.medianMs)}</div>
+          <div className={cnCell('tabular-nums')}>{row.tokensIn === null ? '—' : formatInt(row.tokensIn, locale)}</div>
+          <div className={cnCell('tabular-nums')}>{row.tokensOut === null ? '—' : formatInt(row.tokensOut, locale)}</div>
+        </HistoryRow>
+      ))}
+    </HistoryGrid>
   );
+}
+
+function cnCell(extra: string) {
+  return `${historyCellClass} ${extra}`;
 }
 
 function sortValue(row: ModelAggRow, key: SortKey): string | number | null {
@@ -80,10 +82,10 @@ function sortValue(row: ModelAggRow, key: SortKey): string | number | null {
 
 function HeadButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <TableHead>
-      <button type="button" className="font-medium hover:underline" onClick={onClick}>
+    <div className={historyHeadClass} title={label}>
+      <button type="button" className="max-w-full truncate text-left font-medium hover:underline" onClick={onClick}>
         {label}
       </button>
-    </TableHead>
+    </div>
   );
 }

@@ -1422,6 +1422,8 @@
       "outcome": "النتيجة",
       "error": "خطأ",
       "models": "النماذج",
+      "move": "نقل {{column}}",
+      "resize": "تغيير عرض {{column}}",
       "live": "عرض مباشر",
       "page": "صفحة {{page}} من {{pages}}",
       "prev": "السابق",

@@ -1422,6 +1422,8 @@
       "outcome": "Sonuç",
       "error": "Hata",
       "models": "Modeller",
+      "move": "{{column}} taşı",
+      "resize": "{{column}} genişliğini değiştir",
       "live": "Canlı görüntüle",
       "page": "Sayfa {{page}} / {{pages}}",
       "prev": "Önceki",

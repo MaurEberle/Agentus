@@ -1494,6 +1494,8 @@
       "outcome": "Ergebnis",
       "error": "Fehler",
       "models": "Modelle",
+      "move": "{{column}} verschieben",
+      "resize": "Breite von {{column}} ändern",
       "live": "Live ansehen",
       "page": "Seite {{page}} von {{pages}}",
       "prev": "Zurück",

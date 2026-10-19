@@ -1422,6 +1422,8 @@
       "outcome": "結果",
       "error": "エラー",
       "models": "モデル",
+      "move": "{{column}}を移動",
+      "resize": "{{column}}の幅を変更",
       "live": "ライブで見る",
       "page": "{{page}} / {{pages}} ページ",
       "prev": "前へ",

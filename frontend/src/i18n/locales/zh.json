@@ -1422,6 +1422,8 @@
       "outcome": "结果",
       "error": "错误",
       "models": "模型",
+      "move": "移动{{column}}",
+      "resize": "调整{{column}}的宽度",
       "live": "查看实时",
       "page": "第 {{page}} 页，共 {{pages}} 页",
       "prev": "上一页",

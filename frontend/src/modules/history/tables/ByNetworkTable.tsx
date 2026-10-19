@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { COL_FIT, COL_TEXT, HistoryGrid, HistoryRow, historyCellClass, historyHeadClass } from '@/modules/history/HistoryGrid';
 import { formatDuration, formatInt } from '@/modules/history/model/format';
 import type { NetworkAggRow } from '@/modules/history/model/types';
 
@@ -39,42 +39,40 @@ export function ByNetworkTable({ rows }: { rows: NetworkAggRow[] }) {
     return <p className="p-4 text-sm text-muted-foreground">{t('history.empty.filtered')}</p>;
   }
 
+  const columns = [COL_TEXT, COL_FIT, COL_FIT, COL_FIT, COL_FIT, COL_FIT, COL_TEXT].join(' ');
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <HeadButton label={t('history.table.network')} onClick={() => toggle('networkName')} />
-          <HeadButton label={t('history.table.runs')} onClick={() => toggle('runs')} />
-          <HeadButton label={t('history.table.succeeded')} onClick={() => toggle('succeeded')} />
-          <HeadButton label={t('history.table.failed')} onClick={() => toggle('failed')} />
-          <HeadButton label={t('history.table.cancelled')} onClick={() => toggle('cancelled')} />
-          <HeadButton label={t('history.table.median')} onClick={() => toggle('medianMs')} />
-          <TableHead>{t('history.table.topErrorNode')}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sorted.map((row) => (
-          <TableRow key={row.networkId}>
-            <TableCell className="font-medium">{row.networkName}</TableCell>
-            <TableCell className="tabular-nums">{formatInt(row.runs, locale)}</TableCell>
-            <TableCell className="tabular-nums">{formatInt(row.succeeded, locale)}</TableCell>
-            <TableCell className="tabular-nums">{formatInt(row.failed, locale)}</TableCell>
-            <TableCell className="tabular-nums">{formatInt(row.cancelled, locale)}</TableCell>
-            <TableCell className="tabular-nums">{row.medianMs === null ? '—' : formatDuration(row.medianMs)}</TableCell>
-            <TableCell>{row.topErrorNode ?? '—'}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <HistoryGrid columns={columns}>
+      <HistoryRow className="hover:bg-transparent">
+        <HeadButton label={t('history.table.network')} onClick={() => toggle('networkName')} />
+        <HeadButton label={t('history.table.runs')} onClick={() => toggle('runs')} />
+        <HeadButton label={t('history.table.succeeded')} onClick={() => toggle('succeeded')} />
+        <HeadButton label={t('history.table.failed')} onClick={() => toggle('failed')} />
+        <HeadButton label={t('history.table.cancelled')} onClick={() => toggle('cancelled')} />
+        <HeadButton label={t('history.table.median')} onClick={() => toggle('medianMs')} />
+        <div className={historyHeadClass} title={t('history.table.topErrorNode')}>{t('history.table.topErrorNode')}</div>
+      </HistoryRow>
+      {sorted.map((row) => (
+        <HistoryRow key={row.networkId}>
+          <div className={`${historyCellClass} font-medium`} title={row.networkName}>{row.networkName}</div>
+          <div className={`${historyCellClass} tabular-nums`}>{formatInt(row.runs, locale)}</div>
+          <div className={`${historyCellClass} tabular-nums`}>{formatInt(row.succeeded, locale)}</div>
+          <div className={`${historyCellClass} tabular-nums`}>{formatInt(row.failed, locale)}</div>
+          <div className={`${historyCellClass} tabular-nums`}>{formatInt(row.cancelled, locale)}</div>
+          <div className={`${historyCellClass} tabular-nums`}>{row.medianMs === null ? '—' : formatDuration(row.medianMs)}</div>
+          <div className={historyCellClass} title={row.topErrorNode ?? undefined}>{row.topErrorNode ?? '—'}</div>
+        </HistoryRow>
+      ))}
+    </HistoryGrid>
   );
 }
 
 function HeadButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <TableHead>
-      <button type="button" className="font-medium hover:underline" onClick={onClick}>
+    <div className={historyHeadClass} title={label}>
+      <button type="button" className="max-w-full truncate text-left font-medium hover:underline" onClick={onClick}>
         {label}
       </button>
-    </TableHead>
+    </div>
   );
 }

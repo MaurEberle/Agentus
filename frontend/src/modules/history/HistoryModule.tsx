@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
   resolveBounds,
   sameFilter,
 } from '@/modules/history/model/url';
-import { PAGE_SIZE, STATS_LIMIT, type ErrorTopRow, type HistoryFilter, type LogEvent } from '@/modules/history/model/types';
+import { PAGE_SIZE, STATS_LIMIT, type ErrorTopRow, type HistoryFilter, type HistoryTab, type LogEvent } from '@/modules/history/model/types';
 import { useHistoryPanes } from '@/modules/history/panes';
 import { HistoryRibbon } from '@/modules/history/ribbon/Ribbon';
 import { useHistoryUi } from '@/modules/history/store';
@@ -53,7 +53,13 @@ export function HistoryModule() {
   const stores = useStoresQuery();
   const historyOk = isHistoryStoreOk(stores.data);
   const filter = useMemo(() => parseHistorySearch(params), [params]);
-  const bounds = useMemo(() => resolveBounds(filter), [filter]);
+  const [tab, setTab] = useState<HistoryTab>(filter.tab);
+  const rangeKey = filter.range === 'custom' ? `custom:${filter.from}:${filter.to}` : filter.range;
+  const outcomeKey = filter.outcomes.join(',');
+  const bounds = useMemo(
+    () => resolveBounds({ range: filter.range, from: filter.from, to: filter.to }),
+    [rangeKey],
+  );
 
   const selectedIds = useHistoryUi((state) => state.selectedIds);
   const clearSelection = useHistoryUi((state) => state.clearSelection);
@@ -77,18 +83,20 @@ export function HistoryModule() {
         },
         { limit: STATS_LIMIT, offset: 0 },
       ),
-    [bounds.from, bounds.to, filter.model, filter.networkId, filter.outcomes, filter.q],
+    [bounds, filter.model, filter.networkId, filter.q, outcomeKey],
   );
 
   const runsQuery = useQuery({
     queryKey: ['runs', 'history', apiFilter],
     queryFn: () => listRuns(apiFilter),
     enabled: historyOk,
+    placeholderData: keepPreviousData,
   });
   const callsQuery = useQuery({
     queryKey: ['runs', 'calls', apiFilter],
     queryFn: () => listCalls(apiFilter),
     enabled: historyOk,
+    placeholderData: keepPreviousData,
   });
   const networksQuery = useQuery({
     queryKey: ['networks'],
@@ -151,6 +159,10 @@ export function HistoryModule() {
   }, [runId, setDetailTab]);
 
   useEffect(() => {
+    setTab(filter.tab);
+  }, [filter.tab]);
+
+  useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key !== 'Escape') return;
       if (deleteOpen || purgeOpen) return;
@@ -165,11 +177,20 @@ export function HistoryModule() {
     if (sameFilter(parseHistorySearch(paramsNext), parseHistorySearch(params)) && params.toString() === paramsNext.toString()) {
       return;
     }
-    setParams(paramsNext, { replace: true });
+    setParams(paramsNext, { replace: true, preventScrollReset: true });
+  }
+
+  function selectTab(next: HistoryTab) {
+    if (next === tab) return;
+    setTab(next);
+    const paramsNext = historySearchFrom({ ...filter, tab: next });
+    const search = paramsNext.toString();
+    const path = window.location.pathname;
+    window.history.replaceState(window.history.state, '', search ? `${path}?${search}` : path);
   }
 
   function patchFilter(patch: Partial<HistoryFilter>) {
-    const merged: HistoryFilter = { ...filter, ...patch };
+    const merged: HistoryFilter = { ...filter, tab, ...patch };
     if (patch.from && patch.from.length <= 10) {
       merged.from = startOfLocalDay(patch.from).toISOString();
     }
@@ -185,12 +206,12 @@ export function HistoryModule() {
   }
 
   function openRun(id: string) {
-    const search = historySearchFrom(filter).toString();
+    const search = historySearchFrom({ ...filter, tab }).toString();
     navigate(`/history/${id}${search ? `?${search}` : ''}`);
   }
 
   function closeDetail() {
-    const search = historySearchFrom(filter).toString();
+    const search = historySearchFrom({ ...filter, tab }).toString();
     navigate(`/history${search ? `?${search}` : ''}`);
   }
 
@@ -339,16 +360,8 @@ export function HistoryModule() {
   );
 
   return (
-    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-24">
+    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 p-4 pb-24 [overflow-anchor:none] md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('history.title')}</h1>
-      <HistoryRibbon
-        selectedCount={selectedIds.length}
-        busy={busy}
-        onRefresh={() => void refresh()}
-        onDelete={() => setDeleteOpen(true)}
-        onExport={() => void exportIds(selectedIds)}
-        onPurge={() => setPurgeOpen(true)}
-      />
       <FilterBar
         filter={filter}
         networks={networkOptions}
@@ -376,8 +389,8 @@ export function HistoryModule() {
           </AlertDescription>
         </Alert>
       ) : null}
-      {historyOk && runsQuery.isLoading ? <ModuleLoading /> : null}
-      {historyOk && !runsQuery.isLoading ? (
+      {historyOk && runsQuery.isLoading && runsQuery.data == null ? <ModuleLoading /> : null}
+      {historyOk && (!runsQuery.isLoading || runsQuery.data != null) ? (
         <>
           <KpiRow kpis={kpis} loading={false} />
           <SplitRow>
@@ -413,39 +426,51 @@ export function HistoryModule() {
               />
             </div>
           </SplitRow>
-          <div className="flex gap-1 border-b" role="tablist">
-            {(['history', 'model', 'network'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={filter.tab === tab}
-                className={cn(
-                  'rounded-t-md px-3 py-2 text-sm font-medium',
-                  filter.tab === tab ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground',
-                )}
-                onClick={() => patchFilter({ tab })}
-              >
-                {t(`history.tab.${tab}`)}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-stretch justify-between gap-x-4 gap-y-2 border-b">
+            <div className="flex items-end gap-1 self-stretch" role="tablist">
+              {(['history', 'model', 'network'] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  className={cn(
+                    'rounded-t-md px-3 py-2 text-sm font-medium',
+                    tab === id ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                  onClick={() => selectTab(id)}
+                >
+                  {t(`history.tab.${id}`)}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center self-stretch py-3">
+              <HistoryRibbon
+                selectedCount={selectedIds.length}
+                busy={busy}
+                onRefresh={() => void refresh()}
+                onDelete={() => setDeleteOpen(true)}
+                onExport={() => void exportIds(selectedIds)}
+                onPurge={() => setPurgeOpen(true)}
+              />
+            </div>
           </div>
-          {filter.tab === 'model' ? (
+          <div className={tab === 'model' ? undefined : 'hidden'}>
             <Card className={moduleCardClass}>
               <CardContent className={cn(moduleCardBodyClass, 'p-0')}>
                 <ByModelTable rows={modelRows} />
               </CardContent>
             </Card>
-          ) : null}
-          {filter.tab === 'network' ? (
+          </div>
+          <div className={tab === 'network' ? undefined : 'hidden'}>
             <Card className={moduleCardClass}>
               <CardContent className={cn(moduleCardBodyClass, 'p-0')}>
                 <ByNetworkTable rows={networkRows} />
               </CardContent>
             </Card>
-          ) : null}
-          {filter.tab === 'history' ? (
-            desktop ? (
+          </div>
+          <div className={tab === 'history' ? undefined : 'hidden'}>
+            {desktop ? (
               <SplitRow>
                 <div
                   className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
@@ -506,8 +531,8 @@ export function HistoryModule() {
                   </SheetContent>
                 </Sheet>
               </>
-            )
-          ) : null}
+            )}
+          </div>
         </>
       ) : null}
 

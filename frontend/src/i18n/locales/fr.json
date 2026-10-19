@@ -1422,6 +1422,8 @@
       "outcome": "Résultat",
       "error": "Erreur",
       "models": "Modèles",
+      "move": "Déplacer {{column}}",
+      "resize": "Modifier la largeur de {{column}}",
       "live": "Voir en direct",
       "page": "Page {{page}} sur {{pages}}",
       "prev": "Précédent",

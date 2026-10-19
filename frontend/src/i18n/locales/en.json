@@ -1494,6 +1494,8 @@
       "outcome": "Outcome",
       "error": "Error",
       "models": "Models",
+      "move": "Move {{column}}",
+      "resize": "Resize {{column}}",
       "live": "View live",
       "page": "Page {{page}} of {{pages}}",
       "prev": "Previous",
