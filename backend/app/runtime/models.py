@@ -18,6 +18,7 @@ class PingResult(ApiModel):
 class OllamaModel(ApiModel):
     name: str
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    moe: bool = False
 
 
 class ToolCall(ApiModel):
@@ -99,6 +100,7 @@ class TestLlmRequest(ApiModel):
 class RuntimeModelOut(ApiModel):
     name: str
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    moe: bool = False
 
 
 class RuntimeModelsResponse(ApiModel):

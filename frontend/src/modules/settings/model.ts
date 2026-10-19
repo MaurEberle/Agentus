@@ -174,7 +174,7 @@ export type McpServerListItem = {
 };
 
 export type RuntimePing = { ok: boolean; messageKey?: string };
-export type RuntimeModel = { name: string; sizeBytes?: number };
+export type RuntimeModel = { name: string; sizeBytes?: number; moe?: boolean };
 
 export type KvLayer = {
   bytesPerToken?: number;

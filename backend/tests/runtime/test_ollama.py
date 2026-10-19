@@ -56,6 +56,23 @@ def test_list_models_names_and_size(monkeypatch: pytest.MonkeyPatch) -> None:
     assert items[1].name == "nomic-embed-text"
 
 
+def test_list_models_marks_mixture_of_experts(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/api/tags"):
+            return httpx.Response(
+                200,
+                json={"models": [{"name": "qwen-dense"}, {"name": "qwen-moe"}]},
+            )
+        body = request.read()
+        name = b"qwen-moe" in body
+        info = {"general.architecture": "qwen3moe", "qwen3moe.expert_count": 64} if name else {}
+        return httpx.Response(200, json={"model_info": info})
+
+    install_transport(monkeypatch, handler)
+    items = {item.name: item.moe for item in list_ollama_models()}
+    assert items == {"qwen-dense": False, "qwen-moe": True}
+
+
 def test_list_models_transport_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("offline", request=request)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from app.common.http import client
@@ -270,7 +271,21 @@ def list_ollama_models(*, base_url: str | None = None) -> list[OllamaModel]:
         size = item.get("size")
         size_bytes = int(size) if isinstance(size, int) else None
         out.append(OllamaModel(name=name, size_bytes=size_bytes))
-    return out
+    if not out:
+        return out
+    with ThreadPoolExecutor(max_workers=min(8, len(out))) as pool:
+        flags = list(pool.map(lambda name: _listed_moe(name, base_url), [item.name for item in out]))
+    return [item.model_copy(update={"moe": flag}) for item, flag in zip(out, flags, strict=True)]
+
+
+def _listed_moe(name: str, base_url: str | None) -> bool:
+    """Mixture of experts from ``/api/show``. A failed lookup stays a normal model."""
+    try:
+        if not ensure_model_show(name, base_url=base_url, required=False):
+            return False
+    except RuntimeApiError:
+        return False
+    return bool(_moe_flags.get(_cache_key(name, base_url), False))
 
 
 def tag_key(name: str) -> str:

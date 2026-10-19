@@ -815,15 +815,26 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     enabled: catalogProvider && Boolean(credentialId),
   });
 
+  const ollamaChat = useMemo(
+    () => (ollamaModels.data?.items ?? []).filter((item) => !isEmbeddingModelName(item.name)),
+    [ollamaModels.data?.items],
+  );
+  const denseNames = useMemo(() => ollamaChat.filter((item) => !item.moe).map((item) => item.name), [ollamaChat]);
+  const moeNames = useMemo(() => ollamaChat.filter((item) => item.moe).map((item) => item.name), [ollamaChat]);
+  const ollamaListReady = provider === 'ollama' && ollamaModels.isSuccess && !ollamaModels.isFetching;
+  const onlyMoe = ollamaListReady && moeNames.length > 0 && denseNames.length === 0;
+  const onlyDense = ollamaListReady && denseNames.length > 0 && moeNames.length === 0;
+  const storedKind = node.data.modelKind === 'moe' ? 'moe' : node.data.modelKind === 'dense' ? 'dense' : null;
+  const modelKind: 'dense' | 'moe' = onlyMoe
+    ? 'moe'
+    : onlyDense
+      ? 'dense'
+      : (storedKind ?? (moeNames.includes(model) ? 'moe' : 'dense'));
   const modelOptions = useMemo(() => {
-    const items =
-      provider === 'ollama'
-        ? (ollamaModels.data?.items ?? [])
-        : catalogProvider
-          ? (catalogModels.data?.items ?? [])
-          : [];
-    return items.map((item) => item.name).filter((name) => !isEmbeddingModelName(name));
-  }, [catalogModels.data?.items, catalogProvider, ollamaModels.data?.items, provider]);
+    if (provider === 'ollama') return modelKind === 'moe' ? moeNames : denseNames;
+    if (!catalogProvider) return [];
+    return (catalogModels.data?.items ?? []).map((item) => item.name).filter((name) => !isEmbeddingModelName(name));
+  }, [catalogModels.data?.items, catalogProvider, denseNames, moeNames, modelKind, provider]);
   const modelsLoading =
     provider === 'ollama'
       ? ollamaModels.isPending || ollamaModels.isFetching
@@ -834,14 +845,20 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
 
   useEffect(() => {
     if (readOnly || modelLocked || modelsLoading) return;
+    const patch: Record<string, unknown> = {};
+    if (provider === 'ollama' && node.data.modelKind !== modelKind) patch.modelKind = modelKind;
     if (modelOptions.length === 0) {
-      if (model) editorUpdateNodeData(node.id, { model: '' });
-      return;
+      if (model) patch.model = '';
+    } else if (!modelOptions.includes(model)) {
+      patch.model = modelOptions[0];
+      patch.numCtx = undefined;
+      patch.numGpu = undefined;
+      patch.numGpuPercent = undefined;
+      patch.numGpuLayers = undefined;
+      patch.gpuPlacement = undefined;
     }
-    if (!modelOptions.includes(model)) {
-      editorUpdateNodeData(node.id, { model: modelOptions[0] });
-    }
-  }, [model, modelLocked, modelOptions, modelsLoading, node.id, readOnly]);
+    if (Object.keys(patch).length > 0) editorUpdateNodeData(node.id, patch);
+  }, [model, modelKind, modelLocked, modelOptions, modelsLoading, node.data.modelKind, node.id, provider, readOnly]);
   const catalogFailed =
     catalogProvider &&
     Boolean(credentialId) &&
@@ -862,6 +879,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numGpuLayers = undefined;
       patch.gpuPlacement = undefined;
       patch.kvCacheType = undefined;
+      patch.modelKind = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -930,6 +948,39 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         </Select>
       </Field>
       {catalogProvider ? credentialField : null}
+      {provider === 'ollama' ? (
+        <Field label={t('network.inspector.llm.modelKind')}>
+          <Select
+            value={modelKind}
+            disabled={readOnly || modelsLoading}
+            onValueChange={(value) => {
+              const next = value === 'moe' ? 'moe' : 'dense';
+              const options = next === 'moe' ? moeNames : denseNames;
+              editorUpdateNodeData(node.id, {
+                modelKind: next,
+                model: options.includes(model) ? model : (options[0] ?? ''),
+                numCtx: undefined,
+                numGpu: undefined,
+                numGpuPercent: undefined,
+                numGpuLayers: undefined,
+                gpuPlacement: undefined,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dense" disabled={ollamaListReady && denseNames.length === 0 && moeNames.length > 0}>
+                {t('network.inspector.llm.kindDense')}
+              </SelectItem>
+              <SelectItem value="moe" disabled={ollamaListReady && moeNames.length === 0 && denseNames.length > 0}>
+                {t('network.inspector.llm.kindMoe')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
       <Field label={t('network.inspector.llm.model')}>
         <ModelCombobox
           value={modelLocked ? '' : model}
