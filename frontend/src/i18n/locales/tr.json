@@ -1025,7 +1025,9 @@
       "none": "Ağ seçilmedi.",
       "multi": "{{count}} seçildi",
       "noDescription": "Açıklama yok.",
-      "lastRun": "Son çalıştırma"
+      "lastRun": "Son çalıştırma",
+      "resize": "Ayrıntı genişliğini değiştir",
+      "graphLoading": "Graf yükleniyor…"
     },
     "empty": {
       "library": "Henüz kayıtlı ağ yok.",

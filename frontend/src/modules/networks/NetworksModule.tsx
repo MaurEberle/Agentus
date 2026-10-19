@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +35,30 @@ import { useNetworksUi } from '@/modules/networks/store';
 import type { AgentNetworkDocument } from '@/modules/network/model/document';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 
+const DETAIL_MIN = 320;
+
+function useDetailWidth() {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = Number(window.localStorage.getItem('agentus.networks.detailWidth'));
+      if (Number.isFinite(raw) && raw >= DETAIL_MIN) return raw;
+    } catch {
+      /* ignore private mode */
+    }
+    return DETAIL_MIN;
+  });
+  const setWidth = useCallback((next: number) => {
+    const clamped = Math.max(DETAIL_MIN, Math.round(next));
+    setValue(clamped);
+    try {
+      window.localStorage.setItem('agentus.networks.detailWidth', String(clamped));
+    } catch {
+      /* ignore quota */
+    }
+  }, []);
+  return [value, setWidth] as const;
+}
+
 export function NetworksModule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -70,6 +94,16 @@ export function NetworksModule() {
   const [deleteItems, setDeleteItems] = useState<NetworkListItem[] | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [detailWidth, setDetailWidth] = useDetailWidth();
+  const detailDrag = useRef({ x: 0, width: DETAIL_MIN });
+  const detailWidthRef = useRef(detailWidth);
+  detailWidthRef.current = detailWidth;
+  const libraryRowRef = useRef<HTMLDivElement>(null);
+  const detailLimit = useCallback(() => {
+    const row = libraryRowRef.current;
+    if (!row) return detailWidthRef.current;
+    return Math.max(DETAIL_MIN, row.clientWidth - 280);
+  }, []);
 
   useEffect(() => {
     pruneSelection(items.map((item) => item.id));
@@ -237,12 +271,41 @@ export function NetworksModule() {
           ) : null}
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1">
+        <div ref={libraryRowRef} className="flex min-h-0 flex-1">
           <div className="min-h-0 min-w-0 flex-1">
             <NetworkList items={filtered} loading={false} onOpen={openEditor} />
           </div>
           {isDesktop ? (
-            <aside className="hidden w-80 shrink-0 overflow-auto border-l md:block">
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t('networks.detail.resize')}
+              aria-valuenow={detailWidth}
+              aria-valuemin={DETAIL_MIN}
+              tabIndex={0}
+              className="hidden w-4 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-sm hover:bg-muted/50 focus-visible:bg-muted/50 md:flex"
+              onPointerDown={(event) => {
+                detailDrag.current = { x: event.clientX, width: detailWidth };
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              onPointerMove={(event) => {
+                if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+                const next = detailDrag.current.width - (event.clientX - detailDrag.current.x);
+                setDetailWidth(Math.min(detailLimit(), next));
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                event.preventDefault();
+                const step = event.shiftKey ? 48 : 16;
+                const delta = event.key === 'ArrowLeft' ? step : -step;
+                setDetailWidth(Math.min(detailLimit(), detailWidth + delta));
+              }}
+            >
+              <span className="h-8 w-1 rounded-full bg-border" aria-hidden />
+            </div>
+          ) : null}
+          {isDesktop ? (
+            <aside className="hidden min-h-0 shrink-0 flex-col md:flex" style={{ width: detailWidth }}>
               <DetailPanel items={selected} onOpen={openEditor} />
             </aside>
           ) : null}

@@ -1025,7 +1025,9 @@
       "none": "未选择网络。",
       "multi": "已选择 {{count}} 个",
       "noDescription": "无描述。",
-      "lastRun": "上次运行"
+      "lastRun": "上次运行",
+      "resize": "调整详情宽度",
+      "graphLoading": "正在加载图…"
     },
     "empty": {
       "library": "尚无已保存的网络。",

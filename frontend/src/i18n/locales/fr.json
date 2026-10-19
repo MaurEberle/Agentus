@@ -1025,7 +1025,9 @@
       "none": "Aucun réseau sélectionné.",
       "multi": "{{count}} sélectionnés",
       "noDescription": "Aucune description.",
-      "lastRun": "Dernière exécution"
+      "lastRun": "Dernière exécution",
+      "resize": "Modifier la largeur des détails",
+      "graphLoading": "Chargement du graphe…"
     },
     "empty": {
       "library": "Aucun réseau enregistré pour le moment.",

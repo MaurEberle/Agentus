@@ -1025,7 +1025,9 @@
       "none": "ネットワークが選択されていません。",
       "multi": "{{count}} 件選択",
       "noDescription": "説明はありません。",
-      "lastRun": "前回の実行"
+      "lastRun": "前回の実行",
+      "resize": "詳細の幅を変更",
+      "graphLoading": "グラフを読み込み中…"
     },
     "empty": {
       "library": "保存済みネットワークはまだありません。",

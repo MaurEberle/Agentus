@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import type { NetworkListItem } from '@/modules/dashboard/model';
 import { validationBadgeVariant } from '@/modules/dashboard/model';
 import { formatStamp } from '@/modules/networks/model/format';
+import { ReadonlyGraph } from '@/modules/networks/detail/ReadonlyGraph';
 
 export function DetailPanel({
   items,
@@ -22,7 +23,8 @@ export function DetailPanel({
   }
   const item = items[0];
   return (
-    <div className="space-y-3 p-3">
+    <div className="flex min-h-0 w-full flex-1 flex-col">
+      <div className="space-y-3 p-3">
       <div>
         <h2 className="text-sm font-semibold">{item.name}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{item.description || t('networks.detail.noDescription')}</p>
@@ -63,6 +65,10 @@ export function DetailPanel({
         <Button type="button" size="sm" onClick={() => onOpen(item.id)}>
           {t('networks.ribbon.open')}
         </Button>
+      </div>
+      </div>
+      <div className="min-h-64 flex-1 border-t">
+        <ReadonlyGraph id={item.id} />
       </div>
     </div>
   );

@@ -1097,7 +1097,9 @@
       "none": "No network selected.",
       "multi": "{{count}} selected",
       "noDescription": "No description.",
-      "lastRun": "Last run"
+      "lastRun": "Last run",
+      "resize": "Resize details",
+      "graphLoading": "Loading graph…"
     },
     "empty": {
       "library": "No saved networks yet.",

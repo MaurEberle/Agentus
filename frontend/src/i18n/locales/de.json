@@ -1097,7 +1097,9 @@
       "none": "Kein Netz ausgewählt.",
       "multi": "{{count}} ausgewählt",
       "noDescription": "Keine Beschreibung.",
-      "lastRun": "Letzter Lauf"
+      "lastRun": "Letzter Lauf",
+      "resize": "Detailbreite ändern",
+      "graphLoading": "Graph wird geladen…"
     },
     "empty": {
       "library": "Noch keine gespeicherten Netze.",

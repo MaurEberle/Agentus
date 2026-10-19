@@ -1025,7 +1025,9 @@
       "none": "Nenhuma rede selecionada.",
       "multi": "{{count}} selecionadas",
       "noDescription": "Sem descrição.",
-      "lastRun": "Última execução"
+      "lastRun": "Última execução",
+      "resize": "Alterar a largura dos detalhes",
+      "graphLoading": "A carregar o grafo…"
     },
     "empty": {
       "library": "Ainda sem redes guardadas.",
