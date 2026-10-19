@@ -303,7 +303,7 @@ export function FlowCanvas({
         className="network-flow h-full bg-background"
       >
         {showGrid ? <Background variant={BackgroundVariant.Dots} gap={16} size={1} /> : null}
-        <Controls showInteractive={!readOnly} />
+        <Controls showInteractive={false} />
         {showMinimap ? <MiniMap pannable zoomable /> : null}
       </ReactFlow>
       {empty ? (
