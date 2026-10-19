@@ -1188,7 +1188,8 @@
       "waiting": "等待中",
       "running": "运行中",
       "done": "完成",
-      "error": "错误"
+      "error": "错误",
+      "halted": "已停止"
     },
     "wait": {
       "none": "无等待",

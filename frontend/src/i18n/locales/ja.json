@@ -1188,7 +1188,8 @@
       "waiting": "待機中",
       "running": "実行中",
       "done": "完了",
-      "error": "エラー"
+      "error": "エラー",
+      "halted": "停止"
     },
     "wait": {
       "none": "待機なし",

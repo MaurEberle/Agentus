@@ -70,6 +70,7 @@ const STATUS_CLASS: Record<NodeRuntimeStatus, string> = {
   running: 'border-primary ring-2 ring-primary',
   done: 'border-muted-foreground/40',
   error: 'border-destructive ring-2 ring-destructive',
+  halted: 'border-warning ring-2 ring-warning',
 };
 
 export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
@@ -124,6 +125,7 @@ export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
           data.status === 'running' && 'bg-primary/15 text-primary',
           data.status === 'waiting' && 'bg-warning/15 text-warning-foreground',
           data.status === 'error' && 'bg-destructive/15 text-destructive',
+          data.status === 'halted' && 'bg-warning/15 text-warning-foreground',
           data.status === 'done' && 'bg-muted text-muted-foreground',
           data.status === 'idle' && 'bg-muted text-muted-foreground',
         )}

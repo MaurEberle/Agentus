@@ -1188,7 +1188,8 @@
       "waiting": "A aguardar",
       "running": "Em execução",
       "done": "Concluído",
-      "error": "Erro"
+      "error": "Erro",
+      "halted": "Parado"
     },
     "wait": {
       "none": "Sem espera",

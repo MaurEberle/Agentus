@@ -3,6 +3,31 @@ import type { RunDetail } from '@/modules/history/model/types';
 import { maskLog } from '@/modules/monitoring/model/mask';
 import type { ChatMessage, LogEvent, NodeRuntime, RunGraph, RunSnapshot } from '@/modules/monitoring/model/types';
 
+function settleStoppedRun(
+  nodesRuntime: Record<string, NodeRuntime>,
+  steps: RunDetail['steps'],
+) {
+  const open: string[] = [];
+  for (const step of steps ?? []) {
+    const at = open.indexOf(step.nodeId);
+    if (step.status === 'running' || step.status === 'waiting') {
+      if (at >= 0) open.splice(at, 1);
+      open.push(step.nodeId);
+    } else if (at >= 0) {
+      open.splice(at, 1);
+    }
+  }
+  const lastId = open[open.length - 1];
+  for (const [id, runtime] of Object.entries(nodesRuntime)) {
+    if (runtime.status !== 'running' && runtime.status !== 'waiting') continue;
+    if (id === lastId) runtime.status = 'halted';
+    else {
+      runtime.status = 'idle';
+      runtime.waitReason = undefined;
+    }
+  }
+}
+
 function asGraph(raw: RunDetail['graphSnapshot']): RunGraph {
   if (!raw || !Array.isArray(raw.nodes)) return { nodes: [], edges: [] };
   return {
@@ -39,6 +64,7 @@ export function snapshotFromHistory(detail: RunDetail): RunSnapshot {
       error: step.errorMessage,
     };
   }
+  settleStoppedRun(nodesRuntime, detail.steps ?? []);
   const errorStep = (detail.steps ?? []).find((step) => step.status === 'error');
   let tokensIn = 0;
   let tokensOut = 0;

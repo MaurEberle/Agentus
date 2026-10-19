@@ -198,9 +198,9 @@ export async function hydrateLastRun() {
     if (now.run?.archived && now.run.runId === loaded.run.runId && now.logs.length > 0) return;
     useMonitoringStore.setState({
       run: loaded.run,
-      logs: loaded.logs,
       lastErrorMessage: loaded.run.errorMessage ?? now.lastErrorMessage,
       ...resetForRun(loaded.run, 'keep'),
+      logs: loaded.logs,
       chatMessages: loaded.run.chat?.messages ?? [],
       chatGenerating: false,
     });

@@ -1188,7 +1188,8 @@
       "waiting": "Bekliyor",
       "running": "Çalışıyor",
       "done": "Bitti",
-      "error": "Hata"
+      "error": "Hata",
+      "halted": "Durduruldu"
     },
     "wait": {
       "none": "Bekleme yok",

@@ -1,6 +1,6 @@
 import type { ServiceStatus, WaitAsk } from '@/store/session';
 
-export type NodeRuntimeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error';
+export type NodeRuntimeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error' | 'halted';
 export type WaitReason = 'none' | 'llm' | 'tool' | 'human' | 'index' | 'knowledge' | 'thinking';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';

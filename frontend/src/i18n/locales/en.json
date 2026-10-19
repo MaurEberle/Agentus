@@ -1260,7 +1260,8 @@
       "waiting": "Waiting",
       "running": "Running",
       "done": "Done",
-      "error": "Error"
+      "error": "Error",
+      "halted": "Stopped"
     },
     "wait": {
       "none": "None",
