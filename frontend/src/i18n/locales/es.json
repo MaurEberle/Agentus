@@ -689,6 +689,7 @@
     "inspector": {
       "title": "Inspector",
       "collapse": "Contraer inspector",
+      "resize": "Cambiar el ancho del inspector",
       "expand": "Expandir inspector",
       "displayName": "Nombre visible",
       "multi": "{{count}} nodos seleccionados",

@@ -689,6 +689,7 @@
     "inspector": {
       "title": "Inspetor",
       "collapse": "Recolher inspetor",
+      "resize": "Alterar a largura do inspetor",
       "expand": "Expandir inspetor",
       "displayName": "Nome apresentado",
       "multi": "{{count}} nós selecionados",

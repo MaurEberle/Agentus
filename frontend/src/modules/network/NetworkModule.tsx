@@ -53,6 +53,33 @@ import {
 
 type DirtyAction = 'new' | 'load' | 'library' | 'leave';
 
+const INSPECTOR_MIN = 320;
+
+function useLocalWidth(key: string, fallback: number) {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = Number(window.localStorage.getItem(key));
+      if (Number.isFinite(raw) && raw >= fallback) return raw;
+    } catch {
+      /* ignore private mode */
+    }
+    return fallback;
+  });
+  const setWidth = useCallback(
+    (next: number) => {
+      const clamped = Math.max(fallback, Math.round(next));
+      setValue(clamped);
+      try {
+        window.localStorage.setItem(key, String(clamped));
+      } catch {
+        /* ignore quota */
+      }
+    },
+    [fallback, key],
+  );
+  return [value, setWidth] as const;
+}
+
 function useLocalFlag(key: string, fallback = false) {
   const [value, setValue] = useState(() => {
     try {
@@ -101,6 +128,25 @@ function NetworkEditor() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [paletteCollapsed, setPaletteCollapsed] = useLocalFlag('agentus.network.paletteCollapsed');
   const [inspectorCollapsed, setInspectorCollapsed] = useLocalFlag('agentus.network.inspectorCollapsed');
+  const [inspectorWidth, setInspectorWidth] = useLocalWidth('agentus.network.inspectorWidth', INSPECTOR_MIN);
+  const inspectorDrag = useRef({ x: 0, width: INSPECTOR_MIN });
+  const inspectorWidthRef = useRef(inspectorWidth);
+  inspectorWidthRef.current = inspectorWidth;
+  const editorRowRef = useRef<HTMLDivElement>(null);
+  const inspectorLimit = useCallback(() => {
+    const row = editorRowRef.current;
+    if (!row) return inspectorWidthRef.current;
+    return Math.max(INSPECTOR_MIN, row.clientWidth - 280);
+  }, []);
+  useEffect(() => {
+    const row = editorRowRef.current;
+    if (!row || !isDesktop) return;
+    const fit = () => setInspectorWidth(Math.min(inspectorLimit(), inspectorWidthRef.current));
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [inspectorLimit, isDesktop, setInspectorWidth]);
   const [loadOpen, setLoadOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -516,7 +562,7 @@ function NetworkEditor() {
           </Button>
         </div>
       ) : null}
-      <div className="flex min-h-0 flex-1">
+      <div ref={editorRowRef} className="flex min-h-0 flex-1">
         {isDesktop ? (
           <aside
             className={cn(
@@ -555,12 +601,42 @@ function NetworkEditor() {
             }}
           />
         </div>
+        {isDesktop && !inspectorCollapsed ? (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t('network.inspector.resize')}
+            aria-valuenow={inspectorWidth}
+            aria-valuemin={INSPECTOR_MIN}
+            tabIndex={0}
+            className="hidden w-4 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-sm hover:bg-muted/50 focus-visible:bg-muted/50 md:flex"
+            onPointerDown={(event) => {
+              inspectorDrag.current = { x: event.clientX, width: inspectorWidth };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+              const next = inspectorDrag.current.width - (event.clientX - inspectorDrag.current.x);
+              setInspectorWidth(Math.min(inspectorLimit(), next));
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+              event.preventDefault();
+              const step = event.shiftKey ? 48 : 16;
+              const delta = event.key === 'ArrowLeft' ? step : -step;
+              setInspectorWidth(Math.min(inspectorLimit(), inspectorWidth + delta));
+            }}
+          >
+            <span className="h-8 w-1 rounded-full bg-border" aria-hidden />
+          </div>
+        ) : null}
         {isDesktop ? (
           <aside
             className={cn(
-              'hidden min-w-0 shrink-0 flex-col border-l md:flex',
-              inspectorCollapsed ? 'w-11' : 'w-80',
+              'hidden min-w-0 shrink-0 flex-col md:flex',
+              inspectorCollapsed ? 'w-11 border-l' : '',
             )}
+            style={inspectorCollapsed ? undefined : { width: inspectorWidth }}
           >
             <div className={cn('flex items-center p-1', inspectorCollapsed ? 'justify-center' : 'justify-between px-2')}>
               {inspectorCollapsed ? null : (

@@ -689,6 +689,7 @@
     "inspector": {
       "title": "检查器",
       "collapse": "折叠检查器",
+      "resize": "调整检查器宽度",
       "expand": "展开检查器",
       "displayName": "显示名称",
       "multi": "已选择 {{count}} 个节点",

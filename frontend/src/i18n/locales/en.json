@@ -757,6 +757,7 @@
       "title": "Inspector",
       "collapse": "Collapse inspector",
       "expand": "Expand inspector",
+      "resize": "Resize inspector",
       "displayName": "Display name",
       "multi": "{{count}} nodes selected",
       "graph": {

@@ -689,6 +689,7 @@
     "inspector": {
       "title": "インスペクター",
       "collapse": "インスペクターを折りたたむ",
+      "resize": "インスペクターの幅を変更",
       "expand": "インスペクターを展開",
       "displayName": "表示名",
       "multi": "{{count}} 個のノードを選択",

@@ -689,6 +689,7 @@
     "inspector": {
       "title": "المفتش",
       "collapse": "طي المفتش",
+      "resize": "تغيير عرض المفتش",
       "expand": "توسيع المفتش",
       "displayName": "الاسم المعروض",
       "multi": "تم اختيار {{count}} عقد",

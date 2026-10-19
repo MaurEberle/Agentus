@@ -689,6 +689,7 @@
     "inspector": {
       "title": "Inspecteur",
       "collapse": "Réduire l’inspecteur",
+      "resize": "Modifier la largeur de l’inspecteur",
       "expand": "Développer l’inspecteur",
       "displayName": "Nom affiché",
       "multi": "{{count}} nœuds sélectionnés",

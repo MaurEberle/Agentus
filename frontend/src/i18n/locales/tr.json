@@ -689,6 +689,7 @@
     "inspector": {
       "title": "Denetçi",
       "collapse": "Denetçiyi daralt",
+      "resize": "Denetçi genişliğini değiştir",
       "expand": "Denetçiyi genişlet",
       "displayName": "Görünen ad",
       "multi": "{{count}} düğüm seçildi",

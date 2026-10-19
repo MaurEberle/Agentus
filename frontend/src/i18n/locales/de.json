@@ -757,6 +757,7 @@
       "title": "Inspector",
       "collapse": "Inspector einklappen",
       "expand": "Inspector ausklappen",
+      "resize": "Inspectorbreite ändern",
       "displayName": "Anzeigename",
       "multi": "{{count}} Knoten ausgewählt",
       "graph": {
