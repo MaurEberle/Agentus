@@ -110,9 +110,10 @@ function Canvas({ id, layoutWidth }: { id: string; layoutWidth: number }) {
         nodesConnectable={false}
         elementsSelectable={false}
         panOnDrag
-        panOnScroll
+        zoomOnScroll={false}
+        panOnScroll={false}
         zoomOnPinch
-        zoomOnScroll
+        preventScrolling={false}
         fitView
         colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
         proOptions={{ hideAttribution: true }}
