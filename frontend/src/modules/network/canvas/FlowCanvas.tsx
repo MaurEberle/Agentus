@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   applyEdgeChanges,
   applyNodeChanges,
@@ -50,11 +50,11 @@ export function FlowCanvas({
   const { resolvedTheme } = useTheme();
   const { screenToFlowPosition, fitView, getViewport } = useReactFlow();
   const document = useNetworkEditor((state) => state.document);
-  const selectedNodeIds = useNetworkEditor((state) => state.selectedNodeIds);
   const snap = useNetworkEditor((state) => state.snap);
   const showGrid = useNetworkEditor((state) => state.showGrid);
   const showMinimap = useNetworkEditor((state) => state.showMinimap);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const panePointer = useRef<{ x: number; y: number } | null>(null);
   const mcp = useMcpServersQuery();
   const mcpRecipes = useMcpRecipesQuery();
 
@@ -85,23 +85,31 @@ export function FlowCanvas({
   );
 
   useEffect(() => {
-    setNodes(
-      document.nodes.map((node) => ({
-        id: node.id,
-        type: 'network',
-        position: node.position,
-        selected: selectedNodeIds.includes(node.id),
-        draggable: !readOnly,
-        className: 'overflow-visible',
-        data: {
-          graph: node,
-          issues: issuesForNode(issues, node.id),
-          readOnly,
-          connected: connectedPortKeys(node.id, document.edges),
-          portContext,
-        },
-      })),
-    );
+    const { selectedNodeIds, selectedEdgeIds } = useNetworkEditor.getState();
+    const selectedNodes = new Set(selectedNodeIds);
+    const selectedEdges = new Set(selectedEdgeIds);
+    setNodes((current) => {
+      const prior = new Map(current.map((node) => [node.id, node]));
+      return document.nodes.map((node) => {
+        const previous = prior.get(node.id);
+        return {
+          id: node.id,
+          type: 'network',
+          position: node.position,
+          selected: selectedNodes.has(node.id),
+          draggable: !readOnly,
+          className: 'overflow-visible',
+          measured: previous?.measured,
+          data: {
+            graph: node,
+            issues: issuesForNode(issues, node.id),
+            readOnly,
+            connected: connectedPortKeys(node.id, document.edges),
+            portContext,
+          },
+        };
+      });
+    });
     setEdges(
       document.edges.map((edge) => {
         const sourceNode = document.nodes.find((item) => item.id === edge.source);
@@ -114,12 +122,13 @@ export function FlowCanvas({
           sourceHandle: handles.sourceHandle,
           targetHandle: handles.targetHandle,
           type: 'default',
+          selected: selectedEdges.has(edge.id),
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
           className: issues.some((issue) => issue.edgeId === edge.id) ? '!stroke-destructive' : undefined,
         };
       }),
     );
-  }, [graphSig, issues, portContext, readOnly, document.edges, document.nodes, selectedNodeIds]);
+  }, [graphSig, issues, portContext, readOnly, document.edges, document.nodes]);
 
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
@@ -181,10 +190,52 @@ export function FlowCanvas({
     [readOnly, screenToFlowPosition, snap],
   );
 
+  const replaceSelection = useCallback((nodeIds: string[], edgeIds: string[]) => {
+    const nodeSet = new Set(nodeIds);
+    const edgeSet = new Set(edgeIds);
+    setNodes((current) => {
+      const changes = current
+        .filter((node) => Boolean(node.selected) !== nodeSet.has(node.id))
+        .map((node) => ({ id: node.id, type: 'select' as const, selected: nodeSet.has(node.id) }));
+      return changes.length === 0 ? current : applyNodeChanges(changes, current);
+    });
+    setEdges((current) => {
+      const changes = current
+        .filter((edge) => Boolean(edge.selected) !== edgeSet.has(edge.id))
+        .map((edge) => ({ id: edge.id, type: 'select' as const, selected: edgeSet.has(edge.id) }));
+      return changes.length === 0 ? current : applyEdgeChanges(changes, current);
+    });
+    useNetworkEditor.getState().select(nodeIds, edgeIds);
+  }, []);
+
   const empty = document.nodes.length === 0;
 
+  const clearPaneSelection = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = panePointer.current;
+    panePointer.current = null;
+    if (!start || event.button !== 0) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (
+      target.closest(
+        '.react-flow__node, .react-flow__edge, .react-flow__handle, .react-flow__controls, .react-flow__minimap, .react-flow__panel, .react-flow__attribution',
+      )
+    ) {
+      return;
+    }
+    if (!target.closest('.react-flow__pane')) return;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) return;
+    replaceSelection([], []);
+  };
+
   return (
-    <div className="relative h-full min-h-0 w-full">
+    <div
+      className="relative h-full min-h-0 w-full"
+      onPointerDown={(event) => {
+        panePointer.current = { x: event.clientX, y: event.clientY };
+      }}
+      onPointerUp={clearPaneSelection}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -203,29 +254,31 @@ export function FlowCanvas({
           );
         }}
         onSelectionChange={({ nodes: selNodes, edges: selEdges }) => {
-          if (selNodes.length === 0 && selEdges.length === 0) return;
           useNetworkEditor.getState().select(
             selNodes.map((node) => node.id),
             selEdges.map((edge) => edge.id),
           );
         }}
-        onPaneClick={() => useNetworkEditor.getState().select([])}
+        onNodeClick={(event, node) => {
+          if (event.shiftKey) return;
+          replaceSelection([node.id], []);
+        }}
+        onPaneClick={() => replaceSelection([], [])}
         onPaneContextMenu={(event) => {
           event.preventDefault();
           setMenu({kind: 'pane', x: event.clientX, y: event.clientY, flow: screenToFlowPosition({ x: event.clientX, y: event.clientY })});
         }}
-        onNodeDoubleClick={(_event, node) => {
-          useNetworkEditor.getState().select([node.id]);
+        onNodeDoubleClick={() => {
           onOpenInspector?.();
         }}
         onNodeContextMenu={(event, node) => {
           event.preventDefault();
-          useNetworkEditor.getState().select([node.id]);
+          replaceSelection([node.id], []);
           setMenu({ kind: 'node', x: event.clientX, y: event.clientY, id: node.id });
         }}
         onEdgeContextMenu={(event, edge) => {
           event.preventDefault();
-          useNetworkEditor.getState().select([], [edge.id]);
+          replaceSelection([], [edge.id]);
           setMenu({ kind: 'edge', x: event.clientX, y: event.clientY, id: edge.id });
         }}
         onMoveEnd={() => useNetworkEditor.getState().setViewport(getViewport())}
@@ -241,6 +294,7 @@ export function FlowCanvas({
         deleteKeyCode={[]}
         multiSelectionKeyCode="Shift"
         selectionOnDrag
+        paneClickDistance={8}
         panOnDrag={[1]}
         panOnScroll
         zoomOnPinch
