@@ -18,10 +18,18 @@ export function DetailPanel({
 }) {
   const { t, i18n } = useTranslation();
   if (items.length === 0) {
-    return <p className="p-3 text-sm text-muted-foreground">{t('networks.detail.none')}</p>;
+    return (
+      <p className="flex h-full min-h-0 flex-1 items-center justify-center p-3 text-center text-sm text-muted-foreground">
+        {t('networks.detail.none')}
+      </p>
+    );
   }
   if (items.length > 1) {
-    return <p className="p-3 text-sm text-muted-foreground">{t('networks.detail.multi', { count: items.length })}</p>;
+    return (
+      <p className="flex h-full min-h-0 flex-1 items-center justify-center p-3 text-center text-sm text-muted-foreground">
+        {t('networks.detail.multi', { count: items.length })}
+      </p>
+    );
   }
   const item = items[0];
   return (
