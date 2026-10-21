@@ -167,7 +167,6 @@ packaging/    PyInstaller-Spec
 installer/    NSIS, vendor.lock.json, Lizenz
 resources/    Hilfe-Markdown (de, en, es, fr, tr, pt, zh, ja, ar), App-Icon
 scripts/      build-windows.ps1
-prompts/      Produkt- und Coding-Prompts (features.md, build.md)
 ```
 
 Detaillierte Modul-READMEs: [`frontend/README.md`](frontend/README.md), [`backend/README.md`](backend/README.md). Die verbindliche Bau-Reihenfolge steht in `prompts/build.md`.
