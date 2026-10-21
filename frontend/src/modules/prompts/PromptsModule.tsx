@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { MarkdownView } from '@/components/MarkdownView';
+import { TagInput, type TagInputHandle } from '@/components/TagInput';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
@@ -77,6 +78,13 @@ export function PromptsModule() {
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const query = useQuery({ queryKey: ['prompts'], queryFn: listPrompts });
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
+  const tagSuggestions = useMemo(() => {
+    const tags = new Set<string>();
+    for (const item of items) {
+      for (const tag of item.tags) tags.add(tag);
+    }
+    return [...tags].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  }, [items]);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<'name' | 'updated'>('updated');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -325,6 +333,7 @@ export function PromptsModule() {
         open={editor !== null}
         initial={editor && editor !== 'new' ? editor : null}
         busy={busy}
+        suggestions={tagSuggestions}
         onClose={() => setEditor(null)}
         onSave={(draft) => void run(async () => {
           if (editor && editor !== 'new') await updatePrompt(editor.id, draft);
@@ -379,26 +388,29 @@ function PromptEditor({
   open,
   initial,
   busy,
+  suggestions,
   onClose,
   onSave,
 }: {
   open: boolean;
   initial: PromptDetail | null;
   busy: boolean;
+  suggestions: string[];
   onClose: () => void;
   onSave: (draft: PromptDraft) => void;
 }) {
   const { t } = useTranslation();
+  const tagRef = useRef<TagInputHandle>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [tags, setTags] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [body, setBody] = useState('');
 
   useEffect(() => {
     if (!open) return;
     setName(initial?.name ?? '');
     setDescription(initial?.description ?? '');
-    setTags(initial?.tags.join(', ') ?? '');
+    setTags(initial?.tags ?? []);
     setBody(initial?.body ?? '');
   }, [initial, open]);
 
@@ -419,7 +431,21 @@ function PromptEditor({
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="prompt-tags">{t('prompts.editor.tags')}</Label>
-            <Input id="prompt-tags" value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t('prompts.editor.tagsHint')} />
+            <TagInput
+              ref={tagRef}
+              id="prompt-tags"
+              value={tags}
+              onChange={setTags}
+              disabled={busy}
+              placeholder={t('networks.tags.placeholder')}
+              addLabel={t('networks.tags.add')}
+              removeLabel={(tag) => t('networks.tags.remove', { tag })}
+              suggestions={suggestions}
+              describedBy="prompt-tags-hint"
+            />
+            <p id="prompt-tags-hint" className="text-xs text-muted-foreground">
+              {t('networks.tags.hint')}
+            </p>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="prompt-body">{t('prompts.editor.body')}</Label>
@@ -428,7 +454,18 @@ function PromptEditor({
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>{t('prompts.dialog.cancel')}</Button>
-          <Button type="button" disabled={busy || !name.trim()} onClick={() => onSave({ name: name.trim(), description: description.trim(), tags: parseTagTokens(tags), body })}>
+          <Button
+            type="button"
+            disabled={busy || !name.trim()}
+            onClick={() =>
+              onSave({
+                name: name.trim(),
+                description: description.trim(),
+                tags: tagRef.current?.commitDraft() ?? tags,
+                body,
+              })
+            }
+          >
             {t('prompts.editor.save')}
           </Button>
         </DialogFooter>
