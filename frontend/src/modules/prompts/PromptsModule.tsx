@@ -149,6 +149,17 @@ export function PromptsModule() {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
+  async function openEditor(id: string) {
+    if (busy) return;
+    setSelectedIds([id]);
+    try {
+      const detail = detailQuery.data?.id === id ? detailQuery.data : await getPrompt(id);
+      setEditor(detail);
+    } catch {
+      notify({ titleKey: 'prompts.notify.failed', variant: 'error' });
+    }
+  }
+
   async function onExport() {
     await run(async () => {
       if (selected.length === 1) {
@@ -209,7 +220,12 @@ export function PromptsModule() {
             {filtered.map((item) => (
               <li key={item.id} className={cn('flex items-center gap-2 border-b px-3 py-2', activeId === item.id && 'bg-accent/60')}>
                 <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggle(item.id)} aria-label={item.name} className="p-0" />
-                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setSelectedIds([item.id])}>
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => setSelectedIds([item.id])}
+                  onDoubleClick={() => void openEditor(item.id)}
+                >
                   <span className="block truncate font-medium">{item.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">{item.description || item.tags.join(', ') || '—'}</span>
                 </button>
