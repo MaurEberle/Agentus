@@ -21,8 +21,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
 import { ExportCancelled, saveExportFile } from '@/lib/saveFile';
 import { parseTagTokens } from '@/lib/tags';
-import { HeightGrip, WidthGrip } from '@/modules/monitoring/PaneGrips';
-import { clampPaneHeight } from '@/modules/monitoring/panes';
+import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { formatDateTime } from '@/modules/history/model/format';
 import {
   createPrompt,
@@ -46,7 +45,7 @@ const PANE_KEY = 'agentus.prompts.panes';
 const DETAIL_SHARE = 0.2;
 const DEFAULT_LIST_SHARE = 1 - DETAIL_SHARE;
 
-type Panes = { listH: number; detailH: number; listShare: number; v: number };
+type Panes = { listShare: number; v: number };
 
 function clampListShare(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_LIST_SHARE;
@@ -54,13 +53,11 @@ function clampListShare(value: number): number {
 }
 
 function loadPanes(): Panes {
-  const fallback: Panes = { listH: 480, detailH: 560, listShare: DEFAULT_LIST_SHARE, v: 3 };
+  const fallback: Panes = { listShare: DEFAULT_LIST_SHARE, v: 3 };
   try {
     const raw = JSON.parse(window.localStorage.getItem(PANE_KEY) || '') as Partial<Panes>;
     const storedVersion = Number(raw.v) || 1;
     return {
-      listH: clampPaneHeight(Number(raw.listH) || fallback.listH),
-      detailH: clampPaneHeight(Number(raw.detailH) || fallback.detailH),
       listShare: storedVersion < 3 ? DEFAULT_LIST_SHARE : clampListShare(Number(raw.listShare)),
       v: 3,
     };
@@ -288,10 +285,7 @@ export function PromptsModule() {
       {query.isLoading ? <ModuleLoading /> : (
         <div data-split-row className="flex min-h-0 w-full flex-1">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="min-h-0 w-full overflow-hidden" style={{ height: panes.listH, maxHeight: '100%' }}>
-              {listPane}
-            </div>
-            <HeightGrip label={t('prompts.resize.listHeight')} value={panes.listH} onChange={(listH) => setPanes((current) => ({ ...current, listH: clampPaneHeight(listH) }))} />
+            <div className="min-h-0 w-full flex-1 overflow-hidden">{listPane}</div>
           </div>
           {isDesktop ? (
             <WidthGrip
@@ -302,13 +296,10 @@ export function PromptsModule() {
           ) : null}
           {isDesktop ? (
             <div
-              className="flex min-h-0 min-w-0 shrink-0 flex-col"
+              className="flex h-full min-h-0 min-w-0 shrink-0 flex-col"
               style={{ width: `${(1 - panes.listShare) * 100}%` }}
             >
-              <div className="min-h-0 w-full min-w-0 overflow-hidden" style={{ height: panes.detailH, maxHeight: '100%' }}>
-                {detail}
-              </div>
-              <HeightGrip label={t('prompts.resize.detailHeight')} value={panes.detailH} onChange={(detailH) => setPanes((current) => ({ ...current, detailH: clampPaneHeight(detailH) }))} />
+              <div className="min-h-0 w-full min-w-0 flex-1 overflow-hidden">{detail}</div>
             </div>
           ) : null}
         </div>
