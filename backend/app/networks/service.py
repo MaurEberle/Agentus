@@ -13,6 +13,7 @@ from app.db.networks import (
     list_networks,
     upsert_network,
 )
+from app.db.runs import latest_run_id_by_network
 from app.http.errors import AppError
 from app.run.graph_models import AgentNetworkDocument
 from app.run.knowledge import index_node, status_for_network
@@ -34,7 +35,7 @@ def _running_id() -> str | None:
     return None
 
 
-def _item(row: NetworkRow) -> dict[str, Any]:
+def _item(row: NetworkRow, *, last_run_id: str | None) -> dict[str, Any]:
     doc = AgentNetworkDocument.model_validate(row.document) if row.document else None
     errors = []
     status = "unknown"
@@ -63,12 +64,14 @@ def _item(row: NetworkRow) -> dict[str, Any]:
         "validationErrors": errors or None,
         "isActive": settings.active_network_id == row.id,
         "isRunning": running == row.id,
-        "lastRunId": row.last_run_id,
+        "lastRunId": last_run_id,
     }
 
 
 def list_network_items() -> list[dict[str, Any]]:
-    return [_item(row) for row in list_networks()]
+    rows = list_networks()
+    latest = latest_run_id_by_network()
+    return [_item(row, last_run_id=latest.get(row.id)) for row in rows]
 
 
 def get_network_document(network_id: str) -> dict[str, Any]:
@@ -159,7 +162,10 @@ def patch_network(network_id: str, patch: dict[str, Any]) -> dict[str, Any]:
             last_run_id=row.last_run_id,
         )
     )
-    return _item(get_network(network_id))  # type: ignore[arg-type]
+    saved = get_network(network_id)
+    if saved is None:
+        raise AppError("networks.notFound", status_code=404)
+    return _item(saved, last_run_id=latest_run_id_by_network().get(network_id))
 
 
 def add_tags(ids: list[str], tags: list[str]) -> list[dict[str, Any]]:
