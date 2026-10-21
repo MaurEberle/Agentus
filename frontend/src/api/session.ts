@@ -23,6 +23,8 @@ const START_ERROR_DESC: Record<string, string> = {
   'graph.knowledge.helpCorpus': 'network.validation.knowledgeHelpCorpus',
   'graph.knowledge.dataDir': 'network.validation.knowledgeDataDir',
   'graph.fileAccess.root': 'network.validation.fileAccessRoot',
+  'graph.terminal.root': 'network.validation.terminalRoot',
+  'graph.terminal.programs': 'network.validation.terminalPrograms',
   'graph.cycle': 'network.validation.cycle',
   'graph.agent.noLlm': 'network.validation.agentLlm',
   'graph.agent.noMessage': 'network.validation.agentMessage',

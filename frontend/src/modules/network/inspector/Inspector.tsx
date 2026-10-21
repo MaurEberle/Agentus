@@ -1136,7 +1136,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
   const kind = String(node.data.kind ?? 'datetime');
-  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access'] as const;
+  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access', 'terminal'] as const;
   const searchProvider = String(node.data.searchProvider ?? 'brave');
   const items = credentials.data?.items ?? [];
   const matching = items.filter((item) =>
@@ -1227,6 +1227,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
         </Field>
       ) : null}
       {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
+      {kind === 'terminal' ? <TerminalFields node={node} readOnly={readOnly} /> : null}
       {kind === 'datetime' ? (
         <p className="text-xs text-muted-foreground">{t('network.inspector.tool.dateHint')}</p>
       ) : null}
@@ -1593,6 +1594,134 @@ function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boole
           </label>
         ))}
       </div>
+    </>
+  );
+}
+
+const TERMINAL_CHOICES = ['git', 'python', 'py', 'dotnet', 'node', 'npm', 'pnpm', 'cargo', 'go'] as const;
+const TERMINAL_DEFAULT = ['git', 'python', 'py', 'dotnet'];
+
+function TerminalFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
+  const [extra, setExtra] = useState('');
+  const unrestricted = String(node.data.terminalMode ?? 'restricted') === 'unrestricted';
+  const stored = Array.isArray(node.data.terminalPrograms) ? node.data.terminalPrograms.map(String) : null;
+  const selected = stored ?? TERMINAL_DEFAULT;
+
+  function applyPath(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed) return;
+    editorUpdateNodeData(node.id, { rootPath: trimmed });
+    if (isForbiddenDataRoot(trimmed)) {
+      notify({ titleKey: 'network.validation.terminalRoot', variant: 'error' });
+    }
+  }
+
+  async function pick() {
+    setPicking(true);
+    try {
+      const path = await pickFolderPath();
+      if (path) applyPath(path);
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  function setPrograms(next: string[]) {
+    editorUpdateNodeData(node.id, { terminalPrograms: next });
+  }
+
+  function addExtra() {
+    const name = extra.trim().replace(/\.exe$/i, '').toLowerCase();
+    if (!/^[a-z0-9._+-]{1,40}$/.test(name)) return;
+    setPrograms([...new Set([...selected, name])]);
+    setExtra('');
+  }
+
+  return (
+    <>
+      <Field label={t('network.inspector.tool.rootPath')}>
+        <div className="flex gap-2">
+          <Input
+            value={String(node.data.rootPath ?? '')}
+            disabled={readOnly}
+            spellCheck={false}
+            autoComplete="off"
+            title={String(node.data.rootPath ?? '')}
+            className="min-w-0 font-mono text-xs"
+            onChange={(event) => editorUpdateNodeData(node.id, { rootPath: event.target.value })}
+          />
+          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} loading={picking} onClick={() => void pick()}>
+            {t('network.inspector.tool.pickRoot')}
+          </Button>
+        </div>
+      </Field>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={unrestricted}
+          disabled={readOnly}
+          onCheckedChange={(value) =>
+            editorUpdateNodeData(node.id, { terminalMode: value === true ? 'unrestricted' : 'restricted' })
+          }
+        />
+        {t('network.inspector.tool.terminalUnrestricted')}
+      </label>
+      <p className="text-xs text-muted-foreground">
+        {t(unrestricted ? 'network.inspector.tool.terminalUnrestrictedHint' : 'network.inspector.tool.terminalHint')}
+      </p>
+      {unrestricted ? null : (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t('network.inspector.tool.terminalPrograms')}</p>
+          {TERMINAL_CHOICES.map((program) => (
+            <label key={program} className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={selected.includes(program)}
+                disabled={readOnly}
+                onCheckedChange={(value) => {
+                  const next = new Set(selected);
+                  if (value === true) next.add(program);
+                  else next.delete(program);
+                  setPrograms([...next]);
+                }}
+              />
+              {program}
+            </label>
+          ))}
+          {selected
+            .filter((program) => !TERMINAL_CHOICES.includes(program as (typeof TERMINAL_CHOICES)[number]))
+            .map((program) => (
+              <label key={program} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked
+                  disabled={readOnly}
+                  onCheckedChange={() => setPrograms(selected.filter((item) => item !== program))}
+                />
+                {program}
+              </label>
+            ))}
+          <div className="flex gap-2">
+            <Input
+              value={extra}
+              disabled={readOnly}
+              spellCheck={false}
+              autoComplete="off"
+              placeholder={t('network.inspector.tool.terminalProgramPlaceholder')}
+              className="min-w-0 font-mono text-xs"
+              onChange={(event) => setExtra(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addExtra();
+                }
+              }}
+            />
+            <Button type="button" size="sm" variant="outline" disabled={readOnly || !extra.trim()} onClick={addExtra}>
+              {t('network.inspector.tool.terminalProgramAdd')}
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

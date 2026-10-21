@@ -303,6 +303,16 @@ function validateNode(
         issues.push({ nodeId: node.id, messageKey: 'network.validation.fileAccessRoot' });
       }
     }
+    if (kind === 'terminal') {
+      const root = asString(node.data.rootPath);
+      if (!root || isForbiddenDataRoot(root)) {
+        issues.push({ nodeId: node.id, messageKey: 'network.validation.terminalRoot' });
+      }
+      const mode = asString(node.data.terminalMode) || 'restricted';
+      if (mode !== 'unrestricted' && Array.isArray(node.data.terminalPrograms) && node.data.terminalPrograms.length === 0) {
+        issues.push({ nodeId: node.id, messageKey: 'network.validation.terminalPrograms' });
+      }
+    }
   }
   if (node.type === 'router') {
     issues.push(...validateRouter(node, doc));

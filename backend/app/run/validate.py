@@ -320,6 +320,21 @@ def validate_document(
                             errors.append(_err("graph.fileAccess.root", node.id))
                     except (ValueError, OSError):
                         errors.append(_err("graph.fileAccess.root", node.id))
+            if kind == "terminal":
+                root = str(node.data.get("rootPath") or "").strip()
+                if not root:
+                    errors.append(_err("graph.terminal.root", node.id))
+                else:
+                    try:
+                        root_path = Path(root).expanduser()
+                        if not root_path.is_absolute() or is_forbidden_root(root_path):
+                            errors.append(_err("graph.terminal.root", node.id))
+                    except (ValueError, OSError):
+                        errors.append(_err("graph.terminal.root", node.id))
+                mode = str(node.data.get("terminalMode") or "restricted").strip().lower()
+                programs = node.data.get("terminalPrograms")
+                if mode != "unrestricted" and isinstance(programs, list) and not programs:
+                    errors.append(_err("graph.terminal.programs", node.id))
         if node.type == "knowledge":
             path = str(node.data.get("sourcePath") or "")
             reason = _knowledge_reason(path, data_dir)
