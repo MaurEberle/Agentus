@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { MarkdownView } from '@/components/MarkdownView';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
@@ -246,7 +247,7 @@ export function PromptsModule() {
               <Badge key={tag} variant="outline">{tag}</Badge>
             ))}
           </div>
-          <pre className="w-full min-w-0 whitespace-pre-wrap break-words rounded-md border bg-muted/30 p-3 text-sm">{detailQuery.data.body}</pre>
+          <MarkdownView text={detailQuery.data.body} />
         </div>
       )}
     </div>
