@@ -28,7 +28,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
           <span className="sr-only">{t('shell.language')}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="app-no-drag max-h-80 min-w-44 overflow-y-auto">
+      <DropdownMenuContent align="end" className="app-no-drag h-auto max-h-none min-w-44 overflow-visible">
         {APP_LANGUAGES.map((code) => (
           <DropdownMenuItem
             key={code}

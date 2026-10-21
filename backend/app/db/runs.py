@@ -402,6 +402,23 @@ def list_runs(
     return [_run_dict(row) for row in rows], total
 
 
+def latest_run_id_by_network() -> dict[str, str]:
+    """Newest run that still exists for each network. History may be missing."""
+    try:
+        with locked("history") as conn:
+            rows = conn.execute(
+                "SELECT network_id, id FROM runs ORDER BY started_at DESC, id DESC"
+            ).fetchall()
+    except StoreUnavailable:
+        return {}
+    found: dict[str, str] = {}
+    for row in rows:
+        network_id = row["network_id"]
+        if network_id and network_id not in found:
+            found[str(network_id)] = str(row["id"])
+    return found
+
+
 def delete_runs(ids: list[str]) -> None:
     if not ids:
         return

@@ -19,6 +19,7 @@ DATA_LOCATION = "data_location"
 RUNTIME = "runtime"
 RUN = "run"
 NETWORKS = "networks"
+PROMPTS = "prompts"
 MCP = "mcp"
 TOOLS = "tools"
 HELP_CHAT = "help_chat"
@@ -57,6 +58,16 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("POST", "/api/networks/export", NETWORKS),
     ContractRoute("POST", "/api/networks/import", NETWORKS),
     ContractRoute("POST", "/api/networks/:id/knowledge/:nodeId/reindex", NETWORKS),
+    ContractRoute("GET", "/api/prompts", PROMPTS),
+    ContractRoute("POST", "/api/prompts", PROMPTS),
+    ContractRoute("DELETE", "/api/prompts", PROMPTS),
+    ContractRoute("POST", "/api/prompts/import", PROMPTS),
+    ContractRoute("POST", "/api/prompts/export", PROMPTS),
+    ContractRoute("GET", "/api/prompts/:id", PROMPTS),
+    ContractRoute("PATCH", "/api/prompts/:id", PROMPTS),
+    ContractRoute("DELETE", "/api/prompts/:id", PROMPTS),
+    ContractRoute("POST", "/api/prompts/:id/duplicate", PROMPTS),
+    ContractRoute("GET", "/api/prompts/:id/export", PROMPTS),
     ContractRoute("GET", "/api/settings", SETTINGS),
     ContractRoute("PATCH", "/api/settings", SETTINGS),
     ContractRoute("GET", "/api/data-location", DATA_LOCATION),
@@ -105,6 +116,7 @@ OWNER_BY_MODULE = {
     "app.http.routers.tools": TOOLS,
     "app.http.routers.mcp": MCP,
     "app.http.routers.networks": NETWORKS,
+    "app.http.routers.prompts": PROMPTS,
     "app.http.routers.run": RUN,
     "app.http.routers.runs": RUNS,
     "app.http.routers.help_chat": HELP_CHAT,

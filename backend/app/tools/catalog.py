@@ -144,6 +144,34 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
     },
 }
 
+ZIP_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["action", "path"],
+    "properties": {
+        "action": {"type": "string", "enum": ["list", "extract"]},
+        "path": {"type": "string", "description": "Zip file relative to the tool root"},
+        "destination": {
+            "type": "string",
+            "description": "extract: folder relative to the tool root. Defaults to the archive name.",
+        },
+    },
+}
+
+TERMINAL_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["command"],
+    "properties": {
+        "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Command to run in the configured working directory",
+        },
+    },
+}
+
 _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     "http": "Fetch an http or https URL and return status, headers, and body.",
     "web_search": "Search the web and return titles, URLs, and snippets. The provider is chosen in the tool settings.",
@@ -163,6 +191,13 @@ _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
         "sin, cos, tan use radians. factorial takes an integer from 0 to 20."
     ),
     "file_access": "Read and write files under the configured root. Actions: list, stat, read (optional head or tail), read_many, write (creates missing parent folders), mkdir, delete, edit (oldText/newText or edits), move (destination), search (pattern), tree.",
+    "terminal": "Run a command in the configured working directory. Output and runtime are limited. There is no elevation and no interactive input.",
+    "zip": (
+        "List or extract a .zip file under the configured root. "
+        "action list returns entry names and sizes. "
+        "action extract writes the files into destination, or into a folder named after the archive when destination is omitted. "
+        "Paths stay inside the root."
+    ),
 }
 
 _mcp_provider: Callable[[], list[CatalogGroup]] | None = None
@@ -226,6 +261,24 @@ def list_first_party_tools() -> list[CatalogTool]:
             title_key="tools.kind.fileAccess",
             description_key="tools.kind.fileAccess.desc",
         ),
+        CatalogTool(
+            name="terminal",
+            kind="terminal",
+            description=_MODEL_DESCRIPTIONS["terminal"],
+            json_schema=TERMINAL_SCHEMA,
+            credential_kind=None,
+            title_key="tools.kind.terminal",
+            description_key="tools.kind.terminal.desc",
+        ),
+        CatalogTool(
+            name="zip",
+            kind="zip",
+            description=_MODEL_DESCRIPTIONS["zip"],
+            json_schema=ZIP_SCHEMA,
+            credential_kind=None,
+            title_key="tools.kind.zip",
+            description_key="tools.kind.zip.desc",
+        ),
     ]
 
 
@@ -256,8 +309,29 @@ def _file_access_parameters(actions: list[str] | None) -> tuple[dict[str, Any], 
     return schema, description
 
 
+def _terminal_description(
+    programs: list[str] | None, unrestricted: bool
+) -> str:
+    if unrestricted:
+        return (
+            "Run a PowerShell command in the configured working directory. "
+            "The command runs as the app user. There is no elevation and no interactive input. "
+            "Output and runtime are limited. The folder is the start directory, not a jail."
+        )
+    allowed = ", ".join(programs or [])
+    return (
+        "Run one program and its arguments in the configured working directory. "
+        "No pipes, redirection, or other shell syntax. "
+        f"Allowed programs: {allowed}."
+    )
+
+
 def openai_tools_for_kinds(
-    kinds: list[str], *, file_actions: list[str] | None = None
+    kinds: list[str],
+    *,
+    file_actions: list[str] | None = None,
+    terminal_programs: list[str] | None = None,
+    terminal_unrestricted: bool = False,
 ) -> list[dict[str, Any]]:
     by_name = {tool.name: tool for tool in list_first_party_tools()}
     out: list[dict[str, Any]] = []
@@ -271,6 +345,8 @@ def openai_tools_for_kinds(
             if file_actions is not None and not file_actions:
                 continue
             parameters, description = _file_access_parameters(file_actions)
+        if kind == "terminal":
+            description = _terminal_description(terminal_programs, terminal_unrestricted)
         out.append(
             {
                 "type": "function",

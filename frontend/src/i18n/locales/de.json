@@ -18,6 +18,7 @@
     "networks": "Verwaltung",
     "monitoring": "Monitoring",
     "history": "Historie",
+    "prompts": "Prompts",
     "settings": "Einstellungen",
     "openMenu": "Navigation öffnen",
     "closeMenu": "Navigation schließen",
@@ -48,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Deutsch",
       "en": "Englisch",
@@ -57,7 +59,8 @@
       "pt": "Portugiesisch",
       "zh": "Chinesisch",
       "ja": "Japanisch",
-      "ar": "Arabisch"
+      "ar": "Arabisch",
+      "ru": "Russisch"
     },
     "window": {
       "minimize": "Minimieren",
@@ -733,7 +736,7 @@
       "agent": "Agent",
       "agentHint": "Systemprompt. Allein über Nachricht, oder über einen Kanal am Orchestrator.",
       "tool": "Werkzeug",
-      "toolHint": "HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. An Agent oder Orchestrator.",
+      "toolHint": "HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff, Terminal, ZIP. An Agent oder Orchestrator.",
       "mcp": "MCP",
       "mcpHint": "Ein aktivierter Server aus den Einstellungen. Lokale Dateien sind das Werkzeug Dateizugriff.",
       "knowledge": "Wissen",
@@ -850,6 +853,19 @@
         "agentMissLimit": "Fehlversuche je Agent",
         "agentMissLimitHint": "So oft darf ein Agent mit Dateizugriff einen Auftrag ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Prompt laden",
+        "body": "Wähle einen gespeicherten Prompt. Er ersetzt den Systemprompt dieses Knotens.",
+        "search": "Suchen",
+        "sortUpdated": "Geändert",
+        "sortName": "Name",
+        "apply": "Übernehmen",
+        "empty": "Noch keine Prompts.",
+        "filter": "Keine Prompts für diesen Filter.",
+        "library": "Zu den Prompts",
+        "failed": "Der Prompt konnte nicht geladen werden."
+      },
       "tool": {
         "kind": "Art",
         "kindName": {
@@ -858,6 +874,8 @@
           "datetime": "Datum/Zeit",
           "calculator": "Rechner",
           "file_access": "Dateizugriff",
+          "terminal": "Terminal",
+          "zip": "ZIP",
           "mcp": "MCP"
         },
         "method": "Methode",
@@ -881,6 +899,13 @@
           "search": "Suchen",
           "tree": "Baum"
         },
+        "terminalUnrestricted": "Uneingeschränkt",
+        "terminalUnrestrictedHint": "PowerShell läuft als der Benutzer der App. Der Ordner ist nur das Startverzeichnis. Keine Rückfrage im Lauf, keine erhöhten Rechte.",
+        "terminalHint": "Nur die angekreuzten Programme, ohne Pipes und Umleitung. Der Ordner ist das Startverzeichnis.",
+        "zipHint": "Listet eine ZIP im Wurzelordner auf und entpackt sie dorthin. Pfade bleiben im Ordner.",
+        "terminalPrograms": "Programme",
+        "terminalProgramPlaceholder": "Programmname",
+        "terminalProgramAdd": "Hinzufügen",
         "dateHint": "Zeigt die aktuelle Zeit in einer IANA-Zeitzone, Standard ist UTC. Ein Zeitpunkt lässt sich um Tage, Stunden und Minuten verschieben, auch rückwärts. Der Abstand zweier Zeitpunkte kommt in Sekunden, Stunden und Tagen. Bestandteile sind Datum, Uhrzeit und Wochentag, Montag ist 1. Dieselbe Zeit lässt sich in eine andere Zeitzone umrechnen.",
         "calculatorHint": "Rechnet einen Ausdruck mit + − * / // % ** und Klammern. Der Exponent von ** darf höchstens 20 sein. Konstanten sind pi und e. Funktionen: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log und ln sind der natürliche Logarithmus, log kann eine Basis nehmen. sin, cos und tan rechnen im Bogenmaß. factorial nur für ganze Zahlen von 0 bis 20.",
         "searchProvider": "Anbieter",
@@ -1016,6 +1041,9 @@
       "mcpRoot": "Dieser MCP-Server braucht einen Wurzelordner.",
       "mcpDisabled": "Dieser MCP-Server ist in den Einstellungen deaktiviert.",
       "fileAccessRoot": "Dateizugriff braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
+      "terminalRoot": "Das Terminal braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
+      "terminalPrograms": "Im eingeschränkten Modus ist mindestens ein Programm nötig.",
+      "zipRoot": "ZIP braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "knowledgePath": "Quellenordner ist Pflicht.",
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
       "knowledgeSandbox": "Pfad muss unter dem Datenordner liegen.",
@@ -1682,5 +1710,59 @@
     "modelNotFound": "Das Embedding-Modell wurde nicht gefunden.",
     "missingCredential": "Für dieses Embedding-Modell fehlt ein Zugang.",
     "unauthorized": "Der Zugang für Embeddings wurde abgelehnt."
+  },
+  "prompts": {
+    "search": "Suche",
+    "sort": { "name": "Name", "updated": "Geändert" },
+    "empty": { "library": "Noch keine Prompts.", "filter": "Keine Prompts für diesen Filter." },
+    "ribbon": {
+      "new": "Neu",
+      "edit": "Bearbeiten",
+      "duplicate": "Duplizieren",
+      "tags": "Tags setzen",
+      "delete": "Löschen",
+      "import": "Importieren",
+      "export": "Exportieren",
+      "refresh": "Aktualisieren"
+    },
+    "detail": {
+      "none": "Kein Prompt ausgewählt.",
+      "many": "{{count}} Prompts ausgewählt.",
+      "created": "Erstellt {{date}}",
+      "updated": "Geändert {{date}}"
+    },
+    "editor": {
+      "create": "Prompt anlegen",
+      "edit": "Prompt bearbeiten",
+      "name": "Name",
+      "description": "Beschreibung",
+      "tags": "Tags",
+      "tagsHint": "Komma oder Zeilenumbruch",
+      "body": "Prompt",
+      "nameRequired": "Name darf nicht leer sein.",
+      "bodyRequired": "Der Prompt darf nicht leer sein.",
+      "save": "Speichern"
+    },
+    "import": {
+      "title": "Prompts importieren",
+      "pick": "Dateien wählen",
+      "empty": "Noch keine Datei.",
+      "unreadable": "{{name}} konnte nicht gelesen werden.",
+      "save": "{{count}} übernehmen"
+    },
+    "delete": { "title": "{{count}} Prompts löschen?" },
+    "dialog": { "close": "Schließen", "cancel": "Abbrechen" },
+    "error": { "title": "Prompts nicht geladen", "body": "Die Bibliothek ist gerade nicht erreichbar." },
+    "resize": { "listHeight": "Höhe der Sammlung ändern", "detailHeight": "Höhe des Details ändern", "width": "Breite ändern" },
+    "notify": {
+      "created": "Prompt angelegt",
+      "saved": "Prompt gespeichert",
+      "duplicated": "Prompt dupliziert",
+      "tagged": "Tags gespeichert",
+      "deleted": "Prompts gelöscht",
+      "exported": "Export gespeichert",
+      "imported": "Prompts importiert",
+      "failed": "Das hat nicht geklappt"
+    }
   }
 }

@@ -243,3 +243,38 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
         except Exception:
             conn.execute("ROLLBACK")
             raise
+        current = 2
+    if store == "workspace" and current < 3:
+        conn.execute("BEGIN")
+        try:
+            conn.execute(
+                """
+                CREATE TABLE prompts (
+                  id TEXT PRIMARY KEY,
+                  name TEXT NOT NULL,
+                  description TEXT,
+                  tags TEXT NOT NULL DEFAULT '[]',
+                  body TEXT NOT NULL DEFAULT '',
+                  created_at TEXT,
+                  updated_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (3)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        current = 3
+    if store == "workspace" and current < 4:
+        conn.execute("BEGIN")
+        try:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(prompts)").fetchall()}
+            if "created_at" not in columns:
+                conn.execute("ALTER TABLE prompts ADD COLUMN created_at TEXT")
+            conn.execute("UPDATE prompts SET created_at = updated_at WHERE created_at IS NULL")
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (4)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise

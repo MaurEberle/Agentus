@@ -18,6 +18,7 @@
     "networks": "ライブラリ",
     "monitoring": "監視",
     "history": "履歴",
+    "prompts": "プロンプト",
     "settings": "設定",
     "openMenu": "ナビゲーションを開く",
     "closeMenu": "ナビゲーションを閉じる",
@@ -48,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "ドイツ語",
       "en": "英語",
@@ -57,7 +59,8 @@
       "pt": "ポルトガル語",
       "zh": "中国語",
       "ja": "日本語",
-      "ar": "アラビア語"
+      "ar": "アラビア語",
+      "ru": "ロシア語"
     },
     "window": {
       "minimize": "最小化",
@@ -666,7 +669,7 @@
       "agent": "エージェント",
       "agentHint": "システムプロンプト。単体ではメッセージ、オーケストレーター配下ではチャネル。",
       "tool": "ツール",
-      "toolHint": "HTTP、ウェブ検索、日時、電卓、ファイルアクセス。エージェントまたはオーケストレーターへ。",
+      "toolHint": "HTTP、ウェブ検索、日時、電卓、ファイルアクセス、ターミナル、ZIP。エージェントまたはオーケストレーターへ。",
       "knowledge": "知識",
       "knowledgeHint": "ソースフォルダー。エージェントの knowledge ポートのみ。",
       "router": "ルーター",
@@ -783,6 +786,19 @@
         "agentMissLimit": "エージェントごとの失敗回数",
         "agentMissLimitHint": "ファイルアクセスのあるエージェントが、書き込み・変更・削除なしでタスクを終えてよい回数です。超えるとオーケストレーターがそのタスクを引き受けます。初期値は 3 です。"
       },
+      "prompt": {
+        "pick": "プロンプト",
+        "title": "プロンプトを読み込む",
+        "body": "保存済みのプロンプトを選びます。このノードのシステムプロンプトを置き換えます。",
+        "search": "検索",
+        "sortUpdated": "更新",
+        "sortName": "名前",
+        "apply": "適用",
+        "empty": "プロンプトはまだありません。",
+        "filter": "この条件に合うプロンプトはありません。",
+        "library": "プロンプトへ",
+        "failed": "プロンプトを読み込めませんでした。"
+      },
       "tool": {
         "kind": "種類",
         "kindName": {
@@ -791,6 +807,8 @@
           "datetime": "日付/時刻",
           "calculator": "電卓",
           "file_access": "ファイルアクセス",
+          "terminal": "ターミナル",
+          "zip": "ZIP",
           "mcp": "MCP"
         },
         "method": "メソッド",
@@ -814,6 +832,13 @@
           "search": "検索",
           "tree": "ツリー"
         },
+        "terminalUnrestricted": "制限なし",
+        "terminalUnrestrictedHint": "PowerShell はアプリのユーザーとして動きます。フォルダーは開始ディレクトリだけです。実行中の確認はなく、昇格もしません。",
+        "terminalHint": "チェックしたプログラムだけ。パイプとリダイレクトはありません。フォルダーは開始ディレクトリです。",
+        "zipHint": "ルートフォルダー内の ZIP を一覧し、そこに展開します。パスはフォルダー内に留まります。",
+        "terminalPrograms": "プログラム",
+        "terminalProgramPlaceholder": "プログラム名",
+        "terminalProgramAdd": "追加",
         "dateHint": "IANA タイムゾーンの現在時刻を出します。既定は UTC です。ある時刻を日・時・分だけ前後にずらせます。二つの時刻の間隔は秒・時・日で返します。内訳は日付、時刻、曜日で、月曜が 1 です。同じ時刻を別のタイムゾーンでも出せます。",
         "calculatorHint": "+ - * / // % ** と括弧の式を計算します。** の指数は 20 までです。定数は pi と e です。関数は sqrt、cbrt、abs、round、floor、ceil、min、max、log、ln、log10、exp、sin、cos、tan、factorial です。log と ln は自然対数で、log は底を取れます。sin、cos、tan はラジアンです。factorial は 0 から 20 の整数だけです。",
         "searchProvider": "提供元",
@@ -943,6 +968,9 @@
       "mcpServer": "有効な MCP サーバーを選んでください。設定で作成して有効化します。",
       "mcpRoot": "このMCPサーバーにはルートフォルダーが必要です。",
       "fileAccessRoot": "ファイルアクセスにはドライブルートではないフォルダーが必要です。",
+      "terminalRoot": "ターミナルにはドライブルートではないフォルダーが必要です。",
+      "terminalPrograms": "制限モードにはプログラムが少なくとも1つ必要です。",
+      "zipRoot": "ZIP にはドライブルートではないフォルダーが必要です。",
       "knowledgePath": "ソースフォルダーは必須です。",
       "knowledgeRoot": "ドライブまたはシステムのルートは許可されません。",
       "knowledgeSandbox": "パスはデータフォルダー配下である必要があります。",
@@ -1676,6 +1704,60 @@
       "target": "ルーターの先はエージェント、ルーター、または終了です。",
       "orchestrator": "オーケストレーターの後のルーターは終了だけへ続きます。",
       "noEdge": "ルーターに一致するエッジがありません"
+    }
+  },
+  "prompts": {
+    "search": "検索",
+    "sort": { "name": "名前", "updated": "更新" },
+    "empty": { "library": "プロンプトはまだありません。", "filter": "この条件に合うプロンプトはありません。" },
+    "ribbon": {
+      "new": "新規",
+      "edit": "編集",
+      "duplicate": "複製",
+      "tags": "タグを追加",
+      "delete": "削除",
+      "import": "インポート",
+      "export": "エクスポート",
+      "refresh": "更新"
+    },
+    "detail": {
+      "none": "プロンプトが選択されていません。",
+      "many": "{{count}} 件のプロンプトを選択中。",
+      "created": "作成 {{date}}",
+      "updated": "更新 {{date}}"
+    },
+    "editor": {
+      "create": "プロンプトを作成",
+      "edit": "プロンプトを編集",
+      "name": "名前",
+      "description": "説明",
+      "tags": "タグ",
+      "tagsHint": "カンマまたは改行",
+      "body": "プロンプト",
+      "nameRequired": "名前は空にできません。",
+      "bodyRequired": "プロンプトは空にできません。",
+      "save": "保存"
+    },
+    "import": {
+      "title": "プロンプトをインポート",
+      "pick": "ファイルを選択",
+      "empty": "まだファイルがありません。",
+      "unreadable": "{{name}} を読み取れませんでした。",
+      "save": "{{count}} 件を適用"
+    },
+    "delete": { "title": "{{count}} 件のプロンプトを削除しますか？" },
+    "dialog": { "close": "閉じる", "cancel": "キャンセル" },
+    "error": { "title": "プロンプトを読み込めません", "body": "ライブラリに現在接続できません。" },
+    "resize": { "listHeight": "一覧の高さを変更", "detailHeight": "詳細の高さを変更", "width": "幅を変更" },
+    "notify": {
+      "created": "プロンプトを作成しました",
+      "saved": "プロンプトを保存しました",
+      "duplicated": "プロンプトを複製しました",
+      "tagged": "タグを保存しました",
+      "deleted": "プロンプトを削除しました",
+      "exported": "エクスポートを保存しました",
+      "imported": "プロンプトをインポートしました",
+      "failed": "うまくいきませんでした"
     }
   }
 }

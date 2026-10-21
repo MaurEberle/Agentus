@@ -89,7 +89,7 @@ export type OrchestratorNodeData = {
   agentMissLimit?: number;
 };
 
-export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access';
+export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'terminal' | 'zip';
 
 export type ToolNodeData = {
   displayName?: string;
@@ -105,6 +105,10 @@ export type ToolNodeData = {
   allowDelete?: boolean;
   /** Unset means every file action. A list is the subset the agent may call. */
   fileActions?: string[];
+  /** restricted (default) runs only terminalPrograms. unrestricted is PowerShell as the app user. */
+  terminalMode?: 'restricted' | 'unrestricted';
+  /** Unset in restricted mode means git, python, py, and dotnet. */
+  terminalPrograms?: string[];
 };
 
 export type McpNodeData = {

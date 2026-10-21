@@ -390,8 +390,16 @@ def _tool_schemas(
     kinds: list[str],
     mcp_pairs: list[tuple[str, list[str] | None, str | None]],
     file_actions: list[str] | None = None,
+    *,
+    terminal_programs: list[str] | None = None,
+    terminal_unrestricted: bool = False,
 ) -> list[dict]:
-    tools = openai_tools_for_kinds(kinds, file_actions=file_actions)
+    tools = openai_tools_for_kinds(
+        kinds,
+        file_actions=file_actions,
+        terminal_programs=terminal_programs,
+        terminal_unrestricted=terminal_unrestricted,
+    )
     bridge = get_mcp()
     if bridge and mcp_pairs:
         from app.run.mcp_bridge import mcp_openai_tools
@@ -616,7 +624,13 @@ def _agent_turn(
         )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
-    tools = _tool_schemas(agent.tool_kinds, agent.mcp, agent.file_actions)
+    tools = _tool_schemas(
+        agent.tool_kinds,
+        agent.mcp,
+        agent.file_actions,
+        terminal_programs=agent.terminal_programs,
+        terminal_unrestricted=agent.terminal_unrestricted,
+    )
     system = system + "\n\n" + (_AGENT_THINK_TOOLS if tools else _AGENT_THINK)
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
@@ -1486,7 +1500,13 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             name = str(node.data.get("displayName") or node.data.get("role") or agent_id).strip() or agent_id
             instructions = str(node.data.get("systemPrompt") or "")
         roster.append((agent_id, name, instructions))
-    tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp, orch.file_actions)
+    tool_schemas = _tool_schemas(
+        orch.tool_kinds,
+        orch.mcp,
+        orch.file_actions,
+        terminal_programs=orch.terminal_programs,
+        terminal_unrestricted=orch.terminal_unrestricted,
+    )
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
     thinks = 0

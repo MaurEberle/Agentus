@@ -104,10 +104,12 @@ export function WidthGrip({
   label,
   share,
   onChange,
+  marker = true,
 }: {
   label: string;
   share: number;
   onChange: (next: number) => void;
+  marker?: boolean;
 }) {
   const origin = useRef({ x: 0, share: 0, width: 1 });
   return (
@@ -118,9 +120,10 @@ export function WidthGrip({
       aria-valuenow={Math.round(share * 100)}
       aria-valuemin={28}
       aria-valuemax={72}
-      className="hidden w-4 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-sm hover:bg-muted/50 md:flex"
+      className="group hidden w-4 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-sm hover:bg-muted/50 md:flex"
       onPointerDown={(event) => {
-        const row = event.currentTarget.parentElement;
+        const row =
+          event.currentTarget.closest('[data-split-row]') ?? event.currentTarget.parentElement;
         origin.current = {
           x: event.clientX,
           share,
@@ -136,7 +139,7 @@ export function WidthGrip({
         );
       }}
     >
-      <span className="h-8 w-1 rounded-full bg-border" aria-hidden />
+      <span className={cn('h-8 w-1 rounded-full bg-border', !marker && 'opacity-0 group-hover:opacity-100')} aria-hidden />
     </div>
   );
 }

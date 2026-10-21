@@ -4,7 +4,7 @@ Engrenagem no cabeçalho. Secções à esquerda: Aparência, Credenciais, Runtim
 
 ## Aparência
 
-Claro, escuro ou sistema — vale para toda a app, incluindo o cabeçalho. **Idioma** é uma lista pendente com bandeira: Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية. O nome entre parênteses é a tradução no idioma da interface atual.
+Claro, escuro ou sistema — vale para toda a app, incluindo o cabeçalho. **Idioma** é uma lista pendente com bandeira: Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية. O nome entre parênteses é a tradução no idioma da interface atual.
 
 Interruptor **Botão de ajuda**: mostra ou esconde a bolha em baixo à direita. A **configuração** do chatbot fica em **Chat de ajuda**, mesmo com a bolha escondida.
 

@@ -4,7 +4,7 @@ Başlık çubuğundaki dişli. Solda bölümler: Görünüm, Kimlik bilgileri, �
 
 ## Görünüm
 
-Açık, koyu veya sistem — başlık dahil tüm uygulamada geçerlidir. **Dil** bayraklı bir açılır listedir: Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية. Parantezdeki ad, geçerli arayüz dilindeki çeviridir.
+Açık, koyu veya sistem — başlık dahil tüm uygulamada geçerlidir. **Dil** bayraklı bir açılır listedir: Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية. Parantezdeki ad, geçerli arayüz dilindeki çeviridir.
 
 **Yardım düğmesi** anahtarı sağ alttaki baloncuğu gösterir veya gizler. Sohbet botunun **yapılandırması** baloncuk gizli olsa da **Yardım sohbeti** altındadır.
 

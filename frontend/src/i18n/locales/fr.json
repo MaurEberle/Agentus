@@ -18,6 +18,7 @@
     "networks": "Bibliothèque",
     "monitoring": "Supervision",
     "history": "Historique",
+    "prompts": "Prompts",
     "settings": "Paramètres",
     "openMenu": "Ouvrir la navigation",
     "closeMenu": "Fermer la navigation",
@@ -48,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Allemand",
       "en": "Anglais",
@@ -57,7 +59,8 @@
       "pt": "Portugais",
       "zh": "Chinois",
       "ja": "Japonais",
-      "ar": "Arabe"
+      "ar": "Arabe",
+      "ru": "Russe"
     },
     "window": {
       "minimize": "Réduire",
@@ -666,7 +669,7 @@
       "agent": "Agent",
       "agentHint": "Invite système. Seul via le message, ou via un canal de l’orchestrateur.",
       "tool": "Outil",
-      "toolHint": "HTTP, recherche web, date/heure, calculatrice, accès fichiers. Vers l’agent ou l’orchestrateur.",
+      "toolHint": "HTTP, recherche web, date/heure, calculatrice, accès fichiers, terminal, ZIP. Vers l’agent ou l’orchestrateur.",
       "knowledge": "Connaissances",
       "knowledgeHint": "Dossier source, uniquement vers le port knowledge de l’agent.",
       "router": "Routeur",
@@ -783,6 +786,19 @@
         "agentMissLimit": "Échecs par agent",
         "agentMissLimitHint": "Nombre de fois qu’un agent avec accès aux fichiers peut terminer une tâche sans écrire, modifier ou supprimer. L’orchestrateur reprend alors cette tâche. La valeur par défaut est 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Charger un prompt",
+        "body": "Choisissez un prompt enregistré. Il remplace l’invite système de ce nœud.",
+        "search": "Rechercher",
+        "sortUpdated": "Modifié",
+        "sortName": "Nom",
+        "apply": "Appliquer",
+        "empty": "Aucun prompt enregistré.",
+        "filter": "Aucun prompt ne correspond à ce filtre.",
+        "library": "Vers les prompts",
+        "failed": "Le prompt n’a pas pu être chargé."
+      },
       "tool": {
         "kind": "Type",
         "kindName": {
@@ -791,6 +807,8 @@
           "datetime": "Date/heure",
           "calculator": "Calculatrice",
           "file_access": "Accès aux fichiers",
+          "terminal": "Terminal",
+          "zip": "ZIP",
           "mcp": "MCP"
         },
         "method": "Méthode",
@@ -814,6 +832,13 @@
           "search": "Chercher",
           "tree": "Arbre"
         },
+        "terminalUnrestricted": "Sans restriction",
+        "terminalUnrestrictedHint": "PowerShell s’exécute avec l’utilisateur de l’app. Le dossier n’est que le répertoire de départ. Pas de question pendant l’exécution, pas d’élévation.",
+        "terminalHint": "Seuls les programmes cochés, sans tube ni redirection. Le dossier est le répertoire de départ.",
+        "zipHint": "Liste une archive ZIP dans le dossier racine et l’extrait sur place. Les chemins restent dans le dossier.",
+        "terminalPrograms": "Programmes",
+        "terminalProgramPlaceholder": "Nom du programme",
+        "terminalProgramAdd": "Ajouter",
         "dateHint": "Affiche l’heure actuelle dans un fuseau IANA, UTC par défaut. Un instant peut être décalé de jours, d’heures et de minutes, aussi vers le passé. L’écart entre deux instants revient en secondes, heures et jours. Les composants sont la date, l’heure et le jour ; lundi vaut 1. Le même instant peut être affiché dans un autre fuseau.",
         "calculatorHint": "Calcule une expression avec + - * / // % ** et des parenthèses. L’exposant de ** vaut au plus 20. Constantes : pi et e. Fonctions : sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log et ln sont le logarithme naturel ; log peut prendre une base. sin, cos et tan sont en radians. factorial n’accepte que les entiers de 0 à 20.",
         "searchProvider": "Fournisseur",
@@ -943,6 +968,9 @@
       "mcpServer": "Choisissez un serveur MCP actif. Créez-le et activez-le dans Paramètres.",
       "mcpRoot": "Ce serveur MCP a besoin d’un dossier racine.",
       "fileAccessRoot": "L’accès aux fichiers nécessite un dossier qui n’est pas la racine d’un lecteur.",
+      "terminalRoot": "Le terminal nécessite un dossier qui n’est pas la racine d’un lecteur.",
+      "terminalPrograms": "Le mode restreint exige au moins un programme.",
+      "zipRoot": "ZIP nécessite un dossier qui n’est pas la racine d’un lecteur.",
       "knowledgePath": "Le dossier source est obligatoire.",
       "knowledgeRoot": "La racine d’un lecteur ou du système n’est pas autorisée.",
       "knowledgeSandbox": "Le chemin doit se trouver sous le dossier de données.",
@@ -1676,6 +1704,60 @@
       "target": "Un routeur mène à un agent, un routeur ou une fin.",
       "orchestrator": "Un routeur après l’orchestrateur ne mène qu’à des fins.",
       "noEdge": "Le routeur n’a pas d’arête correspondante"
+    }
+  },
+  "prompts": {
+    "search": "Rechercher",
+    "sort": { "name": "Nom", "updated": "Modifié" },
+    "empty": { "library": "Aucun prompt pour l’instant.", "filter": "Aucun prompt ne correspond à ce filtre." },
+    "ribbon": {
+      "new": "Nouveau",
+      "edit": "Modifier",
+      "duplicate": "Dupliquer",
+      "tags": "Ajouter des étiquettes",
+      "delete": "Supprimer",
+      "import": "Importer",
+      "export": "Exporter",
+      "refresh": "Actualiser"
+    },
+    "detail": {
+      "none": "Aucun prompt sélectionné.",
+      "many": "{{count}} prompts sélectionnés.",
+      "created": "Créé {{date}}",
+      "updated": "Modifié {{date}}"
+    },
+    "editor": {
+      "create": "Créer un prompt",
+      "edit": "Modifier le prompt",
+      "name": "Nom",
+      "description": "Description",
+      "tags": "Étiquettes",
+      "tagsHint": "Virgule ou saut de ligne",
+      "body": "Prompt",
+      "nameRequired": "Le nom ne peut pas être vide.",
+      "bodyRequired": "Le prompt ne peut pas être vide.",
+      "save": "Enregistrer"
+    },
+    "import": {
+      "title": "Importer des prompts",
+      "pick": "Choisir des fichiers",
+      "empty": "Aucun fichier pour l’instant.",
+      "unreadable": "{{name}} n’a pas pu être lu.",
+      "save": "Appliquer {{count}}"
+    },
+    "delete": { "title": "Supprimer {{count}} prompts ?" },
+    "dialog": { "close": "Fermer", "cancel": "Annuler" },
+    "error": { "title": "Prompts non chargés", "body": "La bibliothèque n’est pas disponible pour le moment." },
+    "resize": { "listHeight": "Modifier la hauteur de la collection", "detailHeight": "Modifier la hauteur du détail", "width": "Modifier la largeur" },
+    "notify": {
+      "created": "Prompt créé",
+      "saved": "Prompt enregistré",
+      "duplicated": "Prompt dupliqué",
+      "tagged": "Étiquettes enregistrées",
+      "deleted": "Prompts supprimés",
+      "exported": "Export enregistré",
+      "imported": "Prompts importés",
+      "failed": "Cela n’a pas fonctionné"
     }
   }
 }

@@ -18,6 +18,7 @@
     "networks": "Biblioteca",
     "monitoring": "Supervisión",
     "history": "Historial",
+    "prompts": "Prompts",
     "settings": "Ajustes",
     "openMenu": "Abrir navegación",
     "closeMenu": "Cerrar navegación",
@@ -48,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Alemán",
       "en": "Inglés",
@@ -57,7 +59,8 @@
       "pt": "Portugués",
       "zh": "Chino",
       "ja": "Japonés",
-      "ar": "Árabe"
+      "ar": "Árabe",
+      "ru": "Ruso"
     },
     "window": {
       "minimize": "Minimizar",
@@ -666,7 +669,7 @@
       "agent": "Agente",
       "agentHint": "Prompt de sistema. Solo por mensaje, o por un canal del orquestador.",
       "tool": "Herramienta",
-      "toolHint": "HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos. Al agente o al orquestador.",
+      "toolHint": "HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos, terminal, ZIP. Al agente o al orquestador.",
       "knowledge": "Conocimiento",
       "knowledgeHint": "Carpeta de origen, solo al puerto knowledge del agente.",
       "router": "Enrutador",
@@ -783,6 +786,19 @@
         "agentMissLimit": "Intentos fallidos por agente",
         "agentMissLimitHint": "Cuántas veces un agente con acceso a archivos puede terminar una tarea sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Cargar prompt",
+        "body": "Elige un prompt guardado. Sustituye el prompt de sistema de este nodo.",
+        "search": "Buscar",
+        "sortUpdated": "Modificado",
+        "sortName": "Nombre",
+        "apply": "Aplicar",
+        "empty": "Aún no hay prompts.",
+        "filter": "Ningún prompt coincide con este filtro.",
+        "library": "Ir a los prompts",
+        "failed": "No se pudo cargar el prompt."
+      },
       "tool": {
         "kind": "Tipo",
         "kindName": {
@@ -791,6 +807,8 @@
           "datetime": "Fecha/hora",
           "calculator": "Calculadora",
           "file_access": "Acceso a archivos",
+          "terminal": "Terminal",
+          "zip": "ZIP",
           "mcp": "MCP"
         },
         "method": "Método",
@@ -814,6 +832,13 @@
           "search": "Buscar",
           "tree": "Árbol"
         },
+        "terminalUnrestricted": "Sin restricción",
+        "terminalUnrestrictedHint": "PowerShell se ejecuta como el usuario de la app. La carpeta solo es el directorio inicial. Sin pregunta durante la ejecución y sin elevación.",
+        "terminalHint": "Solo los programas marcados, sin tuberías ni redirección. La carpeta es el directorio inicial.",
+        "zipHint": "Lista un ZIP en la carpeta raíz y lo extrae allí. Las rutas permanecen en la carpeta.",
+        "terminalPrograms": "Programas",
+        "terminalProgramPlaceholder": "Nombre del programa",
+        "terminalProgramAdd": "Añadir",
         "dateHint": "Muestra la hora actual en una zona IANA; por defecto UTC. Un instante se puede desplazar días, horas y minutos, también hacia atrás. La diferencia entre dos instantes sale en segundos, horas y días. Las partes son fecha, hora y día de la semana; el lunes es 1. El mismo instante se puede ver en otra zona.",
         "calculatorHint": "Calcula una expresión con + - * / // % ** y paréntesis. El exponente de ** puede ser como máximo 20. Constantes: pi y e. Funciones: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log y ln son el logaritmo natural; log puede llevar base. sin, cos y tan usan radianes. factorial solo admite enteros de 0 a 20.",
         "searchProvider": "Proveedor",
@@ -943,6 +968,9 @@
       "mcpServer": "Elige un servidor MCP activo. Créalo y actívalo en Ajustes.",
       "mcpRoot": "Este servidor MCP necesita una carpeta raíz.",
       "fileAccessRoot": "El acceso a archivos necesita una carpeta que no sea la raíz de una unidad.",
+      "terminalRoot": "El terminal necesita una carpeta que no sea la raíz de una unidad.",
+      "terminalPrograms": "El modo restringido necesita al menos un programa.",
+      "zipRoot": "ZIP necesita una carpeta que no sea la raíz de una unidad.",
       "knowledgePath": "La carpeta de origen es obligatoria.",
       "knowledgeRoot": "No se permite la raíz de una unidad o del sistema.",
       "knowledgeSandbox": "La ruta debe estar bajo la carpeta de datos.",
@@ -1676,6 +1704,60 @@
       "target": "Un enrutador lleva a un agente, un enrutador o un fin.",
       "orchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
       "noEdge": "El enrutador no tiene una arista coincidente"
+    }
+  },
+  "prompts": {
+    "search": "Buscar",
+    "sort": { "name": "Nombre", "updated": "Modificado" },
+    "empty": { "library": "Aún no hay prompts.", "filter": "Ningún prompt coincide con este filtro." },
+    "ribbon": {
+      "new": "Nuevo",
+      "edit": "Editar",
+      "duplicate": "Duplicar",
+      "tags": "Añadir etiquetas",
+      "delete": "Eliminar",
+      "import": "Importar",
+      "export": "Exportar",
+      "refresh": "Actualizar"
+    },
+    "detail": {
+      "none": "Ningún prompt seleccionado.",
+      "many": "{{count}} prompts seleccionados.",
+      "created": "Creado {{date}}",
+      "updated": "Modificado {{date}}"
+    },
+    "editor": {
+      "create": "Crear prompt",
+      "edit": "Editar prompt",
+      "name": "Nombre",
+      "description": "Descripción",
+      "tags": "Etiquetas",
+      "tagsHint": "Coma o salto de línea",
+      "body": "Prompt",
+      "nameRequired": "El nombre no puede estar vacío.",
+      "bodyRequired": "El prompt no puede estar vacío.",
+      "save": "Guardar"
+    },
+    "import": {
+      "title": "Importar prompts",
+      "pick": "Elegir archivos",
+      "empty": "Aún no hay ningún archivo.",
+      "unreadable": "No se pudo leer {{name}}.",
+      "save": "Aplicar {{count}}"
+    },
+    "delete": { "title": "¿Eliminar {{count}} prompts?" },
+    "dialog": { "close": "Cerrar", "cancel": "Cancelar" },
+    "error": { "title": "No se pudieron cargar los prompts", "body": "La biblioteca no está disponible ahora." },
+    "resize": { "listHeight": "Cambiar la altura de la colección", "detailHeight": "Cambiar la altura del detalle", "width": "Cambiar el ancho" },
+    "notify": {
+      "created": "Prompt creado",
+      "saved": "Prompt guardado",
+      "duplicated": "Prompt duplicado",
+      "tagged": "Etiquetas guardadas",
+      "deleted": "Prompts eliminados",
+      "exported": "Exportación guardada",
+      "imported": "Prompts importados",
+      "failed": "No ha funcionado"
     }
   }
 }

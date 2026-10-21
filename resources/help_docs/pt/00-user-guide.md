@@ -16,7 +16,7 @@ Ollama é um **serviço à parte**. Fechar ou desinstalar o Agentus Network não
 
 **Definições** ficam no cabeçalho (engrenagem), não na navegação esquerda.
 
-No cabeçalho também: **Iniciar** / **Parar**, **seleção rápida** da rede ativa, sino (notificações), claro/escuro/sistema, idioma (Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية) e botões da janela (minimizar, maximizar, fechar).
+No cabeçalho também: **Iniciar** / **Parar**, **seleção rápida** da rede ativa, sino (notificações), claro/escuro/sistema, idioma (Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية) e botões da janela (minimizar, maximizar, fechar).
 
 Arrasta o logótipo ou o cabeçalho vazio para mover a janela. Iniciar, Parar, a seleção rápida e os botões à direita não são zonas de arrasto.
 

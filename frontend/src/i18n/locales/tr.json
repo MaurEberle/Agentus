@@ -18,6 +18,7 @@
     "networks": "Kitaplık",
     "monitoring": "İzleme",
     "history": "Geçmiş",
+    "prompts": "İstemler",
     "settings": "Ayarlar",
     "openMenu": "Gezintiyi aç",
     "closeMenu": "Gezintiyi kapat",
@@ -48,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Almanca",
       "en": "İngilizce",
@@ -57,7 +59,8 @@
       "pt": "Portekizce",
       "zh": "Çince",
       "ja": "Japonca",
-      "ar": "Arapça"
+      "ar": "Arapça",
+      "ru": "Rusça"
     },
     "window": {
       "minimize": "Simge durumuna küçült",
@@ -666,7 +669,7 @@
       "agent": "Ajan",
       "agentHint": "Sistem istemi. Tek başına iletiyle veya orkestratörün bir kanalıyla.",
       "tool": "Araç",
-      "toolHint": "HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi. Ajan veya orkestratöre.",
+      "toolHint": "HTTP, web araması, tarih/saat, hesap makinesi, dosya erişimi, terminal, ZIP. Ajan veya orkestratöre.",
       "knowledge": "Bilgi",
       "knowledgeHint": "Kaynak klasör, yalnızca ajan knowledge bağlantı noktasına.",
       "router": "Yönlendirici",
@@ -783,6 +786,19 @@
         "agentMissLimit": "Aracı başına başarısız deneme",
         "agentMissLimitHint": "Dosya erişimi olan bir aracı, yazmadan, değiştirmeden veya silmeden bir görevi kaç kez bitirebilir. Sonra orkestratör bu görevi üstlenir. Varsayılan 3."
       },
+      "prompt": {
+        "pick": "İstem",
+        "title": "İstem yükle",
+        "body": "Kayıtlı bir istem seçin. Bu düğümün sistem isteminin yerini alır.",
+        "search": "Ara",
+        "sortUpdated": "Güncellendi",
+        "sortName": "Ad",
+        "apply": "Uygula",
+        "empty": "Henüz istem yok.",
+        "filter": "Bu filtreye uyan istem yok.",
+        "library": "İstemlere git",
+        "failed": "İstem yüklenemedi."
+      },
       "tool": {
         "kind": "Tür",
         "kindName": {
@@ -791,6 +807,8 @@
           "datetime": "Tarih/saat",
           "calculator": "Hesap makinesi",
           "file_access": "Dosya erişimi",
+          "terminal": "Terminal",
+          "zip": "ZIP",
           "mcp": "MCP"
         },
         "method": "Yöntem",
@@ -814,6 +832,13 @@
           "search": "Ara",
           "tree": "Ağaç"
         },
+        "terminalUnrestricted": "Kısıtsız",
+        "terminalUnrestrictedHint": "PowerShell uygulamanın kullanıcısı olarak çalışır. Klasör yalnızca başlangıç dizinidir. Çalışma sırasında soru yok, yükseltme yok.",
+        "terminalHint": "Yalnızca işaretli programlar, boru ve yönlendirme olmadan. Klasör başlangıç dizinidir.",
+        "zipHint": "Kök klasördeki bir ZIP’i listeler ve oraya açar. Yollar klasörün içinde kalır.",
+        "terminalPrograms": "Programlar",
+        "terminalProgramPlaceholder": "Program adı",
+        "terminalProgramAdd": "Ekle",
         "dateHint": "Geçerli zamanı bir IANA saat diliminde gösterir; varsayılan UTC’dir. Bir an gün, saat ve dakika kadar ileri veya geri kayar. İki anın farkı saniye, saat ve gün olarak gelir. Parçalar tarih, saat ve haftanın günüdür; pazartesi 1’dir. Aynı an başka bir dilimde gösterilebilir.",
         "calculatorHint": "Bir ifadeyi + - * / // % ** ve parantezle hesaplar. ** üssü en fazla 20 olabilir. Sabitler pi ve e’dir. İşlevler: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log ve ln doğal logaritmadır; log bir taban alabilir. sin, cos ve tan radyan kullanır. factorial yalnızca 0 ile 20 arasındaki tam sayıları alır.",
         "searchProvider": "Sağlayıcı",
@@ -943,6 +968,9 @@
       "mcpServer": "Etkin bir MCP sunucusu seçin. Ayarlar’da oluşturup açın.",
       "mcpRoot": "Bu MCP sunucusunun bir kök klasöre ihtiyacı var.",
       "fileAccessRoot": "Dosya erişimi, sürücü kökü olmayan bir klasör ister.",
+      "terminalRoot": "Terminal, sürücü kökü olmayan bir klasör ister.",
+      "terminalPrograms": "Kısıtlı kip en az bir program ister.",
+      "zipRoot": "ZIP, sürücü kökü olmayan bir klasör ister.",
       "knowledgePath": "Kaynak klasör zorunludur.",
       "knowledgeRoot": "Sürücü veya sistem kökü izinli değil.",
       "knowledgeSandbox": "Yol veri klasörünün altında olmalıdır.",
@@ -1676,6 +1704,60 @@
       "target": "Bir yönlendirici bir aracıya, bir yönlendiriciye veya bir bitişe gider.",
       "orchestrator": "Orkestratörden sonraki yönlendirici yalnızca bitişlere gider.",
       "noEdge": "Yönlendiricide eşleşen kenar yok"
+    }
+  },
+  "prompts": {
+    "search": "Ara",
+    "sort": { "name": "Ad", "updated": "Değiştirildi" },
+    "empty": { "library": "Henüz istem yok.", "filter": "Bu filtreye uyan istem yok." },
+    "ribbon": {
+      "new": "Yeni",
+      "edit": "Düzenle",
+      "duplicate": "Çoğalt",
+      "tags": "Etiket ekle",
+      "delete": "Sil",
+      "import": "İçe aktar",
+      "export": "Dışa aktar",
+      "refresh": "Yenile"
+    },
+    "detail": {
+      "none": "İstem seçilmedi.",
+      "many": "{{count}} istem seçildi.",
+      "created": "Oluşturuldu {{date}}",
+      "updated": "Değiştirildi {{date}}"
+    },
+    "editor": {
+      "create": "İstem oluştur",
+      "edit": "İstemi düzenle",
+      "name": "Ad",
+      "description": "Açıklama",
+      "tags": "Etiketler",
+      "tagsHint": "Virgül veya satır sonu",
+      "body": "İstem",
+      "nameRequired": "Ad boş olamaz.",
+      "bodyRequired": "İstem boş olamaz.",
+      "save": "Kaydet"
+    },
+    "import": {
+      "title": "İstemleri içe aktar",
+      "pick": "Dosyaları seç",
+      "empty": "Henüz dosya yok.",
+      "unreadable": "{{name}} okunamadı.",
+      "save": "{{count}} uygula"
+    },
+    "delete": { "title": "{{count}} istem silinsin mi?" },
+    "dialog": { "close": "Kapat", "cancel": "İptal" },
+    "error": { "title": "İstemler yüklenemedi", "body": "Kitaplığa şu anda ulaşılamıyor." },
+    "resize": { "listHeight": "Koleksiyon yüksekliğini değiştir", "detailHeight": "Ayrıntı yüksekliğini değiştir", "width": "Genişliği değiştir" },
+    "notify": {
+      "created": "İstem oluşturuldu",
+      "saved": "İstem kaydedildi",
+      "duplicated": "İstem çoğaltıldı",
+      "tagged": "Etiketler kaydedildi",
+      "deleted": "İstemler silindi",
+      "exported": "Dışa aktarma kaydedildi",
+      "imported": "İstemler içe aktarıldı",
+      "failed": "Bu işe yaramadı"
     }
   }
 }

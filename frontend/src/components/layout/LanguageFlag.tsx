@@ -58,6 +58,15 @@ export function LanguageFlag({
       </svg>
     );
   }
+  if (code === 'ru') {
+    return (
+      <svg viewBox="0 0 9 6" className={frame} aria-hidden>
+        <rect width="9" height="2" fill="#fff" />
+        <rect y="2" width="9" height="2" fill="#0039A6" />
+        <rect y="4" width="9" height="2" fill="#D52B1E" />
+      </svg>
+    );
+  }
   if (code === 'zh') {
     return (
       <svg viewBox="0 0 12 8" className={frame} aria-hidden>

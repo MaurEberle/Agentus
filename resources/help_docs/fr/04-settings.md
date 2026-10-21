@@ -4,7 +4,7 @@ Engrenage dans l’en-tête. Sections à gauche : Apparence, Identifiants, Runti
 
 ## Apparence
 
-Clair, sombre ou système — pour toute l’app, y compris l’en-tête. **Langue** est une liste déroulante avec drapeau : Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية. Le nom entre parenthèses est la traduction dans la langue d’interface actuelle.
+Clair, sombre ou système — pour toute l’app, y compris l’en-tête. **Langue** est une liste déroulante avec drapeau : Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية. Le nom entre parenthèses est la traduction dans la langue d’interface actuelle.
 
 Interrupteur **Bouton d’aide** : affiche ou masque la bulle en bas à droite. La **configuration** du chatbot reste sous **Chat d’aide**, même si la bulle est masquée.
 

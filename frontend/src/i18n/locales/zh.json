@@ -18,6 +18,7 @@
     "networks": "资料库",
     "monitoring": "监控",
     "history": "历史",
+    "prompts": "提示词",
     "settings": "设置",
     "openMenu": "打开导航",
     "closeMenu": "关闭导航",
@@ -48,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "德语",
       "en": "英语",
@@ -57,7 +59,8 @@
       "pt": "葡萄牙语",
       "zh": "中文",
       "ja": "日语",
-      "ar": "阿拉伯语"
+      "ar": "阿拉伯语",
+      "ru": "俄语"
     },
     "window": {
       "minimize": "最小化",
@@ -666,7 +669,7 @@
       "agent": "智能体",
       "agentHint": "系统提示。单独使用时走消息，或通过编排器的通道。",
       "tool": "工具",
-      "toolHint": "HTTP、网页搜索、日期/时间、计算器、文件访问。接到智能体或编排器。",
+      "toolHint": "HTTP、网页搜索、日期/时间、计算器、文件访问、终端、ZIP。接到智能体或编排器。",
       "knowledge": "知识",
       "knowledgeHint": "源文件夹，仅连接到智能体 knowledge 端口。",
       "router": "路由器",
@@ -783,6 +786,19 @@
         "agentMissLimit": "每个智能体的失败次数",
         "agentMissLimitHint": "有文件访问权限的智能体可以在不写入、不修改、不删除的情况下结束任务的次数。超过后由编排器接手该任务。默认是 3。"
       },
+      "prompt": {
+        "pick": "提示词",
+        "title": "加载提示词",
+        "body": "选择一个已保存的提示词。它会替换此节点的系统提示。",
+        "search": "搜索",
+        "sortUpdated": "已更改",
+        "sortName": "名称",
+        "apply": "应用",
+        "empty": "还没有提示词。",
+        "filter": "没有符合此筛选的提示词。",
+        "library": "前往提示词",
+        "failed": "无法加载提示词。"
+      },
       "tool": {
         "kind": "类型",
         "kindName": {
@@ -791,6 +807,8 @@
           "datetime": "日期/时间",
           "calculator": "计算器",
           "file_access": "文件访问",
+          "terminal": "终端",
+          "zip": "ZIP",
           "mcp": "MCP"
         },
         "method": "方法",
@@ -814,6 +832,13 @@
           "search": "搜索",
           "tree": "目录树"
         },
+        "terminalUnrestricted": "无限制",
+        "terminalUnrestrictedHint": "PowerShell 以应用用户身份运行。文件夹只是起始目录。运行中不询问，也不提权。",
+        "terminalHint": "只能运行勾选的程序，不能使用管道或重定向。文件夹是起始目录。",
+        "zipHint": "列出根文件夹中的 ZIP 并解压到那里。路径留在该文件夹内。",
+        "terminalPrograms": "程序",
+        "terminalProgramPlaceholder": "程序名",
+        "terminalProgramAdd": "添加",
         "dateHint": "显示某个 IANA 时区的当前时间，默认是 UTC。可以把一个时刻按天、小时和分钟前后移动。两个时刻的间隔以秒、小时和天返回。分量包括日期、钟点和星期，星期一是 1。同一个时刻可以换到另一个时区。",
         "calculatorHint": "计算带 + - * / // % ** 和括号的表达式。** 的指数最多为 20。常数是 pi 和 e。函数：sqrt、cbrt、abs、round、floor、ceil、min、max、log、ln、log10、exp、sin、cos、tan、factorial。log 和 ln 是自然对数，log 可以带底数。sin、cos、tan 使用弧度。factorial 只接受 0 到 20 的整数。",
         "searchProvider": "提供方",
@@ -943,6 +968,9 @@
       "mcpServer": "请选择已启用的 MCP 服务器。在设置中创建并启用。",
       "mcpRoot": "此 MCP 服务器需要一个根文件夹。",
       "fileAccessRoot": "文件访问需要不是驱动器根目录的文件夹。",
+      "terminalRoot": "终端需要不是驱动器根目录的文件夹。",
+      "terminalPrograms": "受限模式至少需要一个程序。",
+      "zipRoot": "ZIP 需要不是驱动器根目录的文件夹。",
       "knowledgePath": "源文件夹为必填。",
       "knowledgeRoot": "不允许使用驱动器或系统根目录。",
       "knowledgeSandbox": "路径必须位于数据文件夹下。",
@@ -1676,6 +1704,60 @@
       "target": "路由器通向智能体、路由器或结束。",
       "orchestrator": "编排器之后的路由器只能通向结束。",
       "noEdge": "路由器没有匹配的边"
+    }
+  },
+  "prompts": {
+    "search": "搜索",
+    "sort": { "name": "名称", "updated": "已更改" },
+    "empty": { "library": "还没有提示词。", "filter": "没有符合此筛选的提示词。" },
+    "ribbon": {
+      "new": "新建",
+      "edit": "编辑",
+      "duplicate": "复制",
+      "tags": "添加标签",
+      "delete": "删除",
+      "import": "导入",
+      "export": "导出",
+      "refresh": "刷新"
+    },
+    "detail": {
+      "none": "未选择提示词。",
+      "many": "已选择 {{count}} 个提示词。",
+      "created": "创建于 {{date}}",
+      "updated": "更改于 {{date}}"
+    },
+    "editor": {
+      "create": "新建提示词",
+      "edit": "编辑提示词",
+      "name": "名称",
+      "description": "描述",
+      "tags": "标签",
+      "tagsHint": "逗号或换行",
+      "body": "提示词",
+      "nameRequired": "名称不能为空。",
+      "bodyRequired": "提示词不能为空。",
+      "save": "保存"
+    },
+    "import": {
+      "title": "导入提示词",
+      "pick": "选择文件",
+      "empty": "还没有文件。",
+      "unreadable": "无法读取 {{name}}。",
+      "save": "应用 {{count}} 项"
+    },
+    "delete": { "title": "删除 {{count}} 个提示词？" },
+    "dialog": { "close": "关闭", "cancel": "取消" },
+    "error": { "title": "提示词未能加载", "body": "当前无法访问资料库。" },
+    "resize": { "listHeight": "调整列表高度", "detailHeight": "调整详情高度", "width": "调整宽度" },
+    "notify": {
+      "created": "已创建提示词",
+      "saved": "已保存提示词",
+      "duplicated": "已复制提示词",
+      "tagged": "已保存标签",
+      "deleted": "已删除提示词",
+      "exported": "已保存导出",
+      "imported": "已导入提示词",
+      "failed": "没有成功"
     }
   }
 }

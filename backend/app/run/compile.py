@@ -36,6 +36,8 @@ class CompiledOrchestrator:
     tool_kinds: list[str] = field(default_factory=list)
     mcp: list[tuple[str, list[str] | None, str | None]] = field(default_factory=list)
     file_actions: list[str] | None = None
+    terminal_unrestricted: bool = False
+    terminal_programs: list[str] | None = None
     agent_miss_limit: int = DEFAULT_AGENT_MISS_LIMIT
 
 
@@ -49,6 +51,8 @@ class CompiledAgent:
     knowledge_node_ids: list[str]
     outbound_message: list[str]
     file_actions: list[str] | None = None
+    terminal_unrestricted: bool = False
+    terminal_programs: list[str] | None = None
 
 
 @dataclass
@@ -139,15 +143,36 @@ def _merge_actions(
     return list(dict.fromkeys([*current, *chosen])), True
 
 
+def _terminal_grant(data: dict) -> tuple[bool, list[str]]:
+    from app.tools.terminal_tool import DEFAULT_PROGRAMS
+
+    unrestricted = str(data.get("terminalMode") or "restricted").strip().lower() == "unrestricted"
+    raw = data.get("terminalPrograms")
+    if isinstance(raw, list):
+        programs = []
+        for item in raw:
+            name = str(item).strip().lower()
+            if name.endswith(".exe"):
+                name = name[:-4]
+            if name:
+                programs.append(name)
+    else:
+        programs = list(DEFAULT_PROGRAMS)
+    return unrestricted, programs
+
+
 def _compile_tools(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str
-) -> tuple[list[str], list[tuple[str, list[str] | None, str | None]], list[str] | None]:
+) -> tuple[list[str], list[tuple[str, list[str] | None, str | None]], list[str] | None, bool, list[str] | None]:
     from app.tools.file_access_tool import FILE_ACTION_ORDER
 
     tool_kinds: list[str] = []
     mcp: list[tuple[str, list[str] | None, str | None]] = []
     file_actions: list[str] | None = None
     saw_file = False
+    terminal_unrestricted = False
+    terminal_programs: list[str] | None = None
+    saw_terminal = False
     for edge in doc.edges:
         if edge.target != node_id or edge.target_handle != "tool":
             continue
@@ -174,7 +199,18 @@ def _compile_tools(
             file_actions, saw_file = _merge_actions(
                 file_actions, _chosen_actions(tool.data, "fileActions", FILE_ACTION_ORDER), saw_file
             )
-    return tool_kinds, mcp, file_actions
+        if kind == "terminal":
+            node_open, node_programs = _terminal_grant(tool.data)
+            if not saw_terminal:
+                terminal_unrestricted = node_open
+                terminal_programs = None if node_open else node_programs
+                saw_terminal = True
+            elif node_open or terminal_unrestricted:
+                terminal_unrestricted = True
+                terminal_programs = None
+            else:
+                terminal_programs = list(dict.fromkeys([*(terminal_programs or []), *node_programs]))
+    return tool_kinds, mcp, file_actions, terminal_unrestricted, terminal_programs
 
 
 def _agent_miss_limit(data: dict) -> int:
@@ -215,7 +251,9 @@ def _compile_orchestrator(
             agents.append(target.id)
         elif edge.source_handle == "message":
             finals.append(target.id)
-    tool_kinds, mcp, file_actions = _compile_tools(doc, by_id, node.id)
+    tool_kinds, mcp, file_actions, terminal_unrestricted, terminal_programs = _compile_tools(
+        doc, by_id, node.id
+    )
     return CompiledOrchestrator(
         node_id=node.id,
         system_prompt=str(node.data.get("systemPrompt") or ""),
@@ -225,6 +263,8 @@ def _compile_orchestrator(
         tool_kinds=tool_kinds,
         mcp=mcp,
         file_actions=file_actions,
+        terminal_unrestricted=terminal_unrestricted,
+        terminal_programs=terminal_programs,
         agent_miss_limit=_agent_miss_limit(node.data),
     )
 
@@ -254,7 +294,9 @@ def compile_document(
         if node.type != "agent":
             continue
         llm = _compile_llm(doc, by_id, node.id)
-        tool_kinds, mcp, file_actions = _compile_tools(doc, by_id, node.id)
+        tool_kinds, mcp, file_actions, terminal_unrestricted, terminal_programs = _compile_tools(
+            doc, by_id, node.id
+        )
         knowledge_ids = [
             e.source
             for e in doc.edges
@@ -272,6 +314,8 @@ def compile_document(
             tool_kinds=tool_kinds,
             mcp=mcp,
             file_actions=file_actions,
+            terminal_unrestricted=terminal_unrestricted,
+            terminal_programs=terminal_programs,
             knowledge_node_ids=knowledge_ids,
             outbound_message=outbound,
         )

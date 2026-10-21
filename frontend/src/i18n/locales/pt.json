@@ -18,6 +18,7 @@
     "networks": "Biblioteca",
     "monitoring": "Monitorização",
     "history": "Histórico",
+    "prompts": "Prompts",
     "settings": "Definições",
     "openMenu": "Abrir navegação",
     "closeMenu": "Fechar navegação",
@@ -48,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Alemão",
       "en": "Inglês",
@@ -57,7 +59,8 @@
       "pt": "Português",
       "zh": "Chinês",
       "ja": "Japonês",
-      "ar": "Árabe"
+      "ar": "Árabe",
+      "ru": "Russo"
     },
     "window": {
       "minimize": "Minimizar",
@@ -666,7 +669,7 @@
       "agent": "Agente",
       "agentHint": "Prompt de sistema. Sozinho pela mensagem, ou por um canal do orquestrador.",
       "tool": "Ferramenta",
-      "toolHint": "HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros. Ao agente ou ao orquestrador.",
+      "toolHint": "HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros, terminal, ZIP. Ao agente ou ao orquestrador.",
       "knowledge": "Conhecimento",
       "knowledgeHint": "Pasta de origem, só para o porto knowledge do agente.",
       "router": "Router",
@@ -783,6 +786,19 @@
         "agentMissLimit": "Falhas por agente",
         "agentMissLimitHint": "Quantas vezes um agente com acesso a ficheiros pode terminar uma tarefa sem escrever, editar ou apagar. Depois o orquestrador assume essa tarefa. A predefinição é 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Carregar prompt",
+        "body": "Escolha um prompt guardado. Substitui o prompt de sistema deste nó.",
+        "search": "Procurar",
+        "sortUpdated": "Alterado",
+        "sortName": "Nome",
+        "apply": "Aplicar",
+        "empty": "Ainda não há prompts.",
+        "filter": "Nenhum prompt corresponde a este filtro.",
+        "library": "Ir para os prompts",
+        "failed": "Não foi possível carregar o prompt."
+      },
       "tool": {
         "kind": "Tipo",
         "kindName": {
@@ -791,6 +807,8 @@
           "datetime": "Data/hora",
           "calculator": "Calculadora",
           "file_access": "Acesso a ficheiros",
+          "terminal": "Terminal",
+          "zip": "ZIP",
           "mcp": "MCP"
         },
         "method": "Método",
@@ -814,6 +832,13 @@
           "search": "Procurar",
           "tree": "Árvore"
         },
+        "terminalUnrestricted": "Sem restrição",
+        "terminalUnrestrictedHint": "O PowerShell corre como o utilizador da app. A pasta é apenas o diretório inicial. Sem pergunta durante a execução e sem elevação.",
+        "terminalHint": "Apenas os programas marcados, sem pipes nem redirecionamento. A pasta é o diretório inicial.",
+        "zipHint": "Lista um ZIP na pasta raiz e extrai-o lá. Os caminhos ficam dentro da pasta.",
+        "terminalPrograms": "Programas",
+        "terminalProgramPlaceholder": "Nome do programa",
+        "terminalProgramAdd": "Adicionar",
         "dateHint": "Mostra a hora atual num fuso IANA; o padrão é UTC. Um instante pode avançar ou recuar dias, horas e minutos. A distância entre dois instantes vem em segundos, horas e dias. As partes são data, hora e dia da semana; segunda-feira é 1. O mesmo instante pode ser visto noutro fuso.",
         "calculatorHint": "Calcula uma expressão com + - * / // % ** e parênteses. O expoente de ** é no máximo 20. Constantes: pi e e. Funções: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log e ln são o logaritmo natural; log pode ter uma base. sin, cos e tan usam radianos. factorial só aceita inteiros de 0 a 20.",
         "searchProvider": "Fornecedor",
@@ -943,6 +968,9 @@
       "mcpServer": "Escolha um servidor MCP ativo. Crie-o e ative-o nas Definições.",
       "mcpRoot": "Este servidor MCP precisa de uma pasta raiz.",
       "fileAccessRoot": "O acesso a ficheiros precisa de uma pasta que não seja a raiz da unidade.",
+      "terminalRoot": "O terminal precisa de uma pasta que não seja a raiz da unidade.",
+      "terminalPrograms": "O modo restrito precisa de pelo menos um programa.",
+      "zipRoot": "O ZIP precisa de uma pasta que não seja a raiz da unidade.",
       "knowledgePath": "A pasta de origem é obrigatória.",
       "knowledgeRoot": "A raiz de uma unidade ou do sistema não é permitida.",
       "knowledgeSandbox": "O caminho tem de estar sob a pasta de dados.",
@@ -1676,6 +1704,60 @@
       "target": "Um router leva a um agente, um router ou um fim.",
       "orchestrator": "Um router depois do orquestrador só leva a fins.",
       "noEdge": "O router não tem aresta correspondente"
+    }
+  },
+  "prompts": {
+    "search": "Procurar",
+    "sort": { "name": "Nome", "updated": "Alterado" },
+    "empty": { "library": "Ainda não há prompts.", "filter": "Nenhum prompt corresponde a este filtro." },
+    "ribbon": {
+      "new": "Novo",
+      "edit": "Editar",
+      "duplicate": "Duplicar",
+      "tags": "Adicionar etiquetas",
+      "delete": "Eliminar",
+      "import": "Importar",
+      "export": "Exportar",
+      "refresh": "Atualizar"
+    },
+    "detail": {
+      "none": "Nenhum prompt selecionado.",
+      "many": "{{count}} prompts selecionados.",
+      "created": "Criado {{date}}",
+      "updated": "Alterado {{date}}"
+    },
+    "editor": {
+      "create": "Criar prompt",
+      "edit": "Editar prompt",
+      "name": "Nome",
+      "description": "Descrição",
+      "tags": "Etiquetas",
+      "tagsHint": "Vírgula ou quebra de linha",
+      "body": "Prompt",
+      "nameRequired": "O nome não pode ficar vazio.",
+      "bodyRequired": "O prompt não pode ficar vazio.",
+      "save": "Guardar"
+    },
+    "import": {
+      "title": "Importar prompts",
+      "pick": "Escolher ficheiros",
+      "empty": "Ainda nenhum ficheiro.",
+      "unreadable": "Não foi possível ler {{name}}.",
+      "save": "Aplicar {{count}}"
+    },
+    "delete": { "title": "Eliminar {{count}} prompts?" },
+    "dialog": { "close": "Fechar", "cancel": "Cancelar" },
+    "error": { "title": "Prompts não carregados", "body": "A biblioteca não está acessível de momento." },
+    "resize": { "listHeight": "Alterar a altura da coleção", "detailHeight": "Alterar a altura do detalhe", "width": "Alterar a largura" },
+    "notify": {
+      "created": "Prompt criado",
+      "saved": "Prompt guardado",
+      "duplicated": "Prompt duplicado",
+      "tagged": "Etiquetas guardadas",
+      "deleted": "Prompts eliminados",
+      "exported": "Exportação guardada",
+      "imported": "Prompts importados",
+      "failed": "Não resultou"
     }
   }
 }

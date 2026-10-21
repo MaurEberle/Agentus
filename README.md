@@ -22,7 +22,7 @@ Ein Netz ist entweder eine **Kette** (Chat → Agent → Ende, optional Router, 
 
 Wissen darf auf einen beliebigen Ordner zeigen, außer auf eine Laufwerk- oder Systemwurzel und auf den Hilfe-Korpus. Hängt Wissen an einem Agenten, bleibt der Start in „startet“, bis der Index fertig oder als aktuell erkannt ist. Monitoring, Kopfzeile und Dashboard nennen den Knoten.
 
-Sprachen der Oberfläche und der Hilfe: Deutsch (Default), English, Español, Français, Türkçe, Português, 中文, 日本語, العربية.
+Sprachen der Oberfläche und der Hilfe: Deutsch (Default), English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية.
 
 ## Voraussetzungen
 
