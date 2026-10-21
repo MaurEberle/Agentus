@@ -1699,7 +1699,6 @@
   },
   "prompts": {
     "search": "Suche",
-    "tagFilter": "Tag",
     "sort": { "name": "Name", "updated": "Geändert" },
     "empty": { "library": "Noch keine Prompts.", "filter": "Keine Prompts für diesen Filter." },
     "ribbon": {

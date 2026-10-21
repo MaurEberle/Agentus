@@ -80,7 +80,6 @@ export function PromptsModule() {
   const query = useQuery({ queryKey: ['prompts'], queryFn: listPrompts });
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
   const [search, setSearch] = useState('');
-  const [tagFilter, setTagFilter] = useState('');
   const [sortKey, setSortKey] = useState<'name' | 'updated'>('updated');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -93,9 +92,7 @@ export function PromptsModule() {
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    const tag = tagFilter.trim().toLowerCase();
     const next = items.filter((item) => {
-      if (tag && !item.tags.some((entry) => entry.toLowerCase() === tag)) return false;
       if (!needle) return true;
       return `${item.name} ${item.description} ${item.tags.join(' ')}`.toLowerCase().includes(needle);
     });
@@ -111,7 +108,7 @@ export function PromptsModule() {
       return (av - bv) * dir;
     });
     return next;
-  }, [items, search, sortDir, sortKey, tagFilter]);
+  }, [items, search, sortDir, sortKey]);
 
   const selected = useMemo(
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is PromptListItem => Boolean(item)),
@@ -178,7 +175,6 @@ export function PromptsModule() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap gap-2 border-b p-3">
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
-        <Input value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} placeholder={t('prompts.tagFilter')} className="max-w-[12rem]" />
         <div className="flex items-center gap-1">
           <Button
             type="button"
