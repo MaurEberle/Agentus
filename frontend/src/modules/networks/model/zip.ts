@@ -32,6 +32,13 @@ function u32(value: number): Uint8Array {
   return buffer;
 }
 
+/** `Uint8Array` is `ArrayBufferLike` in TypeScript 5.8, which `Blob` rejects. */
+function blobFromBytes(data: Uint8Array, type: string): Blob {
+  const buffer = new ArrayBuffer(data.byteLength);
+  new Uint8Array(buffer).set(data);
+  return new Blob([buffer], { type });
+}
+
 function concat(parts: Uint8Array[]): Uint8Array {
   const length = parts.reduce((sum, part) => sum + part.length, 0);
   const out = new Uint8Array(length);
@@ -101,7 +108,7 @@ export function zipStore(files: Array<{ name: string; data: Uint8Array }>): Blob
     u32(offset),
     u16(0),
   ]);
-  return new Blob([concat([...locals, central, end])], { type: 'application/zip' });
+  return blobFromBytes(concat([...locals, central, end]), 'application/zip');
 }
 
 export function downloadBlob(filename: string, blob: Blob) {

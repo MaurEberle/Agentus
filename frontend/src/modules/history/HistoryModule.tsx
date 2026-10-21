@@ -271,21 +271,23 @@ export function HistoryModule() {
   async function exportIds(ids: string[]) {
     setBusy(true);
     try {
-      const files: Array<{ name: string; data: Uint8Array }> = [];
+      const files: Array<{ name: string; text: string }> = [];
       const encoder = new TextEncoder();
       for (const id of ids) {
         const run = items.find((item) => item.runId === id);
         const logs = await listRunLogs(id);
-        const body = logsToJsonl(logs);
         files.push({
           name: `${safeFilePart(run?.networkName ?? 'run')}-${shortId(id)}-${fileStamp()}.jsonl`,
-          data: encoder.encode(body),
+          text: logsToJsonl(logs),
         });
       }
       if (files.length === 1 && files[0]) {
-        downloadBlob(files[0].name, new Blob([files[0].data], { type: 'application/x-ndjson' }));
+        downloadBlob(files[0].name, new Blob([files[0].text], { type: 'application/x-ndjson' }));
       } else {
-        downloadBlob(`history-logs-${fileStamp()}.zip`, zipStore(files));
+        downloadBlob(
+          `history-logs-${fileStamp()}.zip`,
+          zipStore(files.map((file) => ({ name: file.name, data: encoder.encode(file.text) }))),
+        );
       }
       notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
     } catch {
