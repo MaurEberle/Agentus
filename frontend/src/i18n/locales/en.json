@@ -1730,6 +1730,8 @@
     },
     "import": {
       "title": "Import prompts",
+      "pick": "Choose files",
+      "empty": "No file yet.",
       "unreadable": "{{name}} could not be read.",
       "save": "Import {{count}}"
     },
