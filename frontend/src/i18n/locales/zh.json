@@ -784,6 +784,19 @@
         "agentMissLimit": "每个智能体的失败次数",
         "agentMissLimitHint": "有文件访问权限的智能体可以在不写入、不修改、不删除的情况下结束任务的次数。超过后由编排器接手该任务。默认是 3。"
       },
+      "prompt": {
+        "pick": "提示词",
+        "title": "加载提示词",
+        "body": "选择一个已保存的提示词。它会替换此节点的系统提示。",
+        "search": "搜索",
+        "sortUpdated": "已更改",
+        "sortName": "名称",
+        "apply": "应用",
+        "empty": "还没有提示词。",
+        "filter": "没有符合此筛选的提示词。",
+        "library": "前往提示词",
+        "failed": "无法加载提示词。"
+      },
       "tool": {
         "kind": "类型",
         "kindName": {

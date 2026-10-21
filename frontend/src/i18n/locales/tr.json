@@ -784,6 +784,19 @@
         "agentMissLimit": "Aracı başına başarısız deneme",
         "agentMissLimitHint": "Dosya erişimi olan bir aracı, yazmadan, değiştirmeden veya silmeden bir görevi kaç kez bitirebilir. Sonra orkestratör bu görevi üstlenir. Varsayılan 3."
       },
+      "prompt": {
+        "pick": "İstem",
+        "title": "İstem yükle",
+        "body": "Kayıtlı bir istem seçin. Bu düğümün sistem isteminin yerini alır.",
+        "search": "Ara",
+        "sortUpdated": "Güncellendi",
+        "sortName": "Ad",
+        "apply": "Uygula",
+        "empty": "Henüz istem yok.",
+        "filter": "Bu filtreye uyan istem yok.",
+        "library": "İstemlere git",
+        "failed": "İstem yüklenemedi."
+      },
       "tool": {
         "kind": "Tür",
         "kindName": {

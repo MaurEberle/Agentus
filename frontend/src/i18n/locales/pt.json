@@ -784,6 +784,19 @@
         "agentMissLimit": "Falhas por agente",
         "agentMissLimitHint": "Quantas vezes um agente com acesso a ficheiros pode terminar uma tarefa sem escrever, editar ou apagar. Depois o orquestrador assume essa tarefa. A predefinição é 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Carregar prompt",
+        "body": "Escolha um prompt guardado. Substitui o prompt de sistema deste nó.",
+        "search": "Procurar",
+        "sortUpdated": "Alterado",
+        "sortName": "Nome",
+        "apply": "Aplicar",
+        "empty": "Ainda não há prompts.",
+        "filter": "Nenhum prompt corresponde a este filtro.",
+        "library": "Ir para os prompts",
+        "failed": "Não foi possível carregar o prompt."
+      },
       "tool": {
         "kind": "Tipo",
         "kindName": {

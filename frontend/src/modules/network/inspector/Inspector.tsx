@@ -28,6 +28,7 @@ import {
   type RouterMatch,
   type ValidationIssue,
 } from '@/modules/network/model/document';
+import { PromptPickDialog } from '@/modules/network/inspector/PromptPickDialog';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
@@ -1058,14 +1059,7 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
   return (
     <>
       <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.hint')}</p>
-      <Field label={t('network.inspector.orchestrator.systemPrompt')}>
-        <Textarea
-          rows={6}
-          value={String(node.data.systemPrompt ?? '')}
-          disabled={readOnly}
-          onChange={(event) => editorUpdateNodeData(node.id, { systemPrompt: event.target.value })}
-        />
-      </Field>
+      <SystemPromptField key={node.id} node={node} readOnly={readOnly} label={t('network.inspector.orchestrator.systemPrompt')} />
       <Field label={t('network.inspector.orchestrator.agentMissLimit')}>
         <Input
           type="number"
@@ -1100,15 +1094,41 @@ function AgentFields({ node, readOnly }: { node: GraphNode; readOnly: boolean })
       <p className="text-xs text-muted-foreground">
         {t(onChannel ? 'network.inspector.agent.channelHint' : 'network.inspector.agent.hint')}
       </p>
-      <Field label={t('network.inspector.agent.systemPrompt')}>
-        <Textarea
-          rows={6}
-          value={String(node.data.systemPrompt ?? '')}
-          disabled={readOnly}
-          onChange={(event) => editorUpdateNodeData(node.id, { systemPrompt: event.target.value })}
-        />
-      </Field>
+      <SystemPromptField key={node.id} node={node} readOnly={readOnly} label={t('network.inspector.agent.systemPrompt')} />
     </>
+  );
+}
+
+function SystemPromptField({ node, readOnly, label }: { node: GraphNode; readOnly: boolean; label: string }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="grid min-w-0 gap-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <Label>{label}</Label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-xs"
+          disabled={readOnly}
+          onClick={() => setOpen(true)}
+        >
+          {t('network.inspector.prompt.pick')}
+        </Button>
+      </div>
+      <Textarea
+        rows={6}
+        value={String(node.data.systemPrompt ?? '')}
+        disabled={readOnly}
+        onChange={(event) => editorUpdateNodeData(node.id, { systemPrompt: event.target.value })}
+      />
+      <PromptPickDialog
+        open={open}
+        onOpenChange={setOpen}
+        onPick={(body) => editorUpdateNodeData(node.id, { systemPrompt: body })}
+      />
+    </div>
   );
 }
 

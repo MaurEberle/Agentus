@@ -784,6 +784,19 @@
         "agentMissLimit": "Échecs par agent",
         "agentMissLimitHint": "Nombre de fois qu’un agent avec accès aux fichiers peut terminer une tâche sans écrire, modifier ou supprimer. L’orchestrateur reprend alors cette tâche. La valeur par défaut est 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Charger un prompt",
+        "body": "Choisissez un prompt enregistré. Il remplace l’invite système de ce nœud.",
+        "search": "Rechercher",
+        "sortUpdated": "Modifié",
+        "sortName": "Nom",
+        "apply": "Appliquer",
+        "empty": "Aucun prompt enregistré.",
+        "filter": "Aucun prompt ne correspond à ce filtre.",
+        "library": "Vers les prompts",
+        "failed": "Le prompt n’a pas pu être chargé."
+      },
       "tool": {
         "kind": "Type",
         "kindName": {

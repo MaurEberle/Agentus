@@ -851,6 +851,19 @@
         "agentMissLimit": "Fehlversuche je Agent",
         "agentMissLimitHint": "So oft darf ein Agent mit Dateizugriff einen Auftrag ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Prompt laden",
+        "body": "Wähle einen gespeicherten Prompt. Er ersetzt den Systemprompt dieses Knotens.",
+        "search": "Suchen",
+        "sortUpdated": "Geändert",
+        "sortName": "Name",
+        "apply": "Übernehmen",
+        "empty": "Noch keine Prompts.",
+        "filter": "Keine Prompts für diesen Filter.",
+        "library": "Zu den Prompts",
+        "failed": "Der Prompt konnte nicht geladen werden."
+      },
       "tool": {
         "kind": "Art",
         "kindName": {

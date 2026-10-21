@@ -851,6 +851,19 @@
         "agentMissLimit": "Misses per agent",
         "agentMissLimitHint": "How often an agent with file access may finish a task without writing, editing, or deleting a file. The orchestrator then does that task. The default is 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Load prompt",
+        "body": "Choose a saved prompt. It replaces this node's system prompt.",
+        "search": "Search",
+        "sortUpdated": "Updated",
+        "sortName": "Name",
+        "apply": "Apply",
+        "empty": "No prompts saved yet.",
+        "filter": "No prompts match this filter.",
+        "library": "Go to prompts",
+        "failed": "The prompt could not be loaded."
+      },
       "tool": {
         "kind": "Kind",
         "kindName": {

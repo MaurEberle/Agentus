@@ -784,6 +784,19 @@
         "agentMissLimit": "Intentos fallidos por agente",
         "agentMissLimitHint": "Cuántas veces un agente con acceso a archivos puede terminar una tarea sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 3."
       },
+      "prompt": {
+        "pick": "Prompt",
+        "title": "Cargar prompt",
+        "body": "Elige un prompt guardado. Sustituye el prompt de sistema de este nodo.",
+        "search": "Buscar",
+        "sortUpdated": "Modificado",
+        "sortName": "Nombre",
+        "apply": "Aplicar",
+        "empty": "Aún no hay prompts.",
+        "filter": "Ningún prompt coincide con este filtro.",
+        "library": "Ir a los prompts",
+        "failed": "No se pudo cargar el prompt."
+      },
       "tool": {
         "kind": "Tipo",
         "kindName": {
