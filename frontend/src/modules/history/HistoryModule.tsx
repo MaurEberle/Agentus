@@ -38,7 +38,6 @@ import { ByModelTable } from '@/modules/history/tables/ByModelTable';
 import { ByNetworkTable } from '@/modules/history/tables/ByNetworkTable';
 import { HeightGrip, SplitRow, WidthGrip, paneColStyle } from '@/modules/monitoring/PaneGrips';
 import { cn } from '@/lib/utils';
-import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 
 
@@ -360,7 +359,7 @@ export function HistoryModule() {
   );
 
   return (
-    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 p-4 pb-24 [overflow-anchor:none] md:p-6 md:pb-24">
+    <div className="flex w-full min-w-0 max-w-full flex-col gap-4 overflow-x-hidden p-4 pb-24 [overflow-anchor:none] md:p-6 md:pb-24">
       <h1 className="text-xl font-semibold tracking-tight">{t('history.title')}</h1>
       <FilterBar
         filter={filter}
@@ -456,15 +455,15 @@ export function HistoryModule() {
             </div>
           </div>
           <div className={tab === 'model' ? undefined : 'hidden'}>
-            <Card className={moduleCardClass}>
-              <CardContent className={cn(moduleCardBodyClass, 'p-0')}>
+            <Card>
+              <CardContent className="p-0">
                 <ByModelTable rows={modelRows} />
               </CardContent>
             </Card>
           </div>
           <div className={tab === 'network' ? undefined : 'hidden'}>
-            <Card className={moduleCardClass}>
-              <CardContent className={cn(moduleCardBodyClass, 'p-0')}>
+            <Card>
+              <CardContent className="p-0">
                 <ByNetworkTable rows={networkRows} />
               </CardContent>
             </Card>
@@ -476,9 +475,9 @@ export function HistoryModule() {
                   className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
                   style={paneColStyle(panes.listShare)}
                 >
-                  <div className="min-h-0 w-full" style={{ height: panes.listH }}>
-                    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
-                      <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
+                  <div className="min-h-0 w-full min-w-0 overflow-hidden" style={{ height: panes.listH }}>
+                    <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+                      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">{listPane}</div>
                     </Card>
                   </div>
                   <HeightGrip
@@ -496,9 +495,9 @@ export function HistoryModule() {
                   className="flex w-full min-w-0 flex-col md:min-w-[12rem]"
                   style={paneColStyle(1 - panes.listShare)}
                 >
-                  <div className="min-h-0 w-full" style={{ height: panes.detailH }}>
-                    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
-                      <div className={moduleCardBodyClass}>{detailPane}</div>
+                  <div className="min-h-0 w-full min-w-0 overflow-hidden" style={{ height: panes.detailH }}>
+                    <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+                      <div className="min-h-0 flex-1 overflow-y-auto">{detailPane}</div>
                     </Card>
                   </div>
                   <HeightGrip
@@ -510,18 +509,16 @@ export function HistoryModule() {
               </SplitRow>
             ) : (
               <>
-                <div className="flex w-full min-w-0 flex-col">
-                  <div className="min-h-0 w-full" style={{ height: panes.listH }}>
-                    <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
-                      <div className={cn(moduleCardBodyClass, 'overflow-x-auto')}>{listPane}</div>
-                    </Card>
-                  </div>
-                  <HeightGrip
-                    label={t('history.resize.listHeight')}
-                    value={panes.listH}
-                    onChange={(listH) => setPanes({ listH })}
-                  />
+                <div className="min-h-0 w-full min-w-0 overflow-hidden" style={{ height: panes.listH }}>
+                  <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+                    <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">{listPane}</div>
+                  </Card>
                 </div>
+                <HeightGrip
+                  label={t('history.resize.listHeight')}
+                  value={panes.listH}
+                  onChange={(listH) => setPanes({ listH })}
+                />
                 <Sheet open={showDetail} onOpenChange={(open) => !open && closeDetail()}>
                   <SheetContent side="bottom" closeLabel={t('history.close')} className="max-h-[min(90vh,1000px)] overflow-auto">
                     <SheetHeader>
