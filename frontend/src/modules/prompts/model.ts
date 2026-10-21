@@ -69,6 +69,30 @@ export function parsePrompty(fileName: string, text: string): PromptFile {
   return draft ? { fileName, ok: true, draft } : { fileName, ok: false };
 }
 
+export function parseMarkdown(fileName: string, text: string): PromptFile {
+  const source = text.replace(/^\uFEFF/, '');
+  const base = fileName.split(/[\\/]/).pop()?.replace(/\.md$/i, '') || 'Prompt';
+  let name = base || 'Prompt';
+  let description = '';
+  let body = source;
+  if (source.startsWith('---')) {
+    const end = source.indexOf('\n---', 3);
+    if (end >= 0) {
+      const front = source.slice(3, end);
+      body = source.slice(end + 4).replace(/^\r?\n/, '');
+      for (const line of front.split(/\r?\n/)) {
+        const match = /^(name|description):\s*(.*)$/.exec(line.trim());
+        if (!match) continue;
+        const value = match[2].replace(/^["']|["']$/g, '').trim();
+        if (match[1] === 'name' && value) name = value;
+        if (match[1] === 'description') description = value;
+      }
+    }
+  }
+  const draft = asDraft(name, description, body);
+  return draft ? { fileName, ok: true, draft } : { fileName, ok: false };
+}
+
 export function parseFabric(fileName: string, text: string): PromptFile {
   const parts = fileName.split(/[\\/]/).filter(Boolean);
   const systemIndex = parts.lastIndexOf('system.md');
@@ -80,6 +104,7 @@ export function parseFabric(fileName: string, text: string): PromptFile {
 export function parsePromptFile(fileName: string, text: string): PromptFile[] {
   const lower = fileName.toLowerCase();
   if (lower.endsWith('system.md')) return [parseFabric(fileName, text)];
+  if (lower.endsWith('.md')) return [parseMarkdown(fileName, text)];
   if (lower.endsWith('.prompty')) return [parsePrompty(fileName, text)];
   if (lower.endsWith('.json')) {
     try {
