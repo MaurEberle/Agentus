@@ -27,7 +27,7 @@ export function PromptPickDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPick: (body: string) => void;
+  onPick: (prompt: { name: string; body: string }) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { data } = useQuery({ queryKey: ['prompts'], queryFn: listPrompts, enabled: open });
@@ -61,7 +61,7 @@ export function PromptPickDialog({
     setBusy(true);
     try {
       const detail = await getPrompt(selected);
-      onPick(detail.body);
+      onPick({ name: detail.name, body: detail.body });
       onOpenChange(false);
     } catch {
       notify({ titleKey: 'network.inspector.prompt.failed', variant: 'error' });

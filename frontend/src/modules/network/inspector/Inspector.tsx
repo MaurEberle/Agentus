@@ -1126,7 +1126,13 @@ function SystemPromptField({ node, readOnly, label }: { node: GraphNode; readOnl
       <PromptPickDialog
         open={open}
         onOpenChange={setOpen}
-        onPick={(body) => editorUpdateNodeData(node.id, { systemPrompt: body })}
+        onPick={(prompt) => {
+          const patch: Record<string, string> = { systemPrompt: prompt.body };
+          const currentName = String(node.data.displayName ?? '').trim();
+          const promptName = prompt.name.trim();
+          if (!currentName && promptName) patch.displayName = promptName;
+          editorUpdateNodeData(node.id, patch);
+        }}
       />
     </div>
   );
