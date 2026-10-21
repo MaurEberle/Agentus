@@ -9,7 +9,12 @@ export const COL_FIT = 'max-content';
 export function HistoryGrid({ columns, children }: { columns: string; children: ReactNode }) {
   return (
     <div className="w-full overflow-x-auto">
-      <div role="table" className="grid w-max text-sm" style={{ gridTemplateColumns: columns }}>
+      <div
+        role="table"
+        className="grid w-max text-sm"
+        // This max-content grid leaks its height to the document past overflow:hidden. Paint containment stops that.
+        style={{ gridTemplateColumns: columns, contain: 'paint' }}
+      >
         {children}
       </div>
     </div>
