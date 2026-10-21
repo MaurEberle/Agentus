@@ -405,6 +405,9 @@ function PromptEditor({
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [body, setBody] = useState('');
+  const [showErrors, setShowErrors] = useState(false);
+  const nameMissing = !name.trim();
+  const bodyMissing = !body.trim();
 
   useEffect(() => {
     if (!open) return;
@@ -412,7 +415,21 @@ function PromptEditor({
     setDescription(initial?.description ?? '');
     setTags(initial?.tags ?? []);
     setBody(initial?.body ?? '');
+    setShowErrors(false);
   }, [initial, open]);
+
+  function save() {
+    if (nameMissing || bodyMissing) {
+      setShowErrors(true);
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      description: description.trim(),
+      tags: tagRef.current?.commitDraft() ?? tags,
+      body: body.trim(),
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -423,7 +440,14 @@ function PromptEditor({
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label htmlFor="prompt-name">{t('prompts.editor.name')}</Label>
-            <Input id="prompt-name" value={name} onChange={(event) => setName(event.target.value)} />
+            <Input
+              id="prompt-name"
+              value={name}
+              aria-invalid={showErrors && nameMissing}
+              className={showErrors && nameMissing ? 'border-destructive' : undefined}
+              onChange={(event) => setName(event.target.value)}
+            />
+            {showErrors && nameMissing ? <p className="text-xs text-destructive">{t('prompts.editor.nameRequired')}</p> : null}
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="prompt-description">{t('prompts.editor.description')}</Label>
@@ -449,23 +473,19 @@ function PromptEditor({
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="prompt-body">{t('prompts.editor.body')}</Label>
-            <Textarea id="prompt-body" value={body} onChange={(event) => setBody(event.target.value)} className="min-h-48 font-mono text-sm" />
+            <Textarea
+              id="prompt-body"
+              value={body}
+              aria-invalid={showErrors && bodyMissing}
+              onChange={(event) => setBody(event.target.value)}
+              className={cn('min-h-48 font-mono text-sm', showErrors && bodyMissing && 'border-destructive')}
+            />
+            {showErrors && bodyMissing ? <p className="text-xs text-destructive">{t('prompts.editor.bodyRequired')}</p> : null}
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>{t('prompts.dialog.cancel')}</Button>
-          <Button
-            type="button"
-            disabled={busy || !name.trim()}
-            onClick={() =>
-              onSave({
-                name: name.trim(),
-                description: description.trim(),
-                tags: tagRef.current?.commitDraft() ?? tags,
-                body,
-              })
-            }
-          >
+          <Button type="button" disabled={busy || nameMissing || bodyMissing} onClick={save}>
             {t('prompts.editor.save')}
           </Button>
         </DialogFooter>

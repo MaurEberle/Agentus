@@ -49,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Deutsch",
       "en": "Englisch",
@@ -58,7 +59,8 @@
       "pt": "Portugiesisch",
       "zh": "Chinesisch",
       "ja": "Japanisch",
-      "ar": "Arabisch"
+      "ar": "Arabisch",
+      "ru": "Russisch"
     },
     "window": {
       "minimize": "Minimieren",
@@ -1725,6 +1727,8 @@
       "tags": "Tags",
       "tagsHint": "Komma oder Zeilenumbruch",
       "body": "Prompt",
+      "nameRequired": "Name darf nicht leer sein.",
+      "bodyRequired": "Der Prompt darf nicht leer sein.",
       "save": "Speichern"
     },
     "import": {

@@ -16,7 +16,7 @@ Ollama est un **service à part**. Fermer ou désinstaller Agentus Network n’a
 
 **Paramètres** sont dans l’en-tête (engrenage), pas dans la navigation de gauche.
 
-Dans l’en-tête aussi : **Démarrer** / **Arrêter**, **sélection rapide** du réseau actif, cloche (notifications), clair/sombre/système, langue (Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية) et boutons de fenêtre (réduire, agrandir, fermer).
+Dans l’en-tête aussi : **Démarrer** / **Arrêter**, **sélection rapide** du réseau actif, cloche (notifications), clair/sombre/système, langue (Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية) et boutons de fenêtre (réduire, agrandir, fermer).
 
 Glisse le logo ou l’en-tête vide pour déplacer la fenêtre. Démarrer, Arrêter, la sélection rapide et les boutons à droite ne sont pas des zones de glisser.
 

@@ -49,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Alemão",
       "en": "Inglês",
@@ -58,7 +59,8 @@
       "pt": "Português",
       "zh": "Chinês",
       "ja": "Japonês",
-      "ar": "Árabe"
+      "ar": "Árabe",
+      "ru": "Russo"
     },
     "window": {
       "minimize": "Minimizar",
@@ -1690,6 +1692,60 @@
       "target": "Um router leva a um agente, um router ou um fim.",
       "orchestrator": "Um router depois do orquestrador só leva a fins.",
       "noEdge": "O router não tem aresta correspondente"
+    }
+  },
+  "prompts": {
+    "search": "Procurar",
+    "sort": { "name": "Nome", "updated": "Alterado" },
+    "empty": { "library": "Ainda não há prompts.", "filter": "Nenhum prompt corresponde a este filtro." },
+    "ribbon": {
+      "new": "Novo",
+      "edit": "Editar",
+      "duplicate": "Duplicar",
+      "tags": "Adicionar etiquetas",
+      "delete": "Eliminar",
+      "import": "Importar",
+      "export": "Exportar",
+      "refresh": "Atualizar"
+    },
+    "detail": {
+      "none": "Nenhum prompt selecionado.",
+      "many": "{{count}} prompts selecionados.",
+      "created": "Criado {{date}}",
+      "updated": "Alterado {{date}}"
+    },
+    "editor": {
+      "create": "Criar prompt",
+      "edit": "Editar prompt",
+      "name": "Nome",
+      "description": "Descrição",
+      "tags": "Etiquetas",
+      "tagsHint": "Vírgula ou quebra de linha",
+      "body": "Prompt",
+      "nameRequired": "O nome não pode ficar vazio.",
+      "bodyRequired": "O prompt não pode ficar vazio.",
+      "save": "Guardar"
+    },
+    "import": {
+      "title": "Importar prompts",
+      "pick": "Escolher ficheiros",
+      "empty": "Ainda nenhum ficheiro.",
+      "unreadable": "Não foi possível ler {{name}}.",
+      "save": "Aplicar {{count}}"
+    },
+    "delete": { "title": "Eliminar {{count}} prompts?" },
+    "dialog": { "close": "Fechar", "cancel": "Cancelar" },
+    "error": { "title": "Prompts não carregados", "body": "A biblioteca não está acessível de momento." },
+    "resize": { "listHeight": "Alterar a altura da coleção", "detailHeight": "Alterar a altura do detalhe", "width": "Alterar a largura" },
+    "notify": {
+      "created": "Prompt criado",
+      "saved": "Prompt guardado",
+      "duplicated": "Prompt duplicado",
+      "tagged": "Etiquetas guardadas",
+      "deleted": "Prompts eliminados",
+      "exported": "Exportação guardada",
+      "imported": "Prompts importados",
+      "failed": "Não resultou"
     }
   }
 }

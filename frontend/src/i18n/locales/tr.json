@@ -49,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Almanca",
       "en": "İngilizce",
@@ -58,7 +59,8 @@
       "pt": "Portekizce",
       "zh": "Çince",
       "ja": "Japonca",
-      "ar": "Arapça"
+      "ar": "Arapça",
+      "ru": "Rusça"
     },
     "window": {
       "minimize": "Simge durumuna küçült",
@@ -1690,6 +1692,60 @@
       "target": "Bir yönlendirici bir aracıya, bir yönlendiriciye veya bir bitişe gider.",
       "orchestrator": "Orkestratörden sonraki yönlendirici yalnızca bitişlere gider.",
       "noEdge": "Yönlendiricide eşleşen kenar yok"
+    }
+  },
+  "prompts": {
+    "search": "Ara",
+    "sort": { "name": "Ad", "updated": "Değiştirildi" },
+    "empty": { "library": "Henüz istem yok.", "filter": "Bu filtreye uyan istem yok." },
+    "ribbon": {
+      "new": "Yeni",
+      "edit": "Düzenle",
+      "duplicate": "Çoğalt",
+      "tags": "Etiket ekle",
+      "delete": "Sil",
+      "import": "İçe aktar",
+      "export": "Dışa aktar",
+      "refresh": "Yenile"
+    },
+    "detail": {
+      "none": "İstem seçilmedi.",
+      "many": "{{count}} istem seçildi.",
+      "created": "Oluşturuldu {{date}}",
+      "updated": "Değiştirildi {{date}}"
+    },
+    "editor": {
+      "create": "İstem oluştur",
+      "edit": "İstemi düzenle",
+      "name": "Ad",
+      "description": "Açıklama",
+      "tags": "Etiketler",
+      "tagsHint": "Virgül veya satır sonu",
+      "body": "İstem",
+      "nameRequired": "Ad boş olamaz.",
+      "bodyRequired": "İstem boş olamaz.",
+      "save": "Kaydet"
+    },
+    "import": {
+      "title": "İstemleri içe aktar",
+      "pick": "Dosyaları seç",
+      "empty": "Henüz dosya yok.",
+      "unreadable": "{{name}} okunamadı.",
+      "save": "{{count}} uygula"
+    },
+    "delete": { "title": "{{count}} istem silinsin mi?" },
+    "dialog": { "close": "Kapat", "cancel": "İptal" },
+    "error": { "title": "İstemler yüklenemedi", "body": "Kitaplığa şu anda ulaşılamıyor." },
+    "resize": { "listHeight": "Koleksiyon yüksekliğini değiştir", "detailHeight": "Ayrıntı yüksekliğini değiştir", "width": "Genişliği değiştir" },
+    "notify": {
+      "created": "İstem oluşturuldu",
+      "saved": "İstem kaydedildi",
+      "duplicated": "İstem çoğaltıldı",
+      "tagged": "Etiketler kaydedildi",
+      "deleted": "İstemler silindi",
+      "exported": "Dışa aktarma kaydedildi",
+      "imported": "İstemler içe aktarıldı",
+      "failed": "Bu işe yaramadı"
     }
   }
 }

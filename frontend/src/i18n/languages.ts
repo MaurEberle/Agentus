@@ -1,4 +1,4 @@
-export const APP_LANGUAGES = ['de', 'en', 'es', 'fr', 'tr', 'pt', 'zh', 'ja', 'ar'] as const;
+export const APP_LANGUAGES = ['de', 'en', 'es', 'fr', 'tr', 'pt', 'ru', 'zh', 'ja', 'ar'] as const;
 
 export type AppLanguage = (typeof APP_LANGUAGES)[number];
 
@@ -9,6 +9,7 @@ export const LANGUAGE_LABEL_KEYS: Record<AppLanguage, `shell.language${Capitaliz
   fr: 'shell.languageFr',
   tr: 'shell.languageTr',
   pt: 'shell.languagePt',
+  ru: 'shell.languageRu',
   zh: 'shell.languageZh',
   ja: 'shell.languageJa',
   ar: 'shell.languageAr',
@@ -21,6 +22,7 @@ export const LANGUAGE_NAME_KEYS: Record<AppLanguage, `shell.languageNames.${AppL
   fr: 'shell.languageNames.fr',
   tr: 'shell.languageNames.tr',
   pt: 'shell.languageNames.pt',
+  ru: 'shell.languageNames.ru',
   zh: 'shell.languageNames.zh',
   ja: 'shell.languageNames.ja',
   ar: 'shell.languageNames.ar',

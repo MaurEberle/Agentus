@@ -7,6 +7,7 @@ import es from '@/i18n/locales/es.json';
 import fr from '@/i18n/locales/fr.json';
 import ja from '@/i18n/locales/ja.json';
 import pt from '@/i18n/locales/pt.json';
+import ru from '@/i18n/locales/ru.json';
 import tr from '@/i18n/locales/tr.json';
 import zh from '@/i18n/locales/zh.json';
 import {
@@ -49,6 +50,7 @@ void i18n.use(initReactI18next).init({
     fr: { translation: fr },
     tr: { translation: tr },
     pt: { translation: pt },
+    ru: { translation: ru },
     zh: { translation: zh },
     ja: { translation: ja },
     ar: { translation: ar },

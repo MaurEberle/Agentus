@@ -49,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "ドイツ語",
       "en": "英語",
@@ -58,7 +59,8 @@
       "pt": "ポルトガル語",
       "zh": "中国語",
       "ja": "日本語",
-      "ar": "アラビア語"
+      "ar": "アラビア語",
+      "ru": "ロシア語"
     },
     "window": {
       "minimize": "最小化",
@@ -1690,6 +1692,60 @@
       "target": "ルーターの先はエージェント、ルーター、または終了です。",
       "orchestrator": "オーケストレーターの後のルーターは終了だけへ続きます。",
       "noEdge": "ルーターに一致するエッジがありません"
+    }
+  },
+  "prompts": {
+    "search": "検索",
+    "sort": { "name": "名前", "updated": "更新" },
+    "empty": { "library": "プロンプトはまだありません。", "filter": "この条件に合うプロンプトはありません。" },
+    "ribbon": {
+      "new": "新規",
+      "edit": "編集",
+      "duplicate": "複製",
+      "tags": "タグを追加",
+      "delete": "削除",
+      "import": "インポート",
+      "export": "エクスポート",
+      "refresh": "更新"
+    },
+    "detail": {
+      "none": "プロンプトが選択されていません。",
+      "many": "{{count}} 件のプロンプトを選択中。",
+      "created": "作成 {{date}}",
+      "updated": "更新 {{date}}"
+    },
+    "editor": {
+      "create": "プロンプトを作成",
+      "edit": "プロンプトを編集",
+      "name": "名前",
+      "description": "説明",
+      "tags": "タグ",
+      "tagsHint": "カンマまたは改行",
+      "body": "プロンプト",
+      "nameRequired": "名前は空にできません。",
+      "bodyRequired": "プロンプトは空にできません。",
+      "save": "保存"
+    },
+    "import": {
+      "title": "プロンプトをインポート",
+      "pick": "ファイルを選択",
+      "empty": "まだファイルがありません。",
+      "unreadable": "{{name}} を読み取れませんでした。",
+      "save": "{{count}} 件を適用"
+    },
+    "delete": { "title": "{{count}} 件のプロンプトを削除しますか？" },
+    "dialog": { "close": "閉じる", "cancel": "キャンセル" },
+    "error": { "title": "プロンプトを読み込めません", "body": "ライブラリに現在接続できません。" },
+    "resize": { "listHeight": "一覧の高さを変更", "detailHeight": "詳細の高さを変更", "width": "幅を変更" },
+    "notify": {
+      "created": "プロンプトを作成しました",
+      "saved": "プロンプトを保存しました",
+      "duplicated": "プロンプトを複製しました",
+      "tagged": "タグを保存しました",
+      "deleted": "プロンプトを削除しました",
+      "exported": "エクスポートを保存しました",
+      "imported": "プロンプトをインポートしました",
+      "failed": "うまくいきませんでした"
     }
   }
 }

@@ -49,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "德语",
       "en": "英语",
@@ -58,7 +59,8 @@
       "pt": "葡萄牙语",
       "zh": "中文",
       "ja": "日语",
-      "ar": "阿拉伯语"
+      "ar": "阿拉伯语",
+      "ru": "俄语"
     },
     "window": {
       "minimize": "最小化",
@@ -1690,6 +1692,60 @@
       "target": "路由器通向智能体、路由器或结束。",
       "orchestrator": "编排器之后的路由器只能通向结束。",
       "noEdge": "路由器没有匹配的边"
+    }
+  },
+  "prompts": {
+    "search": "搜索",
+    "sort": { "name": "名称", "updated": "已更改" },
+    "empty": { "library": "还没有提示词。", "filter": "没有符合此筛选的提示词。" },
+    "ribbon": {
+      "new": "新建",
+      "edit": "编辑",
+      "duplicate": "复制",
+      "tags": "添加标签",
+      "delete": "删除",
+      "import": "导入",
+      "export": "导出",
+      "refresh": "刷新"
+    },
+    "detail": {
+      "none": "未选择提示词。",
+      "many": "已选择 {{count}} 个提示词。",
+      "created": "创建于 {{date}}",
+      "updated": "更改于 {{date}}"
+    },
+    "editor": {
+      "create": "新建提示词",
+      "edit": "编辑提示词",
+      "name": "名称",
+      "description": "描述",
+      "tags": "标签",
+      "tagsHint": "逗号或换行",
+      "body": "提示词",
+      "nameRequired": "名称不能为空。",
+      "bodyRequired": "提示词不能为空。",
+      "save": "保存"
+    },
+    "import": {
+      "title": "导入提示词",
+      "pick": "选择文件",
+      "empty": "还没有文件。",
+      "unreadable": "无法读取 {{name}}。",
+      "save": "应用 {{count}} 项"
+    },
+    "delete": { "title": "删除 {{count}} 个提示词？" },
+    "dialog": { "close": "关闭", "cancel": "取消" },
+    "error": { "title": "提示词未能加载", "body": "当前无法访问资料库。" },
+    "resize": { "listHeight": "调整列表高度", "detailHeight": "调整详情高度", "width": "调整宽度" },
+    "notify": {
+      "created": "已创建提示词",
+      "saved": "已保存提示词",
+      "duplicated": "已复制提示词",
+      "tagged": "已保存标签",
+      "deleted": "已删除提示词",
+      "exported": "已保存导出",
+      "imported": "已导入提示词",
+      "failed": "没有成功"
     }
   }
 }

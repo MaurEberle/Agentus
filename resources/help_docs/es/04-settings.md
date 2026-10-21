@@ -4,7 +4,7 @@ Engranaje en el encabezado. Secciones a la izquierda: Apariencia, Credenciales, 
 
 ## Apariencia
 
-Claro, oscuro o sistema — vale para toda la app, incluido el encabezado. **Idioma** es un desplegable con bandera: Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية. El nombre entre paréntesis es la traducción en el idioma de la interfaz actual.
+Claro, oscuro o sistema — vale para toda la app, incluido el encabezado. **Idioma** es un desplegable con bandera: Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية. El nombre entre paréntesis es la traducción en el idioma de la interfaz actual.
 
 Interruptor **Botón de ayuda**: muestra u oculta la burbuja abajo a la derecha. La **configuración** del chatbot sigue en **Chat de ayuda**, aunque la burbuja esté oculta.
 

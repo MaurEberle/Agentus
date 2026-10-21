@@ -16,7 +16,7 @@ Solda (telefonda: hamburger menü):
 
 **Ayarlar** başlık çubuğundadır (dişli), sol gezinmede değil.
 
-Başlıkta ayrıca: **Başlat** / **Durdur**, etkin ağın **hızlı seçimi**, zil (bildirimler), açık/koyu/sistem, dil (Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية) ve pencere düğmeleri (küçült, kapla, kapat).
+Başlıkta ayrıca: **Başlat** / **Durdur**, etkin ağın **hızlı seçimi**, zil (bildirimler), açık/koyu/sistem, dil (Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية) ve pencere düğmeleri (küçült, kapla, kapat).
 
 Logoyu veya boş başlığı sürükleyerek pencereyi taşırsın. Başlat, Durdur, hızlı seçim ve sağdaki düğmeler sürükleme alanı değildir.
 

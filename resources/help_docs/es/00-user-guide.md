@@ -16,7 +16,7 @@ A la izquierda (en el teléfono: menú hamburguesa):
 
 **Ajustes** están en el encabezado (engranaje), no en la navegación izquierda.
 
-En el encabezado también: **Iniciar** / **Detener**, **selección rápida** de la red activa, campana (notificaciones), claro/oscuro/sistema, idioma (Deutsch, English, Español, Français, Türkçe, Português, 中文, 日本語, العربية) y botones de ventana (minimizar, maximizar, cerrar).
+En el encabezado también: **Iniciar** / **Detener**, **selección rápida** de la red activa, campana (notificaciones), claro/oscuro/sistema, idioma (Deutsch, English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية) y botones de ventana (minimizar, maximizar, cerrar).
 
 Arrastra el logotipo o el encabezado vacío para mover la ventana. Iniciar, Detener, la selección rápida y los botones de la derecha no son zonas de arrastre.
 

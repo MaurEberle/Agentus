@@ -49,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "German",
       "en": "English",
@@ -58,7 +59,8 @@
       "pt": "Portuguese",
       "zh": "Chinese",
       "ja": "Japanese",
-      "ar": "Arabic"
+      "ar": "Arabic",
+      "ru": "Russian"
     },
     "window": {
       "minimize": "Minimize",
@@ -1725,6 +1727,8 @@
       "tags": "Tags",
       "tagsHint": "Comma or new line",
       "body": "Prompt",
+      "nameRequired": "Name cannot be empty.",
+      "bodyRequired": "The prompt cannot be empty.",
       "save": "Save"
     },
     "import": {

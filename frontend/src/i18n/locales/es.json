@@ -49,6 +49,7 @@
     "languageZh": "中文",
     "languageJa": "日本語",
     "languageAr": "العربية",
+    "languageRu": "Русский",
     "languageNames": {
       "de": "Alemán",
       "en": "Inglés",
@@ -58,7 +59,8 @@
       "pt": "Portugués",
       "zh": "Chino",
       "ja": "Japonés",
-      "ar": "Árabe"
+      "ar": "Árabe",
+      "ru": "Ruso"
     },
     "window": {
       "minimize": "Minimizar",
@@ -1690,6 +1692,60 @@
       "target": "Un enrutador lleva a un agente, un enrutador o un fin.",
       "orchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
       "noEdge": "El enrutador no tiene una arista coincidente"
+    }
+  },
+  "prompts": {
+    "search": "Buscar",
+    "sort": { "name": "Nombre", "updated": "Modificado" },
+    "empty": { "library": "Aún no hay prompts.", "filter": "Ningún prompt coincide con este filtro." },
+    "ribbon": {
+      "new": "Nuevo",
+      "edit": "Editar",
+      "duplicate": "Duplicar",
+      "tags": "Añadir etiquetas",
+      "delete": "Eliminar",
+      "import": "Importar",
+      "export": "Exportar",
+      "refresh": "Actualizar"
+    },
+    "detail": {
+      "none": "Ningún prompt seleccionado.",
+      "many": "{{count}} prompts seleccionados.",
+      "created": "Creado {{date}}",
+      "updated": "Modificado {{date}}"
+    },
+    "editor": {
+      "create": "Crear prompt",
+      "edit": "Editar prompt",
+      "name": "Nombre",
+      "description": "Descripción",
+      "tags": "Etiquetas",
+      "tagsHint": "Coma o salto de línea",
+      "body": "Prompt",
+      "nameRequired": "El nombre no puede estar vacío.",
+      "bodyRequired": "El prompt no puede estar vacío.",
+      "save": "Guardar"
+    },
+    "import": {
+      "title": "Importar prompts",
+      "pick": "Elegir archivos",
+      "empty": "Aún no hay ningún archivo.",
+      "unreadable": "No se pudo leer {{name}}.",
+      "save": "Aplicar {{count}}"
+    },
+    "delete": { "title": "¿Eliminar {{count}} prompts?" },
+    "dialog": { "close": "Cerrar", "cancel": "Cancelar" },
+    "error": { "title": "No se pudieron cargar los prompts", "body": "La biblioteca no está disponible ahora." },
+    "resize": { "listHeight": "Cambiar la altura de la colección", "detailHeight": "Cambiar la altura del detalle", "width": "Cambiar el ancho" },
+    "notify": {
+      "created": "Prompt creado",
+      "saved": "Prompt guardado",
+      "duplicated": "Prompt duplicado",
+      "tagged": "Etiquetas guardadas",
+      "deleted": "Prompts eliminados",
+      "exported": "Exportación guardada",
+      "imported": "Prompts importados",
+      "failed": "No ha funcionado"
     }
   }
 }
