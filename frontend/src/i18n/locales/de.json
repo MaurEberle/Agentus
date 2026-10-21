@@ -18,6 +18,7 @@
     "networks": "Verwaltung",
     "monitoring": "Monitoring",
     "history": "Historie",
+    "prompts": "Prompts",
     "settings": "Einstellungen",
     "openMenu": "Navigation öffnen",
     "closeMenu": "Navigation schließen",
@@ -1682,5 +1683,56 @@
     "modelNotFound": "Das Embedding-Modell wurde nicht gefunden.",
     "missingCredential": "Für dieses Embedding-Modell fehlt ein Zugang.",
     "unauthorized": "Der Zugang für Embeddings wurde abgelehnt."
+  },
+  "prompts": {
+    "search": "Suche",
+    "tagFilter": "Tag",
+    "sort": { "name": "Name", "updated": "Geändert" },
+    "empty": { "library": "Noch keine Prompts.", "filter": "Keine Prompts für diesen Filter." },
+    "ribbon": {
+      "new": "Neu",
+      "edit": "Bearbeiten",
+      "duplicate": "Duplizieren",
+      "tags": "Tags setzen",
+      "delete": "Löschen",
+      "import": "Importieren",
+      "export": "Exportieren",
+      "refresh": "Aktualisieren"
+    },
+    "detail": {
+      "none": "Kein Prompt ausgewählt.",
+      "many": "{{count}} Prompts ausgewählt.",
+      "created": "Erstellt {{date}}",
+      "updated": "Geändert {{date}}"
+    },
+    "editor": {
+      "create": "Prompt anlegen",
+      "edit": "Prompt bearbeiten",
+      "name": "Name",
+      "description": "Beschreibung",
+      "tags": "Tags",
+      "tagsHint": "Komma oder Zeilenumbruch",
+      "body": "Prompt",
+      "save": "Speichern"
+    },
+    "import": {
+      "title": "Prompts importieren",
+      "unreadable": "{{name}} konnte nicht gelesen werden.",
+      "save": "{{count}} übernehmen"
+    },
+    "delete": { "title": "{{count}} Prompts löschen?" },
+    "dialog": { "close": "Schließen", "cancel": "Abbrechen" },
+    "error": { "title": "Prompts nicht geladen", "body": "Die Bibliothek ist gerade nicht erreichbar." },
+    "resize": { "listHeight": "Höhe der Sammlung ändern", "detailHeight": "Höhe des Details ändern", "width": "Breite ändern" },
+    "notify": {
+      "created": "Prompt angelegt",
+      "saved": "Prompt gespeichert",
+      "duplicated": "Prompt dupliziert",
+      "tagged": "Tags gespeichert",
+      "deleted": "Prompts gelöscht",
+      "exported": "Export gespeichert",
+      "imported": "Prompts importiert",
+      "failed": "Das hat nicht geklappt"
+    }
   }
 }

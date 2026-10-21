@@ -18,6 +18,7 @@
     "networks": "ライブラリ",
     "monitoring": "監視",
     "history": "履歴",
+    "prompts": "プロンプト",
     "settings": "設定",
     "openMenu": "ナビゲーションを開く",
     "closeMenu": "ナビゲーションを閉じる",

@@ -18,6 +18,7 @@
     "networks": "Library",
     "monitoring": "Monitoring",
     "history": "History",
+    "prompts": "Prompts",
     "settings": "Settings",
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
@@ -1682,5 +1683,56 @@
     "modelNotFound": "The embedding model was not found.",
     "missingCredential": "This embedding model needs a credential.",
     "unauthorized": "The embedding credential was rejected."
+  },
+  "prompts": {
+    "search": "Search",
+    "tagFilter": "Tag",
+    "sort": { "name": "Name", "updated": "Updated" },
+    "empty": { "library": "No prompts yet.", "filter": "No prompts match this filter." },
+    "ribbon": {
+      "new": "New",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "tags": "Set tags",
+      "delete": "Delete",
+      "import": "Import",
+      "export": "Export",
+      "refresh": "Refresh"
+    },
+    "detail": {
+      "none": "No prompt selected.",
+      "many": "{{count}} prompts selected.",
+      "created": "Created {{date}}",
+      "updated": "Updated {{date}}"
+    },
+    "editor": {
+      "create": "New prompt",
+      "edit": "Edit prompt",
+      "name": "Name",
+      "description": "Description",
+      "tags": "Tags",
+      "tagsHint": "Comma or new line",
+      "body": "Prompt",
+      "save": "Save"
+    },
+    "import": {
+      "title": "Import prompts",
+      "unreadable": "{{name}} could not be read.",
+      "save": "Import {{count}}"
+    },
+    "delete": { "title": "Delete {{count}} prompts?" },
+    "dialog": { "close": "Close", "cancel": "Cancel" },
+    "error": { "title": "Prompts not loaded", "body": "The library is not reachable." },
+    "resize": { "listHeight": "Resize collection height", "detailHeight": "Resize detail height", "width": "Resize width" },
+    "notify": {
+      "created": "Prompt created",
+      "saved": "Prompt saved",
+      "duplicated": "Prompt duplicated",
+      "tagged": "Tags saved",
+      "deleted": "Prompts deleted",
+      "exported": "Export saved",
+      "imported": "Prompts imported",
+      "failed": "That did not work"
+    }
   }
 }
