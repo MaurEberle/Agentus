@@ -10,9 +10,15 @@ def test_recipes_endpoint(client: TestClient) -> None:
     assert response.status_code == 200
     ids = {item["id"] for item in response.json()["items"]}
     assert "github" in ids
-    assert "filesystem" in ids
-    assert len(ids) == 15
+    assert "filesystem" not in ids
+    assert "fetch" not in ids
+    assert len(ids) == 13
     assert "excel" in ids
+    by_id = {item["id"]: item for item in response.json()["items"]}
+    assert by_id["github"]["available"] is True
+    assert by_id["git"]["available"] is True
+    assert by_id["excel"]["available"] is True
+    assert by_id["slack"]["available"] is False
     assert "office" not in ids
     assert "pdf" not in ids
 
@@ -30,11 +36,11 @@ def test_create_list_delete(client: TestClient) -> None:
     assert deleted.status_code == 204
 
 
-def test_ping_filesystem_runtime_missing(client: TestClient, monkeypatch) -> None:
+def test_ping_runtime_missing(client: TestClient, monkeypatch) -> None:
     monkeypatch.setattr(
         "app.mcp.service.runtime_available", lambda runtime: False
     )
-    created = client.post("/api/mcp/servers", json={"recipeId": "filesystem"})
+    created = client.post("/api/mcp/servers", json={"recipeId": "excel"})
     server_id = created.json()["id"]
     ping = client.post(f"/api/mcp/servers/{server_id}/ping")
     assert ping.status_code == 200
@@ -42,15 +48,15 @@ def test_ping_filesystem_runtime_missing(client: TestClient, monkeypatch) -> Non
     assert ping.json()["messageKey"] == "mcp.runtime.missing"
 
 
-def test_enable_filesystem_without_root(client: TestClient) -> None:
-    created = client.post("/api/mcp/servers", json={"recipeId": "filesystem"})
+def test_enable_excel_without_root(client: TestClient) -> None:
+    created = client.post("/api/mcp/servers", json={"recipeId": "excel"})
     server_id = created.json()["id"]
     response = client.post(
         f"/api/mcp/servers/{server_id}/enabled", json={"enabled": True}
     )
     assert response.status_code == 200
     assert response.json()["enabled"] is True
-    assert "read_file" in (response.json().get("toolNames") or [])
+    assert "excel_read_sheet" in (response.json().get("toolNames") or [])
 
 
 def test_ping_ok_with_fake(client: TestClient, monkeypatch) -> None:

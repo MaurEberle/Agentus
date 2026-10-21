@@ -32,7 +32,7 @@ Mientras corre **exactamente esta** red: banner **Solo lectura** — primero det
 | Herramienta | `tool` | First-party: HTTP, búsqueda web, fecha/hora, calculadora, acceso a archivos. Salida **Herramienta**. |
 | MCP | `mcp` | Un servidor creado y **activado** en **Ajustes**. Salida **Herramienta**, como un nodo de herramienta. |
 | Conocimiento | `knowledge` | Carpeta con archivos para la red. Salida **Conocimiento**, solo al puerto Conocimiento del agente. |
-| Enrutador | `router` | Bifurca el mensaje según condiciones (primera línea / ramas con nombre) más salida por defecto. |
+| Enrutador | `router` | Envía el mensaje a una sola salida. Las ramas se comprueban en orden: contiene, empieza por, primera línea, expresión regular. El estándar recoge el resto. Tras el orquestador, las salidas solo van a fines. |
 | Fin | `end` | Cierre. **Al menos uno.** |
 
 ## Conexiones
@@ -85,7 +85,8 @@ Válido/Inválido se ve como insignia. Las redes inválidas se pueden guardar, p
 - **Guardar como:** documento nuevo, se convierte en el abierto.
 - **Abrir:** una red guardada; búsqueda y orden. Acciones masivas y borrar solo en la biblioteca.
 - **Duplicar:** solo con documento ya guardado; abre la copia.
-- **Exportar:** descarga del grafo abierto. Incluye `credentialId`, no claves. La importación en la biblioteca descarta secretos adjuntos.
+- **Exportar:** diálogo y luego JSON del grafo abierto (`schemaVersion` 1). Incluye `credentialId`, no claves.
+- **Importar:** diálogo para un archivo JSON. Se crea una red nueva. Un nombre ya usado se cambia, o se omite el archivo.
 
 Salir sin guardar: diálogo Guardar / Descartar / Cancelar.
 
@@ -97,4 +98,4 @@ Acciones: Nuevo (editor), Abrir, Duplicar, Renombrar, Poner etiquetas, **Definir
 
 Borrar quita la entrada del espacio de trabajo, no tus archivos de conocimiento en disco, ni el corpus de ayuda ni las ejecuciones del historial. Una red **en ejecución** se omite. Borrar la red activa vacía la selección rápida.
 
-Importar: archivos con colisión de nombre se renombran o se omiten. Las versiones de esquema no soportadas se rechazan.
+Importar: diálogo con vista previa. Mismo nombre: renombrar u omitir. Otra schemaVersion se rechaza. Los secretos se descartan.

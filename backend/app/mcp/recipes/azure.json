@@ -1,5 +1,6 @@
 {
   "id": "azure",
+  "available": false,
   "titleKey": "mcp.recipe.azure",
   "transport": "stdio",
   "runtime": "npx",

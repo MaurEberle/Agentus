@@ -50,6 +50,8 @@ function helpFrom(settings: AppSettings): HelpChatSettings {
     embeddingModel: help.embeddingModel || '',
     embeddingCredentialId: help.embeddingCredentialId || undefined,
     webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchProvider: help.webSearchProvider || 'brave',
+    webSearchBaseUrl: help.webSearchBaseUrl || '',
     webSearchCredentialId: help.webSearchCredentialId || undefined,
     fallbackModel: help.fallbackModel || undefined,
   };

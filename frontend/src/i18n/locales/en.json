@@ -199,6 +199,14 @@
       "createTitle": "Add credential",
       "editTitle": "Replace credential",
       "empty": "No credentials yet.",
+      "emptyGroup": "No credentials in this group yet.",
+      "groups": "Credential group",
+      "group": {
+        "llm": "LLM",
+        "search": "Web search",
+        "mcp": "MCP",
+        "custom": "Custom"
+      },
       "name": "Name",
       "kind": "Kind",
       "mask": "Mask",
@@ -223,7 +231,10 @@
         "anthropic": "Claude",
         "gemini": "Gemini",
         "openai_compat": "OpenAI-compatible",
-        "web_search": "Web search",
+        "brave": "Brave",
+        "tavily": "Tavily",
+        "exa": "Exa",
+        "searxng": "SearXNG",
         "github": "GitHub",
         "azure": "Azure",
         "gitlab": "GitLab",
@@ -232,7 +243,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Token"
+        "token": "Token",
+        "custom": "Custom"
       },
       "kindHint": {
         "xai": "API key from xAI.",
@@ -240,7 +252,10 @@
         "anthropic": "API key from Anthropic (Claude).",
         "gemini": "API key from Google Gemini.",
         "openai_compat": "Bearer token for an OpenAI-compatible URL.",
-        "web_search": "Key for web search in the network.",
+        "brave": "Subscription token for the Brave Search API.",
+        "tavily": "API key from Tavily.",
+        "exa": "API key from Exa.",
+        "searxng": "Optional key for your own SearXNG instance.",
         "github": "GitHub personal access token (PAT). Classic: repo, issues, or actions scopes as needed.",
         "azure": "Azure or Entra token, or a PAT.",
         "gitlab": "GitLab personal access token.",
@@ -249,8 +264,18 @@
         "atlassian": "Atlassian Cloud API token (Jira/Confluence).",
         "linear": "Linear API key.",
         "postgres": "Postgres connection string (not the app databases).",
-        "token": "Generic API key or bearer token (Context7, Sentry, and similar)."
-      }
+        "token": "Generic API key or bearer token (Context7, Sentry, and similar).",
+        "custom": "Bearer token, extra headers, or environment variables."
+      },
+      "bearer": "Bearer",
+      "bearerHint": "Sent as Authorization: Bearer.",
+      "headerName": "Header",
+      "headerValue": "Value",
+      "addHeader": "Add header",
+      "envName": "Variable",
+      "envValue": "Value",
+      "addEnv": "Add variable",
+      "customInvalid": "A custom credential needs a bearer token, a header, or a variable."
     },
     "runtime": {
       "lead": "Local Ollama URL. Ping and model list go through the app API, not from the browser to Ollama.",
@@ -260,11 +285,13 @@
       "pingOk": "Runtime reachable",
       "pingFail": "Runtime not reachable",
       "modelNotFound": "Model not found or could not be loaded: {{name}}",
+      "modelInfoFailed": "Ollama did not return the model data. The run was stopped so the model is not started with a full GPU offload.",
       "timeout": "No progress from the model ({{name}}). Aborted after silence, not a total time limit.",
       "unreachable": "Ollama is not reachable ({{name}}).",
       "models": "Installed models",
       "modelsChat": "Standard models",
       "modelsEmbed": "Embedding models",
+      "modelsMoe": "MoE models",
       "modelsGroupEmpty": "None",
       "modelsEmpty": "No models, or the runtime is unavailable.",
       "modelName": "Model",
@@ -295,7 +322,9 @@
       "embedModel": "Embedding model",
       "reindexHint": "Rebuild the index after changing embeddings.",
       "webSearch": "Web search",
-      "webSearchHint": "Optional. Without a search credential the chat can still be configured; search stays disabled.",
+      "webSearchHint": "Optional. Without a matching credential the chat can still be configured; search stays disabled. SearXNG needs a base URL.",
+      "webSearchProvider": "Provider",
+      "webSearchBaseUrl": "Base URL",
       "webSearchCredential": "Search credential",
       "webSearchMissing": "Credential missing — add a web search entry under Credentials.",
       "fallback": "Economy model (optional)",
@@ -316,6 +345,7 @@
       "servers": "Configured servers",
       "empty": "No MCP servers yet.",
       "enable": "Enable",
+      "comingSoon": "Coming soon",
       "reset": "Disable",
       "secretNew": "New secret (optional)",
       "secretName": "Name for the new credential",
@@ -327,7 +357,7 @@
       "enabled": "Enabled",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Credentials from the recipe. Filesystem and Excel take their folder on the MCP node in the editor. Saving creates and enables the server.",
+      "presetHint": "Credentials from the recipe. Excel takes its folder on the MCP node in the editor. Local files are the File access tool, not an MCP recipe. Saving creates and enables the server.",
       "rootPath": "Root path",
       "pickRoot": "Folder",
       "needsNone": "No credential needed",
@@ -492,7 +522,8 @@
     "call": {
       "failed": "MCP call failed."
     },
-    "notFound": "MCP server not found."
+    "notFound": "MCP server not found.",
+    "unavailable": "This recipe is coming soon."
   },
   "graph": {
     "mcp": {
@@ -500,6 +531,15 @@
       "disabled": "This MCP server is disabled.",
       "root": "This MCP server needs a root path in Settings.",
       "unavailable": "MCP is not available in this install."
+    },
+    "router": {
+      "name": "Branch names must be set and unique.",
+      "pattern": "Each branch needs a pattern of at most 200 characters.",
+      "regex": "The pattern is not a valid regular expression.",
+      "edge": "Each branch and Default need exactly one edge.",
+      "target": "A router leads to an agent, a router, or an end.",
+      "orchestrator": "A router after the orchestrator leads only to ends.",
+      "noEdge": "Router has no matching edge"
     }
   },
   "helpChat": {
@@ -665,6 +705,7 @@
       "saveAs": "Save as",
       "load": "Open",
       "duplicate": "Duplicate",
+      "import": "Import",
       "export": "Export",
       "validate": "Validate",
       "undo": "Undo",
@@ -694,11 +735,11 @@
       "tool": "Tool",
       "toolHint": "HTTP, web search, date/time, calculator, file access. Connect to an agent or the orchestrator.",
       "mcp": "MCP",
-      "mcpHint": "An enabled server from Settings. Connects like a tool.",
+      "mcpHint": "An enabled server from Settings. Local files are the File access tool.",
       "knowledge": "Knowledge",
       "knowledgeHint": "Source folder, only to the agent knowledge port.",
       "router": "Router",
-      "routerHint": "Branches messages by condition.",
+      "routerHint": "Sends the message to the first matching branch. Default catches the rest.",
       "end": "End",
       "endHint": "At least one. Finishes the run."
     },
@@ -717,6 +758,7 @@
       "title": "Inspector",
       "collapse": "Collapse inspector",
       "expand": "Expand inspector",
+      "resize": "Resize inspector",
       "displayName": "Display name",
       "multi": "{{count}} nodes selected",
       "graph": {
@@ -746,6 +788,9 @@
         "pingOk": "Model responded",
         "pingFail": "Test failed",
         "advanced": "Advanced",
+        "modelKind": "Model kind",
+        "kindDense": "Standard models",
+        "kindMoe": "MoE models",
         "noModels": "No models loaded.",
         "useModel": "Use “{{name}}”",
         "temperature": "Temperature",
@@ -755,7 +800,11 @@
         "numCtxLoading": "Loading model limits…",
         "numCtxUnavailable": "No length limits are available for this model.",
         "numThread": "CPU threads",
-        "numThreadHint": "Default is the physical core count.",
+        "numThreadHint": "Default is half of the available threads.",
+        "kvCache": "KV cache",
+        "kvCacheF16": "16-bit",
+        "kvCacheQ8": "8-bit",
+        "kvCacheHint": "8-bit halves the cache. Ollama 0.40 applies it only when the service starts with OLLAMA_KV_CACHE_TYPE=q8_0. The estimate follows this choice.",
         "numThreadLoading": "Reading CPU cores…",
         "numThreadUnavailable": "CPU thread count is not available.",
         "numGpu": "GPU offload",
@@ -774,7 +823,21 @@
         "vramFormula": "GPU: last {{on}} of {{total}} layers. {{full}} × {{perToken}} B/token × {{ctx}} tokens.",
         "vramFormulaMixed": "GPU: last {{on}} of {{total}} layers. {{full}} global layers × {{ctx}} tokens.",
         "vramFormulaSwa": "GPU: last {{on}} of {{total}} layers. {{full}} global × {{ctx}} tokens, {{swa}} sliding-window × window {{window}}.",
-        "vramHint": "Per-layer estimate from model data. The GPU takes the last N layers. Full attention uses the whole context. Sliding-window layers stay at their window. KV cache is f16."
+        "vramHint": "Per-layer estimate from model data. The GPU takes the last N layers. Full attention uses the whole context. Sliding-window layers stay at their window. KV cache is f16.",
+        "moeAuto": "Place experts automatically",
+        "moeForce": "Force every layer",
+        "moeAutoHint": "{{count}} experts, {{used}} active per token. All weights stay loaded. Attention stays on the GPU, and experts fill the rest.",
+        "moeAutoHintNoUsed": "{{count}} experts. All weights stay loaded. Attention stays on the GPU, and experts fill the rest.",
+        "moeLayerWarn": "This choice moves whole layers, including attention.",
+        "moeUnknown": "Expert weights cannot be split from this model's metadata. The meter uses the dense formula.",
+        "moeExpertsGpu": "Experts on the GPU {{experts}}",
+        "moeRam": "Experts in system RAM: {{ram}}",
+        "moeRamTight": "Free system RAM is below this estimate. Pinned pages and mmap can take more.",
+        "moeAttention": "Attention stays on the last {{on}} of {{total}} layers so it fits in GPU memory.",
+        "moeSwa": "With a sliding-window context, Ollama may keep every expert in system RAM even when this meter still shows free GPU space.",
+        "moeEstimate": "Estimate from model metadata and file size. It is recalculated for every context size.",
+        "moeKvFormula": "KV: {{full}} layers × {{perToken}} B/token × {{ctx}} tokens.",
+        "moeAutoFit": "Automatic expert placement would use {{gpu}} on the GPU and leave {{ram}} in memory."
       },
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
@@ -783,7 +846,9 @@
       },
       "orchestrator": {
         "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end. It calls tools on the tool port.",
-        "systemPrompt": "System prompt"
+        "systemPrompt": "System prompt",
+        "agentMissLimit": "Misses per agent",
+        "agentMissLimitHint": "How often an agent with file access may finish a task without writing, editing, or deleting a file. The orchestrator then does that task. The default is 3."
       },
       "tool": {
         "kind": "Kind",
@@ -801,7 +866,38 @@
         "pickRoot": "Folder",
         "allowWrite": "Allow write",
         "allowDelete": "Allow delete",
-        "fileAccessHint": "The agent may only read, write, and delete under this folder.",
+        "fileAccessHint": "All actions are on. Uncheck one to hide it from the agent.",
+        "fileActions": "Actions",
+        "fileAction": {
+          "list": "List",
+          "stat": "Info",
+          "read": "Read",
+          "read_many": "Read several",
+          "write": "Write",
+          "mkdir": "Create folder",
+          "delete": "Delete",
+          "edit": "Replace",
+          "move": "Move",
+          "search": "Search",
+          "tree": "Tree"
+        },
+        "dateHint": "Shows the current time in an IANA time zone, default UTC. An instant can be shifted by days, hours, and minutes, including backwards. The gap between two instants comes back in seconds, hours, and days. Parts are the date, the clock time, and the weekday; Monday is 1. The same instant can be shown in another time zone.",
+        "calculatorHint": "Evaluates an expression with + - * / // % ** and parentheses. The ** exponent must be at most 20. Constants are pi and e. Functions: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log and ln are natural logarithms; log can take a base. sin, cos, and tan use radians. factorial only accepts integers from 0 to 20.",
+        "searchProvider": "Provider",
+        "searchProviderName": {
+          "brave": "Brave",
+          "tavily": "Tavily",
+          "exa": "Exa",
+          "searxng": "SearXNG"
+        },
+        "searchBaseUrl": "Base URL",
+        "maxResults": "Results",
+        "searchHint": {
+          "brave": "Independent index. Credential kind Brave.",
+          "tavily": "Snippets built for agents. Credential kind Tavily.",
+          "exa": "Meaning-based search on its own index. Credential kind Exa.",
+          "searxng": "Your own instance. Base URL required, credential optional."
+        },
         "credential": "Credential",
         "mcpServer": "MCP server",
         "mcpEmpty": "No server",
@@ -836,10 +932,18 @@
         "reindexHint": "Rebuild the index after changing embeddings."
       },
       "router": {
+        "hint": "The first match wins. Letter case is ignored, except for a regular expression.",
         "branches": "Branches",
         "branchName": "Name",
-        "condition": "Condition",
-        "add": "Add branch"
+        "pattern": "Pattern",
+        "add": "Add branch",
+        "defaultHint": "When no branch matches.",
+        "match": {
+          "contains": "contains",
+          "startsWith": "starts with",
+          "firstLine": "first line is",
+          "regex": "regular expression"
+        }
       },
       "chat": {
         "hint": "The run conversation. An orchestrator can ask follow-ups here until it ends the run.",
@@ -895,7 +999,13 @@
       "orchestratorLlm": "The orchestrator needs exactly one LLM edge.",
       "orchestratorChat": "The chat must connect to the orchestrator.",
       "orchestratorFanout": "With an orchestrator, the chat connects only to the orchestrator.",
-      "orchestratorEnd": "The orchestrator needs a message edge to an end node.",
+      "orchestratorEnd": "The orchestrator needs a message to an end, directly or through a router that only leads to ends.",
+      "routerName": "Branch names must be set and unique.",
+      "routerPattern": "Each branch needs a pattern of at most 200 characters.",
+      "routerRegex": "The pattern is not a valid regular expression.",
+      "routerEdge": "Each branch and Default need exactly one edge.",
+      "routerTarget": "A router leads to an agent, a router, or an end.",
+      "routerOrchestrator": "A router after the orchestrator leads only to ends.",
       "orchestratorLooseAgent": "With an orchestrator, every agent needs a channel from it.",
       "agentMode": "An agent is either in the chain or on the orchestrator.",
       "agentChannel": "An agent has at most one channel.",
@@ -991,7 +1101,9 @@
       "none": "No network selected.",
       "multi": "{{count}} selected",
       "noDescription": "No description.",
-      "lastRun": "Last run"
+      "lastRun": "Last run",
+      "resize": "Resize details",
+      "graphLoading": "Loading graph…"
     },
     "empty": {
       "library": "No saved networks yet.",
@@ -1041,6 +1153,26 @@
       "skip": "Skip this file",
       "include": "Import anyway",
       "continue": "Import"
+    },
+    "transfer": {
+      "exportTitle": "Export network",
+      "exportBody": "The network is saved as JSON (schemaVersion 1). Secrets are left out. Credential references stay.",
+      "importTitle": "Import network",
+      "importBody": "Choose a JSON file with schemaVersion 1. It becomes a new network. Secrets in the file are discarded.",
+      "pick": "Choose file",
+      "name": "Name",
+      "counts": "{{nodes}} nodes · {{edges}} edges",
+      "secrets": "Secrets in the file are discarded.",
+      "fileUnreadable": "This is not a network file.",
+      "fileSchema": "This schemaVersion is not supported.",
+      "collision": "This name is already used.",
+      "nameRequired": "Name is missing.",
+      "download": "Export",
+      "confirmImport": "Import",
+      "empty": "No file yet.",
+      "zipNote": "Several networks are saved as a ZIP, one JSON file each.",
+      "skip": "Skip",
+      "include": "Include"
     },
     "notify": {
       "error": "Action failed",
@@ -1128,7 +1260,8 @@
       "waiting": "Waiting",
       "running": "Running",
       "done": "Done",
-      "error": "Error"
+      "error": "Error",
+      "halted": "Stopped"
     },
     "wait": {
       "none": "None",
@@ -1361,6 +1494,8 @@
       "outcome": "Outcome",
       "error": "Error",
       "models": "Models",
+      "move": "Move {{column}}",
+      "resize": "Resize {{column}}",
       "live": "View live",
       "page": "Page {{page}} of {{pages}}",
       "prev": "Previous",
@@ -1461,11 +1596,13 @@
       "agent": {
         "start": "Agent started",
         "done": "Agent finished",
-        "toolFailures": "Agent stopped after {{failed}} failed tool calls",
+        "toolFailures": "Agent stopped after {{failed}} failed tool calls in a row",
         "toolJson": "Discarded tool call {{name}}: incomplete JSON arguments (attempt {{attempt}}/{{max}}).",
         "think": "Agent is thinking (not a result).",
         "thinkLimit": "Too many think turns without a result.",
         "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
+        "emptyStop": "Discarded an empty reply ({{attempt}}/{{max}}). The task continues.",
+        "emptyStops": "Task incomplete: five empty replies in a row.",
         "truncated": "Reply was cut off; not a result."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
@@ -1478,12 +1615,15 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM finished ({{durationMs}} ms)"
+        "done": "LLM finished ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: estimate {{estimated}}, used {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
+        "modelInfo": "Model data for {{model}} is missing. The run was stopped.",
+        "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
       },
       "tool": {
         "call": "Tool {{name}}"
       },
-      "router": "Router → {{target}}",
+      "router": "Router {{branch}} → {{target}}",
       "end": "End reached",
       "succeeded": "Run succeeded",
       "failed": "Run failed",
@@ -1500,7 +1640,13 @@
         "think": "Orchestrator is thinking (does not count as a step).",
         "thinkLimit": "Too many think turns without a call.",
         "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
-        "window": "The prompt does not fit any context window."
+        "window": "The prompt does not fit any context window.",
+        "toolThink": "Five tool calls failed. Think round {{round}}.",
+        "toolFailures": "Orchestrator stopped after two failed think rounds",
+        "takeoverStart": "{{agent}} used {{misses}} file attempts without a change. The orchestrator takes over.",
+        "takeoverBlocked": "Call to {{agent}} was refused. The orchestrator must write the file.",
+        "takeover": "{{agent}} reached the attempt limit. The orchestrator did not write a file.",
+        "takeoverNoTool": "{{agent}} reached the attempt limit. The orchestrator has no file tool."
       }
     },
     "mcp": {

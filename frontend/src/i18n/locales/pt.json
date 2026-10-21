@@ -199,6 +199,14 @@
       "createTitle": "Adicionar credencial",
       "editTitle": "Substituir credencial",
       "empty": "Ainda não há credenciais.",
+      "emptyGroup": "Ainda não há credenciais neste grupo.",
+      "groups": "Grupo de credenciais",
+      "group": {
+        "llm": "LLM",
+        "search": "Pesquisa web",
+        "mcp": "MCP",
+        "custom": "Próprio"
+      },
       "name": "Nome",
       "kind": "Tipo",
       "mask": "Máscara",
@@ -215,7 +223,10 @@
         "anthropic": "Claude",
         "gemini": "Gemini",
         "openai_compat": "Compatível com OpenAI",
-        "web_search": "Pesquisa web",
+        "brave": "Brave",
+        "tavily": "Tavily",
+        "exa": "Exa",
+        "searxng": "SearXNG",
         "github": "GitHub",
         "azure": "Azure",
         "gitlab": "GitLab",
@@ -224,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Token"
+        "token": "Token",
+        "custom": "Próprio"
       },
       "kindHint": {
         "xai": "Chave API da xAI.",
@@ -232,7 +244,10 @@
         "anthropic": "Chave API da Anthropic (Claude).",
         "gemini": "Chave API do Google Gemini.",
         "openai_compat": "Token Bearer para um URL compatível com OpenAI.",
-        "web_search": "Chave para a pesquisa web da rede.",
+        "brave": "Token de subscrição da API Brave Search.",
+        "tavily": "Chave API da Tavily.",
+        "exa": "Chave API da Exa.",
+        "searxng": "Chave opcional para uma instância SearXNG.",
         "github": "Token de acesso pessoal do GitHub (PAT). Classic: repos, issues ou actions conforme a tarefa.",
         "azure": "Token Azure/Entra ou PAT.",
         "gitlab": "Token de acesso pessoal do GitLab.",
@@ -241,8 +256,18 @@
         "atlassian": "Token API Atlassian Cloud (Jira/Confluence).",
         "linear": "Chave API Linear.",
         "postgres": "Cadeia de ligação Postgres (não as bases da app).",
-        "token": "Chave API ou token Bearer genérico (Context7, Sentry, etc.)."
+        "token": "Chave API ou token Bearer genérico (Context7, Sentry, etc.).",
+        "custom": "Token Bearer, cabeçalhos extra ou variáveis de ambiente."
       },
+      "bearer": "Bearer",
+      "bearerHint": "Enviado como Authorization: Bearer.",
+      "headerName": "Cabeçalho",
+      "headerValue": "Valor",
+      "addHeader": "Adicionar cabeçalho",
+      "envName": "Variável",
+      "envValue": "Valor",
+      "addEnv": "Adicionar variável",
+      "customInvalid": "Um acesso próprio precisa de um Bearer, um cabeçalho ou uma variável.",
       "inUseMcpHint": "Atribui outra credencial no servidor MCP ou elimina o servidor. Depois podes remover esta credencial.",
       "usedBy": {
         "helpChatLlm": "Chat de ajuda (chat)",
@@ -260,11 +285,13 @@
       "pingOk": "Runtime acessível",
       "pingFail": "Runtime inacessível",
       "modelNotFound": "Modelo não encontrado ou não carregável: {{name}}",
+      "modelInfoFailed": "O Ollama não devolveu os dados do modelo. A execução foi interrompida para não o iniciar com offload total na GPU.",
       "timeout": "Sem progresso do modelo ({{name}}). Interrompido após silêncio, não por duração total.",
       "unreachable": "O Ollama não está acessível ({{name}}).",
       "models": "Modelos instalados",
       "modelsChat": "Modelos normais",
       "modelsEmbed": "Modelos de embeddings",
+      "modelsMoe": "Modelos MoE",
       "modelsGroupEmpty": "Nenhum",
       "modelsEmpty": "Sem modelos, ou o runtime está inacessível.",
       "modelName": "Modelo",
@@ -295,7 +322,9 @@
       "embedModel": "Modelo de embeddings",
       "reindexHint": "Reconstrua o índice após alterar os embeddings.",
       "webSearch": "Pesquisa web",
-      "webSearchHint": "Opcional. Sem credencial de pesquisa o chat pode ser configurado; a pesquisa fica desativada.",
+      "webSearchHint": "Opcional. Sem a credencial correspondente o chat pode ser configurado; a pesquisa fica desativada. O SearXNG precisa de um endereço base.",
+      "webSearchProvider": "Fornecedor",
+      "webSearchBaseUrl": "Endereço base",
       "webSearchCredential": "Credencial de pesquisa",
       "webSearchMissing": "Falta a credencial — adicione uma entrada de pesquisa web em Credenciais.",
       "fallback": "Modelo económico (opcional)",
@@ -315,6 +344,7 @@
       "servers": "Servidores configurados",
       "empty": "Ainda não há servidores MCP.",
       "enable": "Ativar",
+      "comingSoon": "Em breve",
       "added": "Adicionado",
       "custom": "Personalizado",
       "customCreate": "Servidor personalizado",
@@ -322,7 +352,7 @@
       "enabled": "Ativo",
       "status": "Estado",
       "probe": "Sonda",
-      "presetHint": "Credenciais da receita. Sistema de ficheiros e Excel recebem a pasta no nó MCP do editor. Guardar cria o servidor de imediato.",
+      "presetHint": "Credenciais da receita. O Excel recebe a pasta no nó MCP do editor. Ficheiros locais são a ferramenta Acesso a ficheiros, não uma receita MCP. Guardar cria o servidor de imediato.",
       "rootPath": "Caminho raiz",
       "untrusted": "Um processo desconhecido será iniciado com os privilégios indicados. Use apenas comandos de confiança.",
       "command": "Comando",
@@ -608,6 +638,7 @@
       "saveAs": "Guardar como",
       "load": "Abrir",
       "duplicate": "Duplicar",
+      "import": "Importar",
       "export": "Exportar",
       "validate": "Validar",
       "undo": "Anular",
@@ -639,7 +670,7 @@
       "knowledge": "Conhecimento",
       "knowledgeHint": "Pasta de origem, só para o porto knowledge do agente.",
       "router": "Router",
-      "routerHint": "Encaminha mensagens por condições.",
+      "routerHint": "Envia a mensagem ao primeiro ramo que corresponder. O padrão apanha o resto.",
       "end": "Fim",
       "endHint": "Pelo menos um. Termina a execução.",
       "mcp": "MCP",
@@ -659,6 +690,7 @@
     "inspector": {
       "title": "Inspetor",
       "collapse": "Recolher inspetor",
+      "resize": "Alterar a largura do inspetor",
       "expand": "Expandir inspetor",
       "displayName": "Nome apresentado",
       "multi": "{{count}} nós selecionados",
@@ -689,6 +721,9 @@
         "pingOk": "O modelo respondeu",
         "pingFail": "O teste falhou",
         "advanced": "Avançado",
+        "modelKind": "Tipo de modelo",
+        "kindDense": "Modelos normais",
+        "kindMoe": "Modelos MoE",
         "noModels": "Nenhum modelo carregado.",
         "useModel": "Usar “{{name}}”",
         "temperature": "Temperatura",
@@ -698,7 +733,11 @@
         "numCtxLoading": "A carregar limites do modelo…",
         "numCtxUnavailable": "Este modelo não indica limites de comprimento.",
         "numThread": "Threads da CPU",
-        "numThreadHint": "O padrão é o número de núcleos físicos.",
+        "numThreadHint": "O padrão é metade das threads disponíveis.",
+        "kvCache": "Cache KV",
+        "kvCacheF16": "16 bits",
+        "kvCacheQ8": "8 bits",
+        "kvCacheHint": "8 bits reduz o cache pela metade. O Ollama 0.40 só aplica isso se o serviço iniciar com OLLAMA_KV_CACHE_TYPE=q8_0. A estimativa segue a escolha.",
         "numThreadLoading": "A ler núcleos da CPU…",
         "numThreadUnavailable": "A contagem de threads da CPU não está disponível.",
         "numGpu": "Offload GPU",
@@ -717,7 +756,21 @@
         "vramFormula": "GPU: últimas {{on}} de {{total}} camadas. {{full}} × {{perToken}} B/token × {{ctx}} tokens.",
         "vramFormulaMixed": "GPU: últimas {{on}} de {{total}} camadas. {{full}} camadas globais × {{ctx}} tokens.",
         "vramFormulaSwa": "GPU: últimas {{on}} de {{total}} camadas. {{full}} globais × {{ctx}} tokens, {{swa}} janela deslizante × janela {{window}}.",
-        "vramHint": "Estimativa por camada a partir do modelo. A GPU fica com as últimas N camadas. Atenção completa: contexto inteiro. Janela deslizante: só a janela. Cache KV em f16."
+        "vramHint": "Estimativa por camada a partir do modelo. A GPU fica com as últimas N camadas. Atenção completa: contexto inteiro. Janela deslizante: só a janela. Cache KV em f16.",
+        "moeAuto": "Colocar os especialistas automaticamente",
+        "moeForce": "Forçar todas as camadas",
+        "moeAutoHint": "{{count}} especialistas, {{used}} ativos por token. Todos os pesos ficam carregados. A atenção fica na GPU e os especialistas ocupam o resto.",
+        "moeAutoHintNoUsed": "{{count}} especialistas. Todos os pesos ficam carregados. A atenção fica na GPU e os especialistas ocupam o resto.",
+        "moeLayerWarn": "Esta escolha move camadas inteiras, inclusive a atenção.",
+        "moeUnknown": "Os pesos dos especialistas não podem ser separados com os metadados deste modelo. O medidor usa a fórmula densa.",
+        "moeExpertsGpu": "Especialistas na GPU {{experts}}",
+        "moeRam": "Especialistas na RAM: {{ram}}",
+        "moeRamTight": "A RAM livre fica abaixo desta estimativa. Páginas fixadas e mmap podem ocupar mais.",
+        "moeAttention": "A atenção fica nas últimas {{on}} de {{total}} camadas para caber na memória da GPU.",
+        "moeSwa": "Com contexto de janela deslizante, o Ollama pode deixar todos os especialistas na RAM mesmo quando este medidor ainda mostra espaço na GPU.",
+        "moeEstimate": "Estimativa a partir dos metadados e do tamanho do arquivo. É recalculada para cada tamanho de contexto.",
+        "moeKvFormula": "KV: {{full}} camadas × {{perToken}} B/token × {{ctx}} tokens.",
+        "moeAutoFit": "A colocação automática dos especialistas usaria {{gpu}} na GPU e deixaria {{ram}} na memória."
       },
       "agent": {
         "hint": "LLM, ferramentas e conhecimento vêm pelas arestas. Sem orquestrador, a mensagem inicia o agente.",
@@ -726,7 +779,9 @@
       },
       "orchestrator": {
         "hint": "Um LLM por uma aresta. O chat chega aqui. Cada agente tem o seu canal. A saída de mensagem continua a ser o fim. Chama ele próprio as ferramentas ligadas.",
-        "systemPrompt": "Prompt de sistema"
+        "systemPrompt": "Prompt de sistema",
+        "agentMissLimit": "Falhas por agente",
+        "agentMissLimitHint": "Quantas vezes um agente com acesso a ficheiros pode terminar uma tarefa sem escrever, editar ou apagar. Depois o orquestrador assume essa tarefa. A predefinição é 3."
       },
       "tool": {
         "kind": "Tipo",
@@ -744,7 +799,33 @@
         "pickRoot": "Pasta",
         "allowWrite": "Permitir escrita",
         "allowDelete": "Permitir eliminação",
-        "fileAccessHint": "O agente só pode ler, escrever e eliminar nesta pasta.",
+        "fileAccessHint": "Por defeito estão todas. Desmarcar tira a ação ao agente.",
+        "fileActions": "Funções",
+        "fileAction": {
+          "list": "Listar",
+          "stat": "Propriedades",
+          "read": "Ler",
+          "read_many": "Vários ficheiros",
+          "write": "Escrever",
+          "mkdir": "Criar pasta",
+          "delete": "Eliminar",
+          "edit": "Substituir",
+          "move": "Mover",
+          "search": "Procurar",
+          "tree": "Árvore"
+        },
+        "dateHint": "Mostra a hora atual num fuso IANA; o padrão é UTC. Um instante pode avançar ou recuar dias, horas e minutos. A distância entre dois instantes vem em segundos, horas e dias. As partes são data, hora e dia da semana; segunda-feira é 1. O mesmo instante pode ser visto noutro fuso.",
+        "calculatorHint": "Calcula uma expressão com + - * / // % ** e parênteses. O expoente de ** é no máximo 20. Constantes: pi e e. Funções: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log e ln são o logaritmo natural; log pode ter uma base. sin, cos e tan usam radianos. factorial só aceita inteiros de 0 a 20.",
+        "searchProvider": "Fornecedor",
+        "searchProviderName": { "brave": "Brave", "tavily": "Tavily", "exa": "Exa", "searxng": "SearXNG" },
+        "searchBaseUrl": "Endereço base",
+        "maxResults": "Resultados",
+        "searchHint": {
+          "brave": "Índice próprio. Credencial do tipo Brave.",
+          "tavily": "Trechos para agentes. Credencial do tipo Tavily.",
+          "exa": "Pesquisa por significado. Credencial do tipo Exa.",
+          "searxng": "Instância própria. Endereço base obrigatório, credencial opcional."
+        },
         "credential": "Credencial",
         "mcpServer": "Servidor MCP",
         "mcpEmpty": "Sem servidor",
@@ -765,10 +846,18 @@
         "reindexHint": "Reconstrua o índice após alterar os embeddings."
       },
       "router": {
+        "hint": "O primeiro acerto ganha. Maiúsculas são ignoradas, exceto na expressão regular.",
         "branches": "Ramos",
         "branchName": "Nome",
-        "condition": "Condição",
-        "add": "Adicionar ramo"
+        "pattern": "Padrão",
+        "add": "Adicionar ramo",
+        "defaultHint": "Quando nenhum ramo corresponde.",
+        "match": {
+          "contains": "contém",
+          "startsWith": "começa por",
+          "firstLine": "a primeira linha é",
+          "regex": "expressão regular"
+        }
       },
       "chat": {
         "hint": "Conversa da execução. Um orquestrador pode perguntar aqui até terminar a execução.",
@@ -838,7 +927,13 @@
       "orchestratorLlm": "O orquestrador precisa de exatamente uma aresta LLM.",
       "orchestratorChat": "O chat tem de ligar ao orquestrador.",
       "orchestratorFanout": "Com orquestrador, o chat liga-se apenas a ele.",
-      "orchestratorEnd": "O orquestrador precisa de uma aresta de mensagem para um fim.",
+      "orchestratorEnd": "O orquestrador precisa de uma mensagem para um fim, direta ou por um router que só leve a fins.",
+      "routerName": "Os nomes dos ramos têm de existir e ser únicos.",
+      "routerPattern": "Cada ramo precisa de um padrão com no máximo 200 caracteres.",
+      "routerRegex": "O padrão não é uma expressão regular válida.",
+      "routerEdge": "Cada ramo e o padrão precisam de exatamente uma aresta.",
+      "routerTarget": "Um router leva a um agente, um router ou um fim.",
+      "routerOrchestrator": "Um router depois do orquestrador só leva a fins.",
       "orchestratorLooseAgent": "Com orquestrador, cada agente precisa de um canal a partir dele.",
       "agentMode": "Um agente está na cadeia ou no orquestrador.",
       "agentChannel": "Um agente tem no máximo um canal.",
@@ -934,7 +1029,9 @@
       "none": "Nenhuma rede selecionada.",
       "multi": "{{count}} selecionadas",
       "noDescription": "Sem descrição.",
-      "lastRun": "Última execução"
+      "lastRun": "Última execução",
+      "resize": "Alterar a largura dos detalhes",
+      "graphLoading": "A carregar o grafo…"
     },
     "empty": {
       "library": "Ainda sem redes guardadas.",
@@ -984,6 +1081,26 @@
       "skip": "Ignorar este ficheiro",
       "include": "Importar mesmo assim",
       "continue": "Importar"
+    },
+    "transfer": {
+      "exportTitle": "Exportar rede",
+      "exportBody": "A rede é guardada como JSON (schemaVersion 1). Os segredos não entram no ficheiro. As referências de acesso ficam.",
+      "importTitle": "Importar rede",
+      "importBody": "Escolhe um ficheiro JSON com schemaVersion 1. Passa a ser uma rede nova. Os segredos do ficheiro são descartados.",
+      "pick": "Escolher ficheiro",
+      "name": "Nome",
+      "counts": "{{nodes}} nós · {{edges}} ligações",
+      "secrets": "Os segredos do ficheiro são descartados.",
+      "fileUnreadable": "Isto não é um ficheiro de rede.",
+      "fileSchema": "Esta schemaVersion não é suportada.",
+      "collision": "Este nome já está a ser usado.",
+      "nameRequired": "Falta o nome.",
+      "download": "Exportar",
+      "confirmImport": "Importar",
+      "empty": "Ainda sem ficheiro.",
+      "zipNote": "Várias redes são guardadas num ZIP, um JSON cada.",
+      "skip": "Ignorar",
+      "include": "Incluir"
     },
     "notify": {
       "error": "A ação falhou",
@@ -1071,7 +1188,8 @@
       "waiting": "A aguardar",
       "running": "Em execução",
       "done": "Concluído",
-      "error": "Erro"
+      "error": "Erro",
+      "halted": "Parado"
     },
     "wait": {
       "none": "Sem espera",
@@ -1304,6 +1422,8 @@
       "outcome": "Resultado",
       "error": "Erro",
       "models": "Modelos",
+      "move": "Mover {{column}}",
+      "resize": "Alterar a largura de {{column}}",
       "live": "Ver em direto",
       "page": "Página {{page}} de {{pages}}",
       "prev": "Anterior",
@@ -1404,11 +1524,13 @@
       "agent": {
         "start": "Agente iniciado",
         "done": "Agente concluído",
-        "toolFailures": "Agente interrompido após {{failed}} chamadas de ferramenta com falha",
+        "toolFailures": "Agente interrompido após {{failed}} chamadas de ferramenta com falha seguidas",
         "toolJson": "Chamada de ferramenta {{name}} descartada: argumentos JSON incompletos (tentativa {{attempt}}/{{max}}).",
         "think": "O agente está a pensar (não é um resultado).",
         "thinkLimit": "Demasiados passos de pensamento sem resultado.",
         "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos.",
+        "emptyStop": "Resposta vazia descartada ({{attempt}}/{{max}}). A tarefa continua.",
+        "emptyStops": "Tarefa incompleta: cinco respostas vazias seguidas.",
         "truncated": "Resposta cortada; não é um resultado."
       },
       "knowledge": "Pesquisa de conhecimento ({{count}} resultados)",
@@ -1421,12 +1543,15 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM concluído ({{durationMs}} ms)"
+        "done": "LLM concluído ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: estimativa {{estimated}}, usado {{used}}, {{delta}} ({{percent}}). Especialistas {{expertsOnGpu}}/{{expertLayers}}, atenção {{attentionLayersOnGpu}}{{placement}}.",
+        "modelInfo": "Faltam os dados do modelo {{model}}. A execução foi interrompida.",
+        "moeUnsplit": "A divisão de especialistas de {{model}} é desconhecida. num_gpu não é enviado."
       },
       "tool": {
         "call": "Ferramenta {{name}}"
       },
-      "router": "Router → {{target}}",
+      "router": "Router {{branch}} → {{target}}",
       "end": "Fim alcançado",
       "succeeded": "Execução com êxito",
       "failed": "Execução falhou",
@@ -1443,7 +1568,13 @@
         "think": "O orquestrador está a pensar (não conta como passo).",
         "thinkLimit": "Demasiados turnos de pensamento sem uma chamada.",
         "thinkLoop": "Ciclo de pensamento de 1 token interrompido após {{thinks}} passos.",
-        "window": "O prompt não cabe em nenhuma janela de contexto."
+        "window": "O prompt não cabe em nenhuma janela de contexto.",
+        "toolThink": "Cinco chamadas de ferramenta falharam. Ronda de pensamento {{round}}.",
+        "toolFailures": "Orquestrador interrompido após duas rondas de pensamento falhadas",
+        "takeoverStart": "{{agent}} gastou {{misses}} tentativas de ficheiro sem alteração. O orquestrador assume.",
+        "takeoverBlocked": "Chamada a {{agent}} recusada. O orquestrador tem de escrever o ficheiro.",
+        "takeover": "{{agent}} atingiu o limite de tentativas. O orquestrador não escreveu nenhum ficheiro.",
+        "takeoverNoTool": "{{agent}} atingiu o limite de tentativas. O orquestrador não tem ferramenta de ficheiros."
       }
     },
     "graph": {
@@ -1527,7 +1658,8 @@
     "call": {
       "failed": "A chamada MCP falhou."
     },
-    "notFound": "Servidor MCP não encontrado."
+    "notFound": "Servidor MCP não encontrado.",
+    "unavailable": "Esta receita estará disponível em breve."
   },
   "graph": {
     "mcp": {
@@ -1535,6 +1667,15 @@
       "disabled": "Este servidor MCP está desativado.",
       "root": "Este servidor MCP precisa de um caminho raiz nas Definições.",
       "unavailable": "O MCP não está disponível nesta instalação."
+    },
+    "router": {
+      "name": "Os nomes dos ramos têm de existir e ser únicos.",
+      "pattern": "Cada ramo precisa de um padrão com no máximo 200 caracteres.",
+      "regex": "O padrão não é uma expressão regular válida.",
+      "edge": "Cada ramo e o padrão precisam de exatamente uma aresta.",
+      "target": "Um router leva a um agente, um router ou um fim.",
+      "orchestrator": "Um router depois do orquestrador só leva a fins.",
+      "noEdge": "O router não tem aresta correspondente"
     }
   }
 }

@@ -32,7 +32,7 @@ Pendant que **précisément ce** réseau tourne : bannière **Lecture seule** �
 | Outil | `tool` | First-party : HTTP, recherche web, date/heure, calculatrice, accès aux fichiers. Sortie **Outil**. |
 | MCP | `mcp` | Un serveur créé et **activé** dans **Paramètres**. Sortie **Outil**, comme un nœud outil. |
 | Connaissances | `knowledge` | Dossier de fichiers pour le réseau. Sortie **Connaissances**, uniquement vers le port Connaissances de l’agent. |
-| Routeur | `router` | Branche le message selon des conditions (première ligne / branches nommées) plus sortie par défaut. |
+| Routeur | `router` | Envoie le message vers une seule sortie. Les branches sont testées dans l’ordre : contient, commence par, première ligne, expression régulière. La sortie par défaut prend le reste. Après l’orchestrateur, les sorties ne mènent qu’à des fins. |
 | Fin | `end` | Clôture. **Au moins une.** |
 
 ## Connexions
@@ -85,7 +85,8 @@ Valide/Invalide se voit comme badge. Les réseaux invalides se sauvegardent, mai
 - **Enregistrer sous :** nouveau document, devient l’ouvert.
 - **Ouvrir :** un réseau enregistré ; recherche et tri. Actions groupées et suppression seulement dans la bibliothèque.
 - **Dupliquer :** seulement si le document est déjà enregistré ; ouvre la copie.
-- **Exporter :** téléchargement du graphe ouvert. Contient `credentialId`, pas de clés. L’import dans la bibliothèque jette les secrets joints.
+- **Exporter :** dialogue, puis JSON du graphe ouvert (`schemaVersion` 1). Contient `credentialId`, pas de clés.
+- **Importer :** dialogue pour un fichier JSON. Il devient un nouveau réseau. Un nom déjà pris est modifié, ou le fichier est ignoré.
 
 Quitter sans enregistrer : dialogue Enregistrer / Abandonner / Annuler.
 
@@ -97,4 +98,4 @@ Actions : Nouveau (éditeur), Ouvrir, Dupliquer, Renommer, Définir les étiquet
 
 Supprimer retire l’entrée de l’espace de travail, pas tes fichiers source de connaissances sur le disque, ni le corpus d’aide, ni les exécutions d’historique. Un réseau **en cours** est ignoré. Supprimer le réseau actif vide la sélection rapide.
 
-Import : fichiers en collision de nom à renommer ou ignorer. Les versions de schéma non prises en charge sont refusées.
+Import : dialogue avec aperçu. Même nom : renommer ou ignorer. Une autre schemaVersion est refusée. Les secrets sont écartés.

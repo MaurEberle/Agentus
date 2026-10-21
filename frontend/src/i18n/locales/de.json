@@ -199,6 +199,14 @@
       "createTitle": "Zugang anlegen",
       "editTitle": "Zugang ersetzen",
       "empty": "Noch keine Zugänge.",
+      "emptyGroup": "In dieser Gruppe noch keine Zugänge.",
+      "groups": "Art des Zugangs",
+      "group": {
+        "llm": "LLM",
+        "search": "Websuche",
+        "mcp": "MCP",
+        "custom": "Eigen"
+      },
       "name": "Name",
       "kind": "Art",
       "mask": "Maske",
@@ -223,7 +231,10 @@
         "anthropic": "Claude",
         "gemini": "Gemini",
         "openai_compat": "OpenAI-kompatibel",
-        "web_search": "Websuche",
+        "brave": "Brave",
+        "tavily": "Tavily",
+        "exa": "Exa",
+        "searxng": "SearXNG",
         "github": "GitHub",
         "azure": "Azure",
         "gitlab": "GitLab",
@@ -232,7 +243,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Token"
+        "token": "Token",
+        "custom": "Eigen"
       },
       "kindHint": {
         "xai": "API-Key von xAI.",
@@ -240,7 +252,10 @@
         "anthropic": "API-Key von Anthropic (Claude).",
         "gemini": "API-Key von Google Gemini.",
         "openai_compat": "Bearer-Token für eine OpenAI-kompatible URL.",
-        "web_search": "Schlüssel für die Websuche im Netz.",
+        "brave": "Subscription-Token der Brave Search API.",
+        "tavily": "API-Schlüssel von Tavily.",
+        "exa": "API-Schlüssel von Exa.",
+        "searxng": "Optionaler Schlüssel für eine eigene SearXNG-Instanz.",
         "github": "GitHub Personal Access Token (PAT). Classic: Rechte für Repos, Issues oder Actions, je nach Aufgabe.",
         "azure": "Azure- oder Entra-Token bzw. PAT.",
         "gitlab": "GitLab Personal Access Token.",
@@ -249,8 +264,18 @@
         "atlassian": "Atlassian Cloud API-Token (Jira/Confluence).",
         "linear": "Linear API-Key.",
         "postgres": "Postgres-Verbindungszeichenfolge (nicht die App-Datenbanken).",
-        "token": "Allgemeiner API-Key oder Bearer-Token (Context7, Sentry u. a.)."
-      }
+        "token": "Allgemeiner API-Key oder Bearer-Token (Context7, Sentry u. a.).",
+        "custom": "Bearer-Token, zusätzliche Header oder Umgebungsvariablen."
+      },
+      "bearer": "Bearer",
+      "bearerHint": "Wird als Authorization: Bearer gesendet.",
+      "headerName": "Header",
+      "headerValue": "Wert",
+      "addHeader": "Header hinzufügen",
+      "envName": "Variable",
+      "envValue": "Wert",
+      "addEnv": "Variable hinzufügen",
+      "customInvalid": "Der eigene Zugang braucht einen Bearer, einen Header oder eine Variable."
     },
     "runtime": {
       "lead": "Lokale Ollama-URL. Prüfung und Modellliste laufen über die App-API, nicht direkt aus dem Browser.",
@@ -260,11 +285,13 @@
       "pingOk": "Runtime erreichbar",
       "pingFail": "Runtime nicht erreichbar",
       "modelNotFound": "Modell nicht gefunden oder nicht ladbar: {{name}}",
+      "modelInfoFailed": "Ollama hat die Modelldaten nicht geliefert. Der Lauf wurde abgebrochen, damit das Modell nicht mit voller GPU-Offload gestartet wird.",
       "timeout": "Kein Fortschritt vom Modell ({{name}}). Abbruch nach Stille, nicht nach Gesamtdauer.",
       "unreachable": "Ollama ist nicht erreichbar ({{name}}).",
       "models": "Installierte Modelle",
       "modelsChat": "Normale Modelle",
       "modelsEmbed": "Embedding-Modelle",
+      "modelsMoe": "MoE-Modelle",
       "modelsGroupEmpty": "Keine",
       "modelsEmpty": "Keine Modelle oder Runtime nicht erreichbar.",
       "modelName": "Modell",
@@ -295,7 +322,9 @@
       "embedModel": "Embedding-Modell",
       "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen.",
       "webSearch": "Websuche",
-      "webSearchHint": "Optional. Ohne Such-Zugang bleibt der Chat konfiguriert, die Suche ist dann deaktiviert.",
+      "webSearchHint": "Optional. Ohne passenden Zugang bleibt der Chat konfiguriert, die Suche ist dann deaktiviert. SearXNG braucht eine Basis-Adresse.",
+      "webSearchProvider": "Anbieter",
+      "webSearchBaseUrl": "Basis-Adresse",
       "webSearchCredential": "Such-Zugang",
       "webSearchMissing": "Zugang fehlt — lege unter Zugänge einen Eintrag der Art Websuche an.",
       "fallback": "Spar-Modell (optional)",
@@ -316,6 +345,7 @@
       "servers": "Konfigurierte Server",
       "empty": "Noch keine MCP-Server.",
       "enable": "Aktivieren",
+      "comingSoon": "Bald verfügbar",
       "reset": "Deaktivieren",
       "secretNew": "Neues Secret (optional)",
       "secretName": "Name für den neuen Zugang",
@@ -327,7 +357,7 @@
       "enabled": "Aktiv",
       "status": "Status",
       "probe": "Probe",
-      "presetHint": "Zugänge laut Rezept. Dateisystem und Excel bekommen den Ordner am MCP-Knoten im Editor. Speichern legt den Server an und aktiviert ihn.",
+      "presetHint": "Zugänge laut Rezept. Excel bekommt den Ordner am MCP-Knoten im Editor. Lokale Dateien sind das Werkzeug Dateizugriff, kein MCP-Rezept. Speichern legt den Server an und aktiviert ihn.",
       "rootPath": "Wurzelpfad",
       "pickRoot": "Ordner",
       "needsNone": "Kein Zugang nötig",
@@ -492,7 +522,8 @@
     "call": {
       "failed": "MCP-Aufruf fehlgeschlagen."
     },
-    "notFound": "MCP-Server nicht gefunden."
+    "notFound": "MCP-Server nicht gefunden.",
+    "unavailable": "Dieses Rezept ist bald verfügbar."
   },
   "graph": {
     "mcp": {
@@ -500,6 +531,15 @@
       "disabled": "Dieser MCP-Server ist deaktiviert.",
       "root": "Dieser MCP-Server braucht einen Wurzelpfad in den Einstellungen.",
       "unavailable": "MCP ist in dieser Installation nicht verfügbar."
+    },
+    "router": {
+      "name": "Zweig-Namen müssen gesetzt und eindeutig sein.",
+      "pattern": "Jeder Zweig braucht ein Muster, höchstens 200 Zeichen.",
+      "regex": "Das Muster ist kein gültiger regulärer Ausdruck.",
+      "edge": "Jeder Zweig und der Standard brauchen genau eine Kante.",
+      "target": "Ein Router führt zu einem Agenten, einem Router oder einem Ende.",
+      "orchestrator": "Ein Router hinter dem Orchestrator führt nur zu Enden.",
+      "noEdge": "Router ohne passende Kante"
     }
   },
   "helpChat": {
@@ -665,6 +705,7 @@
       "saveAs": "Speichern unter",
       "load": "Laden",
       "duplicate": "Duplizieren",
+      "import": "Import",
       "export": "Export",
       "validate": "Validieren",
       "undo": "Rückgängig",
@@ -694,11 +735,11 @@
       "tool": "Werkzeug",
       "toolHint": "HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. An Agent oder Orchestrator.",
       "mcp": "MCP",
-      "mcpHint": "Ein aktivierter Server aus den Einstellungen. Anschluss wie ein Werkzeug.",
+      "mcpHint": "Ein aktivierter Server aus den Einstellungen. Lokale Dateien sind das Werkzeug Dateizugriff.",
       "knowledge": "Wissen",
       "knowledgeHint": "Quellenordner, nur zum Agenten-Port knowledge.",
       "router": "Router",
-      "routerHint": "Verzweigt Nachrichten nach Bedingungen.",
+      "routerHint": "Schickt die Nachricht an den ersten passenden Zweig. Der Standard fängt den Rest.",
       "end": "Ende",
       "endHint": "Mindestens eines. Abschluss des Laufs."
     },
@@ -717,6 +758,7 @@
       "title": "Inspector",
       "collapse": "Inspector einklappen",
       "expand": "Inspector ausklappen",
+      "resize": "Inspectorbreite ändern",
       "displayName": "Anzeigename",
       "multi": "{{count}} Knoten ausgewählt",
       "graph": {
@@ -746,6 +788,9 @@
         "pingOk": "Modell antwortet",
         "pingFail": "Prüfung fehlgeschlagen",
         "advanced": "Erweitert",
+        "modelKind": "Modellart",
+        "kindDense": "Normale Modelle",
+        "kindMoe": "MoE-Modelle",
         "noModels": "Keine Modelle geladen.",
         "useModel": "„{{name}}“ verwenden",
         "temperature": "Temperature",
@@ -755,7 +800,11 @@
         "numCtxLoading": "Modellgrenzen werden geladen…",
         "numCtxUnavailable": "Für dieses Modell sind keine Längenangaben verfügbar.",
         "numThread": "CPU-Threads",
-        "numThreadHint": "Standard sind die physischen Kerne.",
+        "numThreadHint": "Standard ist die Hälfte der verfügbaren Threads.",
+        "kvCache": "KV-Cache",
+        "kvCacheF16": "16 Bit",
+        "kvCacheQ8": "8 Bit",
+        "kvCacheHint": "8 Bit halbiert den Cache. Ollama 0.40 übernimmt das nur, wenn der Dienst mit OLLAMA_KV_CACHE_TYPE=q8_0 gestartet wurde. Die Schätzung rechnet mit der Wahl.",
         "numThreadLoading": "CPU-Kerne werden gelesen…",
         "numThreadUnavailable": "Die CPU-Thread-Zahl ist nicht verfügbar.",
         "numGpu": "GPU-Offload",
@@ -774,7 +823,21 @@
         "vramFormula": "GPU: letzte {{on}} von {{total}} Schichten. {{full}} × {{perToken}} B/Token × {{ctx}} Tokens.",
         "vramFormulaMixed": "GPU: letzte {{on}} von {{total}} Schichten. {{full}} globale Schichten × {{ctx}} Tokens.",
         "vramFormulaSwa": "GPU: letzte {{on}} von {{total}} Schichten. {{full}} global × {{ctx}} Tokens, {{swa}} Sliding-Window × Fenster {{window}}.",
-        "vramHint": "Schätzung je Schicht aus den Modelldaten. Die GPU nimmt die letzten N Schichten. Volle Attention: kompletter Kontext. Sliding-Window: nur das Fenster. KV-Cache ist f16."
+        "vramHint": "Schätzung je Schicht aus den Modelldaten. Die GPU nimmt die letzten N Schichten. Volle Attention: kompletter Kontext. Sliding-Window: nur das Fenster. KV-Cache ist f16.",
+        "moeAuto": "Experten automatisch platzieren",
+        "moeForce": "Alle Schichten erzwingen",
+        "moeAutoHint": "{{count}} Experten, {{used}} pro Token aktiv. Alle Gewichte bleiben geladen. Attention bleibt auf der GPU, Experten füllen den Rest.",
+        "moeAutoHintNoUsed": "{{count}} Experten. Alle Gewichte bleiben geladen. Attention bleibt auf der GPU, Experten füllen den Rest.",
+        "moeLayerWarn": "Diese Wahl verschiebt ganze Schichten und damit auch die Attention.",
+        "moeUnknown": "Die Expertengewichte lassen sich aus den Modelldaten nicht aufteilen. Die Anzeige rechnet deshalb wie bei einem dichten Modell.",
+        "moeExpertsGpu": "Experten auf der GPU {{experts}}",
+        "moeRam": "Experten im Arbeitsspeicher: {{ram}}",
+        "moeRamTight": "Der freie Arbeitsspeicher liegt unter dieser Schätzung. Festgehaltene Seiten und mmap können noch mehr brauchen.",
+        "moeAttention": "Attention bleibt auf den letzten {{on}} von {{total}} Schichten, damit sie in den GPU-Speicher passt.",
+        "moeSwa": "Bei Sliding-Window-Kontext kann Ollama alle Experten in den Arbeitsspeicher legen, auch wenn hier noch GPU-Platz frei ist.",
+        "moeEstimate": "Schätzung aus den Modelldaten und der Dateigröße. Sie wird bei jeder Kontextgröße neu gerechnet.",
+        "moeKvFormula": "KV: {{full}} Schichten × {{perToken}} B/Token × {{ctx}} Tokens.",
+        "moeAutoFit": "Automatische Expertenplatzierung würde {{gpu}} auf der GPU brauchen und {{ram}} im Arbeitsspeicher lassen."
       },
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",
@@ -783,7 +846,9 @@
       },
       "orchestrator": {
         "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang. Angeschlossene Werkzeuge ruft er selbst auf.",
-        "systemPrompt": "Systemprompt"
+        "systemPrompt": "Systemprompt",
+        "agentMissLimit": "Fehlversuche je Agent",
+        "agentMissLimitHint": "So oft darf ein Agent mit Dateizugriff einen Auftrag ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 3."
       },
       "tool": {
         "kind": "Art",
@@ -801,7 +866,38 @@
         "pickRoot": "Ordner",
         "allowWrite": "Schreiben erlauben",
         "allowDelete": "Löschen erlauben",
-        "fileAccessHint": "Der Agent darf nur unter diesem Ordner lesen, schreiben und löschen.",
+        "fileAccessHint": "Standard sind alle Aktionen. Abwählen nimmt sie dem Agenten.",
+        "fileActions": "Funktionen",
+        "fileAction": {
+          "list": "Auflisten",
+          "stat": "Eigenschaften",
+          "read": "Lesen",
+          "read_many": "Mehrere Dateien",
+          "write": "Schreiben",
+          "mkdir": "Ordner anlegen",
+          "delete": "Löschen",
+          "edit": "Ersetzen",
+          "move": "Verschieben",
+          "search": "Suchen",
+          "tree": "Baum"
+        },
+        "dateHint": "Zeigt die aktuelle Zeit in einer IANA-Zeitzone, Standard ist UTC. Ein Zeitpunkt lässt sich um Tage, Stunden und Minuten verschieben, auch rückwärts. Der Abstand zweier Zeitpunkte kommt in Sekunden, Stunden und Tagen. Bestandteile sind Datum, Uhrzeit und Wochentag, Montag ist 1. Dieselbe Zeit lässt sich in eine andere Zeitzone umrechnen.",
+        "calculatorHint": "Rechnet einen Ausdruck mit + − * / // % ** und Klammern. Der Exponent von ** darf höchstens 20 sein. Konstanten sind pi und e. Funktionen: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log und ln sind der natürliche Logarithmus, log kann eine Basis nehmen. sin, cos und tan rechnen im Bogenmaß. factorial nur für ganze Zahlen von 0 bis 20.",
+        "searchProvider": "Anbieter",
+        "searchProviderName": {
+          "brave": "Brave",
+          "tavily": "Tavily",
+          "exa": "Exa",
+          "searxng": "SearXNG"
+        },
+        "searchBaseUrl": "Basis-Adresse",
+        "maxResults": "Treffer",
+        "searchHint": {
+          "brave": "Eigener Index. Zugang der Art Brave.",
+          "tavily": "Schnipsel für Agenten. Zugang der Art Tavily.",
+          "exa": "Suche nach Bedeutung, eigener Index. Zugang der Art Exa.",
+          "searxng": "Eigene Instanz. Basis-Adresse nötig, Zugang optional."
+        },
         "credential": "Zugang",
         "mcpServer": "MCP-Server",
         "mcpEmpty": "Kein Server",
@@ -836,10 +932,18 @@
         "reindexHint": "Nach einem Wechsel der Embeddings den Index neu aufbauen."
       },
       "router": {
+        "hint": "Der erste Treffer gewinnt. Groß- und Kleinschreibung spielt keine Rolle, außer beim regulären Ausdruck.",
         "branches": "Zweige",
         "branchName": "Name",
-        "condition": "Bedingung",
-        "add": "Zweig hinzufügen"
+        "pattern": "Muster",
+        "add": "Zweig hinzufügen",
+        "defaultHint": "Wenn kein Zweig passt.",
+        "match": {
+          "contains": "enthält",
+          "startsWith": "beginnt mit",
+          "firstLine": "erste Zeile ist",
+          "regex": "regulärer Ausdruck"
+        }
       },
       "chat": {
         "hint": "Gespräch des Laufs. Ein Orchestrator kann hier nachfragen, bis er den Lauf beendet.",
@@ -895,7 +999,13 @@
       "orchestratorLlm": "Der Orchestrator braucht genau eine LLM-Kante.",
       "orchestratorChat": "Der Chat muss an den Orchestrator angeschlossen sein.",
       "orchestratorFanout": "Mit Orchestrator geht der Chat nur an den Orchestrator.",
-      "orchestratorEnd": "Der Orchestrator braucht eine Nachricht-Kante zum Ende.",
+      "orchestratorEnd": "Der Orchestrator braucht eine Nachricht zum Ende, direkt oder über einen Router, der nur auf Enden zeigt.",
+      "routerName": "Zweig-Namen müssen gesetzt und eindeutig sein.",
+      "routerPattern": "Jeder Zweig braucht ein Muster, höchstens 200 Zeichen.",
+      "routerRegex": "Das Muster ist kein gültiger regulärer Ausdruck.",
+      "routerEdge": "Jeder Zweig und der Standard brauchen genau eine Kante.",
+      "routerTarget": "Ein Router führt zu einem Agenten, einem Router oder einem Ende.",
+      "routerOrchestrator": "Ein Router hinter dem Orchestrator führt nur zu Enden.",
       "orchestratorLooseAgent": "Mit Orchestrator braucht jeder Agent einen Kanal von ihm.",
       "agentMode": "Ein Agent hängt entweder in der Kette oder am Orchestrator.",
       "agentChannel": "Ein Agent hat höchstens einen Kanal.",
@@ -991,7 +1101,9 @@
       "none": "Kein Netz ausgewählt.",
       "multi": "{{count}} ausgewählt",
       "noDescription": "Keine Beschreibung.",
-      "lastRun": "Letzter Lauf"
+      "lastRun": "Letzter Lauf",
+      "resize": "Detailbreite ändern",
+      "graphLoading": "Graph wird geladen…"
     },
     "empty": {
       "library": "Noch keine gespeicherten Netze.",
@@ -1041,6 +1153,26 @@
       "skip": "Diese Datei überspringen",
       "include": "Doch importieren",
       "continue": "Importieren"
+    },
+    "transfer": {
+      "exportTitle": "Netz exportieren",
+      "exportBody": "Das Netz wird als JSON gespeichert (schemaVersion 1). Geheimnisse stehen nicht in der Datei. Verweise auf Zugänge bleiben erhalten.",
+      "importTitle": "Netz importieren",
+      "importBody": "Wähle eine JSON-Datei mit schemaVersion 1. Daraus wird ein neues Netz. Geheimnisse in der Datei werden verworfen.",
+      "pick": "Datei wählen",
+      "name": "Name",
+      "counts": "{{nodes}} Knoten · {{edges}} Kanten",
+      "secrets": "Geheimnisse in der Datei werden verworfen.",
+      "fileUnreadable": "Das ist keine Netz-Datei.",
+      "fileSchema": "Diese schemaVersion wird nicht unterstützt.",
+      "collision": "Dieser Name ist schon vergeben.",
+      "nameRequired": "Name fehlt.",
+      "download": "Exportieren",
+      "confirmImport": "Importieren",
+      "empty": "Noch keine Datei.",
+      "zipNote": "Mehrere Netze werden als ZIP mit je einer JSON-Datei gespeichert.",
+      "skip": "Überspringen",
+      "include": "Doch übernehmen"
     },
     "notify": {
       "error": "Aktion fehlgeschlagen",
@@ -1128,7 +1260,8 @@
       "waiting": "Wartend",
       "running": "Läuft",
       "done": "Fertig",
-      "error": "Fehler"
+      "error": "Fehler",
+      "halted": "Angehalten"
     },
     "wait": {
       "none": "Kein Warten",
@@ -1361,6 +1494,8 @@
       "outcome": "Ergebnis",
       "error": "Fehler",
       "models": "Modelle",
+      "move": "{{column}} verschieben",
+      "resize": "Breite von {{column}} ändern",
       "live": "Live ansehen",
       "page": "Seite {{page}} von {{pages}}",
       "prev": "Zurück",
@@ -1461,11 +1596,13 @@
       "agent": {
         "start": "Agent gestartet",
         "done": "Agent fertig",
-        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen beendet",
+        "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen hintereinander beendet",
         "toolJson": "Werkzeugaufruf {{name}} verworfen: JSON-Argumente unvollständig (Versuch {{attempt}}/{{max}}).",
         "think": "Agent denkt (kein Ergebnis).",
         "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",
         "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
+        "emptyStop": "Leere Antwort verworfen ({{attempt}}/{{max}}). Der Auftrag geht weiter.",
+        "emptyStops": "Aufgabe unvollständig: fünf leere Antworten hintereinander.",
         "truncated": "Antwort abgeschnitten; kein Ergebnis."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
@@ -1478,12 +1615,15 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM fertig ({{durationMs}} ms)"
+        "done": "LLM fertig ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: Schätzung {{estimated}}, belegt {{used}}, {{delta}} ({{percent}}). Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}{{placement}}.",
+        "modelInfo": "Modelldaten von {{model}} fehlen. Der Lauf wurde abgebrochen.",
+        "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
       },
       "tool": {
         "call": "Werkzeug {{name}}"
       },
-      "router": "Router → {{target}}",
+      "router": "Router {{branch}} → {{target}}",
       "end": "Ende erreicht",
       "succeeded": "Lauf erfolgreich",
       "failed": "Lauf fehlgeschlagen",
@@ -1500,7 +1640,13 @@
         "think": "Orchestrator denkt (zählt nicht als Schritt).",
         "thinkLimit": "Zu viele Denkschritte ohne Auftrag.",
         "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
-        "window": "Der Prompt passt in kein Kontextfenster."
+        "window": "Der Prompt passt in kein Kontextfenster.",
+        "toolThink": "Fünf Werkzeugaufrufe fehlgeschlagen. Denkrunde {{round}}.",
+        "toolFailures": "Orchestrator nach zwei gescheiterten Denkrunden beendet",
+        "takeoverStart": "{{agent}} hat {{misses}} Dateiversuche ohne Änderung verbraucht. Der Orchestrator übernimmt.",
+        "takeoverBlocked": "Aufruf von {{agent}} abgelehnt. Der Orchestrator muss die Datei selbst schreiben.",
+        "takeover": "{{agent}} hat das Versuchslimit erreicht. Der Orchestrator hat keine Datei geschrieben.",
+        "takeoverNoTool": "{{agent}} hat das Versuchslimit erreicht. Am Orchestrator hängt kein Dateiwerkzeug."
       }
     },
     "mcp": {

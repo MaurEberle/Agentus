@@ -199,6 +199,14 @@
       "createTitle": "添加凭据",
       "editTitle": "替换凭据",
       "empty": "尚无凭据。",
+      "emptyGroup": "此分组尚无凭据。",
+      "groups": "凭据分组",
+      "group": {
+        "llm": "LLM",
+        "search": "网页搜索",
+        "mcp": "MCP",
+        "custom": "自定义"
+      },
       "name": "名称",
       "kind": "类型",
       "mask": "掩码",
@@ -215,7 +223,10 @@
         "anthropic": "Claude",
         "gemini": "Gemini",
         "openai_compat": "OpenAI 兼容",
-        "web_search": "网页搜索",
+        "brave": "Brave",
+        "tavily": "Tavily",
+        "exa": "Exa",
+        "searxng": "SearXNG",
         "github": "GitHub",
         "azure": "Azure",
         "gitlab": "GitLab",
@@ -224,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "令牌"
+        "token": "令牌",
+        "custom": "自定义"
       },
       "kindHint": {
         "xai": "xAI 的 API 密钥。",
@@ -232,7 +244,10 @@
         "anthropic": "Anthropic（Claude）的 API 密钥。",
         "gemini": "Google Gemini 的 API 密钥。",
         "openai_compat": "兼容 OpenAI 的 URL 的 Bearer 令牌。",
-        "web_search": "网络中网页搜索所用的密钥。",
+        "brave": "Brave Search API 的订阅令牌。",
+        "tavily": "Tavily 的 API 密钥。",
+        "exa": "Exa 的 API 密钥。",
+        "searxng": "自建 SearXNG 的可选密钥。",
         "github": "GitHub 个人访问令牌（PAT）。Classic：按任务授予仓库、议题或 Actions 权限。",
         "azure": "Azure/Entra 令牌或 PAT。",
         "gitlab": "GitLab 个人访问令牌。",
@@ -241,8 +256,18 @@
         "atlassian": "Atlassian Cloud API 令牌（Jira/Confluence）。",
         "linear": "Linear API 密钥。",
         "postgres": "Postgres 连接字符串（不要指向应用数据库）。",
-        "token": "通用 API 密钥或 Bearer 令牌（Context7、Sentry 等）。"
+        "token": "通用 API 密钥或 Bearer 令牌（Context7、Sentry 等）。",
+        "custom": "Bearer 令牌、额外请求头或环境变量。"
       },
+      "bearer": "Bearer",
+      "bearerHint": "以 Authorization: Bearer 发送。",
+      "headerName": "请求头",
+      "headerValue": "值",
+      "addHeader": "添加请求头",
+      "envName": "变量",
+      "envValue": "值",
+      "addEnv": "添加变量",
+      "customInvalid": "自定义凭据需要 Bearer、请求头或变量。",
       "inUseMcpHint": "在 MCP 服务器上改用其他凭据，或删除该服务器。然后即可移除此凭据。",
       "usedBy": {
         "helpChatLlm": "帮助聊天（对话）",
@@ -260,11 +285,13 @@
       "pingOk": "运行时可达",
       "pingFail": "运行时不可达",
       "modelNotFound": "找不到或无法加载模型：{{name}}",
+      "modelInfoFailed": "Ollama 没有返回模型数据。运行已中止，以免把全部层都放到 GPU 上。",
       "timeout": "模型无进展（{{name}}）。因静默中止，而非总时长限制。",
       "unreachable": "无法访问 Ollama（{{name}}）。",
       "models": "已安装的模型",
       "modelsChat": "普通模型",
       "modelsEmbed": "嵌入模型",
+      "modelsMoe": "MoE 模型",
       "modelsGroupEmpty": "无",
       "modelsEmpty": "没有模型，或运行时不可达。",
       "modelName": "模型",
@@ -295,7 +322,9 @@
       "embedModel": "嵌入模型",
       "reindexHint": "更改嵌入后请重建索引。",
       "webSearch": "网页搜索",
-      "webSearchHint": "可选。没有搜索凭据时仍可配置聊天，搜索保持关闭。",
+      "webSearchHint": "可选。没有对应凭据时仍可配置聊天，搜索保持关闭。SearXNG 需要基址。",
+      "webSearchProvider": "提供方",
+      "webSearchBaseUrl": "基址",
       "webSearchCredential": "搜索凭据",
       "webSearchMissing": "缺少凭据 — 请在“凭据”中添加网页搜索条目。",
       "fallback": "节省模型（可选）",
@@ -315,6 +344,7 @@
       "servers": "已配置的服务器",
       "empty": "尚无 MCP 服务器。",
       "enable": "启用",
+      "comingSoon": "即将推出",
       "added": "已添加",
       "custom": "自定义",
       "customCreate": "自定义服务器",
@@ -322,7 +352,7 @@
       "enabled": "已启用",
       "status": "状态",
       "probe": "探测",
-      "presetHint": "按配方填写凭据。文件系统和 Excel 的文件夹在编辑器的 MCP 节点上。保存会立即创建服务器。",
+      "presetHint": "按配方填写凭据。Excel 的文件夹在编辑器的 MCP 节点上。本地文件是文件访问工具，不是 MCP 配方。保存会立即创建服务器。",
       "rootPath": "根路径",
       "untrusted": "将以给定权限启动未知进程。请仅使用可信命令。",
       "command": "命令",
@@ -608,6 +638,7 @@
       "saveAs": "另存为",
       "load": "打开",
       "duplicate": "复制",
+      "import": "导入",
       "export": "导出",
       "validate": "验证",
       "undo": "撤销",
@@ -639,7 +670,7 @@
       "knowledge": "知识",
       "knowledgeHint": "源文件夹，仅连接到智能体 knowledge 端口。",
       "router": "路由器",
-      "routerHint": "按条件分支消息。",
+      "routerHint": "把消息送到第一个命中的分支。其余由默认出口接收。",
       "end": "结束",
       "endHint": "至少一个。结束运行。",
       "mcp": "MCP",
@@ -659,6 +690,7 @@
     "inspector": {
       "title": "检查器",
       "collapse": "折叠检查器",
+      "resize": "调整检查器宽度",
       "expand": "展开检查器",
       "displayName": "显示名称",
       "multi": "已选择 {{count}} 个节点",
@@ -689,6 +721,9 @@
         "pingOk": "模型已响应",
         "pingFail": "测试失败",
         "advanced": "高级",
+        "modelKind": "模型类型",
+        "kindDense": "普通模型",
+        "kindMoe": "MoE 模型",
         "noModels": "未加载模型。",
         "useModel": "使用“{{name}}”",
         "temperature": "温度",
@@ -698,7 +733,11 @@
         "numCtxLoading": "正在加载模型上限…",
         "numCtxUnavailable": "此模型没有可用的长度信息。",
         "numThread": "CPU 线程",
-        "numThreadHint": "默认使用物理核心数。",
+        "numThreadHint": "默认使用可用线程的一半。",
+        "kvCache": "KV 缓存",
+        "kvCacheF16": "16 位",
+        "kvCacheQ8": "8 位",
+        "kvCacheHint": "8 位把缓存减半。Ollama 0.40 只有在服务以 OLLAMA_KV_CACHE_TYPE=q8_0 启动时才会采用。估算按这里的选择计算。",
         "numThreadLoading": "正在读取 CPU 核心…",
         "numThreadUnavailable": "无法取得 CPU 线程数。",
         "numGpu": "GPU 卸载",
@@ -717,7 +756,21 @@
         "vramFormula": "GPU：最后 {{on}} / {{total}} 层。{{full}} × {{perToken}} 字节/token × {{ctx}} token。",
         "vramFormulaMixed": "GPU：最后 {{on}} / {{total}} 层。{{full}} 个全局层 × {{ctx}} token。",
         "vramFormulaSwa": "GPU：最后 {{on}} / {{total}} 层。{{full}} 个全局 × {{ctx}} token，{{swa}} 个滑动窗口 × 窗口 {{window}}。",
-        "vramHint": "按层根据模型数据估算。GPU 使用最后 N 层。全局注意力使用完整上下文；滑动窗口层只用其窗口。KV 缓存为 f16。"
+        "vramHint": "按层根据模型数据估算。GPU 使用最后 N 层。全局注意力使用完整上下文；滑动窗口层只用其窗口。KV 缓存为 f16。",
+        "moeAuto": "自动放置专家",
+        "moeForce": "强制全部层",
+        "moeAutoHint": "{{count}} 个专家，每个 token 激活 {{used}} 个。全部权重仍会加载。注意力留在 GPU，专家占用剩余空间。",
+        "moeAutoHintNoUsed": "{{count}} 个专家。全部权重仍会加载。注意力留在 GPU，专家占用剩余空间。",
+        "moeLayerWarn": "此选择会移动整层，包括注意力。",
+        "moeUnknown": "无法从该模型的元数据拆分专家权重。指示器按稠密模型公式计算。",
+        "moeExpertsGpu": "GPU 上的专家 {{experts}}",
+        "moeRam": "内存中的专家：{{ram}}",
+        "moeRamTight": "空闲内存低于此估计。锁定页和 mmap 可能占用更多。",
+        "moeAttention": "注意力留在最后 {{on}} / {{total}} 层，以便放入 GPU 内存。",
+        "moeSwa": "滑动窗口上下文下，即使这里仍显示 GPU 有空余，Ollama 也可能把全部专家放在内存中。",
+        "moeEstimate": "根据模型元数据和文件大小估计。上下文大小每次变化都会重新计算。",
+        "moeKvFormula": "KV：{{full}} 层 × {{perToken}} B/token × {{ctx}} token。",
+        "moeAutoFit": "自动放置专家会在 GPU 上使用 {{gpu}}，其余 {{ram}} 留在内存。"
       },
       "agent": {
         "hint": "LLM、工具和知识通过连线接入。没有编排器时，消息启动智能体。",
@@ -726,7 +779,9 @@
       },
       "orchestrator": {
         "hint": "一条 LLM 连线。聊天进入这里。每个智能体有自己的通道。消息输出仍指向结束。已连接的工具由它自己调用。",
-        "systemPrompt": "系统提示"
+        "systemPrompt": "系统提示",
+        "agentMissLimit": "每个智能体的失败次数",
+        "agentMissLimitHint": "有文件访问权限的智能体可以在不写入、不修改、不删除的情况下结束任务的次数。超过后由编排器接手该任务。默认是 3。"
       },
       "tool": {
         "kind": "类型",
@@ -744,7 +799,33 @@
         "pickRoot": "文件夹",
         "allowWrite": "允许写入",
         "allowDelete": "允许删除",
-        "fileAccessHint": "智能体只能在此文件夹下读取、写入和删除。",
+        "fileAccessHint": "默认包含全部操作。取消勾选后智能体不能调用它。",
+        "fileActions": "功能",
+        "fileAction": {
+          "list": "列出",
+          "stat": "属性",
+          "read": "读取",
+          "read_many": "读取多个",
+          "write": "写入",
+          "mkdir": "建目录",
+          "delete": "删除",
+          "edit": "替换",
+          "move": "移动",
+          "search": "搜索",
+          "tree": "目录树"
+        },
+        "dateHint": "显示某个 IANA 时区的当前时间，默认是 UTC。可以把一个时刻按天、小时和分钟前后移动。两个时刻的间隔以秒、小时和天返回。分量包括日期、钟点和星期，星期一是 1。同一个时刻可以换到另一个时区。",
+        "calculatorHint": "计算带 + - * / // % ** 和括号的表达式。** 的指数最多为 20。常数是 pi 和 e。函数：sqrt、cbrt、abs、round、floor、ceil、min、max、log、ln、log10、exp、sin、cos、tan、factorial。log 和 ln 是自然对数，log 可以带底数。sin、cos、tan 使用弧度。factorial 只接受 0 到 20 的整数。",
+        "searchProvider": "提供方",
+        "searchProviderName": { "brave": "Brave", "tavily": "Tavily", "exa": "Exa", "searxng": "SearXNG" },
+        "searchBaseUrl": "基址",
+        "maxResults": "结果数",
+        "searchHint": {
+          "brave": "自有索引。凭据类型为 Brave。",
+          "tavily": "面向智能体的摘要。凭据类型为 Tavily。",
+          "exa": "按含义搜索，自有索引。凭据类型为 Exa。",
+          "searxng": "自建实例。必须填写基址，凭据可选。"
+        },
         "credential": "凭据",
         "mcpServer": "MCP 服务器",
         "mcpEmpty": "无服务器",
@@ -765,10 +846,18 @@
         "reindexHint": "更改嵌入后请重建索引。"
       },
       "router": {
+        "hint": "第一个命中生效。除正则表达式外忽略大小写。",
         "branches": "分支",
         "branchName": "名称",
-        "condition": "条件",
-        "add": "添加分支"
+        "pattern": "模式",
+        "add": "添加分支",
+        "defaultHint": "没有分支命中时。",
+        "match": {
+          "contains": "包含",
+          "startsWith": "开头是",
+          "firstLine": "第一行是",
+          "regex": "正则表达式"
+        }
       },
       "chat": {
         "hint": "运行中的对话。编排器可以在这里追问，直到它结束运行。",
@@ -838,7 +927,13 @@
       "orchestratorLlm": "编排器需要恰好一条 LLM 边。",
       "orchestratorChat": "聊天必须连接到编排器。",
       "orchestratorFanout": "有编排器时，聊天只连接编排器。",
-      "orchestratorEnd": "编排器需要一条指向结束的消息边。",
+      "orchestratorEnd": "编排器需要一条通向结束的消息，可以直接连接，或经过只通向结束的路由器。",
+      "routerName": "分支名称必须填写且不能重复。",
+      "routerPattern": "每个分支都需要一个最多 200 个字符的模式。",
+      "routerRegex": "该模式不是有效的正则表达式。",
+      "routerEdge": "每个分支和默认出口都需要恰好一条边。",
+      "routerTarget": "路由器通向智能体、路由器或结束。",
+      "routerOrchestrator": "编排器之后的路由器只能通向结束。",
       "orchestratorLooseAgent": "有编排器时，每个智能体都需要来自它的一条通道。",
       "agentMode": "智能体要么在链中，要么接在编排器上。",
       "agentChannel": "每个智能体最多一条通道。",
@@ -934,7 +1029,9 @@
       "none": "未选择网络。",
       "multi": "已选择 {{count}} 个",
       "noDescription": "无描述。",
-      "lastRun": "上次运行"
+      "lastRun": "上次运行",
+      "resize": "调整详情宽度",
+      "graphLoading": "正在加载图…"
     },
     "empty": {
       "library": "尚无已保存的网络。",
@@ -984,6 +1081,26 @@
       "skip": "跳过此文件",
       "include": "仍要导入",
       "continue": "导入"
+    },
+    "transfer": {
+      "exportTitle": "导出网络",
+      "exportBody": "网络保存为 JSON（schemaVersion 1）。文件中不含密钥。访问引用会保留。",
+      "importTitle": "导入网络",
+      "importBody": "选择 schemaVersion 为 1 的 JSON 文件。会新建一个网络。文件中的密钥会被丢弃。",
+      "pick": "选择文件",
+      "name": "名称",
+      "counts": "{{nodes}} 个节点 · {{edges}} 条边",
+      "secrets": "文件中的密钥会被丢弃。",
+      "fileUnreadable": "这不是网络文件。",
+      "fileSchema": "不支持该 schemaVersion。",
+      "collision": "该名称已被使用。",
+      "nameRequired": "缺少名称。",
+      "download": "导出",
+      "confirmImport": "导入",
+      "empty": "尚未选择文件。",
+      "zipNote": "多个网络会存成 ZIP，每个网络一个 JSON 文件。",
+      "skip": "跳过",
+      "include": "纳入"
     },
     "notify": {
       "error": "操作失败",
@@ -1071,7 +1188,8 @@
       "waiting": "等待中",
       "running": "运行中",
       "done": "完成",
-      "error": "错误"
+      "error": "错误",
+      "halted": "已停止"
     },
     "wait": {
       "none": "无等待",
@@ -1304,6 +1422,8 @@
       "outcome": "结果",
       "error": "错误",
       "models": "模型",
+      "move": "移动{{column}}",
+      "resize": "调整{{column}}的宽度",
       "live": "查看实时",
       "page": "第 {{page}} 页，共 {{pages}} 页",
       "prev": "上一页",
@@ -1404,11 +1524,13 @@
       "agent": {
         "start": "智能体已启动",
         "done": "智能体已完成",
-        "toolFailures": "智能体在 {{failed}} 次失败的工具调用后已停止",
+        "toolFailures": "智能体在连续 {{failed}} 次失败的工具调用后已停止",
         "toolJson": "已丢弃工具调用 {{name}}：JSON 参数不完整（第 {{attempt}}/{{max}} 次）。",
         "think": "智能体正在思考（不是结果）。",
         "thinkLimit": "思考轮次过多且没有结果。",
         "thinkLoop": "1 token 思考循环在 {{thinks}} 步后已停止。",
+        "emptyStop": "已丢弃空回复（{{attempt}}/{{max}}）。任务继续。",
+        "emptyStops": "任务未完成：连续五次空回复。",
         "truncated": "回复被截断；不是结果。"
       },
       "knowledge": "知识搜索（{{count}} 条结果）",
@@ -1421,12 +1543,15 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM 已完成（{{durationMs}} ms）"
+        "done": "LLM 已完成（{{durationMs}} ms）",
+        "vram": "VRAM {{model}}：估计 {{estimated}}，实际 {{used}}，{{delta}}（{{percent}}）。专家 {{expertsOnGpu}}/{{expertLayers}}，注意力层 {{attentionLayersOnGpu}}{{placement}}。",
+        "modelInfo": "缺少 {{model}} 的模型数据。运行已中止。",
+        "moeUnsplit": "无法划分 {{model}} 的专家层。未设置 num_gpu。"
       },
       "tool": {
         "call": "工具 {{name}}"
       },
-      "router": "路由器 → {{target}}",
+      "router": "路由器 {{branch}} → {{target}}",
       "end": "已到达结束",
       "succeeded": "运行成功",
       "failed": "运行失败",
@@ -1443,7 +1568,13 @@
         "think": "编排器正在思考（不计入步骤）。",
         "thinkLimit": "没有任务的思考轮次过多。",
         "thinkLoop": "1 token 思考循环在 {{thinks}} 步后已停止。",
-        "window": "提示词无法放入任何上下文窗口。"
+        "window": "提示词无法放入任何上下文窗口。",
+        "toolThink": "五次工具调用失败。思考轮次 {{round}}。",
+        "toolFailures": "编排器在连续两轮思考失败后已停止",
+        "takeoverStart": "{{agent}} 已用完 {{misses}} 次未改动文件的尝试。编排器接手。",
+        "takeoverBlocked": "已拒绝调用 {{agent}}。编排器必须自己写文件。",
+        "takeover": "{{agent}} 达到尝试上限。编排器没有写入文件。",
+        "takeoverNoTool": "{{agent}} 达到尝试上限。编排器没有文件工具。"
       }
     },
     "graph": {
@@ -1527,7 +1658,8 @@
     "call": {
       "failed": "MCP 调用失败。"
     },
-    "notFound": "未找到 MCP 服务器。"
+    "notFound": "未找到 MCP 服务器。",
+    "unavailable": "此配方即将推出。"
   },
   "graph": {
     "mcp": {
@@ -1535,6 +1667,15 @@
       "disabled": "此 MCP 服务器已停用。",
       "root": "此 MCP 服务器需要在设置中指定根路径。",
       "unavailable": "此安装中没有 MCP。"
+    },
+    "router": {
+      "name": "分支名称必须填写且不能重复。",
+      "pattern": "每个分支都需要一个最多 200 个字符的模式。",
+      "regex": "该模式不是有效的正则表达式。",
+      "edge": "每个分支和默认出口都需要恰好一条边。",
+      "target": "路由器通向智能体、路由器或结束。",
+      "orchestrator": "编排器之后的路由器只能通向结束。",
+      "noEdge": "路由器没有匹配的边"
     }
   }
 }

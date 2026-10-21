@@ -37,8 +37,70 @@ import {
   updateCredential,
   useCredentialsQuery,
 } from '@/modules/settings/api';
-import { CREDENTIAL_KINDS, type CredentialKind, type CredentialListItem } from '@/modules/settings/model';
+import {
+  CREDENTIAL_GROUPS,
+  CREDENTIAL_KINDS_BY_GROUP,
+  SELECTABLE_MCP_CREDENTIAL_KINDS,
+  credentialGroup,
+  type CredentialGroup,
+  type CredentialKind,
+  type CredentialListItem,
+} from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
+
+function PairEditor({
+  rows,
+  nameLabel,
+  valueLabel,
+  addLabel,
+  onChange,
+}: {
+  rows: SecretPair[];
+  nameLabel: string;
+  valueLabel: string;
+  addLabel: string;
+  onChange: (rows: SecretPair[]) => void;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      {rows.map((row, index) => (
+        <div key={index} className="flex gap-2">
+          <Input
+            value={row.name}
+            placeholder={nameLabel}
+            spellCheck={false}
+            onChange={(event) => {
+              const next = rows.slice();
+              next[index] = { ...row, name: event.target.value };
+              onChange(next);
+            }}
+          />
+          <Input
+            type="password"
+            autoComplete="new-password"
+            value={row.value}
+            placeholder={valueLabel}
+            onChange={(event) => {
+              const next = rows.slice();
+              next[index] = { ...row, value: event.target.value };
+              onChange(next);
+            }}
+          />
+        </div>
+      ))}
+      {rows.length < 8 ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onChange([...rows, { name: '', value: '' }])}
+        >
+          {addLabel}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 function usageLabelText(label: string, t: TFunction): string {
   if (label === 'helpChat.llm') return t('settings.credentials.usedBy.helpChatLlm');
@@ -57,19 +119,66 @@ function usageLabelText(label: string, t: TFunction): string {
   return label;
 }
 
+type SecretPair = { name: string; value: string };
+
 type FormState = {
   id?: string;
   name: string;
   kind: CredentialKind;
   secret: string;
+  token: string;
+  headers: SecretPair[];
+  env: SecretPair[];
 };
 
-const emptyForm = (): FormState => ({ name: '', kind: 'token', secret: '' });
+function canSave(form: FormState | null): boolean {
+  if (!form?.name.trim()) return false;
+  if (form.id) return true;
+  if (form.kind === 'custom') return encodeCustom(form) !== null;
+  return Boolean(form.secret);
+}
+
+function encodeCustom(form: FormState): string | null {
+  const headers: Record<string, string> = {};
+  for (const row of form.headers) {
+    const name = row.name.trim();
+    if (name && row.value.trim()) headers[name] = row.value.trim();
+  }
+  const env: Record<string, string> = {};
+  for (const row of form.env) {
+    const name = row.name.trim();
+    if (name && row.value.trim()) env[name] = row.value.trim();
+  }
+  const token = form.token.trim();
+  if (!token && Object.keys(headers).length === 0 && Object.keys(env).length === 0) return null;
+  const body: Record<string, unknown> = {};
+  if (token) body.token = token;
+  if (Object.keys(headers).length > 0) body.headers = headers;
+  if (Object.keys(env).length > 0) body.env = env;
+  return JSON.stringify(body);
+}
+
+function selectableKinds(group: CredentialGroup): readonly CredentialKind[] {
+  if (group === 'mcp') return SELECTABLE_MCP_CREDENTIAL_KINDS;
+  return CREDENTIAL_KINDS_BY_GROUP[group];
+}
+
+function emptyForm(group: CredentialGroup): FormState {
+  return {
+    name: '',
+    kind: selectableKinds(group)[0],
+    secret: '',
+    token: '',
+    headers: [],
+    env: [],
+  };
+}
 
 export function CredentialsSection() {
   const { t } = useTranslation();
   const { data } = useCredentialsQuery();
   const items = data?.items ?? [];
+  const [group, setGroup] = useState<CredentialGroup>('llm');
   const [form, setForm] = useState<FormState | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CredentialListItem | null>(null);
   const [saving, setSaving] = useState(false);
@@ -79,21 +188,23 @@ export function CredentialsSection() {
     if (!form || !form.name.trim()) return;
     setSaving(true);
     try {
+      const secret = form.kind === 'custom' ? encodeCustom(form) : form.secret;
       if (form.id) {
         await updateCredential(form.id, {
           name: form.name.trim(),
           kind: form.kind,
-          secret: form.secret || undefined,
+          secret: secret || undefined,
         });
         notify({ titleKey: 'settings.notify.credentialUpdated', variant: 'success' });
       } else {
-        if (!form.secret) return;
-        await createCredential({ name: form.name.trim(), kind: form.kind, secret: form.secret });
+        if (!secret) return;
+        await createCredential({ name: form.name.trim(), kind: form.kind, secret });
         notify({ titleKey: 'settings.notify.credentialCreated', variant: 'success' });
       }
       setForm(null);
-    } catch {
-      notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+    } catch (err) {
+      const titleKey = err instanceof ApiError && err.messageKey ? err.messageKey : 'settings.notify.saveError';
+      notify({ titleKey, variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -121,16 +232,38 @@ export function CredentialsSection() {
     }
   }
 
+  const kinds = selectableKinds(group);
+  const formKinds =
+    form && !kinds.includes(form.kind) ? [form.kind, ...kinds] : kinds;
+  const visible = items.filter((item) => credentialGroup(item.kind) === group);
+
   return (
     <div className="max-w-3xl">
       <SectionHeader title={t('settings.nav.credentials')} description={t('settings.credentials.lead')} />
-      <div className="mb-3 flex justify-end">
-        <Button type="button" onClick={() => setForm(emptyForm())}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1" role="tablist" aria-label={t('settings.credentials.groups')}>
+          {CREDENTIAL_GROUPS.map((id) => (
+            <Button
+              key={id}
+              type="button"
+              size="sm"
+              role="tab"
+              variant={group === id ? 'secondary' : 'ghost'}
+              aria-selected={group === id}
+              onClick={() => setGroup(id)}
+            >
+              {t(`settings.credentials.group.${id}`)}
+            </Button>
+          ))}
+        </div>
+        <Button type="button" onClick={() => setForm(emptyForm(group))}>
           {t('settings.credentials.create')}
         </Button>
       </div>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('settings.credentials.empty')}</p>
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {items.length === 0 ? t('settings.credentials.empty') : t('settings.credentials.emptyGroup')}
+        </p>
       ) : (
         <Table>
           <TableHeader>
@@ -142,7 +275,7 @@ export function CredentialsSection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
+            {visible.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell>
@@ -155,7 +288,15 @@ export function CredentialsSection() {
                     variant="ghost"
                     size="sm"
                     onClick={() =>
-                      setForm({ id: item.id, name: item.name, kind: item.kind, secret: '' })
+                      setForm({
+                        id: item.id,
+                        name: item.name,
+                        kind: item.kind,
+                        secret: '',
+                        token: '',
+                        headers: [],
+                        env: [],
+                      })
                     }
                   >
                     {t('settings.common.edit')}
@@ -193,36 +334,70 @@ export function CredentialsSection() {
                   onChange={(event) => setForm({ ...form, name: event.target.value })}
                 />
               </div>
-              <div className="grid gap-1.5">
-                <Label>{t('settings.credentials.kind')}</Label>
-                <Select
-                  value={form.kind}
-                  onValueChange={(value) => setForm({ ...form, kind: value as CredentialKind })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CREDENTIAL_KINDS.filter((kind) => kind !== 'openai_compat').map((kind) => (
-                      <SelectItem key={kind} value={kind}>
-                        {t(`settings.credentials.kindName.${kind}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">{t(`settings.credentials.kindHint.${form.kind}`)}</p>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="cred-secret">{t('settings.credentials.secret')}</Label>
-                <Input
-                  id="cred-secret"
-                  type="password"
-                  autoComplete="new-password"
-                  value={form.secret}
-                  placeholder={form.id ? t('settings.credentials.secretUnchanged') : undefined}
-                  onChange={(event) => setForm({ ...form, secret: event.target.value })}
-                />
-              </div>
+              {form.kind === 'custom' ? (
+                <>
+                  <p className="text-xs text-muted-foreground">{t('settings.credentials.kindHint.custom')}</p>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="cred-bearer">{t('settings.credentials.bearer')}</Label>
+                    <Input
+                      id="cred-bearer"
+                      type="password"
+                      autoComplete="new-password"
+                      value={form.token}
+                      placeholder={form.id ? t('settings.credentials.secretUnchanged') : undefined}
+                      onChange={(event) => setForm({ ...form, token: event.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">{t('settings.credentials.bearerHint')}</p>
+                  </div>
+                  <PairEditor
+                    rows={form.headers}
+                    nameLabel={t('settings.credentials.headerName')}
+                    valueLabel={t('settings.credentials.headerValue')}
+                    addLabel={t('settings.credentials.addHeader')}
+                    onChange={(headers) => setForm({ ...form, headers })}
+                  />
+                  <PairEditor
+                    rows={form.env}
+                    nameLabel={t('settings.credentials.envName')}
+                    valueLabel={t('settings.credentials.envValue')}
+                    addLabel={t('settings.credentials.addEnv')}
+                    onChange={(env) => setForm({ ...form, env })}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="grid gap-1.5">
+                    <Label>{t('settings.credentials.kind')}</Label>
+                    <Select
+                      value={form.kind}
+                      onValueChange={(value) => setForm({ ...form, kind: value as CredentialKind })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formKinds.map((kind) => (
+                          <SelectItem key={kind} value={kind}>
+                            {t(`settings.credentials.kindName.${kind}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{t(`settings.credentials.kindHint.${form.kind}`)}</p>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="cred-secret">{t('settings.credentials.secret')}</Label>
+                    <Input
+                      id="cred-secret"
+                      type="password"
+                      autoComplete="new-password"
+                      value={form.secret}
+                      placeholder={form.id ? t('settings.credentials.secretUnchanged') : undefined}
+                      onChange={(event) => setForm({ ...form, secret: event.target.value })}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           ) : null}
           <DialogFooter>
@@ -232,7 +407,7 @@ export function CredentialsSection() {
             <Button
               type="button"
               onClick={() => void save()}
-              disabled={!form?.name.trim() || (!form.id && !form.secret)}
+              disabled={!canSave(form)}
               loading={saving}
             >
               {t('settings.common.save')}

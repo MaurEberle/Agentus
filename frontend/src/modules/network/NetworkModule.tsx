@@ -26,12 +26,19 @@ import {
   duplicateNetwork,
   updateNetwork,
   useEditorNetworkQuery,
+  useEditorNetworksQuery,
   validateNetwork,
 } from '@/modules/network/api';
 import { FlowCanvas } from '@/modules/network/canvas/FlowCanvas';
 import { Inspector } from '@/modules/network/inspector/Inspector';
 import { LoadDialog } from '@/modules/network/library/LoadDialog';
-import { downloadJson, duplicateNodes, exportDocument } from '@/modules/network/model/serialize';
+import type { AgentNetworkDocument } from '@/modules/network/model/document';
+import { duplicateNodes } from '@/modules/network/model/serialize';
+import { saveExportFile } from '@/lib/saveFile';
+import { ExportDialog } from '@/modules/networks/dialogs/ExportDialog';
+import { ImportDialog } from '@/modules/networks/dialogs/ImportDialog';
+import { importNetwork, previewExport } from '@/modules/networks/api';
+import { exportFileStem, exportStamp } from '@/modules/networks/model/importDoc';
 import { Palette } from '@/modules/network/palette/Palette';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { Ribbon } from '@/modules/network/ribbon/Ribbon';
@@ -45,6 +52,33 @@ import {
 } from '@/modules/network/store';
 
 type DirtyAction = 'new' | 'load' | 'library' | 'leave';
+
+const INSPECTOR_MIN = 320;
+
+function useLocalWidth(key: string, fallback: number) {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = Number(window.localStorage.getItem(key));
+      if (Number.isFinite(raw) && raw >= fallback) return raw;
+    } catch {
+      /* ignore private mode */
+    }
+    return fallback;
+  });
+  const setWidth = useCallback(
+    (next: number) => {
+      const clamped = Math.max(fallback, Math.round(next));
+      setValue(clamped);
+      try {
+        window.localStorage.setItem(key, String(clamped));
+      } catch {
+        /* ignore quota */
+      }
+    },
+    [fallback, key],
+  );
+  return [value, setWidth] as const;
+}
 
 function useLocalFlag(key: string, fallback = false) {
   const [value, setValue] = useState(() => {
@@ -94,7 +128,30 @@ function NetworkEditor() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [paletteCollapsed, setPaletteCollapsed] = useLocalFlag('agentus.network.paletteCollapsed');
   const [inspectorCollapsed, setInspectorCollapsed] = useLocalFlag('agentus.network.inspectorCollapsed');
+  const [inspectorWidth, setInspectorWidth] = useLocalWidth('agentus.network.inspectorWidth', INSPECTOR_MIN);
+  const inspectorDrag = useRef({ x: 0, width: INSPECTOR_MIN });
+  const inspectorWidthRef = useRef(inspectorWidth);
+  inspectorWidthRef.current = inspectorWidth;
+  const editorRowRef = useRef<HTMLDivElement>(null);
+  const inspectorLimit = useCallback(() => {
+    const row = editorRowRef.current;
+    if (!row) return inspectorWidthRef.current;
+    return Math.max(INSPECTOR_MIN, row.clientWidth - 280);
+  }, []);
+  useEffect(() => {
+    const row = editorRowRef.current;
+    if (!row || !isDesktop) return;
+    const fit = () => setInspectorWidth(Math.min(inspectorLimit(), inspectorWidthRef.current));
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [inspectorLimit, isDesktop, setInspectorWidth]);
   const [loadOpen, setLoadOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const library = useEditorNetworksQuery();
   const [nameOpen, setNameOpen] = useState(false);
   const [nameValue, setNameValue] = useState('');
   const [nameMode, setNameMode] = useState<'save' | 'saveAs'>('save');
@@ -379,10 +436,45 @@ function NetworkEditor() {
     }
   }
 
-  function exportOpen() {
-    const payload = exportDocument(document);
-    const filename = `${(document.name || 'network').replace(/[^\w-]+/g, '_')}.json`;
-    downloadJson(filename, payload);
+  async function confirmExport() {
+    setTransferBusy(true);
+    try {
+      const payload = await previewExport(useNetworkEditor.getState().document);
+      const name = payload.name || document.name || 'network';
+      const written = await saveExportFile(
+        `${exportFileStem(name)}-${exportStamp()}.json`,
+        new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json' }),
+      );
+      if (!written) return;
+      setExportOpen(false);
+      notify({ titleKey: 'networks.notify.exported', variant: 'success' });
+    } catch {
+      notify({ titleKey: 'networks.notify.error', variant: 'error' });
+    } finally {
+      setTransferBusy(false);
+    }
+  }
+
+  function confirmImport(documents: AgentNetworkDocument[]) {
+    const documentToImport = documents[0];
+    if (!documentToImport) return;
+    setTransferBusy(true);
+    void importNetwork(documentToImport)
+      .then((created) => {
+        setImportOpen(false);
+        notify({
+          titleKey: 'networks.notify.imported',
+          values: { count: '1' },
+          variant: 'success',
+        });
+        if (created.id) openLoaded(created.id);
+      })
+      .catch(() => {
+        notify({ titleKey: 'networks.notify.error', variant: 'error' });
+      })
+      .finally(() => {
+        setTransferBusy(false);
+      });
   }
 
   async function runValidate() {
@@ -455,7 +547,8 @@ function NetworkEditor() {
         }}
         onLoad={() => setLoadOpen(true)}
         onDuplicate={() => void duplicate()}
-        onExport={exportOpen}
+        onImport={() => setImportOpen(true)}
+        onExport={() => setExportOpen(true)}
         onValidate={() => void runValidate()}
         onLibrary={requestLibrary}
       />
@@ -469,7 +562,7 @@ function NetworkEditor() {
           </Button>
         </div>
       ) : null}
-      <div className="flex min-h-0 flex-1">
+      <div ref={editorRowRef} className="flex min-h-0 flex-1">
         {isDesktop ? (
           <aside
             className={cn(
@@ -508,12 +601,42 @@ function NetworkEditor() {
             }}
           />
         </div>
+        {isDesktop && !inspectorCollapsed ? (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t('network.inspector.resize')}
+            aria-valuenow={inspectorWidth}
+            aria-valuemin={INSPECTOR_MIN}
+            tabIndex={0}
+            className="hidden w-4 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-sm hover:bg-muted/50 focus-visible:bg-muted/50 md:flex"
+            onPointerDown={(event) => {
+              inspectorDrag.current = { x: event.clientX, width: inspectorWidth };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+              const next = inspectorDrag.current.width - (event.clientX - inspectorDrag.current.x);
+              setInspectorWidth(Math.min(inspectorLimit(), next));
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+              event.preventDefault();
+              const step = event.shiftKey ? 48 : 16;
+              const delta = event.key === 'ArrowLeft' ? step : -step;
+              setInspectorWidth(Math.min(inspectorLimit(), inspectorWidth + delta));
+            }}
+          >
+            <span className="h-8 w-1 rounded-full bg-border" aria-hidden />
+          </div>
+        ) : null}
         {isDesktop ? (
           <aside
             className={cn(
-              'hidden min-w-0 shrink-0 flex-col border-l md:flex',
-              inspectorCollapsed ? 'w-11' : 'w-80',
+              'hidden min-w-0 shrink-0 flex-col md:flex',
+              inspectorCollapsed ? 'w-11 border-l' : '',
             )}
+            style={inspectorCollapsed ? undefined : { width: inspectorWidth }}
           >
             <div className={cn('flex items-center p-1', inspectorCollapsed ? 'justify-center' : 'justify-between px-2')}>
               {inspectorCollapsed ? null : (
@@ -556,6 +679,27 @@ function NetworkEditor() {
         </SheetContent>
       </Sheet>
       <LoadDialog open={loadOpen} onOpenChange={setLoadOpen} onOpen={openLoaded} />
+      <ExportDialog
+        open={exportOpen}
+        items={[
+          {
+            name: document.name,
+            nodeCount: document.nodes.length,
+            edgeCount: document.edges.length,
+          },
+        ]}
+        busy={transferBusy}
+        onClose={() => setExportOpen(false)}
+        onConfirm={() => void confirmExport()}
+      />
+      <ImportDialog
+        open={importOpen}
+        multiple={false}
+        existingNames={(library.data?.items ?? []).map((item) => item.name)}
+        busy={transferBusy}
+        onClose={() => setImportOpen(false)}
+        onImport={confirmImport}
+      />
       <Dialog open={nameOpen} onOpenChange={setNameOpen}>
         <DialogContent closeLabel={t('network.dialog.close')}>
           <DialogHeader>

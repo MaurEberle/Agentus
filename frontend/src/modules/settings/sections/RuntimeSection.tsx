@@ -37,14 +37,14 @@ function ModelGroup({ title, items }: { title: string; items: RuntimeModel[] }) 
           <TableHeader>
             <TableRow>
               <TableHead>{t('settings.runtime.modelName')}</TableHead>
-              <TableHead>{t('settings.runtime.modelSize')}</TableHead>
+              <TableHead className="w-24 text-right">{t('settings.runtime.modelSize')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.map((model) => (
               <TableRow key={model.name}>
                 <TableCell className="font-mono text-xs">{model.name}</TableCell>
-                <TableCell>{formatBytes(model.sizeBytes)}</TableCell>
+                <TableCell className="whitespace-nowrap text-right tabular-nums">{formatBytes(model.sizeBytes)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -125,14 +125,17 @@ export function RuntimeSection() {
         </div>
       </div>
       <div className="space-y-4">
-        <h2 className="text-sm font-medium">{t('settings.runtime.models')}</h2>
         {(models?.items.length ?? 0) === 0 ? (
           <p className="text-sm text-muted-foreground">{t('settings.runtime.modelsEmpty')}</p>
         ) : (
           <>
             <ModelGroup
               title={t('settings.runtime.modelsChat')}
-              items={(models?.items ?? []).filter((model) => !isEmbeddingModelName(model.name))}
+              items={(models?.items ?? []).filter((model) => !model.moe && !isEmbeddingModelName(model.name))}
+            />
+            <ModelGroup
+              title={t('settings.runtime.modelsMoe')}
+              items={(models?.items ?? []).filter((model) => model.moe && !isEmbeddingModelName(model.name))}
             />
             <ModelGroup
               title={t('settings.runtime.modelsEmbed')}

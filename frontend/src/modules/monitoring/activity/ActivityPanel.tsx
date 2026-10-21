@@ -11,7 +11,9 @@ export function ActivityPanel({ run, dimmed }: { run: RunSnapshot; dimmed?: bool
   const { t, i18n } = useTranslation();
   const currentIds = new Set(run.activity.currentNodeIds);
   for (const [id, runtime] of Object.entries(run.nodesRuntime)) {
-    if (runtime.status === 'running' || runtime.status === 'waiting') currentIds.add(id);
+    if (runtime.status === 'running' || runtime.status === 'waiting' || runtime.status === 'halted') {
+      currentIds.add(id);
+    }
   }
   const current = [...currentIds]
     .map((id) => {

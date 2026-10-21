@@ -1,5 +1,6 @@
 {
   "id": "slack",
+  "available": false,
   "titleKey": "mcp.recipe.slack",
   "transport": "stdio",
   "runtime": "npx",

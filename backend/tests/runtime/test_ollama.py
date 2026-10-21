@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from app.runtime.errors import RuntimeTransportError
+from app.runtime.errors import RuntimeApiError, RuntimeTransportError
 from app.runtime.ollama import (
     clamp_gpu_layers,
     ensure_loaded,
@@ -54,6 +54,23 @@ def test_list_models_names_and_size(monkeypatch: pytest.MonkeyPatch) -> None:
     assert items[0].name == "llama3.2:1b"
     assert items[0].size_bytes == 111
     assert items[1].name == "nomic-embed-text"
+
+
+def test_list_models_marks_mixture_of_experts(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/api/tags"):
+            return httpx.Response(
+                200,
+                json={"models": [{"name": "qwen-dense"}, {"name": "qwen-moe"}]},
+            )
+        body = request.read()
+        name = b"qwen-moe" in body
+        info = {"general.architecture": "qwen3moe", "qwen3moe.expert_count": 64} if name else {}
+        return httpx.Response(200, json={"model_info": info})
+
+    install_transport(monkeypatch, handler)
+    items = {item.name: item.moe for item in list_ollama_models()}
+    assert items == {"qwen-dense": False, "qwen-moe": True}
 
 
 def test_list_models_transport_raises(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -204,6 +221,8 @@ def test_model_block_count_caches(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.runtime import ollama as ollama_mod
 
     ollama_mod._block_counts.clear()
+    ollama_mod._moe_flags.clear()
+    ollama_mod._show_seen.clear()
     calls: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -214,15 +233,83 @@ def test_model_block_count_caches(monkeypatch: pytest.MonkeyPatch) -> None:
     assert model_block_count("llama3.2:1b") == 16
     assert model_block_count("llama3.2:1b") == 16
     assert calls == ["/api/show"]
+    assert ollama_mod.model_is_moe("llama3.2:1b") is False
 
 
 def test_model_block_count_missing_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.runtime import ollama as ollama_mod
 
     ollama_mod._block_counts.clear()
+    ollama_mod._moe_flags.clear()
+    ollama_mod._show_seen.clear()
 
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("offline", request=request)
 
     install_transport(monkeypatch, handler)
     assert model_block_count("missing") is None
+    with pytest.raises(RuntimeApiError) as err:
+        ollama_mod.model_is_moe("missing")
+    assert err.value.error_key == "runtime.modelInfoFailed"
+
+
+def test_model_block_count_records_moe(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime import ollama as ollama_mod
+
+    ollama_mod._block_counts.clear()
+    ollama_mod._moe_flags.clear()
+    ollama_mod._show_seen.clear()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        model = json.loads(request.content.decode("utf-8"))["model"]
+        if model == "mixtral:8x7b":
+            info = {"general.architecture": "mixtral", "mixtral.block_count": 32, "mixtral.expert_count": 8}
+        else:
+            info = {"general.architecture": "llama", "llama.block_count": 16, "llama.expert_count": 1}
+        return httpx.Response(200, json={"model_info": info})
+
+    install_transport(monkeypatch, handler)
+    assert model_block_count("mixtral:8x7b") == 32
+    assert ollama_mod.model_is_moe("mixtral:8x7b") is True
+    assert model_block_count("llama-one") == 16
+    assert ollama_mod.model_is_moe("llama-one") is False
+    assert ollama_mod.model_is_moe("never-shown") is False
+
+
+def test_model_is_moe_fetches_without_a_prior_block_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime import ollama as ollama_mod
+
+    ollama_mod._block_counts.clear()
+    ollama_mod._moe_flags.clear()
+    ollama_mod._show_seen.clear()
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        return httpx.Response(
+            200,
+            json={
+                "model_info": {
+                    "general.architecture": "mixtral",
+                    "mixtral.block_count": 32,
+                    "mixtral.expert_count": 8,
+                }
+            },
+        )
+
+    install_transport(monkeypatch, handler)
+    assert ollama_mod.model_is_moe("mixtral:8x7b") is True
+    assert ollama_mod.model_is_moe("mixtral:8x7b") is True
+    assert calls == ["/api/show"]
+
+
+def test_moe_omits_num_gpu_only_for_the_old_full_default() -> None:
+    from app.runtime.ollama import moe_omits_num_gpu
+
+    assert moe_omits_num_gpu(is_moe=False, placement=None, offload_layers=32, block_count=32) is False
+    assert moe_omits_num_gpu(is_moe=True, placement=None, offload_layers=32, block_count=32) is True
+    assert moe_omits_num_gpu(is_moe=True, placement="auto", offload_layers=32, block_count=32) is True
+    assert moe_omits_num_gpu(is_moe=True, placement=None, offload_layers=16, block_count=32) is False
+    assert moe_omits_num_gpu(is_moe=True, placement="layers", offload_layers=32, block_count=32) is False
+    assert moe_omits_num_gpu(is_moe=True, placement=None, offload_layers=24, block_count=None) is False
+    assert moe_omits_num_gpu(is_moe=True, placement=None, offload_layers=999, block_count=None) is True

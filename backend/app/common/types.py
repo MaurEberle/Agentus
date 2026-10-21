@@ -16,7 +16,10 @@ CredentialKind = Literal[
     "anthropic",
     "gemini",
     "openai_compat",
-    "web_search",
+    "brave",
+    "tavily",
+    "exa",
+    "searxng",
     "github",
     "azure",
     "gitlab",
@@ -26,6 +29,7 @@ CredentialKind = Literal[
     "linear",
     "postgres",
     "token",
+    "custom",
 ]
 CREDENTIAL_KINDS: tuple[CredentialKind, ...] = get_args(CredentialKind)
 

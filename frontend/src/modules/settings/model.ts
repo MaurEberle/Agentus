@@ -16,7 +16,10 @@ export const CREDENTIAL_KINDS = [
   'anthropic',
   'gemini',
   'openai_compat',
-  'web_search',
+  'brave',
+  'tavily',
+  'exa',
+  'searxng',
   'github',
   'azure',
   'gitlab',
@@ -26,9 +29,30 @@ export const CREDENTIAL_KINDS = [
   'linear',
   'postgres',
   'token',
+  'custom',
 ] as const;
 
 export type CredentialKind = (typeof CREDENTIAL_KINDS)[number];
+
+export const CREDENTIAL_GROUPS = ['llm', 'search', 'mcp', 'custom'] as const;
+export type CredentialGroup = (typeof CREDENTIAL_GROUPS)[number];
+
+export const CREDENTIAL_KINDS_BY_GROUP: Record<CredentialGroup, readonly CredentialKind[]> = {
+  llm: ['xai', 'openai', 'anthropic', 'gemini', 'openai_compat'],
+  search: ['brave', 'tavily', 'exa', 'searxng'],
+  mcp: ['github', 'azure', 'gitlab', 'slack', 'notion', 'atlassian', 'linear', 'postgres', 'token'],
+  custom: ['custom'],
+};
+
+/** Kinds whose MCP recipe can be enabled. Git and Excel need no credential. */
+export const SELECTABLE_MCP_CREDENTIAL_KINDS: readonly CredentialKind[] = ['github'];
+
+export function credentialGroup(kind: string): CredentialGroup | null {
+  for (const group of CREDENTIAL_GROUPS) {
+    if ((CREDENTIAL_KINDS_BY_GROUP[group] as readonly string[]).includes(kind)) return group;
+  }
+  return null;
+}
 
 export const LLM_PROVIDERS = ['ollama', 'xai', 'openai', 'anthropic', 'gemini'] as const;
 
@@ -55,8 +79,15 @@ export function credentialMatchesProvider(kind: string, provider: string): boole
   return kind === provider || kind === 'token';
 }
 
+export const SEARCH_PROVIDERS = ['brave', 'tavily', 'exa', 'searxng'] as const;
+export type SearchProvider = (typeof SEARCH_PROVIDERS)[number];
+
+export function credentialMatchesSearchProvider(credentialKind: string, provider: string): boolean {
+  return credentialKind === (provider || 'brave');
+}
+
 export function credentialMatchesToolKind(credentialKind: string, toolKind: string): boolean {
-  if (toolKind === 'web_search') return credentialKind === 'web_search';
+  if (toolKind === 'web_search') return credentialMatchesSearchProvider(credentialKind, 'brave');
   return true;
 }
 
@@ -77,6 +108,8 @@ export type HelpChatSettings = {
   embeddingModel?: string;
   embeddingCredentialId?: string;
   webSearchEnabled: boolean;
+  webSearchProvider?: SearchProvider | string;
+  webSearchBaseUrl?: string;
   webSearchCredentialId?: string;
   fallbackModel?: string;
 };
@@ -122,6 +155,7 @@ export type McpRecipe = {
   rootOnNode?: boolean;
   runtime?: string;
   notes?: string;
+  available?: boolean;
 };
 
 export type McpServerListItem = {
@@ -140,7 +174,7 @@ export type McpServerListItem = {
 };
 
 export type RuntimePing = { ok: boolean; messageKey?: string };
-export type RuntimeModel = { name: string; sizeBytes?: number };
+export type RuntimeModel = { name: string; sizeBytes?: number; moe?: boolean };
 
 export type KvLayer = {
   bytesPerToken?: number;
@@ -159,6 +193,12 @@ export type RuntimeModelStats = {
   swaWindow?: number;
   overheadBytes?: number;
   kvLayers?: KvLayer[];
+  expertCount?: number;
+  expertUsedCount?: number;
+  routedExpertBytes?: number;
+  nonExpertBytes?: number;
+  leadingDenseBlocks?: number;
+  projectorBytes?: number;
   messageKey?: string;
 };
 export type HelpPing = { ok: boolean; messageKey?: string };
@@ -181,7 +221,6 @@ export const MCP_RECIPE_IDS = [
   'github',
   'azure',
   'gitlab',
-  'filesystem',
   'git',
   'playwright',
   'postgres',
@@ -190,7 +229,6 @@ export const MCP_RECIPE_IDS = [
   'notion',
   'atlassian',
   'linear',
-  'fetch',
   'sentry',
   'pdf',
   'excel',
@@ -238,6 +276,8 @@ export function helpChatSnapshot(help: HelpChatSettings): string {
       ? optionalText(help.embeddingCredentialId)
       : '',
     webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchProvider: help.webSearchProvider || 'brave',
+    webSearchBaseUrl: optionalText(help.webSearchBaseUrl),
     webSearchCredentialId: optionalText(help.webSearchCredentialId),
     fallbackModel: optionalText(help.fallbackModel),
   });
@@ -257,6 +297,8 @@ export function helpChatWritePayload(help: HelpChatSettings) {
     embeddingModel: optionalText(help.embeddingModel),
     embeddingCredentialId: embeddingCredentialId || null,
     webSearchEnabled: Boolean(help.webSearchEnabled),
+    webSearchProvider: help.webSearchProvider || 'brave',
+    webSearchBaseUrl: optionalText(help.webSearchBaseUrl) || null,
     webSearchCredentialId: webSearchCredentialId || null,
     fallbackModel: optionalText(help.fallbackModel) || null,
   };
@@ -273,6 +315,7 @@ export function defaultHelpChat(): HelpChatSettings {
     embeddingProvider: 'ollama',
     embeddingModel: 'nomic-embed-text',
     webSearchEnabled: false,
+    webSearchProvider: 'brave',
     fallbackModel: 'llama3.2:1b',
   };
 }

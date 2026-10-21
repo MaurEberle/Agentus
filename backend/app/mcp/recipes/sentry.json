@@ -1,5 +1,6 @@
 {
   "id": "sentry",
+  "available": false,
   "titleKey": "mcp.recipe.sentry",
   "transport": "stdio",
   "runtime": "npx",

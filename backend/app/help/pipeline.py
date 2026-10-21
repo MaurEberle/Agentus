@@ -37,7 +37,12 @@ def _persist(message: HelpMessage) -> None:
 
 
 def _web_search_ready(help_chat) -> bool:
-    return bool(help_chat.web_search_enabled and help_chat.web_search_credential_id)
+    if not help_chat.web_search_enabled:
+        return False
+    provider = (help_chat.web_search_provider or "brave").strip().lower() or "brave"
+    if provider == "searxng":
+        return bool((help_chat.web_search_base_url or "").strip())
+    return bool(help_chat.web_search_credential_id)
 
 
 def _web_hits(query: str) -> list[tuple[HelpSource, str]]:
@@ -48,13 +53,18 @@ def _web_hits(query: str) -> list[tuple[HelpSource, str]]:
     from app.db.vault import get as vault_get
     from app.tools.execute import execute_first_party
 
-    secret = vault_get(help_chat.web_search_credential_id)
-    if not secret:
+    secret = vault_get(help_chat.web_search_credential_id) if help_chat.web_search_credential_id else None
+    provider = (help_chat.web_search_provider or "brave").strip().lower() or "brave"
+    if provider != "searxng" and not secret:
         log.warning("help web search skipped: empty vault")
         return []
     result = execute_first_party(
         "web_search",
-        config={"maxResults": 5},
+        config={
+            "maxResults": 5,
+            "searchProvider": provider,
+            "searchBaseUrl": help_chat.web_search_base_url,
+        },
         args={"query": query},
         secret=secret,
     )

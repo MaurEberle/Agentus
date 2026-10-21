@@ -22,10 +22,12 @@ function Meter({
 }) {
   const tone = meterTone(percent, alarm);
   return (
-    <div className="space-y-1">
-      <div className="flex items-baseline justify-between gap-2 text-xs">
-        <span className="font-medium">{label}</span>
-        <span className="tabular-nums text-muted-foreground">
+    <div className="min-w-0 space-y-1">
+      <div className="flex min-w-0 items-baseline gap-2 text-xs">
+        <span className="min-w-0 flex-1 truncate font-medium" title={label}>
+          {label}
+        </span>
+        <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-muted-foreground">
           {formatPercent(percent, locale)}
           {detail ? ` · ${detail}` : ''}
         </span>
@@ -76,7 +78,7 @@ export function ResourcesPanel({
         <CardDescription>{t('monitoring.resources.hostHint')}</CardDescription>
       </CardHeader>
       <CardContent className={cn(moduleCardBodyClass, 'grid gap-4 sm:grid-cols-3')}>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Meter
             label={t('monitoring.resources.cpu')}
             percent={resources?.cpuPercent ?? 0}
@@ -126,12 +128,12 @@ export function ResourcesPanel({
             <p className="mt-1 text-xs text-muted-foreground">{t('monitoring.resources.noGpuHint')}</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             {gpus.map((gpu) => {
               const vramPct = gpu.vramTotalBytes > 0 ? (gpu.vramUsedBytes / gpu.vramTotalBytes) * 100 : 0;
               const name = gpu.name ? `${gpu.index}: ${gpu.name}` : `${t('monitoring.resources.gpu')} ${gpu.index}`;
               return (
-                <div key={gpu.index} className="space-y-2">
+                <div key={gpu.index} className="min-w-0 space-y-2">
                   <Meter label={name} percent={gpu.utilPercent} alarm locale={locale} />
                   <Meter
                     label={t('monitoring.resources.vram')}

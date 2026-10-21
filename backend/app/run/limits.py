@@ -9,17 +9,28 @@ MAX_AGENT_THINKS = 128
 MAX_SHORT_THINKS = 5
 # After a successful write/delete, a think this small is the result, not another round.
 MAX_CLOSING_THINK_TOKENS = 16
-# Failed tool calls in one agent invocation. Successful calls are unbounded.
+# Consecutive empty replies after a successful write or delete.
+# Each one asks the model to continue. The last one ends the run as incomplete.
+MAX_EMPTY_STOPS = 5
+# Consecutive failed tool calls in one agent invocation. A success resets the count.
 MAX_FAILED_TOOL_CALLS = 10
 # Same truncated tool-call JSON from llama-server. Then it counts as one failed tool.
 MAX_TOOL_JSON_ATTEMPTS = 3
-# Orchestrator checks files; it does not spend the run on tools instead of agents.
-MAX_ORCHESTRATOR_TOOL_ROUNDS = 2
+# Consecutive failed orchestrator tool calls. A success resets the count.
+MAX_ORCHESTRATOR_FAILED_TOOLS = 5
+# Failed think rounds after a five-fail streak. Two in a row stop the run.
+MAX_ORCHESTRATOR_FAILED_THINKS = 2
+# File attempts without a write, edit, or delete before the orchestrator takes the task.
+DEFAULT_AGENT_MISS_LIMIT = 3
+MAX_AGENT_MISS_LIMIT = 8
+# Consecutive think turns during takeover. The next one ends the run.
+MAX_TAKEOVER_THINKS = 2
 # Extra attempts after an unreadable orchestrator decision. Not part of the step cap.
 MAX_CONTROL_REPAIRS = 2
 # One same-prompt retry when the model died before any tool succeeded.
 MAX_SAME_RETRIES = 1
-# Idle gap between stream chunks (or first byte). Not a total run duration.
+# Silence with neither a stream chunk nor runner token progress.
+# A live generation keeps the request open. Not a cap on the answer length.
 STREAM_IDLE_TIMEOUT_SEC = 180.0
 RESOURCES_INTERVAL_SEC = 1.5
 SSE_QUEUE_MAX = 1000

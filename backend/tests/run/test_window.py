@@ -68,6 +68,13 @@ def test_loaded_window_does_not_step_down() -> None:
     assert choice.context_max == 32768
 
 
+def test_explicit_context_reloads_below_a_loaded_window() -> None:
+    choice = _choice(need=1000, preferred=8192, loaded=32768)
+    assert choice.num_ctx == 8192
+    assert choice.context_max == 8192
+    assert choice.fits is True
+
+
 def test_loaded_8k_steps_up_when_the_prompt_does_not_fit() -> None:
     choice = _choice(need=9000, loaded=8192)
     assert choice.num_ctx == 16384

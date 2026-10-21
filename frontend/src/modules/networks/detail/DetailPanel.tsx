@@ -5,24 +5,36 @@ import { Button } from '@/components/ui/button';
 import type { NetworkListItem } from '@/modules/dashboard/model';
 import { validationBadgeVariant } from '@/modules/dashboard/model';
 import { formatStamp } from '@/modules/networks/model/format';
+import { ReadonlyGraph } from '@/modules/networks/detail/ReadonlyGraph';
 
 export function DetailPanel({
   items,
   onOpen,
+  layoutWidth = 0,
 }: {
   items: NetworkListItem[];
   onOpen: (id: string) => void;
+  layoutWidth?: number;
 }) {
   const { t, i18n } = useTranslation();
   if (items.length === 0) {
-    return <p className="p-3 text-sm text-muted-foreground">{t('networks.detail.none')}</p>;
+    return (
+      <p className="flex h-full min-h-0 flex-1 items-center justify-center p-3 text-center text-sm text-muted-foreground">
+        {t('networks.detail.none')}
+      </p>
+    );
   }
   if (items.length > 1) {
-    return <p className="p-3 text-sm text-muted-foreground">{t('networks.detail.multi', { count: items.length })}</p>;
+    return (
+      <p className="flex h-full min-h-0 flex-1 items-center justify-center p-3 text-center text-sm text-muted-foreground">
+        {t('networks.detail.multi', { count: items.length })}
+      </p>
+    );
   }
   const item = items[0];
   return (
-    <div className="space-y-3 p-3">
+    <div className="flex min-h-0 w-full flex-1 flex-col">
+      <div className="space-y-3 p-3">
       <div>
         <h2 className="text-sm font-semibold">{item.name}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{item.description || t('networks.detail.noDescription')}</p>
@@ -63,6 +75,10 @@ export function DetailPanel({
         <Button type="button" size="sm" onClick={() => onOpen(item.id)}>
           {t('networks.ribbon.open')}
         </Button>
+      </div>
+      </div>
+      <div className="min-h-64 min-w-0 flex-1 overflow-hidden border-t">
+        <ReadonlyGraph id={item.id} layoutWidth={layoutWidth} />
       </div>
     </div>
   );

@@ -143,6 +143,25 @@ def test_cross_host_redirect_drops_credentials(monkeypatch: pytest.MonkeyPatch) 
     assert seen[1][2] is None
 
 
+def test_custom_secret_sets_bearer_and_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, str | None] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["authorization"] = request.headers.get("authorization")
+        seen["x-api-key"] = request.headers.get("x-api-key")
+        return httpx.Response(200, text="ok")
+
+    _install(monkeypatch, handler)
+    result = execute_first_party(
+        "http",
+        args={"url": _PUBLIC},
+        secret='{"token":"live-bearer","headers":{"X-Api-Key":"k-1"}}',
+    )
+    assert result.ok is True
+    assert seen["authorization"] == "Bearer live-bearer"
+    assert seen["x-api-key"] == "k-1"
+
+
 def test_same_host_redirect_keeps_authorization(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[str | None] = []
 

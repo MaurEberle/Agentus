@@ -767,10 +767,33 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
     assert stored["memory"]["ownFiles"][0]["action"] == "list"
 
 
-def test_orchestrator_stops_tool_rounds_and_calls_an_agent(monkeypatch, api_env) -> None:
+def _orch_files_doc() -> dict:
+    from tests.run.test_validate import _orchestrator_doc
+
+    doc = _orchestrator_doc()
+    doc["nodes"].append(
+        {
+            "id": "files",
+            "type": "tool",
+            "position": {"x": 0, "y": 0},
+            "data": {"kind": "file_access", "rootPath": "C:/stories"},
+        }
+    )
+    doc["edges"].append(
+        {
+            "id": "et",
+            "source": "files",
+            "sourceHandle": "tool",
+            "target": "orch",
+            "targetHandle": "tool",
+        }
+    )
+    return doc
+
+
+def test_orchestrator_keeps_tool_rounds_then_calls_an_agent(monkeypatch, api_env) -> None:
     from app.runtime.models import ToolCall
     from app.tools.models import ExecuteResult
-    from tests.run.test_validate import _orchestrator_doc
 
     executed = {"n": 0}
 
@@ -791,7 +814,7 @@ def test_orchestrator_stops_tool_rounds_and_calls_an_agent(monkeypatch, api_env)
                 model=req.model,
                 finish_reason="stop",
             )
-        if req.tools:
+        if req.tools and executed["n"] < 3:
             return CompletionResult(
                 content=None,
                 tool_calls=[
@@ -806,30 +829,235 @@ def test_orchestrator_stops_tool_rounds_and_calls_an_agent(monkeypatch, api_env)
             finish_reason="stop",
         )
 
-    doc = _orchestrator_doc()
-    doc["nodes"].append(
-        {
-            "id": "files",
-            "type": "tool",
-            "position": {"x": 0, "y": 0},
-            "data": {"kind": "file_access", "rootPath": "C:/stories"},
-        }
-    )
-    doc["edges"].append(
-        {
-            "id": "et",
-            "source": "files",
-            "sourceHandle": "tool",
-            "target": "orch",
-            "targetHandle": "tool",
-        }
-    )
-    stored = _drive(monkeypatch, _complete, doc=doc)
+    stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
     assert stored["outcome"] == "succeeded"
-    assert executed["n"] == 2
+    assert executed["n"] == 3
     texts = [item["content"] for item in (stored["chat"] or [])]
     assert "Schreiber is done." in texts
     assert "Fertig." in texts
+
+
+def test_orchestrator_runs_a_third_xml_tool_instead_of_chatting(monkeypatch, api_env) -> None:
+    from app.tools.models import ExecuteResult
+
+    executed: list[str] = []
+    orch_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed.append(str(args.get("path") or ""))
+        return ExecuteResult(ok=True, result={"path": args.get("path") or ".", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" not in system:
+            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+        orch_n["n"] += 1
+        if orch_n["n"] == 1:
+            from app.runtime.models import ToolCall
+
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="c1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if orch_n["n"] == 2:
+            from app.runtime.models import ToolCall
+
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="c2",
+                        name="file_access",
+                        arguments='{"action":"write","path":"b.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if orch_n["n"] == 3:
+            xml = (
+                "<tool_call><function=file_access>"
+                "<parameter=action>write</parameter>"
+                "<parameter=path>c.txt</parameter>"
+                "<parameter=content>x</parameter>"
+                "</function></tool_call>"
+            )
+            return CompletionResult(content=xml, model=req.model, finish_reason="stop")
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed == ["a.txt", "b.txt", "c.txt"]
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "<tool_call>" not in texts
+    assert "Fertig." in texts
+
+
+def test_orchestrator_starts_a_think_round_after_five_failed_tools(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=False, result="denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" not in system:
+            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+        if "Five tool calls failed" in blob:
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        return CompletionResult(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"c{i}",
+                    name="file_access",
+                    arguments=f'{{"action":"write","path":"f{i}.txt","content":"x"}}',
+                )
+                for i in range(5)
+            ],
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 5
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.orchestrator.toolThink" in messages
+    assert "run.orchestrator.toolFailures" not in messages
+    assert "Fertig." in [item["content"] for item in (stored["chat"] or [])]
+
+
+def test_orchestrator_stops_after_two_failed_think_rounds(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=False, result="denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" not in system:
+            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+        return CompletionResult(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"c{i}",
+                    name="file_access",
+                    arguments=f'{{"action":"write","path":"f{i}.txt","content":"x"}}',
+                )
+                for i in range(5)
+            ],
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.orchestrator.toolFailures"
+    assert executed["n"] == 15
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.orchestrator.toolThink") == 2
+    assert "run.orchestrator.toolFailures" in messages
+
+
+def test_orchestrator_failed_tool_streak_resets_after_a_success(monkeypatch, api_env) -> None:
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        path = str((args or {}).get("path") or "")
+        ok = path == "ok.txt"
+        return ExecuteResult(ok=ok, result={"path": path, "bytes": 1} if ok else "denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" not in system:
+            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+        if executed["n"] >= 9:
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if executed["n"] == 0:
+            calls = [
+                ToolCall(
+                    id=f"c{i}",
+                    name="file_access",
+                    arguments=f'{{"action":"write","path":"f{i}.txt","content":"x"}}',
+                )
+                for i in range(4)
+            ]
+            calls.append(
+                ToolCall(
+                    id="ok",
+                    name="file_access",
+                    arguments='{"action":"write","path":"ok.txt","content":"x"}',
+                )
+            )
+            return CompletionResult(content=None, tool_calls=calls, model=req.model, finish_reason="tool_calls")
+        return CompletionResult(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"d{i}",
+                    name="file_access",
+                    arguments=f'{{"action":"write","path":"g{i}.txt","content":"x"}}',
+                )
+                for i in range(4)
+            ],
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 9
+    assert "Fertig." in [item["content"] for item in (stored["chat"] or [])]
 
 
 def test_num_ctx_wish_is_sent_to_ollama(monkeypatch, api_env) -> None:
@@ -875,10 +1103,11 @@ def test_num_thread_is_sent_to_ollama(monkeypatch, api_env) -> None:
             node["data"]["numCtx"] = 8192
             node["data"]["numThread"] = 6
             node["data"]["numGpuLayers"] = 24
+            node["data"]["kvCacheType"] = "q8_0"
     monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 47)
     stored = _drive(monkeypatch, _complete, doc=doc)
     assert stored["outcome"] == "succeeded"
-    assert options[0] == {"num_ctx": 8192, "num_thread": 6, "num_gpu": 25}
+    assert options[0] == {"num_ctx": 8192, "num_thread": 6, "num_gpu": 25, "kv_cache_type": "q8_0"}
 
 
 def test_num_gpu_percent_still_maps_for_old_graphs(monkeypatch, api_env) -> None:
@@ -925,6 +1154,98 @@ def test_num_gpu_max_includes_output_slot(monkeypatch, api_env) -> None:
     stored = _drive(monkeypatch, _complete, doc=doc)
     assert stored["outcome"] == "succeeded"
     assert options[0] == {"num_gpu": 33}
+
+
+def _finish(options: list[object]):
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        options.append(req.ollama_options)
+        return CompletionResult(
+            content='{"action":"finish","text":"Fertig."}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    return _complete
+
+
+def test_moe_full_layer_default_omits_num_gpu(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 32
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] is None
+
+
+def test_moe_partial_layers_still_send_num_gpu(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 16
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] == {"num_gpu": 17}
+
+
+def test_moe_forced_layers_send_full_offload(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 32
+            node["data"]["gpuPlacement"] = "layers"
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] == {"num_gpu": 33}
+
+
+def test_moe_auto_sends_expert_layer_count(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+    from tests.runtime.test_vram_est import _qwen_moe
+    from app.runtime.vram_est import parse_vram_profile
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    profile = parse_vram_profile(_qwen_moe(), 20_000_000_000)
+    assert profile is not None
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 24)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    monkeypatch.setattr("app.runtime.vram_est.vram_profile", lambda *a, **k: profile)
+    monkeypatch.setattr("app.run.harness._inference_pool_bytes", lambda: 8 * 1024**3)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    sent = options[0] or {}
+    assert "num_cpu_moe" not in sent
+    assert "num_gpu" not in sent
+
+
+def test_moe_auto_placement_omits_num_gpu(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["gpuPlacement"] = "auto"
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    assert options[0] is None or options[0] == {}
 
 
 def test_llm_node_is_running_during_the_model_call(monkeypatch, api_env) -> None:
@@ -1613,6 +1934,112 @@ def test_agent_stops_after_ten_failed_tools(monkeypatch, api_env) -> None:
     assert "run.agent.toolFailures" in messages
 
 
+def _file_calls(start: int, count: int, *, ok_at: int | None = None) -> list:
+    from app.runtime.models import ToolCall
+
+    calls = []
+    for offset in range(count):
+        index = start + offset
+        name = "ok.txt" if ok_at == index else f"f{index}.txt"
+        calls.append(
+            ToolCall(
+                id=f"c{index}",
+                name="file_access",
+                arguments=f'{{"action":"write","path":"{name}","content":"x"}}',
+            )
+        )
+    return calls
+
+
+def test_failed_tool_streak_resets_after_a_success(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        path = str(args.get("path") or "")
+        if path == "ok.txt":
+            return ExecuteResult(ok=True, result={"path": path, "bytes": 1})
+        return ExecuteResult(ok=False, result="denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        if any(message.role == "tool" for message in req.messages) and agent_n["n"] >= 3:
+            return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            calls = _file_calls(0, 9)
+        elif agent_n["n"] == 2:
+            calls = _file_calls(9, 1, ok_at=9)
+        else:
+            calls = _file_calls(10, 9)
+        return CompletionResult(
+            content=None,
+            tool_calls=calls,
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 19
+    assert agent_n["n"] == 3
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.agent.toolFailures" not in messages
+    assert "run.failed" not in messages
+
+
+def test_ten_failures_in_a_row_still_stop_after_a_success(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs, list_steps
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        path = str(args.get("path") or "")
+        if path == "ok.txt":
+            return ExecuteResult(ok=True, result={"path": path, "bytes": 1})
+        return ExecuteResult(ok=False, result="denied")
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            calls = _file_calls(0, 9)
+        elif agent_n["n"] == 2:
+            calls = _file_calls(9, 1, ok_at=9)
+        else:
+            calls = _file_calls(10, 10)
+        return CompletionResult(
+            content=None,
+            tool_calls=calls,
+            model=req.model,
+            finish_reason="tool_calls",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.agent.toolFailures"
+    assert executed["n"] == 20
+    assert agent_n["n"] == 3
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert "run.agent.toolFailures" in messages
+    assert "run.succeeded" not in messages
+    steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
+    assert steps.get("ag") == "error"
+
+
 def test_tool_agent_think_then_calls(monkeypatch, api_env) -> None:
     from app.db.runs import list_logs
     from app.runtime.models import ToolCall
@@ -1986,6 +2413,187 @@ def test_linear_write_then_short_think_succeeds(monkeypatch, api_env) -> None:
     steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
     assert steps.get("ag") == "done"
     assert steps.get("end") == "done"
+
+
+def _empty_stop() -> CompletionResult:
+    return CompletionResult(
+        content=None,
+        reasoning="",
+        usage=CompletionUsage(prompt_tokens=32, completion_tokens=1),
+        model="test",
+        finish_reason="stop",
+    )
+
+
+def test_linear_empty_stop_after_write_continues(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    saw_note = {"n": 0}
+    wrote_second = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "The last reply was empty" in blob and wrote_second["n"] == 0:
+            saw_note["n"] += 1
+            wrote_second["n"] = 1
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="2",
+                        name="file_access",
+                        arguments='{"action":"write","path":"b.txt","content":"two"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if not any(message.role == "tool" for message in req.messages):
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"one"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        if executed["n"] == 1:
+            return _empty_stop()
+        return CompletionResult(content="Fertig.", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 2
+    assert saw_note["n"] == 1
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.emptyStop") == 1
+    assert "run.agent.emptyStops" not in messages
+    assert "run.failed" not in messages
+
+
+def test_linear_five_empty_stops_fail_the_run(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs, list_steps
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+    agent_n = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": "tiger.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        agent_n["n"] += 1
+        if not any(message.role == "tool" for message in req.messages):
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"tiger.txt","content":"hi"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return _empty_stop()
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.agent.emptyStops"
+    assert executed["n"] == 1
+    assert agent_n["n"] == 6
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "tiger.txt" not in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.emptyStop") == 4
+    assert messages.count("run.agent.emptyStops") == 1
+    assert "run.succeeded" not in messages
+    assert "run.agent.done" not in messages
+    assert "run.failed" in messages
+    steps = {row["node_id"]: row["status"] for row in list_steps(stored["id"])}
+    assert steps.get("ag") == "error"
+    assert steps.get("end") != "done"
+
+
+def test_orchestrator_empty_stops_are_an_anomaly(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    agent_n = {"n": 0}
+    prompts: list[str] = []
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, args, secret
+        return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            prompts.append(blob)
+            if "empty stops" in blob:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        agent_n["n"] += 1
+        if agent_n["n"] == 1:
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="stop",
+            )
+        return _empty_stop()
+
+    stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
+    assert stored["outcome"] == "succeeded"
+    assert agent_n["n"] == 6
+    assert stored["memory"]["calls"][0]["error"] == "empty stops"
+    assert stored["memory"]["calls"][0]["finished"] is False
+    assert any("empty stops" in item for item in prompts)
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "Schreiber is done." not in texts
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.emptyStop") == 4
+    assert "run.agent.emptyStops" in messages
 
 
 def test_write_then_long_think_then_second_write(monkeypatch, api_env) -> None:
@@ -2763,3 +3371,136 @@ def test_xml_tool_call_is_salvaged(monkeypatch, api_env) -> None:
     assert executed["n"] == 1
     assert agent_n["n"] == 2
     assert stored["memory"]["calls"][0]["error"] == ""
+
+
+def _takeover_doc() -> dict:
+    doc = _tool_agent_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "orch":
+            node["data"]["agentMissLimit"] = 3
+    doc["edges"].append(
+        {
+            "id": "etor",
+            "source": "files",
+            "sourceHandle": "tool",
+            "target": "orch",
+            "targetHandle": "tool",
+        }
+    )
+    return doc
+
+
+def test_function_call_markup_calls_the_agent(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        joined = "\n".join(message.content or "" for message in req.messages)
+        if "You orchestrate" in system:
+            if "characters:" in joined:
+                return CompletionResult(
+                    content='{"action":"finish","text":"Fertig."}',
+                    model=req.model,
+                    finish_reason="stop",
+                )
+            return CompletionResult(
+                content=(
+                    "<tool_call>\n<function=call>\n"
+                    "<parameter=agent>\nSchreiber\n</parameter>\n"
+                    "<parameter=task>\nschreib bitte\n</parameter>\n"
+                    "</function>\n</tool_call>"
+                ),
+                model=req.model,
+                finish_reason="stop",
+            )
+        assert "schreib bitte" in joined
+        return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    starts = [row for row in list_logs(stored["id"]) if row["message"] == "run.agent.start"]
+    assert len(starts) == 1
+    assert stored["memory"]["calls"][0]["task"] == "schreib bitte"
+
+
+def test_file_miss_limit_hands_the_task_to_the_orchestrator(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+    from app.runtime.models import ToolCall
+    from app.tools.models import ExecuteResult
+
+    executed = {"n": 0}
+
+    def _execute(kind, *, config, args, secret=None):
+        del kind, config, secret
+        executed["n"] += 1
+        return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 1})
+
+    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" not in system:
+            return CompletionResult(content="Ich habe gespeichert.", model=req.model, finish_reason="stop")
+        if any(message.role == "tool" for message in req.messages):
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "Takeover for" in blob or "Takeover is active" in system:
+            return CompletionResult(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="c1",
+                        name="file_access",
+                        arguments='{"action":"write","path":"a.txt","content":"x"}',
+                    )
+                ],
+                model=req.model,
+                finish_reason="tool_calls",
+            )
+        return CompletionResult(
+            content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_takeover_doc())
+    assert stored["outcome"] == "succeeded"
+    assert executed["n"] == 1
+    starts = [row for row in list_logs(stored["id"]) if row["message"] == "run.agent.start"]
+    assert len(starts) == 3
+    assert any(row["message"] == "run.orchestrator.takeoverStart" for row in list_logs(stored["id"]))
+    assert stored["memory"]["takeover"] is None
+    assert stored["memory"]["misses"].get("ag") == 0
+
+
+def test_takeover_without_a_write_fails_the_run(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        system = req.messages[0].content or ""
+        if "You orchestrate" not in system:
+            return CompletionResult(content="Ich habe gespeichert.", model=req.model, finish_reason="stop")
+        blob = "\n".join(message.content or "" for message in req.messages)
+        if "Takeover for" in blob:
+            return CompletionResult(
+                content='{"action":"reply","text":"Ich schaffe es nicht."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        return CompletionResult(
+            content='{"action":"call","agent":"Schreiber","task":"speichere"}',
+            model=req.model,
+            finish_reason="stop",
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=_takeover_doc())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.orchestrator.takeover"
+    starts = [row for row in list_logs(stored["id"]) if row["message"] == "run.agent.start"]
+    assert len(starts) == 3
+    texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
+    assert "Ich schaffe es nicht." not in texts

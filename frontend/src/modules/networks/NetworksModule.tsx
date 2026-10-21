@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
 import type { NetworkListItem } from '@/modules/dashboard/model';
-import { downloadJson } from '@/modules/network/model/serialize';
+import { ExportCancelled, saveExportFile } from '@/lib/saveFile';
 import {
   deleteNetworks,
   duplicateNetwork,
@@ -21,24 +21,48 @@ import {
 } from '@/modules/networks/api';
 import { DetailPanel } from '@/modules/networks/detail/DetailPanel';
 import { DeleteDialog } from '@/modules/networks/dialogs/DeleteDialog';
-import { ImportCollisionDialog, type CollisionRow } from '@/modules/networks/dialogs/ImportCollisionDialog';
+import { ExportDialog } from '@/modules/networks/dialogs/ExportDialog';
+import { ImportDialog } from '@/modules/networks/dialogs/ImportDialog';
 import { RenameDialog } from '@/modules/networks/dialogs/RenameDialog';
 import { TagsDialog } from '@/modules/networks/dialogs/TagsDialog';
 import { FilterBar } from '@/modules/networks/filters/FilterBar';
 import { NetworkList } from '@/modules/networks/list/NetworkList';
 import { applyNetworkFilters, sharedTags, uniqueTags } from '@/modules/networks/model/filter';
-import { exportFileStem, exportStamp, isImportFail, parseImportJson } from '@/modules/networks/model/importDoc';
-import { downloadBlob, zipStore } from '@/modules/networks/model/zip';
+import { exportFileStem, exportStamp } from '@/modules/networks/model/importDoc';
+import { zipStore } from '@/modules/networks/model/zip';
 import { LibraryRibbon } from '@/modules/networks/ribbon/Ribbon';
 import { useNetworksUi } from '@/modules/networks/store';
 import type { AgentNetworkDocument } from '@/modules/network/model/document';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 
+const DETAIL_MIN = 320;
+
+function useDetailWidth() {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = Number(window.localStorage.getItem('agentus.networks.detailWidth'));
+      if (Number.isFinite(raw) && raw >= DETAIL_MIN) return raw;
+    } catch {
+      /* ignore private mode */
+    }
+    return DETAIL_MIN;
+  });
+  const setWidth = useCallback((next: number) => {
+    const clamped = Math.max(DETAIL_MIN, Math.round(next));
+    setValue(clamped);
+    try {
+      window.localStorage.setItem('agentus.networks.detailWidth', String(clamped));
+    } catch {
+      /* ignore quota */
+    }
+  }, []);
+  return [value, setWidth] as const;
+}
+
 export function NetworksModule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isDesktop = useMediaQuery('(min-width: 768px)');
-  const fileRef = useRef<HTMLInputElement>(null);
   const query = useQuery({ queryKey: ['networks'], queryFn: listNetworkSummaries });
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
   const filterQuery = useNetworksUi((state) => state.query);
@@ -68,7 +92,18 @@ export function NetworksModule() {
   const [renameItem, setRenameItem] = useState<NetworkListItem | null>(null);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [deleteItems, setDeleteItems] = useState<NetworkListItem[] | null>(null);
-  const [collisions, setCollisions] = useState<CollisionRow[] | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [detailWidth, setDetailWidth] = useDetailWidth();
+  const detailDrag = useRef({ x: 0, width: DETAIL_MIN });
+  const detailWidthRef = useRef(detailWidth);
+  detailWidthRef.current = detailWidth;
+  const libraryRowRef = useRef<HTMLDivElement>(null);
+  const detailLimit = useCallback(() => {
+    const row = libraryRowRef.current;
+    if (!row) return detailWidthRef.current;
+    return Math.max(DETAIL_MIN, row.clientWidth - 280);
+  }, []);
 
   useEffect(() => {
     pruneSelection(items.map((item) => item.id));
@@ -77,12 +112,12 @@ export function NetworksModule() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key !== 'Escape') return;
-      if (renameItem || tagsOpen || deleteItems || collisions) return;
+      if (renameItem || tagsOpen || deleteItems || exportOpen || importOpen) return;
       clearSelection();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [clearSelection, collisions, deleteItems, renameItem, tagsOpen]);
+  }, [clearSelection, deleteItems, exportOpen, importOpen, renameItem, tagsOpen]);
 
   function openEditor(id?: string) {
     navigate(id ? `/network/${id}` : '/network');
@@ -93,7 +128,8 @@ export function NetworksModule() {
     try {
       await action();
       if (okKey) notify({ titleKey: okKey, values, variant: 'success' });
-    } catch {
+    } catch (error) {
+      if (error instanceof ExportCancelled) return;
       notify({ titleKey: 'networks.notify.error', variant: 'error' });
     } finally {
       setBusy(false);
@@ -119,24 +155,42 @@ export function NetworksModule() {
     });
   }
 
-  async function onExport() {
+  async function confirmExport() {
     if (selected.length === 0) return;
     await run(async () => {
       const stamp = exportStamp();
+      const used = new Set<string>();
+      const fileName = (name: string) => {
+        const base = `${exportFileStem(name)}-${stamp}`;
+        let next = `${base}.json`;
+        let index = 2;
+        while (used.has(next)) {
+          next = `${base}-${index}.json`;
+          index += 1;
+        }
+        used.add(next);
+        return next;
+      };
       if (selected.length === 1) {
         const payload = await exportNetwork(selected[0].id);
-        downloadJson(`${exportFileStem(selected[0].name)}-${stamp}.json`, payload);
-        return;
+        const written = await saveExportFile(
+          fileName(selected[0].name),
+          new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json' }),
+        );
+        if (!written) throw new ExportCancelled();
+      } else {
+        const files = [];
+        for (const item of selected) {
+          const payload = await exportNetwork(item.id);
+          files.push({
+            name: fileName(item.name),
+            data: new TextEncoder().encode(`${JSON.stringify(payload, null, 2)}\n`),
+          });
+        }
+        const written = await saveExportFile(`networks-${stamp}.zip`, zipStore(files));
+        if (!written) throw new ExportCancelled();
       }
-      const files = [];
-      for (const item of selected) {
-        const payload = await exportNetwork(item.id);
-        files.push({
-          name: `${exportFileStem(item.name)}-${stamp}.json`,
-          data: new TextEncoder().encode(`${JSON.stringify(payload, null, 2)}\n`),
-        });
-      }
-      downloadBlob(`networks-${stamp}.zip`, zipStore(files));
+      setExportOpen(false);
     }, 'networks.notify.exported');
   }
 
@@ -146,47 +200,11 @@ export function NetworksModule() {
     }
   }
 
-  async function onFiles(fileList: FileList | null) {
-    if (!fileList?.length) return;
-    const existing = new Set(items.map((item) => item.name.trim().toLowerCase()));
-    const failures: string[] = [];
-    let stripped = 0;
-    const ready: AgentNetworkDocument[] = [];
-    const collisionRows: CollisionRow[] = [];
-    for (const file of Array.from(fileList)) {
-      try {
-        const parsed = parseImportJson(file.name, JSON.parse(await file.text()) as unknown);
-        if (isImportFail(parsed)) {
-          failures.push(file.name);
-          continue;
-        }
-        if (parsed.strippedSecrets) stripped += 1;
-        const key = parsed.document.name.trim().toLowerCase();
-        if (existing.has(key)) collisionRows.push({ fileName: file.name, document: parsed.document });
-        else {
-          existing.add(key);
-          ready.push(parsed.document);
-        }
-      } catch {
-        failures.push(file.name);
-      }
-    }
-    if (fileRef.current) fileRef.current.value = '';
-    if (failures.length) {
-      notify({
-        titleKey: 'networks.import.unreadable',
-        descriptionKey: 'networks.import.unreadableNames',
-        values: { names: failures.join(', ') },
-        variant: 'error',
-      });
-    }
-    if (stripped) notify({ titleKey: 'networks.import.secrets', variant: 'warning' });
-    if (ready.length) {
-      await run(async () => {
-        await importDocuments(ready);
-      }, 'networks.notify.imported', { count: String(ready.length) });
-    }
-    if (collisionRows.length) setCollisions(collisionRows);
+  function confirmImport(documents: AgentNetworkDocument[]) {
+    void run(async () => {
+      await importDocuments(documents);
+      setImportOpen(false);
+    }, 'networks.notify.imported', { count: String(documents.length) });
   }
 
   const emptyLibrary = !query.isLoading && items.length === 0;
@@ -205,20 +223,12 @@ export function NetworksModule() {
           onTags: () => setTagsOpen(true),
           onActivate: () => void onActivate(),
           onDelete: () => setDeleteItems(selected),
-          onImport: () => fileRef.current?.click(),
-          onExport: () => void onExport(),
+          onImport: () => setImportOpen(true),
+          onExport: () => setExportOpen(true),
           onRefresh: () => void query.refetch(),
         }}
       />
       <FilterBar tags={tags} />
-      <input
-        ref={fileRef}
-        type="file"
-        accept="application/json,.json"
-        multiple
-        className="hidden"
-        onChange={(event) => void onFiles(event.target.files)}
-      />
       {query.isError ? (
         <Alert variant="destructive" className="m-3">
           <AlertTitle>{t('networks.error.title')}</AlertTitle>
@@ -237,7 +247,7 @@ export function NetworksModule() {
             <Button type="button" onClick={() => openEditor()}>
               {t('networks.ribbon.new')}
             </Button>
-            <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
               {t('networks.ribbon.import')}
             </Button>
           </div>
@@ -261,13 +271,42 @@ export function NetworksModule() {
           ) : null}
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1">
+        <div ref={libraryRowRef} className="flex min-h-0 flex-1">
           <div className="min-h-0 min-w-0 flex-1">
             <NetworkList items={filtered} loading={false} onOpen={openEditor} />
           </div>
           {isDesktop ? (
-            <aside className="hidden w-80 shrink-0 overflow-auto border-l md:block">
-              <DetailPanel items={selected} onOpen={openEditor} />
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t('networks.detail.resize')}
+              aria-valuenow={detailWidth}
+              aria-valuemin={DETAIL_MIN}
+              tabIndex={0}
+              className="hidden w-4 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-sm hover:bg-muted/50 focus-visible:bg-muted/50 md:flex"
+              onPointerDown={(event) => {
+                detailDrag.current = { x: event.clientX, width: detailWidth };
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              onPointerMove={(event) => {
+                if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+                const next = detailDrag.current.width - (event.clientX - detailDrag.current.x);
+                setDetailWidth(Math.min(detailLimit(), next));
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                event.preventDefault();
+                const step = event.shiftKey ? 48 : 16;
+                const delta = event.key === 'ArrowLeft' ? step : -step;
+                setDetailWidth(Math.min(detailLimit(), detailWidth + delta));
+              }}
+            >
+              <span className="h-8 w-1 rounded-full bg-border" aria-hidden />
+            </div>
+          ) : null}
+          {isDesktop ? (
+            <aside className="hidden h-full min-h-0 shrink-0 flex-col md:flex" style={{ width: detailWidth }}>
+              <DetailPanel items={selected} onOpen={openEditor} layoutWidth={detailWidth} />
             </aside>
           ) : null}
         </div>
@@ -322,16 +361,24 @@ export function NetworksModule() {
           }, 'networks.notify.deleted');
         }}
       />
-      <ImportCollisionDialog
-        rows={collisions}
+      <ExportDialog
+        open={exportOpen}
+        items={selected.map((item) => ({
+          name: item.name,
+          nodeCount: item.nodeCount,
+          edgeCount: item.edgeCount,
+        }))}
         busy={busy}
-        onClose={() => setCollisions(null)}
-        onConfirm={(accepted) => {
-          void run(async () => {
-            await importDocuments(accepted.map((row) => row.document));
-            setCollisions(null);
-          }, accepted.length ? 'networks.notify.imported' : undefined, { count: String(accepted.length) });
-        }}
+        onClose={() => setExportOpen(false)}
+        onConfirm={() => void confirmExport()}
+      />
+      <ImportDialog
+        open={importOpen}
+        multiple
+        existingNames={items.map((item) => item.name)}
+        busy={busy}
+        onClose={() => setImportOpen(false)}
+        onImport={confirmImport}
       />
     </div>
   );

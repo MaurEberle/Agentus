@@ -7,6 +7,7 @@ import {
   Redo2,
   Save,
   Undo2,
+  Upload,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ export function Ribbon({
   onSaveAs,
   onLoad,
   onDuplicate,
+  onImport,
   onExport,
   onValidate,
   onLibrary,
@@ -49,6 +51,7 @@ export function Ribbon({
   onSaveAs: () => void;
   onLoad: () => void;
   onDuplicate: () => void;
+  onImport: () => void;
   onExport: () => void;
   onValidate: () => void;
   onLibrary: () => void;
@@ -95,6 +98,10 @@ export function Ribbon({
         <Button type="button" size="sm" variant="outline" onClick={onDuplicate} disabled={!document.id} loading={duplicating}>
           <Copy />
           {t('network.ribbon.duplicate')}
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onImport}>
+          <Upload />
+          {t('network.ribbon.import')}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={onExport}>
           <Download />

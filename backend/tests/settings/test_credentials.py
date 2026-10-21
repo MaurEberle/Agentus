@@ -23,6 +23,32 @@ def test_create_list_has_mask_no_secret(client: TestClient) -> None:
     assert listed.json()["items"][0]["inUse"] is False
 
 
+def test_custom_credential_stores_bearer_not_raw_padding(client: TestClient) -> None:
+    secret = '{"token":"bearer-live-value","headers":{"X-Api-Key":"header-secret"}}'
+    response = client.post(
+        "/api/credentials",
+        json={"name": "Own", "kind": "custom", "secret": secret},
+    )
+    assert response.status_code == 201
+    item = response.json()
+    assert item["kind"] == "custom"
+    assert item["mask"].endswith("alue")
+    assert "header-secret" not in response.text
+    stored = vault_get(item["id"])
+    assert stored is not None
+    assert "bearer-live-value" in stored
+    assert "X-Api-Key" in stored
+
+
+def test_custom_credential_rejects_path_override(client: TestClient) -> None:
+    response = client.post(
+        "/api/credentials",
+        json={"name": "Bad", "kind": "custom", "secret": '{"env":{"PATH":"C:\\\\evil"}}'},
+    )
+    assert response.status_code == 400
+    assert response.json()["messageKey"] == "settings.credentials.customInvalid"
+
+
 def test_short_secret_mask(client: TestClient) -> None:
     response = client.post(
         "/api/credentials",

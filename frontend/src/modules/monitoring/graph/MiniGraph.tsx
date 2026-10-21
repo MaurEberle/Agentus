@@ -131,7 +131,10 @@ function GraphInner({
         nodesConnectable={false}
         elementsSelectable
         panOnDrag
-        zoomOnScroll
+        zoomOnScroll={false}
+        panOnScroll={false}
+        zoomOnPinch
+        preventScrolling={false}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         onInit={(instance) => {

@@ -4,6 +4,9 @@ import { connectionAllowed, portKind, type PortContext } from '@/modules/network
 import {
   isMcpNode,
   migrateMcpNodes,
+  routerMatchOf,
+  routerPatternOf,
+  ROUTER_MATCHES,
   type AgentNetworkDocument,
   type GraphNode,
   type KnowledgeState,
@@ -83,9 +86,12 @@ export function validateDocument(
     if (fromChat.some((edge) => edge.target !== orch.id)) {
       issues.push({ nodeId: chat?.id, messageKey: 'network.validation.orchestratorFanout' });
     }
-    const toEnd = doc.edges.some(
-      (edge) => edge.source === orch.id && edge.sourceHandle === 'message' && byId.get(edge.target)?.type === 'end',
-    );
+    const toEnd = doc.edges.some((edge) => {
+      if (edge.source !== orch.id || edge.sourceHandle !== 'message') return false;
+      const target = byId.get(edge.target);
+      if (target?.type === 'end') return true;
+      return target?.type === 'router' && routerGoesOnlyToEnds(doc, target.id);
+    });
     if (!toEnd) {
       issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorEnd' });
     }
@@ -123,6 +129,94 @@ export function validateDocument(
     issues.push({ messageKey: 'network.validation.cycle' });
   }
 
+  return issues;
+}
+
+const ROUTER_PATTERN_MAX = 200;
+
+function routerRows(node: GraphNode): Array<Record<string, unknown>> {
+  if (!Array.isArray(node.data.branches)) return [];
+  return node.data.branches.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object');
+}
+
+function routerPatternProblem(match: string, pattern: string): 'routerPattern' | 'routerRegex' | null {
+  if (!(ROUTER_MATCHES as readonly string[]).includes(match)) return 'routerPattern';
+  if (match === 'regex') {
+    if (!pattern.trim() || pattern.length > ROUTER_PATTERN_MAX) return 'routerPattern';
+    try {
+      RegExp(pattern);
+    } catch {
+      return 'routerRegex';
+    }
+    return null;
+  }
+  const trimmed = pattern.trim();
+  if (!trimmed || trimmed.length > ROUTER_PATTERN_MAX) return 'routerPattern';
+  return null;
+}
+
+function routerGoesOnlyToEnds(doc: AgentNetworkDocument, routerId: string): boolean {
+  const outs = doc.edges.filter((edge) => edge.source === routerId);
+  if (outs.length === 0) return false;
+  return outs.every((edge) => doc.nodes.find((node) => node.id === edge.target)?.type === 'end');
+}
+
+function routerFedByOrchestrator(doc: AgentNetworkDocument, routerId: string): boolean {
+  return doc.edges.some(
+    (edge) =>
+      edge.target === routerId &&
+      edge.targetHandle === 'message' &&
+      edge.sourceHandle === 'message' &&
+      doc.nodes.some((node) => node.id === edge.source && node.type === 'orchestrator'),
+  );
+}
+
+function validateRouter(node: GraphNode, doc: AgentNetworkDocument): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const names: string[] = [];
+  const handles: string[] = [];
+  for (const row of routerRows(node)) {
+    const handle = typeof row.id === 'string' ? row.id.trim() : '';
+    const name = typeof row.name === 'string' ? row.name.trim() : '';
+    if (!handle || handle === 'default' || !name) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.routerName' });
+      continue;
+    }
+    handles.push(handle);
+    names.push(name.toLocaleLowerCase());
+    const match = typeof row.match === 'string' ? row.match : routerMatchOf(row.match);
+    const pattern = routerPatternOf(row);
+    const problem = routerPatternProblem(row.match === undefined ? 'contains' : match, pattern);
+    if (problem) issues.push({ nodeId: node.id, messageKey: `network.validation.${problem}` });
+  }
+  if (names.length !== new Set(names).size) {
+    issues.push({ nodeId: node.id, messageKey: 'network.validation.routerName' });
+  }
+  const outs = new Map<string, number>();
+  for (const edge of doc.edges) {
+    if (edge.source !== node.id) continue;
+    outs.set(edge.sourceHandle, (outs.get(edge.sourceHandle) ?? 0) + 1);
+  }
+  const required = ['default', ...handles];
+  const missing = required.some((handle) => outs.get(handle) !== 1);
+  const extra = [...outs.keys()].some((handle) => !required.includes(handle));
+  if (missing || extra) {
+    issues.push({ nodeId: node.id, messageKey: 'network.validation.routerEdge' });
+  }
+  const allowed = routerFedByOrchestrator(doc, node.id) ? ['end'] : ['agent', 'router', 'end'];
+  const wrong = doc.edges.some((edge) => {
+    if (edge.source !== node.id) return false;
+    const target = doc.nodes.find((item) => item.id === edge.target);
+    return edge.targetHandle !== 'message' || !target || !allowed.includes(target.type);
+  });
+  if (wrong) {
+    issues.push({
+      nodeId: node.id,
+      messageKey: routerFedByOrchestrator(doc, node.id)
+        ? 'network.validation.routerOrchestrator'
+        : 'network.validation.routerTarget',
+    });
+  }
   return issues;
 }
 
@@ -209,6 +303,9 @@ function validateNode(
         issues.push({ nodeId: node.id, messageKey: 'network.validation.fileAccessRoot' });
       }
     }
+  }
+  if (node.type === 'router') {
+    issues.push(...validateRouter(node, doc));
   }
   if (node.type === 'knowledge') {
     const embedProvider = asString(node.data.embeddingProvider) || 'ollama';

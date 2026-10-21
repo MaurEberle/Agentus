@@ -57,6 +57,10 @@ _HELP_CHAT_KEYS = {
     "embedding_credential_id": "embeddingCredentialId",
     "webSearchEnabled": "webSearchEnabled",
     "web_search_enabled": "webSearchEnabled",
+    "webSearchProvider": "webSearchProvider",
+    "web_search_provider": "webSearchProvider",
+    "webSearchBaseUrl": "webSearchBaseUrl",
+    "web_search_base_url": "webSearchBaseUrl",
     "webSearchCredentialId": "webSearchCredentialId",
     "web_search_credential_id": "webSearchCredentialId",
     "fallbackModel": "fallbackModel",
@@ -181,12 +185,25 @@ def list_credential_items() -> list[CredentialListItem]:
     return [_credential_item(row) for row in list_credentials()]
 
 
+def _prepare_secret(kind: str, secret: str) -> tuple[str, str]:
+    if kind != "custom":
+        return secret, mask_from_secret(secret)
+    from app.common.custom_credential import encode_custom_secret, mask_custom, parse_custom_secret
+
+    try:
+        parsed = parse_custom_secret(secret)
+    except ValueError as exc:
+        raise AppError("settings.credentials.customInvalid", status_code=400) from exc
+    canonical = encode_custom_secret(parsed)
+    return canonical, mask_custom(parsed)
+
+
 def create_credential(body: CredentialCreate) -> CredentialListItem:
     secret = body.secret.strip()
     if not secret:
         raise AppError("credentials.secret.required", status_code=400)
+    secret, mask = _prepare_secret(body.kind, secret)
     cred_id = str(uuid.uuid4())
-    mask = mask_from_secret(secret)
     vault_put(cred_id, secret)
     try:
         insert_credential(cred_id, body.name, body.kind, mask)
@@ -207,8 +224,9 @@ def patch_credential(cred_id: str, body: CredentialPatch) -> CredentialListItem:
         secret = body.secret.strip()
         if not secret:
             raise AppError("credentials.secret.required", status_code=400)
+        kind = body.kind or str(existing["kind"])
+        secret, mask = _prepare_secret(kind, secret)
         vault_put(cred_id, secret)
-        mask = mask_from_secret(secret)
     try:
         update_credential_meta(cred_id, name=body.name, kind=body.kind, mask=mask)
     except NotFound:

@@ -199,6 +199,14 @@
       "createTitle": "資格情報を追加",
       "editTitle": "資格情報を置き換え",
       "empty": "資格情報はまだありません。",
+      "emptyGroup": "このグループにはまだ資格情報がありません。",
+      "groups": "資格情報のグループ",
+      "group": {
+        "llm": "LLM",
+        "search": "ウェブ検索",
+        "mcp": "MCP",
+        "custom": "独自"
+      },
       "name": "名前",
       "kind": "種類",
       "mask": "マスク",
@@ -215,7 +223,10 @@
         "anthropic": "Claude",
         "gemini": "Gemini",
         "openai_compat": "OpenAI互換",
-        "web_search": "ウェブ検索",
+        "brave": "Brave",
+        "tavily": "Tavily",
+        "exa": "Exa",
+        "searxng": "SearXNG",
         "github": "GitHub",
         "azure": "Azure",
         "gitlab": "GitLab",
@@ -224,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "トークン"
+        "token": "トークン",
+        "custom": "独自"
       },
       "kindHint": {
         "xai": "xAI の API キー。",
@@ -232,7 +244,10 @@
         "anthropic": "Anthropic（Claude）の API キー。",
         "gemini": "Google Gemini の API キー。",
         "openai_compat": "OpenAI 互換 URL 用の Bearer トークン。",
-        "web_search": "ネットワークのウェブ検索用キー。",
+        "brave": "Brave Search API のサブスクリプション・トークン。",
+        "tavily": "Tavily の API キー。",
+        "exa": "Exa の API キー。",
+        "searxng": "自分の SearXNG 用の任意のキー。",
         "github": "GitHub の個人アクセストークン（PAT）。Classic: リポジトリ、Issue、Actions など必要な権限。",
         "azure": "Azure/Entra トークンまたは PAT。",
         "gitlab": "GitLab の個人アクセストークン。",
@@ -241,8 +256,18 @@
         "atlassian": "Atlassian Cloud API トークン（Jira/Confluence）。",
         "linear": "Linear API キー。",
         "postgres": "Postgres の接続文字列（アプリのデータベースは不可）。",
-        "token": "汎用 API キーまたは Bearer トークン（Context7、Sentry など）。"
+        "token": "汎用 API キーまたは Bearer トークン（Context7、Sentry など）。",
+        "custom": "Bearer トークン、追加ヘッダー、または環境変数。"
       },
+      "bearer": "Bearer",
+      "bearerHint": "Authorization: Bearer として送ります。",
+      "headerName": "ヘッダー",
+      "headerValue": "値",
+      "addHeader": "ヘッダーを追加",
+      "envName": "変数",
+      "envValue": "値",
+      "addEnv": "変数を追加",
+      "customInvalid": "独自の資格情報には Bearer、ヘッダー、または変数が必要です。",
       "inUseMcpHint": "MCPサーバーで別の認証情報に切り替えるか、サーバーを削除してください。その後この認証情報を外せます。",
       "usedBy": {
         "helpChatLlm": "ヘルプチャット（チャット）",
@@ -260,11 +285,13 @@
       "pingOk": "ランタイムに到達できます",
       "pingFail": "ランタイムに到達できません",
       "modelNotFound": "モデルが見つからないか読み込めません: {{name}}",
+      "modelInfoFailed": "Ollama がモデル情報を返しませんでした。全層を GPU に載せずに済むよう、実行を中止しました。",
       "timeout": "モデルからの進捗がありません（{{name}}）。総時間ではなく無応答で中止しました。",
       "unreachable": "Ollama に到達できません（{{name}}）。",
       "models": "インストール済みモデル",
       "modelsChat": "通常のモデル",
       "modelsEmbed": "埋め込みモデル",
+      "modelsMoe": "MoEモデル",
       "modelsGroupEmpty": "なし",
       "modelsEmpty": "モデルがないか、ランタイムに到達できません。",
       "modelName": "モデル",
@@ -295,7 +322,9 @@
       "embedModel": "埋め込みモデル",
       "reindexHint": "埋め込みを変更したらインデックスを再構築してください。",
       "webSearch": "ウェブ検索",
-      "webSearchHint": "任意。検索用資格情報がなくてもチャットは設定できます。検索は無効のままです。",
+      "webSearchHint": "任意。対応する資格情報がなくてもチャットは設定できます。検索は無効のままです。SearXNG にはベース URL が必要です。",
+      "webSearchProvider": "提供元",
+      "webSearchBaseUrl": "ベース URL",
       "webSearchCredential": "検索用資格情報",
       "webSearchMissing": "資格情報がありません — 資格情報にウェブ検索の項目を追加してください。",
       "fallback": "節約モデル（任意）",
@@ -315,6 +344,7 @@
       "servers": "設定済みサーバー",
       "empty": "MCPサーバーはまだありません。",
       "enable": "有効化",
+      "comingSoon": "近日公開",
       "added": "追加済み",
       "custom": "カスタム",
       "customCreate": "独自サーバー",
@@ -322,7 +352,7 @@
       "enabled": "有効",
       "status": "状態",
       "probe": "プローブ",
-      "presetHint": "レシピに従う資格情報。ファイルシステムと Excel のフォルダーはエディターの MCP ノードで指定します。保存するとサーバーがすぐに作成されます。",
+      "presetHint": "レシピに従う資格情報。Excel のフォルダーはエディターの MCP ノードで指定します。ローカルファイルはファイルアクセスツールで、MCP レシピではありません。保存するとサーバーがすぐに作成されます。",
       "rootPath": "ルートパス",
       "untrusted": "指定した権限で未知のプロセスが起動します。信頼できるコマンドだけを使ってください。",
       "command": "コマンド",
@@ -608,6 +638,7 @@
       "saveAs": "名前を付けて保存",
       "load": "開く",
       "duplicate": "複製",
+      "import": "インポート",
       "export": "エクスポート",
       "validate": "検証",
       "undo": "元に戻す",
@@ -639,7 +670,7 @@
       "knowledge": "知識",
       "knowledgeHint": "ソースフォルダー。エージェントの knowledge ポートのみ。",
       "router": "ルーター",
-      "routerHint": "条件に応じてメッセージを分岐します。",
+      "routerHint": "最初に一致した分岐へメッセージを送ります。残りは既定が受けます。",
       "end": "終了",
       "endHint": "少なくとも1つ。実行を終えます。",
       "mcp": "MCP",
@@ -659,6 +690,7 @@
     "inspector": {
       "title": "インスペクター",
       "collapse": "インスペクターを折りたたむ",
+      "resize": "インスペクターの幅を変更",
       "expand": "インスペクターを展開",
       "displayName": "表示名",
       "multi": "{{count}} 個のノードを選択",
@@ -689,6 +721,9 @@
         "pingOk": "モデルが応答しました",
         "pingFail": "テストに失敗しました",
         "advanced": "詳細",
+        "modelKind": "モデルの種類",
+        "kindDense": "通常のモデル",
+        "kindMoe": "MoEモデル",
         "noModels": "モデルが読み込まれていません。",
         "useModel": "「{{name}}」を使用",
         "temperature": "温度",
@@ -698,7 +733,11 @@
         "numCtxLoading": "モデル上限を読み込み中…",
         "numCtxUnavailable": "このモデルの長さ情報はありません。",
         "numThread": "CPU スレッド",
-        "numThreadHint": "既定は物理コア数です。",
+        "numThreadHint": "既定値は利用できるスレッドの半分です。",
+        "kvCache": "KV キャッシュ",
+        "kvCacheF16": "16 ビット",
+        "kvCacheQ8": "8 ビット",
+        "kvCacheHint": "8 ビットはキャッシュを半分にします。Ollama 0.40 はサービス起動時の OLLAMA_KV_CACHE_TYPE=q8_0 だけでこれを使います。見積もりはこの選択に従います。",
         "numThreadLoading": "CPU コアを読み取り中…",
         "numThreadUnavailable": "CPU スレッド数を取得できません。",
         "numGpu": "GPU オフロード",
@@ -717,7 +756,21 @@
         "vramFormula": "GPU: 最後 {{on}} / {{total}} 層。{{full}} × {{perToken}} B/トークン × {{ctx}} トークン。",
         "vramFormulaMixed": "GPU: 最後 {{on}} / {{total}} 層。グローバル {{full}} 層 × {{ctx}} トークン。",
         "vramFormulaSwa": "GPU: 最後 {{on}} / {{total}} 層。グローバル {{full}} × {{ctx}} トークン、スライディング {{swa}} × 窓 {{window}}。",
-        "vramHint": "モデルデータから層ごとに見積もります。GPU は末尾の N 層です。フルアテンションはコンテキスト全体。スライディングウィンドウ層はその窓だけ。KV キャッシュは f16 です。"
+        "vramHint": "モデルデータから層ごとに見積もります。GPU は末尾の N 層です。フルアテンションはコンテキスト全体。スライディングウィンドウ層はその窓だけ。KV キャッシュは f16 です。",
+        "moeAuto": "エキスパートを自動配置",
+        "moeForce": "すべての層を固定",
+        "moeAutoHint": "エキスパート {{count}}、トークンごとに {{used}} が動作します。重みはすべて読み込まれたままです。Attention は GPU に残り、エキスパートが残りの容量を使います。",
+        "moeAutoHintNoUsed": "エキスパート {{count}}。重みはすべて読み込まれたままです。Attention は GPU に残り、エキスパートが残りの容量を使います。",
+        "moeLayerWarn": "この選択は層ごとを動かすため、Attention も一緒に動きます。",
+        "moeUnknown": "このモデルのメタデータではエキスパートの重みを分けられません。表示は密モデルの式を使います。",
+        "moeExpertsGpu": "GPU 上のエキスパート {{experts}}",
+        "moeRam": "メモリ上のエキスパート: {{ram}}",
+        "moeRamTight": "空きメモリがこの見積もりを下回っています。ピン留めと mmap でさらに増えることがあります。",
+        "moeAttention": "Attention は GPU メモリに収まるよう、末尾 {{on}} / {{total}} 層に残ります。",
+        "moeSwa": "スライディングウィンドウのコンテキストでは、ここに GPU の空きが見えても、Ollama がすべてのエキスパートをメモリに置くことがあります。",
+        "moeEstimate": "モデルのメタデータとファイルサイズからの見積もりです。コンテキストサイズが変わるたびに再計算します。",
+        "moeKvFormula": "KV: {{full}} 層 × {{perToken}} B/トークン × {{ctx}} トークン。",
+        "moeAutoFit": "エキスパートの自動配置なら GPU は {{gpu}}、残り {{ram}} はメモリです。"
       },
       "agent": {
         "hint": "LLM、ツール、知識はエッジから届く。オーケストレーターがなければメッセージがエージェントを起動する。",
@@ -726,7 +779,9 @@
       },
       "orchestrator": {
         "hint": "LLM はエッジが1本。チャットはここへ入る。エージェントごとにチャネル。メッセージ出力は終了のまま。つながったツールは自分で呼びます。",
-        "systemPrompt": "システムプロンプト"
+        "systemPrompt": "システムプロンプト",
+        "agentMissLimit": "エージェントごとの失敗回数",
+        "agentMissLimitHint": "ファイルアクセスのあるエージェントが、書き込み・変更・削除なしでタスクを終えてよい回数です。超えるとオーケストレーターがそのタスクを引き受けます。初期値は 3 です。"
       },
       "tool": {
         "kind": "種類",
@@ -744,7 +799,33 @@
         "pickRoot": "フォルダー",
         "allowWrite": "書き込みを許可",
         "allowDelete": "削除を許可",
-        "fileAccessHint": "エージェントはこのフォルダー配下でのみ読み書きと削除ができます。",
+        "fileAccessHint": "既定ではすべての操作です。外すとその操作をエージェントから除きます。",
+        "fileActions": "機能",
+        "fileAction": {
+          "list": "一覧",
+          "stat": "情報",
+          "read": "読む",
+          "read_many": "複数読む",
+          "write": "書く",
+          "mkdir": "フォルダー作成",
+          "delete": "削除",
+          "edit": "置換",
+          "move": "移動",
+          "search": "検索",
+          "tree": "ツリー"
+        },
+        "dateHint": "IANA タイムゾーンの現在時刻を出します。既定は UTC です。ある時刻を日・時・分だけ前後にずらせます。二つの時刻の間隔は秒・時・日で返します。内訳は日付、時刻、曜日で、月曜が 1 です。同じ時刻を別のタイムゾーンでも出せます。",
+        "calculatorHint": "+ - * / // % ** と括弧の式を計算します。** の指数は 20 までです。定数は pi と e です。関数は sqrt、cbrt、abs、round、floor、ceil、min、max、log、ln、log10、exp、sin、cos、tan、factorial です。log と ln は自然対数で、log は底を取れます。sin、cos、tan はラジアンです。factorial は 0 から 20 の整数だけです。",
+        "searchProvider": "提供元",
+        "searchProviderName": { "brave": "Brave", "tavily": "Tavily", "exa": "Exa", "searxng": "SearXNG" },
+        "searchBaseUrl": "ベース URL",
+        "maxResults": "件数",
+        "searchHint": {
+          "brave": "独自の索引。資格情報の種類は Brave。",
+          "tavily": "エージェント向けの抜粋。資格情報の種類は Tavily。",
+          "exa": "意味で探す独自索引。資格情報の種類は Exa。",
+          "searxng": "自分のインスタンス。ベース URL が必要で、資格情報は任意。"
+        },
         "credential": "資格情報",
         "mcpServer": "MCPサーバー",
         "mcpEmpty": "サーバーなし",
@@ -765,10 +846,18 @@
         "reindexHint": "埋め込みを変更したらインデックスを再構築してください。"
       },
       "router": {
+        "hint": "最初の一致が採用されます。正規表現以外では大文字小文字を区別しません。",
         "branches": "分岐",
         "branchName": "名前",
-        "condition": "条件",
-        "add": "分岐を追加"
+        "pattern": "パターン",
+        "add": "分岐を追加",
+        "defaultHint": "どの分岐にも当てはまらないとき。",
+        "match": {
+          "contains": "含む",
+          "startsWith": "で始まる",
+          "firstLine": "先頭行が",
+          "regex": "正規表現"
+        }
       },
       "chat": {
         "hint": "実行中の会話です。オーケストレーターは実行を終えるまでここで確認の質問ができます。",
@@ -838,7 +927,13 @@
       "orchestratorLlm": "オーケストレーターには LLM のエッジがちょうど1つ必要です。",
       "orchestratorChat": "チャットはオーケストレーターに接続する必要があります。",
       "orchestratorFanout": "オーケストレーターがあるとき、チャットはそこだけに接続します。",
-      "orchestratorEnd": "オーケストレーターには終了へのメッセージエッジが必要です。",
+      "orchestratorEnd": "オーケストレーターには終了へのメッセージが必要です。直接か、終了だけへ続くルーター経由です。",
+      "routerName": "分岐名は必須で、重複できません。",
+      "routerPattern": "各分岐には 200 文字以内のパターンが必要です。",
+      "routerRegex": "パターンは有効な正規表現ではありません。",
+      "routerEdge": "各分岐と既定にはエッジがちょうど 1 本必要です。",
+      "routerTarget": "ルーターの先はエージェント、ルーター、または終了です。",
+      "routerOrchestrator": "オーケストレーターの後のルーターは終了だけへ続きます。",
       "orchestratorLooseAgent": "オーケストレーターがあるとき、各エージェントにはそこからのチャネルが必要。",
       "agentMode": "エージェントは連鎖かオーケストレーター配下のどちらか。",
       "agentChannel": "エージェントのチャネルは1つまで。",
@@ -934,7 +1029,9 @@
       "none": "ネットワークが選択されていません。",
       "multi": "{{count}} 件選択",
       "noDescription": "説明はありません。",
-      "lastRun": "前回の実行"
+      "lastRun": "前回の実行",
+      "resize": "詳細の幅を変更",
+      "graphLoading": "グラフを読み込み中…"
     },
     "empty": {
       "library": "保存済みネットワークはまだありません。",
@@ -984,6 +1081,26 @@
       "skip": "このファイルをスキップ",
       "include": "それでもインポート",
       "continue": "インポート"
+    },
+    "transfer": {
+      "exportTitle": "ネットワークをエクスポート",
+      "exportBody": "ネットワークは JSON で保存されます（schemaVersion 1）。秘密はファイルに入りません。アクセスの参照は残ります。",
+      "importTitle": "ネットワークをインポート",
+      "importBody": "schemaVersion 1 の JSON ファイルを選びます。新しいネットワークになります。ファイル内の秘密は破棄されます。",
+      "pick": "ファイルを選択",
+      "name": "名前",
+      "counts": "{{nodes}} ノード · {{edges}} エッジ",
+      "secrets": "ファイル内の秘密は破棄されます。",
+      "fileUnreadable": "ネットワークのファイルではありません。",
+      "fileSchema": "この schemaVersion には対応していません。",
+      "collision": "この名前は既に使われています。",
+      "nameRequired": "名前がありません。",
+      "download": "エクスポート",
+      "confirmImport": "インポート",
+      "empty": "まだファイルがありません。",
+      "zipNote": "複数のネットワークは、それぞれ 1 つの JSON として ZIP に保存されます。",
+      "skip": "スキップ",
+      "include": "含める"
     },
     "notify": {
       "error": "操作に失敗しました",
@@ -1071,7 +1188,8 @@
       "waiting": "待機中",
       "running": "実行中",
       "done": "完了",
-      "error": "エラー"
+      "error": "エラー",
+      "halted": "停止"
     },
     "wait": {
       "none": "待機なし",
@@ -1304,6 +1422,8 @@
       "outcome": "結果",
       "error": "エラー",
       "models": "モデル",
+      "move": "{{column}}を移動",
+      "resize": "{{column}}の幅を変更",
       "live": "ライブで見る",
       "page": "{{page}} / {{pages}} ページ",
       "prev": "前へ",
@@ -1404,11 +1524,13 @@
       "agent": {
         "start": "エージェントを開始しました",
         "done": "エージェントが完了しました",
-        "toolFailures": "エージェントは失敗したツール呼び出し {{failed}} 回で停止しました",
+        "toolFailures": "エージェントは失敗したツール呼び出しが {{failed}} 回続いたため停止しました",
         "toolJson": "ツール呼び出し {{name}} を破棄しました。JSON 引数が不完全です（試行 {{attempt}}/{{max}}）。",
         "think": "エージェントが思考中です（結果ではありません）。",
         "thinkLimit": "結果のない思考が多すぎます。",
         "thinkLoop": "1トークンの思考ループを {{thinks}} ステップで停止しました。",
+        "emptyStop": "空の応答を破棄しました（{{attempt}}/{{max}}）。タスクは続きます。",
+        "emptyStops": "タスク未完了: 空の応答が5回続きました。",
         "truncated": "応答が途中で切れました（結果ではありません）。"
       },
       "knowledge": "知識検索（{{count}} 件）",
@@ -1421,12 +1543,15 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM完了（{{durationMs}} ms）"
+        "done": "LLM完了（{{durationMs}} ms）",
+        "vram": "VRAM {{model}}: 見積もり {{estimated}}、使用 {{used}}、{{delta}}（{{percent}}）。エキスパート {{expertsOnGpu}}/{{expertLayers}}、Attention {{attentionLayersOnGpu}}{{placement}}。",
+        "modelInfo": "{{model}} のモデル情報がありません。実行を中止しました。",
+        "moeUnsplit": "{{model}} のエキスパート分割が不明です。num_gpu は送りません。"
       },
       "tool": {
         "call": "ツール {{name}}"
       },
-      "router": "ルーター → {{target}}",
+      "router": "ルーター {{branch}} → {{target}}",
       "end": "終了に到達しました",
       "succeeded": "実行は成功しました",
       "failed": "実行は失敗しました",
@@ -1443,7 +1568,13 @@
         "think": "オーケストレーターが考えています（ステップに数えません）。",
         "thinkLimit": "依頼なしの思考が多すぎます。",
         "thinkLoop": "1トークンの思考ループを {{thinks}} ステップで停止しました。",
-        "window": "プロンプトがどのコンテキスト窓にも収まりません。"
+        "window": "プロンプトがどのコンテキスト窓にも収まりません。",
+        "toolThink": "ツール呼び出しが 5 回失敗しました。思考ラウンド {{round}}。",
+        "toolFailures": "オーケストレーターは思考ラウンドが 2 回続けて失敗したため停止しました",
+        "takeoverStart": "{{agent}} は変更なしのファイル試行を {{misses}} 回使いました。オーケストレーターが引き受けます。",
+        "takeoverBlocked": "{{agent}} への呼び出しを拒否しました。ファイルはオーケストレーターが書きます。",
+        "takeover": "{{agent}} が試行上限に達しました。オーケストレーターはファイルを書きませんでした。",
+        "takeoverNoTool": "{{agent}} が試行上限に達しました。オーケストレーターにファイルツールがありません。"
       }
     },
     "graph": {
@@ -1527,7 +1658,8 @@
     "call": {
       "failed": "MCP の呼び出しに失敗しました。"
     },
-    "notFound": "MCP サーバーが見つかりません。"
+    "notFound": "MCP サーバーが見つかりません。",
+    "unavailable": "このレシピは近日公開です。"
   },
   "graph": {
     "mcp": {
@@ -1535,6 +1667,15 @@
       "disabled": "この MCP サーバーは無効です。",
       "root": "この MCP サーバーには設定でルートパスが必要です。",
       "unavailable": "このインストールでは MCP を使えません。"
+    },
+    "router": {
+      "name": "分岐名は必須で、重複できません。",
+      "pattern": "各分岐には 200 文字以内のパターンが必要です。",
+      "regex": "パターンは有効な正規表現ではありません。",
+      "edge": "各分岐と既定にはエッジがちょうど 1 本必要です。",
+      "target": "ルーターの先はエージェント、ルーター、または終了です。",
+      "orchestrator": "オーケストレーターの後のルーターは終了だけへ続きます。",
+      "noEdge": "ルーターに一致するエッジがありません"
     }
   }
 }

@@ -91,7 +91,12 @@ def export_network(network_id: str) -> dict[str, Any]:
     return service.export_network(network_id)
 
 
-@router.post("/networks/import")
+@router.post("/networks/export")
+def export_document(body: dict[str, Any]) -> dict[str, Any]:
+    return service.export_document(body)
+
+
+@router.post("/networks/import", status_code=201)
 def import_network(body: ImportBody) -> dict[str, Any]:
     return service.import_network(body.document)
 

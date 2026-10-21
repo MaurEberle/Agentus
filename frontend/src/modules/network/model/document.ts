@@ -29,11 +29,28 @@ export type PortDef = {
   label?: string;
 };
 
+export const ROUTER_MATCHES = ['contains', 'startsWith', 'firstLine', 'regex'] as const;
+
+export type RouterMatch = (typeof ROUTER_MATCHES)[number];
+
 export type RouterBranch = {
   id: string;
   name: string;
-  condition: string;
+  match?: RouterMatch;
+  pattern?: string;
+  /** Older graphs stored the pattern in condition. */
+  condition?: string;
 };
+
+export function routerMatchOf(value: unknown): RouterMatch {
+  return ROUTER_MATCHES.includes(value as RouterMatch) ? (value as RouterMatch) : 'contains';
+}
+
+export function routerPatternOf(branch: { pattern?: unknown; condition?: unknown }): string {
+  if (typeof branch.pattern === 'string') return branch.pattern;
+  if (typeof branch.condition === 'string') return branch.condition;
+  return '';
+}
 
 export type ChatInputData = {
   displayName?: string;
@@ -52,8 +69,12 @@ export type LlmNodeData = {
   maxTokens?: number;
   numCtx?: number;
   numThread?: number;
+  /** Ollama KV cache. Unset means f16. q8_0 halves the token cache. */
+  kvCacheType?: 'f16' | 'q8_0';
   numGpuPercent?: number;
   numGpuLayers?: number;
+  /** MoE only. "auto" omits num_gpu. "layers" sends a whole-layer offload. */
+  gpuPlacement?: 'auto' | 'layers';
 };
 
 export type AgentNodeData = {
@@ -64,6 +85,8 @@ export type AgentNodeData = {
 export type OrchestratorNodeData = {
   displayName?: string;
   systemPrompt?: string;
+  /** File attempts without a write, edit, or delete before the orchestrator takes the task. */
+  agentMissLimit?: number;
 };
 
 export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access';
@@ -72,11 +95,16 @@ export type ToolNodeData = {
   displayName?: string;
   kind: ToolKind;
   credentialId?: string;
+  searchProvider?: 'brave' | 'tavily' | 'exa' | 'searxng';
+  searchBaseUrl?: string;
+  maxResults?: number;
   method?: string;
   url?: string;
   rootPath?: string;
   allowWrite?: boolean;
   allowDelete?: boolean;
+  /** Unset means every file action. A list is the subset the agent may call. */
+  fileActions?: string[];
 };
 
 export type McpNodeData = {

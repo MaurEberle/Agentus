@@ -1,5 +1,6 @@
 {
   "id": "notion",
+  "available": false,
   "titleKey": "mcp.recipe.notion",
   "transport": "stdio",
   "runtime": "npx",

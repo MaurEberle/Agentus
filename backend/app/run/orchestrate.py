@@ -18,6 +18,8 @@ def orchestrator_instructions(
     user_prompt: str,
     agents: list[tuple[str, str, str]],
     tool_names: list[str] | None = None,
+    *,
+    takeover: bool = False,
 ) -> str:
     lines: list[str] = []
     for agent_id, name, instructions in agents:
@@ -26,14 +28,27 @@ def orchestrator_instructions(
     roster = "\n".join(lines) if lines else "(no agents connected)"
     names = [name for name in (tool_names or []) if name]
     tool_block = ""
-    if names:
+    if names and takeover:
+        tool_block = (
+            "You have tools: "
+            + ", ".join(names)
+            + ".\n"
+            "Takeover is active. Call a tool with a tool call and do the failed file task yourself.\n"
+            "Do not call the closed agent. Do not describe the tool call in a sentence.\n"
+            "You may call tools as often as you need, then one JSON object.\n"
+            "Five failed tool calls in a row start a think round. Two failed think rounds in a row stop the run. A successful tool call resets that count.\n"
+            "After a successful write, edit, or delete, decide again with one JSON object.\n"
+            "A later step sees only short lines for your own tools, not the tool result.\n"
+        )
+    elif names:
         tool_block = (
             "You have tools: "
             + ", ".join(names)
             + ".\n"
             "Call a tool with a tool call. Do not put a tool call in the JSON object and do not describe it in a sentence.\n"
             "Use tools to check files after an agent. Do not use tools instead of calling an agent.\n"
-            "At most two tool rounds this step, then one JSON object.\n"
+            "You may call tools as often as you need, then one JSON object.\n"
+            "Five failed tool calls in a row start a think round. Two failed think rounds in a row stop the run. A successful tool call resets that count.\n"
             "After the tool result, decide again with one JSON object.\n"
             "A later step sees only short lines for your own tools, not the tool result.\n"
         )
@@ -63,6 +78,11 @@ Use ask for a question that needs an answer. Use reply to speak without waiting.
 Agents:
 {roster}
 """
+    if takeover:
+        protocol += (
+            "\nTakeover is active. That replaces the earlier rule that file work belongs to the agents. "
+            "Do the file task yourself with a tool call. Do not call the closed agent.\n"
+        )
     extra = user_prompt.strip()
     if extra:
         return extra + "\n\n" + protocol
@@ -110,6 +130,9 @@ def parse_orchestrator_action(raw: str) -> dict[str, str]:
     prose = _salvage_prose_call(text)
     if prose is not None:
         return prose
+    markup = _salvage_markup_action(text)
+    if markup is not None:
+        return markup
     return {"action": "reply", "text": text, "agent": "", "task": "", "source": ""}
 
 
@@ -139,6 +162,12 @@ def looks_like_control(text: str) -> bool:
     if folded.startswith("{") or folded.startswith("```"):
         return True
     if folded.startswith("call "):
+        return True
+    if "<function=action" in folded or "<parameter=agent>" in folded:
+        return True
+    if re.search(r"<function=(ask|call|reply|finish|think)\b", folded):
+        return True
+    if re.search(r"<parameter=action>\s*(ask|call|reply|finish|think)\b", folded):
         return True
     return '"action"' in folded and any(f'"{name}"' in folded for name in _ACTIONS)
 
@@ -183,6 +212,44 @@ _PROSE_CALL = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _PROSE_CALL_BARE = re.compile(r"^call\s+([^\s,.:;]+)\s*$", re.IGNORECASE)
+
+
+_MARKUP_ACTION = re.compile(
+    r"<function=action>\s*(ask|call|reply|finish|think)\b"
+    r"|<function=(ask|call|reply|finish|think)\b",
+    re.IGNORECASE,
+)
+_CONTROL_FUNCTION_NAMES = frozenset({"action", "ask", "call", "reply", "finish", "think"})
+_MARKUP_PARAM = re.compile(
+    r"<parameter=([^>\s/]+)>(.*?)</parameter>",
+    re.DOTALL | re.IGNORECASE,
+)
+_MAX_MARKUP_TASK = 8000
+
+
+def _salvage_markup_action(text: str) -> dict[str, str] | None:
+    """Read a model that writes the control object as broken tool-call tags."""
+    raw = text or ""
+    lower = raw.lower()
+    if "<function=" not in lower and "<parameter=" not in lower:
+        return None
+    params = {key.strip().lower(): value.strip() for key, value in _MARKUP_PARAM.findall(raw)}
+    head = _MARKUP_ACTION.search(raw)
+    kind = ((head.group(1) or head.group(2)) if head else params.get("action", "")).lower()
+    if kind not in _ACTIONS:
+        return None
+    if kind == "call":
+        agent = params.get("agent", "").strip()
+        if not agent:
+            return None
+        task = params.get("task", "").strip()
+        if len(task) > _MAX_MARKUP_TASK:
+            task = task[:_MAX_MARKUP_TASK]
+        return _action("call", "", agent, task, params.get("source", "").strip())
+    spoken = params.get("text", "").strip()
+    if kind != "finish" and not spoken:
+        return None
+    return _action(kind, spoken, "", "", "")
 
 
 def _salvage_prose_call(text: str) -> dict[str, str] | None:
@@ -330,6 +397,8 @@ def _leading_tool_name(blob: str) -> tuple[str, str]:
 
 
 def _make_tool_call(name: str, args: object, offered: list[str], index: int) -> ToolCall | None:
+    if (name or "").strip().lower() in _CONTROL_FUNCTION_NAMES:
+        return None
     resolved = _resolve_tool_name(name, offered)
     if not resolved:
         return None

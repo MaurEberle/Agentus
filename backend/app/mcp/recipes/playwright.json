@@ -1,5 +1,6 @@
 {
   "id": "playwright",
+  "available": false,
   "titleKey": "mcp.recipe.playwright",
   "transport": "stdio",
   "runtime": "npx",

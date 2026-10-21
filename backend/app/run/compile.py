@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 
 from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument, GraphNode, is_mcp_node, normalize_mcp_nodes
+from app.run.limits import DEFAULT_AGENT_MISS_LIMIT, MAX_AGENT_MISS_LIMIT
+from app.run.router_rules import CompiledRouter, rules_from_data
 
 
 @dataclass
@@ -17,9 +19,11 @@ class CompiledLlm:
     max_tokens: int | None
     num_ctx: int | None
     num_thread: int | None
+    kv_cache_type: str | None
     num_gpu: int | None
     num_gpu_percent: int | None
     node_id: str
+    gpu_placement: str | None = None
 
 
 @dataclass
@@ -31,6 +35,8 @@ class CompiledOrchestrator:
     finals: list[str]
     tool_kinds: list[str] = field(default_factory=list)
     mcp: list[tuple[str, list[str] | None, str | None]] = field(default_factory=list)
+    file_actions: list[str] | None = None
+    agent_miss_limit: int = DEFAULT_AGENT_MISS_LIMIT
 
 
 @dataclass
@@ -42,6 +48,7 @@ class CompiledAgent:
     mcp: list[tuple[str, list[str] | None, str | None]]
     knowledge_node_ids: list[str]
     outbound_message: list[str]
+    file_actions: list[str] | None = None
 
 
 @dataclass
@@ -53,7 +60,7 @@ class CompiledGraph:
     orchestrator: CompiledOrchestrator | None
     chat_input: GraphNode | None
     end_ids: list[str]
-    routers: dict[str, list[tuple[str, str]]]
+    routers: dict[str, CompiledRouter]
     topo_agents: list[str]
     by_id: dict[str, GraphNode] = field(default_factory=dict)
 
@@ -71,9 +78,11 @@ def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id
         max_tokens=data.get("maxTokens"),
         num_ctx=_positive_int(data, "numCtx"),
         num_thread=_positive_int(data, "numThread"),
+        kv_cache_type=_kv_cache_type(data),
         num_gpu=_positive_int(data, "numGpuLayers"),
         num_gpu_percent=_gpu_percent(data),
         node_id=llm_node.id if llm_node else "",
+        gpu_placement=_gpu_placement(data),
     )
 
 
@@ -88,6 +97,19 @@ def _positive_int(data: dict, key: str) -> int | None:
     return None
 
 
+def _kv_cache_type(data: dict) -> str | None:
+    if data.get("kvCacheType") == "q8_0":
+        return "q8_0"
+    return None
+
+
+def _gpu_placement(data: dict) -> str | None:
+    raw = data.get("gpuPlacement")
+    if raw in {"auto", "layers"}:
+        return raw
+    return None
+
+
 def _gpu_percent(data: dict) -> int | None:
     raw = data.get("numGpuPercent")
     if isinstance(raw, bool) or raw is None:
@@ -99,11 +121,33 @@ def _gpu_percent(data: dict) -> int | None:
     return None
 
 
+def _chosen_actions(data: dict, key: str, order: tuple[str, ...]) -> list[str] | None:
+    raw = data.get(key)
+    if not isinstance(raw, list):
+        return None
+    picked = {str(item) for item in raw}
+    return [name for name in order if name in picked]
+
+
+def _merge_actions(
+    current: list[str] | None, chosen: list[str] | None, saw: bool
+) -> tuple[list[str] | None, bool]:
+    if not saw:
+        return chosen, True
+    if current is None or chosen is None:
+        return None, True
+    return list(dict.fromkeys([*current, *chosen])), True
+
+
 def _compile_tools(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str
-) -> tuple[list[str], list[tuple[str, list[str] | None]]]:
+) -> tuple[list[str], list[tuple[str, list[str] | None, str | None]], list[str] | None]:
+    from app.tools.file_access_tool import FILE_ACTION_ORDER
+
     tool_kinds: list[str] = []
     mcp: list[tuple[str, list[str] | None, str | None]] = []
+    file_actions: list[str] | None = None
+    saw_file = False
     for edge in doc.edges:
         if edge.target != node_id or edge.target_handle != "tool":
             continue
@@ -126,7 +170,26 @@ def _compile_tools(
         kind = str(tool.data.get("kind") or "")
         if kind:
             tool_kinds.append(kind)
-    return tool_kinds, mcp
+        if kind == "file_access":
+            file_actions, saw_file = _merge_actions(
+                file_actions, _chosen_actions(tool.data, "fileActions", FILE_ACTION_ORDER), saw_file
+            )
+    return tool_kinds, mcp, file_actions
+
+
+def _agent_miss_limit(data: dict) -> int:
+    raw = data.get("agentMissLimit")
+    if isinstance(raw, bool) or raw is None or raw == "":
+        return DEFAULT_AGENT_MISS_LIMIT
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_AGENT_MISS_LIMIT
+    if value < 1:
+        return 1
+    if value > MAX_AGENT_MISS_LIMIT:
+        return MAX_AGENT_MISS_LIMIT
+    return value
 
 
 def _compile_orchestrator(
@@ -152,7 +215,7 @@ def _compile_orchestrator(
             agents.append(target.id)
         elif edge.source_handle == "message":
             finals.append(target.id)
-    tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
+    tool_kinds, mcp, file_actions = _compile_tools(doc, by_id, node.id)
     return CompiledOrchestrator(
         node_id=node.id,
         system_prompt=str(node.data.get("systemPrompt") or ""),
@@ -161,6 +224,8 @@ def _compile_orchestrator(
         finals=finals,
         tool_kinds=tool_kinds,
         mcp=mcp,
+        file_actions=file_actions,
+        agent_miss_limit=_agent_miss_limit(node.data),
     )
 
 
@@ -172,15 +237,16 @@ def compile_document(
     chats = [n for n in doc.nodes if n.type == "chat_input"]
     chat_input = chats[0] if chats else None
     end_ids = [n.id for n in doc.nodes if n.type == "end"]
-    routers: dict[str, list[tuple[str, str]]] = {}
+    routers: dict[str, CompiledRouter] = {}
     for node in doc.nodes:
         if node.type != "router":
             continue
-        routers[node.id] = [
-            (e.source_handle, e.target)
-            for e in doc.edges
-            if e.source == node.id
-        ]
+        targets: dict[str, str] = {}
+        for edge in doc.edges:
+            if edge.source != node.id or edge.source_handle in targets:
+                continue
+            targets[edge.source_handle] = edge.target
+        routers[node.id] = CompiledRouter(rules=rules_from_data(node.data), targets=targets)
 
     agents: dict[str, CompiledAgent] = {}
     orchestrator = _compile_orchestrator(doc, by_id)
@@ -188,7 +254,7 @@ def compile_document(
         if node.type != "agent":
             continue
         llm = _compile_llm(doc, by_id, node.id)
-        tool_kinds, mcp = _compile_tools(doc, by_id, node.id)
+        tool_kinds, mcp, file_actions = _compile_tools(doc, by_id, node.id)
         knowledge_ids = [
             e.source
             for e in doc.edges
@@ -205,6 +271,7 @@ def compile_document(
             llm=llm,
             tool_kinds=tool_kinds,
             mcp=mcp,
+            file_actions=file_actions,
             knowledge_node_ids=knowledge_ids,
             outbound_message=outbound,
         )

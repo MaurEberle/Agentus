@@ -11,6 +11,7 @@ from app.runtime.models import ChatMessage as LlmMessage
 _ANOMALY_TEXT_CAP = 400
 _FILES_SHOWN = 8
 _FILES_KEPT = 48
+_FILE_CHANGES = frozenset({"write", "delete", "edit", "move"})
 
 
 @dataclass
@@ -66,6 +67,13 @@ class SourceChoice:
     auto: bool = False
 
 
+@dataclass
+class Takeover:
+    agent_id: str
+    name: str
+    task: str
+
+
 class RunMemory:
     def __init__(self) -> None:
         self.turns: list[Turn] = []
@@ -81,6 +89,13 @@ class RunMemory:
         self.thinking: dict[str, bool] = {}
         self.loaded: dict[str, int | None] = {}
         self._anomaly: str | None = None
+        self.misses: dict[str, int] = {}
+        self.miss_limit = 3
+        self.takeover: Takeover | None = None
+        self.takeover_rejects = 0
+        self.takeover_unarmed = False
+        self.orch_failed_tools = 0
+        self.orch_failed_thinks = 0
 
     def add_user(self, text: str) -> None:
         cleaned = (text or "").strip()
@@ -162,9 +177,44 @@ class RunMemory:
         own = self._own_block()
         if own:
             messages.append(LlmMessage(role="user", content="Your tools:\n" + own))
+        note = self.takeover_text()
+        if note:
+            messages.append(LlmMessage(role="user", content=note))
         if self._anomaly:
             messages.append(LlmMessage(role="user", content=self._anomaly))
         return messages
+
+    def note_file_attempt(self, *, agent_id: str, name: str, task: str, wrote: bool) -> bool:
+        """Count one file-agent call. True when this miss opens takeover."""
+        if wrote:
+            self.misses[agent_id] = 0
+            if self.takeover is not None and self.takeover.agent_id == agent_id:
+                self.takeover = None
+                self.takeover_rejects = 0
+            return False
+        count = self.misses.get(agent_id, 0) + 1
+        self.misses[agent_id] = count
+        if self.takeover is not None or count < max(1, self.miss_limit):
+            return False
+        self.takeover = Takeover(agent_id=agent_id, name=name, task=task)
+        return True
+
+    def takeover_text(self) -> str:
+        item = self.takeover
+        if item is None:
+            return ""
+        misses = self.misses.get(item.agent_id, 0)
+        return (
+            f"Takeover for {item.name} ({item.agent_id}) after {misses} file attempts "
+            "without a write, edit, or delete.\n"
+            f"task: {item.task}\n"
+            "Do this file work yourself with your tools. Do not call this agent."
+        )
+
+    def refuses_agent(self, token: str, names: list[tuple[str, str]]) -> bool:
+        if self.takeover is None:
+            return False
+        return match_agent(token, names) == self.takeover.agent_id
 
     def set_anomaly(self, record: AgentRecord) -> None:
         lines = [
@@ -185,6 +235,15 @@ class RunMemory:
         self.own_tools.append(event)
         if fact is not None and len(self.own_files) < _FILES_KEPT:
             self.own_files.append(fact)
+        if (
+            self.takeover is not None
+            and fact is not None
+            and fact.ok
+            and fact.action in _FILE_CHANGES
+        ):
+            self.misses[self.takeover.agent_id] = 0
+            self.takeover = None
+            self.takeover_rejects = 0
 
     def note_window(self, model: str, *, context_max: int | None, need: int) -> None:
         self.windows.append({"model": model, "contextMax": context_max, "need": need})
@@ -252,6 +311,16 @@ class RunMemory:
             "rejected": [{"reason": item.reason, "body": item.body} for item in self.rejected],
             "windows": list(self.windows),
             "raised": dict(self.raised),
+            "misses": dict(self.misses),
+            "takeover": (
+                None
+                if self.takeover is None
+                else {
+                    "agentId": self.takeover.agent_id,
+                    "name": self.takeover.name,
+                    "task": self.takeover.task,
+                }
+            ),
         }
 
     def _writers(self) -> list[tuple[str, str, str]]:

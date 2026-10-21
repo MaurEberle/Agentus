@@ -32,7 +32,7 @@ Enquanto corre **exactamente esta** rede: faixa **Só de leitura** — primeiro 
 | Ferramenta | `tool` | First-party: HTTP, pesquisa web, data/hora, calculadora, acesso a ficheiros. Saída **Ferramenta**. |
 | MCP | `mcp` | Um servidor criado e **ativado** nas **Definições**. Saída **Ferramenta**, como um nó de ferramenta. |
 | Conhecimento | `knowledge` | Pasta com ficheiros para a rede. Saída **Conhecimento**, só para o porto Conhecimento do agente. |
-| Router | `router` | Bifurca a mensagem segundo condições (primeira linha / ramos com nome) mais saída predefinida. |
+| Router | `router` | Envia a mensagem para uma só saída. Os ramos são testados por ordem: contém, começa por, primeira linha, expressão regular. O padrão apanha o resto. Depois do orquestrador, as saídas só vão para fins. |
 | Fim | `end` | Encerramento. **Pelo menos um.** |
 
 ## Ligações
@@ -85,7 +85,8 @@ Válido/Inválido vê-se como distintivo. Redes inválidas podem guardar-se, mas
 - **Guardar como:** documento novo, torna-se o aberto.
 - **Abrir:** uma rede guardada; pesquisa e ordenação. Ações em massa e apagar só na biblioteca.
 - **Duplicar:** só com documento já guardado; abre a cópia.
-- **Exportar:** transferência do grafo aberto. Contém `credentialId`, sem chaves. A importação na biblioteca descarta segredos anexos.
+- **Exportar:** diálogo e depois JSON do grafo aberto (`schemaVersion` 1). Contém `credentialId`, sem chaves.
+- **Importar:** diálogo para um ficheiro JSON. Passa a ser uma rede nova. Um nome já usado é alterado, ou o ficheiro é ignorado.
 
 Sair sem guardar: diálogo Guardar / Descartar / Cancelar.
 
@@ -97,4 +98,4 @@ Ações: Novo (editor), Abrir, Duplicar, Mudar o nome, Definir etiquetas, **Defi
 
 Apagar remove a entrada da área de trabalho, não os teus ficheiros de conhecimento no disco, nem o corpus de ajuda nem as execuções do histórico. Uma rede **em execução** é ignorada. Apagar a rede ativa esvazia a seleção rápida.
 
-Importar: ficheiros com colisão de nome são renomeados ou ignorados. Versões de esquema não suportadas são recusadas.
+Importar: diálogo com pré-visualização. O mesmo nome: mudar ou ignorar. Outra schemaVersion é recusada. Os segredos são descartados.

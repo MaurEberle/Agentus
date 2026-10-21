@@ -1,9 +1,0 @@
-{
-  "id": "fetch",
-  "titleKey": "mcp.recipe.fetch",
-  "transport": "stdio",
-  "runtime": "uvx",
-  "command": "uvx",
-  "args": ["mcp-server-fetch"],
-  "needsRoot": false
-}

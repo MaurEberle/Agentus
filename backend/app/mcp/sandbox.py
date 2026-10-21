@@ -24,7 +24,7 @@ _PATH_KEYS = frozenset(
     }
 )
 
-ROOT_RECIPE_IDS = frozenset({"filesystem", "git", "excel"})
+ROOT_RECIPE_IDS = frozenset({"git", "excel"})
 _STORE_FILES = frozenset(
     {"settings.sqlite", "help.sqlite", "workspace.sqlite", "history.sqlite"}
 )

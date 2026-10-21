@@ -113,6 +113,11 @@
   cursor: default !important;
 }
 
+/* The multi-select frame covers the dotted gaps. Clicks there belong to the pane. */
+.network-flow .react-flow__nodesselection-rect {
+  pointer-events: none;
+}
+
 .monitoring-flow .react-flow__pane,
 .monitoring-flow .react-flow__pane.draggable,
 .monitoring-flow .react-flow__pane.dragging,

@@ -59,20 +59,35 @@ let lastService: ServiceStatus | null = null;
 let lastStepKey = '';
 let pendingEndRunId: string | null = null;
 
-function toastOnce(key: string, titleKey: string, variant: 'success' | 'info' | 'error', descriptionKey?: string) {
+function toastOnce(
+  key: string,
+  titleKey: string,
+  variant: 'success' | 'info' | 'error',
+  descriptionKey?: string,
+  values?: Record<string, string>,
+) {
   const state = useMonitoringStore.getState();
   if (state.lastNotifyKey === key) return;
   useMonitoringStore.setState({ lastNotifyKey: key });
-  notify({ titleKey, descriptionKey, variant });
+  notify({ titleKey, descriptionKey, variant, values });
 }
 
-function notifyRunEnded(runId: string | undefined, outcome?: RunSnapshot['outcome']) {
+function runFailureDescription(errorMessage?: string): string | undefined {
+  if (errorMessage === 'runtime.modelInfoFailed') return 'settings.runtime.modelInfoFailed';
+  return undefined;
+}
+
+function notifyRunEnded(
+  runId: string | undefined,
+  outcome?: RunSnapshot['outcome'],
+  errorMessage?: string,
+) {
   if (!outcome || outcome === 'running') return;
   const key = `end:${runId ?? 'x'}`;
   if (outcome === 'succeeded') {
     toastOnce(key, 'monitoring.notify.runSucceeded', 'success');
   } else if (outcome === 'failed' || outcome === 'timeout') {
-    toastOnce(key, 'monitoring.notify.runFailed', 'error');
+    toastOnce(key, 'monitoring.notify.runFailed', 'error', runFailureDescription(errorMessage));
   } else if (outcome === 'cancelled') {
     toastOnce(key, 'monitoring.notify.runCancelled', 'info');
   } else {
@@ -93,7 +108,7 @@ function notifyTransitions(
   if (!prev || prev === next) return;
   if (next === 'stopped' && (prev === 'running' || prev === 'stopping' || prev === 'starting')) {
     if (outcome && outcome !== 'running') {
-      notifyRunEnded(runId, outcome);
+      notifyRunEnded(runId, outcome, errorMessage);
     } else {
       pendingEndRunId = runId ?? '';
     }
@@ -183,9 +198,9 @@ export async function hydrateLastRun() {
     if (now.run?.archived && now.run.runId === loaded.run.runId && now.logs.length > 0) return;
     useMonitoringStore.setState({
       run: loaded.run,
-      logs: loaded.logs,
       lastErrorMessage: loaded.run.errorMessage ?? now.lastErrorMessage,
       ...resetForRun(loaded.run, 'keep'),
+      logs: loaded.logs,
       chatMessages: loaded.run.chat?.messages ?? [],
       chatGenerating: false,
     });
@@ -313,7 +328,7 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       merged.outcome !== 'running' &&
       (!pendingEndRunId || pendingEndRunId === merged.runId)
     ) {
-      notifyRunEnded(merged.runId, merged.outcome);
+      notifyRunEnded(merged.runId, merged.outcome, merged.errorMessage);
     }
     const step = merged.activity.stepError;
     const stepKey = step ? `${merged.runId}:${step.nodeId}:${step.message}` : '';

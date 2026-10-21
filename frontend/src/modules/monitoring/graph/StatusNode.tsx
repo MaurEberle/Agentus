@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { asGraphNode, type PortDef } from '@/modules/network/model/document';
 import { handleTopPercent, nodeMinHeightPx, rfHandleId } from '@/modules/network/canvas/handles';
-import { portI18nKey, portsFor, routerBranchName, type PortContext } from '@/modules/network/schema/ports';
+import { portI18nKey, portsFor, routerBranchName, routerOutletLabel, type PortContext } from '@/modules/network/schema/ports';
 import type { NodeRuntimeStatus, WaitReason } from '@/modules/monitoring/model/types';
 
 const ICONS: Record<string, typeof Bot> = {
@@ -70,6 +70,7 @@ const STATUS_CLASS: Record<NodeRuntimeStatus, string> = {
   running: 'border-primary ring-2 ring-primary',
   done: 'border-muted-foreground/40',
   error: 'border-destructive ring-2 ring-destructive',
+  halted: 'border-warning ring-2 ring-warning',
 };
 
 export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
@@ -124,6 +125,7 @@ export function StatusNode({ id, data, selected }: NodeProps<StatusFlowNode>) {
           data.status === 'running' && 'bg-primary/15 text-primary',
           data.status === 'waiting' && 'bg-warning/15 text-warning-foreground',
           data.status === 'error' && 'bg-destructive/15 text-destructive',
+          data.status === 'halted' && 'bg-warning/15 text-warning-foreground',
           data.status === 'done' && 'bg-muted text-muted-foreground',
           data.status === 'idle' && 'bg-muted text-muted-foreground',
         )}
@@ -162,7 +164,11 @@ function ViewHandle({
   active: boolean;
 }) {
   const { t } = useTranslation();
-  const name = port.label ?? (graph ? routerBranchName(graph, port.id) : undefined) ?? t(portI18nKey(port));
+  const name =
+    (graph ? routerOutletLabel(graph, port.id, t) : undefined) ??
+    port.label ??
+    (graph ? routerBranchName(graph, port.id) : undefined) ??
+    t(portI18nKey(port));
   return (
     <Handle
       id={rfHandleId(port)}

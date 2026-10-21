@@ -21,7 +21,7 @@ _TOML = Path(__file__).resolve().parents[2] / "pyproject.toml"
 
 def test_vendor_lock_complete() -> None:
     raw = json.loads(_LOCK.read_text(encoding="utf-8"))
-    for key in ("webview2_bootstrapper", "ollama_setup"):
+    for key in ("webview2_bootstrapper", "ollama_setup", "uv_windows"):
         entry = raw[key]
         assert entry["name"]
         assert entry["url"].startswith("https://")
@@ -41,6 +41,7 @@ def test_powershell_scripts_parse() -> None:
     """Windows PowerShell treats $Name: in double quotes as a drive qualifier."""
     scripts = [
         _REPO / "installer" / "fetch-url.ps1",
+        _REPO / "installer" / "install-uv.ps1",
         _REPO / "scripts" / "build-windows.ps1",
     ]
     for path in scripts:

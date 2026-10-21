@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent } from 'react';
+import { useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,14 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import { HistoryGrid, HistoryRow } from '@/modules/history/HistoryGrid';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  clampColumnWidth,
+  columnMax,
+  columnMin,
+  loadRunColumns,
+  saveRunColumns,
+  type RunColumnId,
+  type RunColumnLayout,
+} from '@/modules/history/list/runColumns';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 import { durationMs, formatDateTime, formatDuration, outcomeBadgeVariant, shortId } from '@/modules/history/model/format';
@@ -97,6 +99,8 @@ function useSelection(items: RunSummary[]) {
   return { selectedSet, allVisibleSelected, onRowClick, toggleOne, toggleAll };
 }
 
+const cellClass = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2';
+
 function DesktopTable({
   items,
   activeId,
@@ -108,80 +112,311 @@ function DesktopTable({
 }) {
   const { t, i18n } = useTranslation();
   const { selectedSet, allVisibleSelected, onRowClick, toggleOne, toggleAll } = useSelection(items);
+  const [layout, setLayout] = useState<RunColumnLayout>(loadRunColumns);
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+  const dragFrom = useRef<RunColumnId | null>(null);
+  const dropRef = useRef<{ id: RunColumnId; side: 'before' | 'after' } | null>(null);
+  const [drop, setDrop] = useState<{ id: RunColumnId; side: 'before' | 'after' } | null>(null);
+  const [dragging, setDragging] = useState<RunColumnId | null>(null);
+
+  function commit(next: RunColumnLayout) {
+    const normalized = {
+      order: next.order,
+      widths: { ...next.widths },
+    };
+    layoutRef.current = normalized;
+    setLayout(normalized);
+    saveRunColumns(normalized);
+  }
+
+  function setWidth(id: RunColumnId, width: number) {
+    commit({
+      ...layoutRef.current,
+      widths: { ...layoutRef.current.widths, [id]: clampColumnWidth(id, width) },
+    });
+  }
+
+  function placeDrop(id: RunColumnId, side: 'before' | 'after') {
+    dropRef.current = { id, side };
+    setDrop({ id, side });
+  }
+
+  function finishDrag(target?: RunColumnId) {
+    const from = dragFrom.current;
+    const mark = dropRef.current;
+    dragFrom.current = null;
+    dropRef.current = null;
+    setDragging(null);
+    setDrop(null);
+    if (!from || !target || !mark || from === target) return;
+    const without = layoutRef.current.order.filter((item) => item !== from);
+    let index = without.indexOf(target);
+    if (index < 0) return;
+    if (mark.side === 'after') index += 1;
+    without.splice(index, 0, from);
+    commit({ ...layoutRef.current, order: without });
+  }
+
+  function beginResize(event: ReactPointerEvent<HTMLElement>, id: RunColumnId) {
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    const startX = event.clientX;
+    const startW = layoutRef.current.widths[id];
+    const rtl = document.documentElement.dir === 'rtl';
+    handle.setPointerCapture(event.pointerId);
+    const move = (ev: PointerEvent) => {
+      const delta = rtl ? startX - ev.clientX : ev.clientX - startX;
+      setWidth(id, startW + delta);
+    };
+    const up = (ev: PointerEvent) => {
+      if (handle.hasPointerCapture(ev.pointerId)) handle.releasePointerCapture(ev.pointerId);
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  }
+
+  const template = ['2.5rem', ...layout.order.map((id) => `${layout.widths[id]}px`)].join(' ');
 
   return (
-    <Table className="table-fixed">
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-8">
-            <Checkbox checked={allVisibleSelected} onCheckedChange={() => toggleAll()} aria-label={t('history.list.selectAll')} />
-          </TableHead>
-          <TableHead className="w-24">{t('history.list.runId')}</TableHead>
-          <TableHead>{t('history.list.network')}</TableHead>
-          <TableHead className="w-36">{t('history.list.started')}</TableHead>
-          <TableHead className="w-16">{t('history.list.duration')}</TableHead>
-          <TableHead className="w-28">{t('history.list.outcome')}</TableHead>
-          <TableHead className="w-24">{t('history.list.error')}</TableHead>
-          <TableHead className="w-40">{t('history.list.models')}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item) => {
-          const duration = durationMs(item.startedAt, item.endedAt);
-          return (
-            <TableRow
-              key={item.runId}
-              data-state={selectedSet.has(item.runId) || activeId === item.runId ? 'selected' : undefined}
-              className={cn('cursor-pointer', activeId === item.runId && 'bg-accent/60')}
-              onClick={(event) => {
-                onRowClick(event, item.runId);
-                if (!event.shiftKey && !event.metaKey && !event.ctrlKey) onOpen(item.runId);
-              }}
-              onKeyDown={(event: KeyboardEvent<HTMLTableRowElement>) => {
-                if (event.key === 'Enter') onOpen(item.runId);
-              }}
-              tabIndex={0}
+    <HistoryGrid columns={template}>
+      <HistoryRow className="hover:bg-transparent">
+        <div className="px-3">
+          <Checkbox checked={allVisibleSelected} onCheckedChange={() => toggleAll()} aria-label={t('history.list.selectAll')} />
+        </div>
+        {layout.order.map((id) => (
+          <ColumnHead
+            key={id}
+            id={id}
+            label={t(`history.list.${id}`)}
+            width={layout.widths[id]}
+            dragging={dragging === id}
+            dropSide={drop?.id === id ? drop.side : null}
+            resizeLabel={t('history.list.resize', { column: t(`history.list.${id}`) })}
+            moveLabel={t('history.list.move', { column: t(`history.list.${id}`) })}
+            onDragStart={() => {
+              dragFrom.current = id;
+              setDragging(id);
+            }}
+            onDragOver={(side) => placeDrop(id, side)}
+            onDrop={() => finishDrag(id)}
+            onDragEnd={() => finishDrag()}
+            onResizeStart={(event) => beginResize(event, id)}
+            onResizeKey={(next) => setWidth(id, next)}
+          />
+        ))}
+      </HistoryRow>
+      {items.map((item) => {
+        const duration = durationMs(item.startedAt, item.endedAt);
+        const errorText = item.errorMessage ? formatRunLogMessage(item.errorMessage, t) : '—';
+        return (
+          <HistoryRow
+            key={item.runId}
+            data-state={selectedSet.has(item.runId) || activeId === item.runId ? 'selected' : undefined}
+            className={cn('cursor-pointer', activeId === item.runId && 'bg-accent/60')}
+            onClick={(event) => {
+              onRowClick(event, item.runId);
+              if (!event.shiftKey && !event.metaKey && !event.ctrlKey) onOpen(item.runId);
+            }}
+            onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+              if (event.key === 'Enter') onOpen(item.runId);
+            }}
+            tabIndex={0}
+          >
+            <div className="px-3" onClick={(event) => event.stopPropagation()}>
+              <Checkbox
+                checked={selectedSet.has(item.runId)}
+                onCheckedChange={() => toggleOne(item.runId)}
+                aria-label={item.runId}
+              />
+            </div>
+            {layout.order.map((id) => (
+              <RunCell
+                key={id}
+                id={id}
+                item={item}
+                duration={duration}
+                errorText={errorText}
+                locale={i18n.language}
+              />
+            ))}
+          </HistoryRow>
+        );
+      })}
+    </HistoryGrid>
+  );
+}
+
+function ColumnHead({
+  id,
+  label,
+  width,
+  dragging,
+  dropSide,
+  resizeLabel,
+  moveLabel,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  onResizeStart,
+  onResizeKey,
+}: {
+  id: RunColumnId;
+  label: string;
+  width: number;
+  dragging: boolean;
+  dropSide: 'before' | 'after' | null;
+  resizeLabel: string;
+  moveLabel: string;
+  onDragStart: () => void;
+  onDragOver: (side: 'before' | 'after') => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+  onResizeStart: (event: ReactPointerEvent<HTMLElement>) => void;
+  onResizeKey: (width: number) => void;
+}) {
+  function sideFrom(event: DragEvent<HTMLElement>): 'before' | 'after' {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const rtl = document.documentElement.dir === 'rtl';
+    const towardStart = rtl ? event.clientX > rect.left + rect.width / 2 : event.clientX < rect.left + rect.width / 2;
+    return towardStart ? 'before' : 'after';
+  }
+
+  return (
+    <div
+      role="columnheader"
+      draggable
+      title={label}
+      aria-label={moveLabel}
+      onDragStart={(event) => {
+        if ((event.target as HTMLElement).closest('[data-col-resize]')) {
+          event.preventDefault();
+          return;
+        }
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', id);
+        onDragStart();
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        onDragOver(sideFrom(event));
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
+      className={cn(
+        'relative flex h-10 min-w-0 cursor-grab select-none items-center px-3 text-xs font-medium text-muted-foreground active:cursor-grabbing',
+        dragging && 'opacity-50',
+        dropSide === 'before' && "before:absolute before:inset-y-1 before:start-0 before:w-0.5 before:bg-primary before:content-['']",
+        dropSide === 'after' && "after:absolute after:inset-y-1 after:end-0 after:w-0.5 after:bg-primary after:content-['']",
+      )}
+    >
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span
+        data-col-resize
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={resizeLabel}
+        aria-valuemin={columnMin(id)}
+        aria-valuemax={columnMax()}
+        aria-valuenow={width}
+        tabIndex={0}
+        draggable={false}
+        className="absolute inset-y-0 end-0 z-10 flex w-3 cursor-col-resize touch-none items-center justify-center"
+        onPointerDown={onResizeStart}
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onClick={(event) => event.stopPropagation()}
+        onDragStart={(event) => event.preventDefault()}
+        onKeyDown={(event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          event.stopPropagation();
+          const step = event.shiftKey ? 48 : 16;
+          const rtl = document.documentElement.dir === 'rtl';
+          const sign = (event.key === 'ArrowRight' ? 1 : -1) * (rtl ? -1 : 1);
+          onResizeKey(width + sign * step);
+        }}
+      >
+        <span className="h-4 w-0.5 rounded-full bg-border" />
+      </span>
+    </div>
+  );
+}
+
+function RunCell({
+  id,
+  item,
+  duration,
+  errorText,
+  locale,
+}: {
+  id: RunColumnId;
+  item: RunSummary;
+  duration: number | null;
+  errorText: string;
+  locale: string;
+}) {
+  if (id === 'runId') {
+    return (
+      <div className={cellClass}>
+        <IdCell id={item.runId} />
+      </div>
+    );
+  }
+  if (id === 'network') {
+    return (
+      <div className={cn(cellClass, 'font-medium')} title={item.networkName}>
+        {item.networkName}
+      </div>
+    );
+  }
+  if (id === 'started') {
+    return <div className={cn(cellClass, 'text-xs')}>{formatDateTime(item.startedAt, locale)}</div>;
+  }
+  if (id === 'duration') {
+    return <div className={cn(cellClass, 'tabular-nums')}>{duration === null ? '—' : formatDuration(duration)}</div>;
+  }
+  if (id === 'outcome') {
+    return (
+      <div className={cn(cellClass, 'overflow-hidden')}>
+        <OutcomeCell item={item} />
+      </div>
+    );
+  }
+  if (id === 'models') {
+    return (
+      <div className="min-w-0 overflow-hidden px-3 py-2">
+        <div className="flex max-w-full flex-col gap-0.5">
+          {item.models.map((model) => (
+            <Badge
+              key={`${model.provider}:${model.model}`}
+              variant="outline"
+              title={model.model}
+              className="block max-w-full truncate font-mono text-[10px]"
             >
-              <TableCell onClick={(event) => event.stopPropagation()}>
-                <Checkbox
-                  checked={selectedSet.has(item.runId)}
-                  onCheckedChange={() => toggleOne(item.runId)}
-                  aria-label={item.runId}
-                />
-              </TableCell>
-              <TableCell>
-                <IdCell id={item.runId} />
-              </TableCell>
-              <TableCell className="truncate font-medium" title={item.networkName}>
-                {item.networkName}
-              </TableCell>
-              <TableCell className="whitespace-nowrap text-xs">{formatDateTime(item.startedAt, i18n.language)}</TableCell>
-              <TableCell className="tabular-nums">{duration === null ? '—' : formatDuration(duration)}</TableCell>
-              <TableCell>
-                <OutcomeCell item={item} />
-              </TableCell>
-              <TableCell className="max-w-[12rem] truncate text-xs text-muted-foreground">
-                {item.errorMessage ? formatRunLogMessage(item.errorMessage, t) : '—'}
-              </TableCell>
-              <TableCell className="w-40 max-w-[10rem]">
-                <div className="flex max-w-full flex-col gap-0.5">
-                  {item.models.map((model) => (
-                    <Badge
-                      key={`${model.provider}:${model.model}`}
-                      variant="outline"
-                      title={model.model}
-                      className="block max-w-full truncate font-mono text-[10px]"
-                    >
-                      {model.model}
-                    </Badge>
-                  ))}
-                </div>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+              {model.model}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={cn(cellClass, 'text-xs text-muted-foreground')} title={errorText}>
+      {errorText}
+    </div>
   );
 }
 

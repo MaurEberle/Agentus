@@ -23,15 +23,6 @@ def test_create_github_disabled(api_env) -> None:
     assert listed[0].enabled is False
 
 
-def test_filesystem_enable_without_root(api_env) -> None:
-    init()
-    item = create_server(McpServerCreate(recipe_id="filesystem"))
-    enabled = set_enabled(item.id, True)
-    assert enabled.enabled is True
-    assert enabled.tool_names
-    assert "read_file" in enabled.tool_names
-
-
 def test_excel_enable_without_root(api_env) -> None:
     init()
     item = create_server(McpServerCreate(recipe_id="excel", enabled=True))
@@ -67,6 +58,18 @@ def test_github_disable_keeps_default_credential(api_env) -> None:
     assert disabled.credential_ids == ["cred-1"]
     listed = list_servers()
     assert listed[0].enabled is False
+
+
+def test_unavailable_recipe_cannot_be_enabled(api_env) -> None:
+    init()
+    item = create_server(McpServerCreate(recipe_id="slack"))
+    assert item.enabled is False
+    with pytest.raises(AppError) as err:
+        set_enabled(item.id, True)
+    assert err.value.message_key == "mcp.unavailable"
+    with pytest.raises(AppError) as created:
+        create_server(McpServerCreate(recipe_id="gitlab", enabled=True))
+    assert created.value.message_key == "mcp.unavailable"
 
 
 def test_custom_without_command_or_url(api_env) -> None:

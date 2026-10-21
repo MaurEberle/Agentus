@@ -5,6 +5,7 @@ export interface ChromeHost {
   close: () => void;
   isMaximized: () => boolean | Promise<boolean>;
   pickFolder?: () => Promise<string | null>;
+  saveFile?: (name: string, content: string, kind: 'json' | 'zip') => Promise<string | null>;
   requestAttention?: (active?: boolean) => void | Promise<void>;
   openExternal?: (url: string) => boolean | Promise<boolean>;
 }
@@ -29,6 +30,12 @@ function asChromeHost(api: Partial<ChromeHost> | undefined | null): ChromeHost |
     pickFolder: api.pickFolder
       ? async () => {
           const value = await api.pickFolder?.();
+          return value ?? null;
+        }
+      : undefined,
+    saveFile: api.saveFile
+      ? async (name, content, kind) => {
+          const value = await api.saveFile?.(name, content, kind);
           return value ?? null;
         }
       : undefined,

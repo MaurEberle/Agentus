@@ -45,7 +45,7 @@ def test_patch_help_chat_model_keeps_rest(client: TestClient) -> None:
 def test_patch_help_chat_clears_optional_ids(client: TestClient) -> None:
     created = client.post(
         "/api/credentials",
-        json={"name": "search", "kind": "web_search", "secret": "secret-value"},
+        json={"name": "search", "kind": "brave", "secret": "secret-value"},
     ).json()
     client.patch(
         "/api/settings",
@@ -73,7 +73,7 @@ def test_patch_help_chat_clears_optional_ids(client: TestClient) -> None:
 def test_patch_web_search_off_keeps_credential(client: TestClient) -> None:
     created = client.post(
         "/api/credentials",
-        json={"name": "search", "kind": "web_search", "secret": "secret-value"},
+        json={"name": "search", "kind": "brave", "secret": "secret-value"},
     ).json()
     client.patch(
         "/api/settings",

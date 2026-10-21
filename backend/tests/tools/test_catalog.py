@@ -23,6 +23,13 @@ def test_catalog_json_aliases() -> None:
     assert "json_schema" not in dumped
 
 
+def test_file_access_schema_can_drop_actions() -> None:
+    tools = openai_tools_for_kinds(["file_access"], file_actions=["read", "list"])
+    enum = tools[0]["function"]["parameters"]["properties"]["action"]["enum"]
+    assert enum == ["list", "read"]
+    assert "write" not in tools[0]["function"]["description"]
+
+
 def test_openai_tools_for_calculator() -> None:
     tools = openai_tools_for_kinds(["calculator"])
     assert len(tools) == 1

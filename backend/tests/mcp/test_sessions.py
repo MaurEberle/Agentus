@@ -39,31 +39,6 @@ def test_empty_github_schema_gets_recipe_overlay() -> None:
     assert overlaid[0].input_schema.get("required") == ["query"]
 
 
-def test_empty_filesystem_schema_gets_recipe_overlay() -> None:
-    from app.mcp.recipe_loader import get_recipe
-    from app.mcp.sessions import apply_recipe_tool_schemas, tools_from_list_payload
-
-    tools = tools_from_list_payload(
-        {
-            "tools": [
-                {
-                    "name": "list_directory",
-                    "description": "list",
-                    "inputSchema": {
-                        "$schema": "http://json-schema.org/draft-07/schema#",
-                        "type": "object",
-                        "properties": {},
-                    },
-                }
-            ]
-        }
-    )
-    recipe = get_recipe("filesystem")
-    overlaid = apply_recipe_tool_schemas(tools, recipe)
-    assert overlaid[0].input_schema["properties"]["path"]["type"] == "string"
-    assert overlaid[0].input_schema.get("required") == ["path"]
-
-
 def test_default_filesystem_arguments_fills_path() -> None:
     from app.mcp.sessions import default_filesystem_arguments
 
@@ -185,7 +160,7 @@ def test_open_for_uses_root_override(api_env, monkeypatch, tmp_path) -> None:
     monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
     folder = tmp_path / "kb"
     folder.mkdir()
-    item = create_server(McpServerCreate(recipe_id="filesystem", enabled=True))
+    item = create_server(McpServerCreate(recipe_id="git", enabled=True, root_path=str(folder)))
     SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
     assert any(str(folder) in str(arg) for arg in captured.get("args", []))
     SESSIONS.close_all()
@@ -211,7 +186,7 @@ def test_call_reopens_after_idle(api_env, monkeypatch, tmp_path) -> None:
 
     monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
     monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
-    item = create_server(McpServerCreate(recipe_id="filesystem", enabled=True))
+    item = create_server(McpServerCreate(recipe_id="git", enabled=True, root_path=str(folder)))
     SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
     assert len(sessions) == 1
     SESSIONS._idle_close(item.id)
@@ -235,7 +210,7 @@ def test_idle_reopen_keeps_root_override(api_env, monkeypatch, tmp_path) -> None
     monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
     folder = tmp_path / "kb"
     folder.mkdir()
-    item = create_server(McpServerCreate(recipe_id="filesystem", enabled=True))
+    item = create_server(McpServerCreate(recipe_id="git", enabled=True, root_path=str(folder)))
     SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
     SESSIONS._idle_close(item.id)
     out = SESSIONS.call(item.id, "list_directory", {})

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from app.common.http import client
@@ -14,11 +16,15 @@ from app.runtime.errors import (
     raise_transport,
     response_json,
 )
+
+log = logging.getLogger("agentus.runtime")
 from app.runtime.models import OllamaModel, PingResult
 from app.runtime.urls import ollama_native_root, settings_roots
 
 
 _block_counts: dict[str, int] = {}
+_moe_flags: dict[str, bool] = {}
+_show_seen: set[str] = set()
 
 
 def _root(base_url: str | None) -> str:
@@ -81,6 +87,56 @@ def clamp_gpu_layers(count: int, block_count: int | None) -> int:
     return n
 
 
+def _expert_count(payload: object) -> int | None:
+    """``{architecture}.expert_count``. A count of 1 is not a mixture of experts."""
+    if not isinstance(payload, dict):
+        return None
+    info = payload.get("model_info")
+    if not isinstance(info, dict):
+        return None
+    arch = info.get("general.architecture")
+    if isinstance(arch, str) and arch.strip():
+        exact = _positive_layer(info.get(f"{arch.strip()}.expert_count"))
+        if exact:
+            return exact
+    best: int | None = None
+    for key, value in info.items():
+        name = str(key)
+        if not name.endswith(".expert_count"):
+            continue
+        stem = name[: -len(".expert_count")]
+        if "." in stem:
+            continue
+        count = _positive_layer(value)
+        if count:
+            best = count if best is None else max(best, count)
+    return best
+
+
+def moe_omits_num_gpu(
+    *,
+    is_moe: bool,
+    placement: str | None,
+    offload_layers: int | None,
+    block_count: int | None,
+) -> bool:
+    """MoE automatic placement must not send a dense ``num_gpu``.
+
+    ``placement == "layers"`` is an explicit whole-layer choice. A stored count
+    below ``block_count`` is one too. A count equal to ``block_count`` is the
+    old inspector default and stays automatic.
+    """
+    if not is_moe or placement == "layers":
+        return False
+    if isinstance(block_count, int) and block_count > 0:
+        if isinstance(offload_layers, int) and offload_layers < block_count:
+            return False
+        return True
+    if isinstance(offload_layers, int) and 0 < offload_layers < 999:
+        return False
+    return True
+
+
 def ollama_num_gpu(offload: int, block_count: int | None) -> int:
     """llama.cpp ``-ngl``: repeating layers plus the output slot.
 
@@ -98,26 +154,83 @@ def ollama_num_gpu(offload: int, block_count: int | None) -> int:
     return min(max(1, n), block_count) + 1
 
 
+def _cache_key(tag: str, base_url: str | None) -> str:
+    return f"{_root(base_url)}|{(tag or '').strip()}"
+
+
+def _remember_show(key: str, payload: object) -> None:
+    experts = _expert_count(payload)
+    _moe_flags[key] = bool(experts and experts > 1)
+    count = parse_block_count(payload)
+    if count:
+        _block_counts[key] = count
+    _show_seen.add(key)
+
+
+def _fetch_show(tag: str, base_url: str | None) -> object:
+    url = f"{_root(base_url)}/api/show"
+    try:
+        with client(timeout_sec=5.0) as http:
+            response = http.post(url, json={"model": tag})
+        raise_for_status(response)
+        return response_json(response)
+    except RuntimeApiError:
+        raise
+    except Exception as exc:
+        if is_transport_error(exc):
+            raise_transport(exc)
+        raise RuntimeApiError("runtime.modelInfoFailed", detail=tag) from exc
+
+
+def ensure_model_show(tag: str, *, base_url: str | None = None, required: bool = False) -> bool:
+    """Read ``/api/show`` once. A required failure raises ``runtime.modelInfoFailed``."""
+    name = (tag or "").strip()
+    if not name:
+        if required:
+            raise RuntimeApiError("runtime.modelInfoFailed")
+        return False
+    key = _cache_key(name, base_url)
+    if key in _show_seen:
+        return True
+    try:
+        payload = _fetch_show(name, base_url)
+    except RuntimeApiError as exc:
+        log.error("ollama /api/show failed model=%s key=%s", name, exc.error_key)
+        if not required:
+            return False
+        if exc.error_key == "runtime.modelInfoFailed":
+            raise
+        raise RuntimeApiError("runtime.modelInfoFailed", status=exc.status, detail=name) from exc
+    _remember_show(key, payload)
+    return True
+
+
 def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:
     name = (tag or "").strip()
     if not name:
         return None
-    key = f"{_root(base_url)}|{name}"
+    key = _cache_key(name, base_url)
     cached = _block_counts.get(key)
     if cached:
         return cached
-    url = f"{_root(base_url)}/api/show"
-    try:
-        with client(timeout_sec=5.0) as http:
-            response = http.post(url, json={"model": name})
-        raise_for_status(response)
-        payload = response_json(response)
-    except Exception:
+    if not ensure_model_show(name, base_url=base_url, required=False):
         return None
-    count = parse_block_count(payload)
-    if count:
-        _block_counts[key] = count
-    return count
+    return _block_counts.get(key)
+
+
+def model_is_moe(tag: str, *, base_url: str | None = None) -> bool:
+    """True when ``/api/show`` reports ``expert_count > 1``.
+
+    Fetches the show payload itself. A failed show raises
+    ``runtime.modelInfoFailed`` instead of looking like a dense model.
+    """
+    name = (tag or "").strip()
+    if not name:
+        return False
+    key = _cache_key(name, base_url)
+    if key not in _show_seen:
+        ensure_model_show(name, base_url=base_url, required=True)
+    return bool(_moe_flags.get(key, False))
 
 
 def ping_ollama(*, base_url: str | None = None, timeout_sec: float = 3.0) -> PingResult:
@@ -158,7 +271,21 @@ def list_ollama_models(*, base_url: str | None = None) -> list[OllamaModel]:
         size = item.get("size")
         size_bytes = int(size) if isinstance(size, int) else None
         out.append(OllamaModel(name=name, size_bytes=size_bytes))
-    return out
+    if not out:
+        return out
+    with ThreadPoolExecutor(max_workers=min(8, len(out))) as pool:
+        flags = list(pool.map(lambda name: _listed_moe(name, base_url), [item.name for item in out]))
+    return [item.model_copy(update={"moe": flag}) for item, flag in zip(out, flags, strict=True)]
+
+
+def _listed_moe(name: str, base_url: str | None) -> bool:
+    """Mixture of experts from ``/api/show``. A failed lookup stays a normal model."""
+    try:
+        if not ensure_model_show(name, base_url=base_url, required=False):
+            return False
+    except RuntimeApiError:
+        return False
+    return bool(_moe_flags.get(_cache_key(name, base_url), False))
 
 
 def tag_key(name: str) -> str:
@@ -190,6 +317,35 @@ def list_loaded_models(*, base_url: str | None = None) -> list[str]:
         if isinstance(name, str) and name:
             names.append(name)
     return names
+
+
+def loaded_memory(tag: str, *, base_url: str | None = None) -> tuple[int | None, int | None]:
+    """Resident ``(size, size_vram)`` from ``/api/ps``. Missing model is ``(None, None)``."""
+    url = f"{_root(base_url)}/api/ps"
+    try:
+        with client(timeout_sec=5.0) as http:
+            response = http.get(url)
+        raise_for_status(response)
+        payload = response_json(response)
+    except Exception:
+        return None, None
+    models = payload.get("models") if isinstance(payload, dict) else None
+    if not isinstance(models, list):
+        return None, None
+    wanted = tag_key(tag)
+    for item in models:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name") or item.get("model")
+        if not isinstance(name, str) or tag_key(name) != wanted:
+            continue
+        size = item.get("size")
+        vram = item.get("size_vram")
+        return (
+            int(size) if isinstance(size, int) else None,
+            int(vram) if isinstance(vram, int) else None,
+        )
+    return None, None
 
 
 def ensure_loaded(

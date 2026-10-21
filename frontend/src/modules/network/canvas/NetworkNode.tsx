@@ -21,7 +21,14 @@ import {
   portStateKey,
   rfHandleId,
 } from '@/modules/network/canvas/handles';
-import { portAcceptsConnection, portI18nKey, portsFor, routerBranchName, type PortContext } from '@/modules/network/schema/ports';
+import {
+  portAcceptsConnection,
+  portI18nKey,
+  portsFor,
+  routerBranchName,
+  routerOutletLabel,
+  type PortContext,
+} from '@/modules/network/schema/ports';
 
 const ICONS = {
   chat_input: MessageSquare,
@@ -45,6 +52,10 @@ export type NetworkNodeData = {
 
 type ConnectMatch = 'idle' | 'origin' | 'match' | 'mismatch';
 
+function labelText(node: GraphNode, port: PortDef, t: (key: string) => string): string {
+  return routerOutletLabel(node, port.id, t) ?? port.label ?? routerBranchName(node, port.id) ?? t(portI18nKey(port));
+}
+
 export function NetworkNode({ id, data, selected }: NodeProps) {
   const { t } = useTranslation();
   const nodeData = data as unknown as NetworkNodeData;
@@ -62,12 +73,13 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
   const updateNodeInternals = useUpdateNodeInternals();
   const minHeight = nodeMinHeightPx(ins.length, outs.length);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const portSig = ports.map((port) => `${port.direction}:${port.id}:${labelText(node, port, t)}`).join('|');
 
   const fromGraph = (fromNode?.data as NetworkNodeData | undefined)?.graph;
 
   useEffect(() => {
     updateNodeInternals(id);
-  }, [id, ins.length, outs.length, minHeight, updateNodeInternals]);
+  }, [id, portSig, minHeight, updateNodeInternals]);
 
   function matchFor(port: PortDef): ConnectMatch {
     if (!connecting || !fromGraph || !fromHandle) return 'idle';
@@ -86,7 +98,7 @@ export function NetworkNode({ id, data, selected }: NodeProps) {
   }
 
   function labelOf(port: PortDef): string {
-    return port.label ?? routerBranchName(node, port.id) ?? t(portI18nKey(port));
+    return labelText(node, port, t);
   }
 
   function showsIdle(port: PortDef, count: number): boolean {
@@ -204,7 +216,7 @@ function PortNameColumn({
         const show = ports.length > 1 || unconfigured;
         if (!show) return null;
         const match = matchFor(port);
-        const name = port.label ?? routerBranchName(node, port.id) ?? t(portI18nKey(port));
+        const name = labelText(node, port, t);
         const hideForHover = match === 'match' || (match !== 'mismatch' && hoveredKey === portStateKey(port));
         return (
           <span
@@ -253,7 +265,7 @@ function PortHandle({
   const { t } = useTranslation();
   const key = portStateKey(port);
   const unconfigured = Boolean(port.required) && !connected;
-  const name = port.label ?? routerBranchName(node, port.id) ?? t(portI18nKey(port));
+  const name = labelText(node, port, t);
   const directionLabel = t(`network.ports.${port.direction}`);
   const fullLabel = `${name} · ${directionLabel}`;
   const top = handleTopPercent(index, count);

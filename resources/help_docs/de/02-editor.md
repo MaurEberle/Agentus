@@ -32,7 +32,7 @@ Während **genau dieses** Netz läuft: Banner **Schreibgeschützt** — zuerst i
 | Werkzeug | `tool` | First-Party: HTTP, Websuche, Datum/Zeit, Rechner, Dateizugriff. Ausgang **Werkzeug**. |
 | MCP | `mcp` | Ein in den **Einstellungen** angelegter und **aktiver** Server. Ausgang **Werkzeug**, wie ein Werkzeug-Knoten. |
 | Wissen | `knowledge` | Ordner mit Dateien für das Netz. Ausgang **Wissen**, nur zum Agent-Anschluss Wissen. |
-| Router | `router` | Verzweigt die Nachricht nach Bedingungen (erste Zeile / benannte Zweige) plus Standard-Ausgang. |
+| Router | `router` | Schickt die Nachricht an genau einen Ausgang. Zweige prüfen der Reihe nach: enthält, beginnt mit, erste Zeile, regulärer Ausdruck. Der Standard fängt den Rest. Hinter dem Orchestrator führen die Ausgänge nur zu Enden. |
 | Ende | `end` | Abschluss. **Mindestens eines.** |
 
 ## Verbindungen
@@ -85,7 +85,8 @@ Gültig/Ungültig siehst du als Badge. Ungültige Netze lassen sich speichern, a
 - **Speichern unter:** neues Dokument, wird das geöffnete.
 - **Laden:** ein gespeichertes Netz; Suche und Sortierung. Bulk und Löschen nur in der Verwaltung.
 - **Duplizieren:** nur bei schon gespeichertem Dokument; öffnet die Kopie.
-- **Export:** Download des offenen Graphen. Enthält `credentialId`, keine Schlüssel. Import in der Verwaltung verwirft mitgeschickte Geheimnisse.
+- **Export:** Dialog, dann JSON des offenen Graphen (`schemaVersion` 1). Enthält `credentialId`, keine Schlüssel.
+- **Import:** Dialog für eine JSON-Datei. Daraus wird ein neues Netz. Ein schon vergebener Name wird umbenannt oder die Datei übersprungen.
 
 Ungespeichert verlassen: Dialog Speichern / Verwerfen / Abbrechen.
 
@@ -97,4 +98,4 @@ Aktionen: Neu (Editor), Öffnen, Duplizieren, Umbenennen, Tags setzen, **Als akt
 
 Löschen entfernt den Workspace-Eintrag, nicht deine Knowledge-Quelldateien auf der Platte, nicht den Hilfe-Korpus und nicht die Historie-Läufe. Ein **laufendes** Netz wird übersprungen. Aktives Netz löschen leert die Schnellwahl.
 
-Import: Dateien mit Namenskollision umbenennen oder überspringen. Nicht unterstützte Schema-Versionen werden abgelehnt.
+Import: Dialog mit Vorschau. Gleicher Name: umbenennen oder überspringen. Andere schemaVersion wird abgelehnt. Geheimnisse werden verworfen.

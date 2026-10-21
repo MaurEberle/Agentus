@@ -1,4 +1,12 @@
-import { NODE_TYPES, type GraphNode, type NodeType, type PortDef, type PortKind } from '@/modules/network/model/document';
+import {
+  NODE_TYPES,
+  routerMatchOf,
+  routerPatternOf,
+  type GraphNode,
+  type NodeType,
+  type PortDef,
+  type PortKind,
+} from '@/modules/network/model/document';
 import {
   CHANNEL_GHOST_ID,
   agentIdFromChannel,
@@ -72,11 +80,12 @@ export function portsFor(node: GraphNode, context?: PortContext): PortDef[] {
   const base = STATIC_PORTS[node.type];
   if (node.type === 'router') {
     const branches = Array.isArray(node.data.branches) ? node.data.branches : [];
-    const outs: PortDef[] = [{ id: 'default', kind: 'message', direction: 'out' }];
+    const outs: PortDef[] = [];
     for (const branch of branches) {
       const id = String((branch as { id?: string }).id ?? '');
-      if (id) outs.push({ id, kind: 'message', direction: 'out' });
+      if (id && id !== 'default') outs.push({ id, kind: 'message', direction: 'out' });
     }
+    outs.push({ id: 'default', kind: 'message', direction: 'out' });
     return [...base, ...outs];
   }
   if (node.type === 'agent') {
@@ -137,6 +146,28 @@ export function routerBranchName(node: GraphNode, portId: string): string | unde
     if (rec.id !== portId) continue;
     const name = typeof rec.name === 'string' ? rec.name.trim() : '';
     return name || undefined;
+  }
+  return undefined;
+}
+
+/** Canvas label: branch name, match kind, and pattern. */
+export function routerOutletLabel(
+  node: GraphNode,
+  portId: string,
+  label: (key: string) => string,
+): string | undefined {
+  if (node.type !== 'router') return undefined;
+  if (portId === 'default') return label('network.ports.default');
+  const branches = Array.isArray(node.data.branches) ? node.data.branches : [];
+  for (const branch of branches) {
+    const rec = branch as { id?: string; name?: string; match?: string; pattern?: string; condition?: string };
+    if (rec.id !== portId) continue;
+    const name = typeof rec.name === 'string' && rec.name.trim() ? rec.name.trim() : portId;
+    const kind = label(`network.inspector.router.match.${routerMatchOf(rec.match)}`);
+    const pattern = routerPatternOf(rec).trim();
+    if (!pattern) return `${name} · ${kind}`;
+    const shown = pattern.length > 28 ? `${pattern.slice(0, 28)}…` : pattern;
+    return `${name} · ${kind} ${shown}`;
   }
   return undefined;
 }
@@ -202,6 +233,22 @@ export function connectionAllowed(input: {
     if (input.target.type !== 'end' && input.target.type !== 'router') return false;
   }
   if (!kindsCompatible(from, to)) return false;
+  if (input.source.type === 'router' && from === 'message') {
+    const handle = input.sourceHandle ?? '';
+    const duplicate = (input.context?.edges ?? []).some(
+      (edge) => edge.source === input.source.id && edge.sourceHandle === handle && !sameEdge(edge, input.ignore),
+    );
+    if (duplicate) return false;
+    const fromOrchestrator = (input.context?.edges ?? []).some(
+      (edge) =>
+        edge.target === input.source.id &&
+        edge.targetHandle === 'message' &&
+        edge.sourceHandle === 'message' &&
+        (input.context?.nodes ?? []).some((node) => node.id === edge.source && node.type === 'orchestrator'),
+    );
+    if (fromOrchestrator) return input.target.type === 'end';
+    return input.target.type === 'agent' || input.target.type === 'router' || input.target.type === 'end';
+  }
   if (
     input.source.type === 'agent' &&
     (from === 'message' || from === 'handoff') &&

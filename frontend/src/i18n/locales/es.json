@@ -199,6 +199,14 @@
       "createTitle": "Añadir credencial",
       "editTitle": "Sustituir credencial",
       "empty": "Aún no hay credenciales.",
+      "emptyGroup": "Aún no hay credenciales en este grupo.",
+      "groups": "Grupo de credenciales",
+      "group": {
+        "llm": "LLM",
+        "search": "Búsqueda web",
+        "mcp": "MCP",
+        "custom": "Propio"
+      },
       "name": "Nombre",
       "kind": "Tipo",
       "mask": "Máscara",
@@ -215,7 +223,10 @@
         "anthropic": "Claude",
         "gemini": "Gemini",
         "openai_compat": "Compatible con OpenAI",
-        "web_search": "Búsqueda web",
+        "brave": "Brave",
+        "tavily": "Tavily",
+        "exa": "Exa",
+        "searxng": "SearXNG",
         "github": "GitHub",
         "azure": "Azure",
         "gitlab": "GitLab",
@@ -224,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Token"
+        "token": "Token",
+        "custom": "Propio"
       },
       "kindHint": {
         "xai": "Clave API de xAI.",
@@ -232,7 +244,10 @@
         "anthropic": "Clave API de Anthropic (Claude).",
         "gemini": "Clave API de Google Gemini.",
         "openai_compat": "Token Bearer para una URL compatible con OpenAI.",
-        "web_search": "Clave para la búsqueda web de la red.",
+        "brave": "Token de suscripción de Brave Search.",
+        "tavily": "Clave API de Tavily.",
+        "exa": "Clave API de Exa.",
+        "searxng": "Clave opcional para una instancia propia de SearXNG.",
         "github": "Token de acceso personal de GitHub (PAT). Classic: repos, issues o actions según la tarea.",
         "azure": "Token Azure/Entra o PAT.",
         "gitlab": "Token de acceso personal de GitLab.",
@@ -241,8 +256,18 @@
         "atlassian": "Token API de Atlassian Cloud (Jira/Confluence).",
         "linear": "Clave API de Linear.",
         "postgres": "Cadena de conexión Postgres (no las bases de la app).",
-        "token": "Clave API o token Bearer genérico (Context7, Sentry y similares)."
+        "token": "Clave API o token Bearer genérico (Context7, Sentry y similares).",
+        "custom": "Token Bearer, cabeceras extra o variables de entorno."
       },
+      "bearer": "Bearer",
+      "bearerHint": "Se envía como Authorization: Bearer.",
+      "headerName": "Cabecera",
+      "headerValue": "Valor",
+      "addHeader": "Añadir cabecera",
+      "envName": "Variable",
+      "envValue": "Valor",
+      "addEnv": "Añadir variable",
+      "customInvalid": "Un acceso propio necesita un Bearer, una cabecera o una variable.",
       "inUseMcpHint": "Asigna otra credencial en Servidores MCP o elimina el servidor. Después podrás quitar esta credencial.",
       "usedBy": {
         "helpChatLlm": "Chat de ayuda (chat)",
@@ -260,11 +285,13 @@
       "pingOk": "Runtime accesible",
       "pingFail": "Runtime no accesible",
       "modelNotFound": "Modelo no encontrado o no se pudo cargar: {{name}}",
+      "modelInfoFailed": "Ollama no entregó los datos del modelo. La ejecución se detuvo para no iniciarlo con una carga completa en la GPU.",
       "timeout": "Sin progreso del modelo ({{name}}). Abortado por silencio, no por un límite de duración total.",
       "unreachable": "Ollama no está accesible ({{name}}).",
       "models": "Modelos instalados",
       "modelsChat": "Modelos normales",
       "modelsEmbed": "Modelos de embeddings",
+      "modelsMoe": "Modelos MoE",
       "modelsGroupEmpty": "Ninguno",
       "modelsEmpty": "No hay modelos o el runtime no está disponible.",
       "modelName": "Modelo",
@@ -295,7 +322,9 @@
       "embedModel": "Modelo de embeddings",
       "reindexHint": "Reconstruye el índice después de cambiar los embeddings.",
       "webSearch": "Búsqueda web",
-      "webSearchHint": "Opcional. Sin credencial de búsqueda el chat puede estar configurado; la búsqueda queda desactivada.",
+      "webSearchHint": "Opcional. Sin la credencial adecuada el chat puede estar configurado; la búsqueda queda desactivada. SearXNG necesita una dirección base.",
+      "webSearchProvider": "Proveedor",
+      "webSearchBaseUrl": "Dirección base",
       "webSearchCredential": "Credencial de búsqueda",
       "webSearchMissing": "Falta la credencial: crea una de tipo Búsqueda web en Credenciales.",
       "fallback": "Modelo de ahorro (opcional)",
@@ -315,6 +344,7 @@
       "servers": "Servidores configurados",
       "empty": "Aún no hay servidores MCP.",
       "enable": "Activar",
+      "comingSoon": "Próximamente",
       "added": "Añadido",
       "custom": "Personalizado",
       "customCreate": "Servidor propio",
@@ -322,7 +352,7 @@
       "enabled": "Activo",
       "status": "Estado",
       "probe": "Probar",
-      "presetHint": "Credenciales según la receta. Sistema de archivos y Excel toman la carpeta en el nodo MCP del editor. Guardar crea el servidor al momento.",
+      "presetHint": "Credenciales según la receta. Excel toma la carpeta en el nodo MCP del editor. Los archivos locales son la herramienta Acceso a archivos, no una receta MCP. Guardar crea el servidor al momento.",
       "rootPath": "Ruta raíz",
       "untrusted": "Se iniciará un proceso desconocido con los privilegios indicados. Usa solo comandos de confianza.",
       "command": "Comando",
@@ -608,6 +638,7 @@
       "saveAs": "Guardar como",
       "load": "Abrir",
       "duplicate": "Duplicar",
+      "import": "Importar",
       "export": "Exportar",
       "validate": "Validar",
       "undo": "Deshacer",
@@ -639,7 +670,7 @@
       "knowledge": "Conocimiento",
       "knowledgeHint": "Carpeta de origen, solo al puerto knowledge del agente.",
       "router": "Enrutador",
-      "routerHint": "Bifurca mensajes según condiciones.",
+      "routerHint": "Envía el mensaje a la primera rama que coincida. El estándar recoge el resto.",
       "end": "Fin",
       "endHint": "Al menos uno. Cierra la ejecución.",
       "mcp": "MCP",
@@ -659,6 +690,7 @@
     "inspector": {
       "title": "Inspector",
       "collapse": "Contraer inspector",
+      "resize": "Cambiar el ancho del inspector",
       "expand": "Expandir inspector",
       "displayName": "Nombre visible",
       "multi": "{{count}} nodos seleccionados",
@@ -689,6 +721,9 @@
         "pingOk": "El modelo ha respondido",
         "pingFail": "La prueba ha fallado",
         "advanced": "Avanzado",
+        "modelKind": "Tipo de modelo",
+        "kindDense": "Modelos normales",
+        "kindMoe": "Modelos MoE",
         "noModels": "No hay modelos cargados.",
         "useModel": "Usar «{{name}}»",
         "temperature": "Temperatura",
@@ -698,7 +733,11 @@
         "numCtxLoading": "Cargando límites del modelo…",
         "numCtxUnavailable": "Este modelo no informa límites de longitud.",
         "numThread": "Hilos de CPU",
-        "numThreadHint": "El valor por defecto es el número de núcleos físicos.",
+        "numThreadHint": "El valor por defecto es la mitad de los hilos disponibles.",
+        "kvCache": "Caché KV",
+        "kvCacheF16": "16 bits",
+        "kvCacheQ8": "8 bits",
+        "kvCacheHint": "8 bits reduce la caché a la mitad. Ollama 0.40 solo lo aplica si el servicio arranca con OLLAMA_KV_CACHE_TYPE=q8_0. La estimación sigue esta elección.",
         "numThreadLoading": "Leyendo núcleos de CPU…",
         "numThreadUnavailable": "No hay un recuento de hilos de CPU.",
         "numGpu": "Offload GPU",
@@ -717,7 +756,21 @@
         "vramFormula": "GPU: últimas {{on}} de {{total}} capas. {{full}} × {{perToken}} B/token × {{ctx}} tokens.",
         "vramFormulaMixed": "GPU: últimas {{on}} de {{total}} capas. {{full}} capas globales × {{ctx}} tokens.",
         "vramFormulaSwa": "GPU: últimas {{on}} de {{total}} capas. {{full}} globales × {{ctx}} tokens, {{swa}} ventana deslizante × ventana {{window}}.",
-        "vramHint": "Estimación por capa a partir del modelo. La GPU toma las últimas N capas. Atención completa: todo el contexto. Ventana deslizante: solo su ventana. Caché KV en f16."
+        "vramHint": "Estimación por capa a partir del modelo. La GPU toma las últimas N capas. Atención completa: todo el contexto. Ventana deslizante: solo su ventana. Caché KV en f16.",
+        "moeAuto": "Colocar los expertos automáticamente",
+        "moeForce": "Forzar todas las capas",
+        "moeAutoHint": "{{count}} expertos, {{used}} activos por token. Todos los pesos siguen cargados. La atención queda en la GPU y los expertos ocupan el resto.",
+        "moeAutoHintNoUsed": "{{count}} expertos. Todos los pesos siguen cargados. La atención queda en la GPU y los expertos ocupan el resto.",
+        "moeLayerWarn": "Esta opción mueve capas enteras, incluida la atención.",
+        "moeUnknown": "Los pesos de los expertos no se pueden separar con los metadatos de este modelo. El indicador usa la fórmula densa.",
+        "moeExpertsGpu": "Expertos en la GPU {{experts}}",
+        "moeRam": "Expertos en la RAM: {{ram}}",
+        "moeRamTight": "La RAM libre está por debajo de esta estimación. Las páginas fijadas y mmap pueden ocupar más.",
+        "moeAttention": "La atención queda en las últimas {{on}} de {{total}} capas para caber en la memoria GPU.",
+        "moeSwa": "Con contexto de ventana deslizante, Ollama puede dejar todos los expertos en la RAM aunque aquí aún haya espacio en la GPU.",
+        "moeEstimate": "Estimación a partir de los metadatos y del tamaño del archivo. Se recalcula con cada tamaño de contexto.",
+        "moeKvFormula": "KV: {{full}} capas × {{perToken}} B/token × {{ctx}} tokens.",
+        "moeAutoFit": "La colocación automática de expertos usaría {{gpu}} en la GPU y dejaría {{ram}} en la memoria."
       },
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",
@@ -726,7 +779,9 @@
       },
       "orchestrator": {
         "hint": "Un LLM por una arista. El chat llega aquí. Cada agente tiene su canal. La salida de mensaje sigue siendo el fin. Llama él mismo las herramientas conectadas.",
-        "systemPrompt": "Prompt de sistema"
+        "systemPrompt": "Prompt de sistema",
+        "agentMissLimit": "Intentos fallidos por agente",
+        "agentMissLimitHint": "Cuántas veces un agente con acceso a archivos puede terminar una tarea sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 3."
       },
       "tool": {
         "kind": "Tipo",
@@ -744,7 +799,33 @@
         "pickRoot": "Carpeta",
         "allowWrite": "Permitir escritura",
         "allowDelete": "Permitir eliminación",
-        "fileAccessHint": "El agente solo puede leer, escribir y eliminar bajo esta carpeta.",
+        "fileAccessHint": "Por defecto están todas. Desmarcar quita la acción al agente.",
+        "fileActions": "Funciones",
+        "fileAction": {
+          "list": "Listar",
+          "stat": "Propiedades",
+          "read": "Leer",
+          "read_many": "Varios archivos",
+          "write": "Escribir",
+          "mkdir": "Crear carpeta",
+          "delete": "Eliminar",
+          "edit": "Reemplazar",
+          "move": "Mover",
+          "search": "Buscar",
+          "tree": "Árbol"
+        },
+        "dateHint": "Muestra la hora actual en una zona IANA; por defecto UTC. Un instante se puede desplazar días, horas y minutos, también hacia atrás. La diferencia entre dos instantes sale en segundos, horas y días. Las partes son fecha, hora y día de la semana; el lunes es 1. El mismo instante se puede ver en otra zona.",
+        "calculatorHint": "Calcula una expresión con + - * / // % ** y paréntesis. El exponente de ** puede ser como máximo 20. Constantes: pi y e. Funciones: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log y ln son el logaritmo natural; log puede llevar base. sin, cos y tan usan radianes. factorial solo admite enteros de 0 a 20.",
+        "searchProvider": "Proveedor",
+        "searchProviderName": { "brave": "Brave", "tavily": "Tavily", "exa": "Exa", "searxng": "SearXNG" },
+        "searchBaseUrl": "Dirección base",
+        "maxResults": "Resultados",
+        "searchHint": {
+          "brave": "Índice propio. Credencial de tipo Brave.",
+          "tavily": "Fragmentos para agentes. Credencial de tipo Tavily.",
+          "exa": "Búsqueda por significado. Credencial de tipo Exa.",
+          "searxng": "Instancia propia. Hace falta la dirección base; la credencial es opcional."
+        },
         "credential": "Credencial",
         "mcpServer": "Servidor MCP",
         "mcpEmpty": "Sin servidor",
@@ -765,10 +846,18 @@
         "reindexHint": "Reconstruye el índice tras cambiar los embeddings."
       },
       "router": {
+        "hint": "Gana el primer acierto. No importan mayúsculas, salvo en la expresión regular.",
         "branches": "Ramas",
         "branchName": "Nombre",
-        "condition": "Condición",
-        "add": "Añadir rama"
+        "pattern": "Patrón",
+        "add": "Añadir rama",
+        "defaultHint": "Cuando ninguna rama coincide.",
+        "match": {
+          "contains": "contiene",
+          "startsWith": "empieza por",
+          "firstLine": "la primera línea es",
+          "regex": "expresión regular"
+        }
       },
       "chat": {
         "hint": "Conversación de la ejecución. Un orquestador puede preguntar aquí hasta que termine la ejecución.",
@@ -838,7 +927,13 @@
       "orchestratorLlm": "El orquestador necesita exactamente una arista LLM.",
       "orchestratorChat": "El chat debe conectarse al orquestador.",
       "orchestratorFanout": "Con orquestador, el chat se conecta solo al orquestador.",
-      "orchestratorEnd": "El orquestador necesita una arista de mensaje hacia un fin.",
+      "orchestratorEnd": "El orquestador necesita un mensaje hacia un fin, directo o por un enrutador que solo lleve a fines.",
+      "routerName": "Los nombres de rama deben existir y ser únicos.",
+      "routerPattern": "Cada rama necesita un patrón de como máximo 200 caracteres.",
+      "routerRegex": "El patrón no es una expresión regular válida.",
+      "routerEdge": "Cada rama y el estándar necesitan exactamente una arista.",
+      "routerTarget": "Un enrutador lleva a un agente, un enrutador o un fin.",
+      "routerOrchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
       "orchestratorLooseAgent": "Con orquestador, cada agente necesita un canal desde él.",
       "agentMode": "Un agente está en la cadena o en el orquestador.",
       "agentChannel": "Un agente tiene como máximo un canal.",
@@ -934,7 +1029,9 @@
       "none": "Ninguna red seleccionada.",
       "multi": "{{count}} seleccionadas",
       "noDescription": "Sin descripción.",
-      "lastRun": "Última ejecución"
+      "lastRun": "Última ejecución",
+      "resize": "Cambiar el ancho de los detalles",
+      "graphLoading": "Cargando el grafo…"
     },
     "empty": {
       "library": "Aún no hay redes guardadas.",
@@ -984,6 +1081,26 @@
       "skip": "Omitir este archivo",
       "include": "Importar de todos modos",
       "continue": "Importar"
+    },
+    "transfer": {
+      "exportTitle": "Exportar red",
+      "exportBody": "La red se guarda como JSON (schemaVersion 1). Los secretos no van en el archivo. Las referencias a accesos se conservan.",
+      "importTitle": "Importar red",
+      "importBody": "Elige un archivo JSON con schemaVersion 1. Se crea una red nueva. Los secretos del archivo se descartan.",
+      "pick": "Elegir archivo",
+      "name": "Nombre",
+      "counts": "{{nodes}} nodos · {{edges}} aristas",
+      "secrets": "Los secretos del archivo se descartan.",
+      "fileUnreadable": "Esto no es un archivo de red.",
+      "fileSchema": "Esta schemaVersion no está soportada.",
+      "collision": "Este nombre ya está usado.",
+      "nameRequired": "Falta el nombre.",
+      "download": "Exportar",
+      "confirmImport": "Importar",
+      "empty": "Aún no hay archivo.",
+      "zipNote": "Varias redes se guardan como ZIP, un JSON cada una.",
+      "skip": "Omitir",
+      "include": "Incluir"
     },
     "notify": {
       "error": "La acción ha fallado",
@@ -1071,7 +1188,8 @@
       "waiting": "En espera",
       "running": "En ejecución",
       "done": "Hecho",
-      "error": "Error"
+      "error": "Error",
+      "halted": "Detenido"
     },
     "wait": {
       "none": "Sin espera",
@@ -1304,6 +1422,8 @@
       "outcome": "Resultado",
       "error": "Error",
       "models": "Modelos",
+      "move": "Mover {{column}}",
+      "resize": "Cambiar el ancho de {{column}}",
       "live": "Ver en vivo",
       "page": "Página {{page}} de {{pages}}",
       "prev": "Anterior",
@@ -1404,11 +1524,13 @@
       "agent": {
         "start": "Agente iniciado",
         "done": "Agente finalizado",
-        "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas",
+        "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas seguidas",
         "toolJson": "Llamada a herramienta {{name}} descartada: argumentos JSON incompletos (intento {{attempt}}/{{max}}).",
         "think": "El agente está pensando (no es un resultado).",
         "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",
         "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
+        "emptyStop": "Respuesta vacía descartada ({{attempt}}/{{max}}). La tarea continúa.",
+        "emptyStops": "Tarea incompleta: cinco respuestas vacías seguidas.",
         "truncated": "Respuesta cortada; no es un resultado."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
@@ -1421,12 +1543,15 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM finalizado ({{durationMs}} ms)"
+        "done": "LLM finalizado ({{durationMs}} ms)",
+        "vram": "VRAM {{model}}: estimación {{estimated}}, usado {{used}}, {{delta}} ({{percent}}). Expertos {{expertsOnGpu}}/{{expertLayers}}, atención {{attentionLayersOnGpu}}{{placement}}.",
+        "modelInfo": "Faltan los datos del modelo {{model}}. La ejecución se detuvo.",
+        "moeUnsplit": "No se puede repartir los expertos de {{model}}. No se envía num_gpu."
       },
       "tool": {
         "call": "Herramienta {{name}}"
       },
-      "router": "Enrutador → {{target}}",
+      "router": "Enrutador {{branch}} → {{target}}",
       "end": "Fin alcanzado",
       "succeeded": "Ejecución correcta",
       "failed": "Ejecución fallida",
@@ -1443,7 +1568,13 @@
         "think": "El orquestador está pensando (no cuenta como paso).",
         "thinkLimit": "Demasiados turnos de pensamiento sin un encargo.",
         "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
-        "window": "El prompt no cabe en ninguna ventana de contexto."
+        "window": "El prompt no cabe en ninguna ventana de contexto.",
+        "toolThink": "Cinco llamadas a herramientas fallidas. Ronda de reflexión {{round}}.",
+        "toolFailures": "Orquestador detenido tras dos rondas de reflexión fallidas",
+        "takeoverStart": "{{agent}} agotó {{misses}} intentos de archivo sin cambio. El orquestador toma el control.",
+        "takeoverBlocked": "Llamada a {{agent}} rechazada. El orquestador debe escribir el archivo.",
+        "takeover": "{{agent}} alcanzó el límite de intentos. El orquestador no escribió ningún archivo.",
+        "takeoverNoTool": "{{agent}} alcanzó el límite de intentos. El orquestador no tiene herramienta de archivos."
       }
     },
     "graph": {
@@ -1527,7 +1658,8 @@
     "call": {
       "failed": "La llamada MCP ha fallado."
     },
-    "notFound": "Servidor MCP no encontrado."
+    "notFound": "Servidor MCP no encontrado.",
+    "unavailable": "Esta receta estará disponible pronto."
   },
   "graph": {
     "mcp": {
@@ -1535,6 +1667,15 @@
       "disabled": "Este servidor MCP está desactivado.",
       "root": "Este servidor MCP necesita una ruta raíz en Ajustes.",
       "unavailable": "MCP no está disponible en esta instalación."
+    },
+    "router": {
+      "name": "Los nombres de rama deben existir y ser únicos.",
+      "pattern": "Cada rama necesita un patrón de como máximo 200 caracteres.",
+      "regex": "El patrón no es una expresión regular válida.",
+      "edge": "Cada rama y el estándar necesitan exactamente una arista.",
+      "target": "Un enrutador lleva a un agente, un enrutador o un fin.",
+      "orchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
+      "noEdge": "El enrutador no tiene una arista coincidente"
     }
   }
 }

@@ -199,6 +199,14 @@
       "createTitle": "Ajouter un identifiant",
       "editTitle": "Remplacer l’identifiant",
       "empty": "Aucun identifiant pour le moment.",
+      "emptyGroup": "Aucun identifiant dans ce groupe pour le moment.",
+      "groups": "Groupe d’identifiants",
+      "group": {
+        "llm": "LLM",
+        "search": "Recherche web",
+        "mcp": "MCP",
+        "custom": "Personnel"
+      },
       "name": "Nom",
       "kind": "Type",
       "mask": "Masque",
@@ -215,7 +223,10 @@
         "anthropic": "Claude",
         "gemini": "Gemini",
         "openai_compat": "Compatible OpenAI",
-        "web_search": "Recherche web",
+        "brave": "Brave",
+        "tavily": "Tavily",
+        "exa": "Exa",
+        "searxng": "SearXNG",
         "github": "GitHub",
         "azure": "Azure",
         "gitlab": "GitLab",
@@ -224,7 +235,8 @@
         "atlassian": "Atlassian",
         "linear": "Linear",
         "postgres": "Postgres",
-        "token": "Jeton"
+        "token": "Jeton",
+        "custom": "Personnel"
       },
       "kindHint": {
         "xai": "Clé API xAI.",
@@ -232,7 +244,10 @@
         "anthropic": "Clé API Anthropic (Claude).",
         "gemini": "Clé API Google Gemini.",
         "openai_compat": "Jeton Bearer pour une URL compatible OpenAI.",
-        "web_search": "Clé pour la recherche web du réseau.",
+        "brave": "Jeton d’abonnement de l’API Brave Search.",
+        "tavily": "Clé API Tavily.",
+        "exa": "Clé API Exa.",
+        "searxng": "Clé facultative pour une instance SearXNG.",
         "github": "Jeton d’accès personnel GitHub (PAT). Classic : repos, issues ou actions selon la tâche.",
         "azure": "Jeton Azure/Entra ou PAT.",
         "gitlab": "Jeton d’accès personnel GitLab.",
@@ -241,8 +256,18 @@
         "atlassian": "Jeton API Atlassian Cloud (Jira/Confluence).",
         "linear": "Clé API Linear.",
         "postgres": "Chaîne de connexion Postgres (pas les bases de l’app).",
-        "token": "Clé API ou jeton Bearer générique (Context7, Sentry, etc.)."
+        "token": "Clé API ou jeton Bearer générique (Context7, Sentry, etc.).",
+        "custom": "Jeton Bearer, en-têtes supplémentaires ou variables d’environnement."
       },
+      "bearer": "Bearer",
+      "bearerHint": "Envoyé comme Authorization: Bearer.",
+      "headerName": "En-tête",
+      "headerValue": "Valeur",
+      "addHeader": "Ajouter un en-tête",
+      "envName": "Variable",
+      "envValue": "Valeur",
+      "addEnv": "Ajouter une variable",
+      "customInvalid": "Un accès personnel exige un Bearer, un en-tête ou une variable.",
       "inUseMcpHint": "Attribuez un autre identifiant au serveur MCP, ou supprimez ce serveur. Ensuite vous pourrez retirer cet identifiant.",
       "usedBy": {
         "helpChatLlm": "Chat d’aide (chat)",
@@ -260,11 +285,13 @@
       "pingOk": "Runtime joignable",
       "pingFail": "Runtime injoignable",
       "modelNotFound": "Modèle introuvable ou non chargeable : {{name}}",
+      "modelInfoFailed": "Ollama n'a pas fourni les données du modèle. L'exécution a été arrêtée pour ne pas charger toutes les couches sur le GPU.",
       "timeout": "Aucun progrès du modèle ({{name}}). Abandon après silence, pas après une durée totale.",
       "unreachable": "Ollama n’est pas joignable ({{name}}).",
       "models": "Modèles installés",
       "modelsChat": "Modèles normaux",
       "modelsEmbed": "Modèles d’embeddings",
+      "modelsMoe": "Modèles MoE",
       "modelsGroupEmpty": "Aucun",
       "modelsEmpty": "Aucun modèle, ou runtime injoignable.",
       "modelName": "Modèle",
@@ -295,7 +322,9 @@
       "embedModel": "Modèle d’embeddings",
       "reindexHint": "Reconstruire l’index après un changement d’embeddings.",
       "webSearch": "Recherche web",
-      "webSearchHint": "Facultatif. Sans identifiant de recherche, le chat reste configurable ; la recherche reste désactivée.",
+      "webSearchHint": "Facultatif. Sans l’identifiant correspondant, le chat reste configurable ; la recherche reste désactivée. SearXNG exige une adresse de base.",
+      "webSearchProvider": "Fournisseur",
+      "webSearchBaseUrl": "Adresse de base",
       "webSearchCredential": "Identifiant de recherche",
       "webSearchMissing": "Identifiant manquant — ajoutez une entrée de type recherche web sous Identifiants.",
       "fallback": "Modèle économique (facultatif)",
@@ -315,6 +344,7 @@
       "servers": "Serveurs configurés",
       "empty": "Aucun serveur MCP pour le moment.",
       "enable": "Activer",
+      "comingSoon": "Bientôt disponible",
       "added": "Présent",
       "custom": "Personnalisé",
       "customCreate": "Serveur personnalisé",
@@ -322,7 +352,7 @@
       "enabled": "Actif",
       "status": "Statut",
       "probe": "Sonde",
-      "presetHint": "Identifiants selon la recette. Fichiers et Excel prennent le dossier sur le nœud MCP de l’éditeur. L’enregistrement crée le serveur immédiatement.",
+      "presetHint": "Identifiants selon la recette. Excel prend le dossier sur le nœud MCP de l’éditeur. Les fichiers locaux sont l’outil Accès aux fichiers, pas une recette MCP. L’enregistrement crée le serveur immédiatement.",
       "rootPath": "Chemin racine",
       "untrusted": "Un processus inconnu sera lancé avec les droits indiqués. N’utilisez que des commandes de confiance.",
       "command": "Commande",
@@ -608,6 +638,7 @@
       "saveAs": "Enregistrer sous",
       "load": "Ouvrir",
       "duplicate": "Dupliquer",
+      "import": "Importer",
       "export": "Exporter",
       "validate": "Valider",
       "undo": "Annuler",
@@ -639,7 +670,7 @@
       "knowledge": "Connaissances",
       "knowledgeHint": "Dossier source, uniquement vers le port knowledge de l’agent.",
       "router": "Routeur",
-      "routerHint": "Aiguille les messages selon des conditions.",
+      "routerHint": "Envoie le message à la première branche qui correspond. La sortie par défaut prend le reste.",
       "end": "Fin",
       "endHint": "Au moins un. Termine l’exécution.",
       "mcp": "MCP",
@@ -659,6 +690,7 @@
     "inspector": {
       "title": "Inspecteur",
       "collapse": "Réduire l’inspecteur",
+      "resize": "Modifier la largeur de l’inspecteur",
       "expand": "Développer l’inspecteur",
       "displayName": "Nom affiché",
       "multi": "{{count}} nœuds sélectionnés",
@@ -689,6 +721,9 @@
         "pingOk": "Le modèle a répondu",
         "pingFail": "Échec du test",
         "advanced": "Avancé",
+        "modelKind": "Type de modèle",
+        "kindDense": "Modèles normaux",
+        "kindMoe": "Modèles MoE",
         "noModels": "Aucun modèle chargé.",
         "useModel": "Utiliser « {{name}} »",
         "temperature": "Température",
@@ -698,7 +733,11 @@
         "numCtxLoading": "Chargement des limites du modèle…",
         "numCtxUnavailable": "Aucune limite de longueur n’est disponible pour ce modèle.",
         "numThread": "Threads CPU",
-        "numThreadHint": "La valeur par défaut est le nombre de cœurs physiques.",
+        "numThreadHint": "La valeur par défaut est la moitié des threads disponibles.",
+        "kvCache": "Cache KV",
+        "kvCacheF16": "16 bits",
+        "kvCacheQ8": "8 bits",
+        "kvCacheHint": "8 bits réduit le cache de moitié. Ollama 0.40 ne l’applique que si le service démarre avec OLLAMA_KV_CACHE_TYPE=q8_0. L’estimation suit ce choix.",
         "numThreadLoading": "Lecture des cœurs CPU…",
         "numThreadUnavailable": "Le nombre de threads CPU n’est pas disponible.",
         "numGpu": "Offload GPU",
@@ -717,7 +756,21 @@
         "vramFormula": "GPU : {{on}} dernières couches sur {{total}}. {{full}} × {{perToken}} o/jeton × {{ctx}} jetons.",
         "vramFormulaMixed": "GPU : {{on}} dernières couches sur {{total}}. {{full}} couches globales × {{ctx}} jetons.",
         "vramFormulaSwa": "GPU : {{on}} dernières couches sur {{total}}. {{full}} globales × {{ctx}} jetons, {{swa}} fenêtre glissante × fenêtre {{window}}.",
-        "vramHint": "Estimation couche par couche d’après le modèle. Le GPU prend les N dernières couches. Attention complète : tout le contexte. Fenêtre glissante : seulement sa fenêtre. Cache KV en f16."
+        "vramHint": "Estimation couche par couche d’après le modèle. Le GPU prend les N dernières couches. Attention complète : tout le contexte. Fenêtre glissante : seulement sa fenêtre. Cache KV en f16.",
+        "moeAuto": "Placer les experts automatiquement",
+        "moeForce": "Forcer toutes les couches",
+        "moeAutoHint": "{{count}} experts, {{used}} actifs par jeton. Tous les poids restent chargés. L’attention reste sur le GPU, les experts occupent le reste.",
+        "moeAutoHintNoUsed": "{{count}} experts. Tous les poids restent chargés. L’attention reste sur le GPU, les experts occupent le reste.",
+        "moeLayerWarn": "Ce choix déplace des couches entières, attention comprise.",
+        "moeUnknown": "Les poids des experts ne peuvent pas être séparés avec les métadonnées de ce modèle. L’indicateur utilise la formule dense.",
+        "moeExpertsGpu": "Experts sur le GPU {{experts}}",
+        "moeRam": "Experts en mémoire vive : {{ram}}",
+        "moeRamTight": "La mémoire vive libre est sous cette estimation. Les pages épinglées et mmap peuvent prendre davantage.",
+        "moeAttention": "L’attention reste sur les {{on}} dernières couches sur {{total}}, pour tenir dans la mémoire GPU.",
+        "moeSwa": "Avec un contexte à fenêtre glissante, Ollama peut garder tous les experts en mémoire vive même si cet indicateur voit encore de la place sur le GPU.",
+        "moeEstimate": "Estimation à partir des métadonnées et de la taille du fichier. Elle est recalculée pour chaque taille de contexte.",
+        "moeKvFormula": "KV : {{full}} couches × {{perToken}} o/token × {{ctx}} jetons.",
+        "moeAutoFit": "Le placement automatique des experts utiliserait {{gpu}} sur le GPU et laisserait {{ram}} en mémoire."
       },
       "agent": {
         "hint": "LLM, outils et connaissances arrivent par des arêtes. Sans orchestrateur, le message démarre l’agent.",
@@ -726,7 +779,9 @@
       },
       "orchestrator": {
         "hint": "Un LLM par une arête. Le chat arrive ici. Chaque agent a son canal. La sortie message reste la fin. Il appelle lui-même les outils branchés.",
-        "systemPrompt": "Invite système"
+        "systemPrompt": "Invite système",
+        "agentMissLimit": "Échecs par agent",
+        "agentMissLimitHint": "Nombre de fois qu’un agent avec accès aux fichiers peut terminer une tâche sans écrire, modifier ou supprimer. L’orchestrateur reprend alors cette tâche. La valeur par défaut est 3."
       },
       "tool": {
         "kind": "Type",
@@ -744,7 +799,33 @@
         "pickRoot": "Dossier",
         "allowWrite": "Autoriser l’écriture",
         "allowDelete": "Autoriser la suppression",
-        "fileAccessHint": "L’agent ne peut lire, écrire et supprimer que sous ce dossier.",
+        "fileAccessHint": "Toutes les actions sont actives. Décocher les retire pour l’agent.",
+        "fileActions": "Fonctions",
+        "fileAction": {
+          "list": "Lister",
+          "stat": "Propriétés",
+          "read": "Lire",
+          "read_many": "Plusieurs fichiers",
+          "write": "Écrire",
+          "mkdir": "Créer un dossier",
+          "delete": "Supprimer",
+          "edit": "Remplacer",
+          "move": "Déplacer",
+          "search": "Chercher",
+          "tree": "Arbre"
+        },
+        "dateHint": "Affiche l’heure actuelle dans un fuseau IANA, UTC par défaut. Un instant peut être décalé de jours, d’heures et de minutes, aussi vers le passé. L’écart entre deux instants revient en secondes, heures et jours. Les composants sont la date, l’heure et le jour ; lundi vaut 1. Le même instant peut être affiché dans un autre fuseau.",
+        "calculatorHint": "Calcule une expression avec + - * / // % ** et des parenthèses. L’exposant de ** vaut au plus 20. Constantes : pi et e. Fonctions : sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log et ln sont le logarithme naturel ; log peut prendre une base. sin, cos et tan sont en radians. factorial n’accepte que les entiers de 0 à 20.",
+        "searchProvider": "Fournisseur",
+        "searchProviderName": { "brave": "Brave", "tavily": "Tavily", "exa": "Exa", "searxng": "SearXNG" },
+        "searchBaseUrl": "Adresse de base",
+        "maxResults": "Résultats",
+        "searchHint": {
+          "brave": "Index propre. Identifiant de type Brave.",
+          "tavily": "Extraits pour agents. Identifiant de type Tavily.",
+          "exa": "Recherche par le sens. Identifiant de type Exa.",
+          "searxng": "Instance locale. Adresse de base requise, identifiant facultatif."
+        },
         "credential": "Identifiant",
         "mcpServer": "Serveur MCP",
         "mcpEmpty": "Aucun serveur",
@@ -765,10 +846,18 @@
         "reindexHint": "Reconstruire l’index après un changement d’embeddings."
       },
       "router": {
+        "hint": "Le premier résultat l’emporte. La casse est ignorée, sauf pour l’expression régulière.",
         "branches": "Branches",
         "branchName": "Nom",
-        "condition": "Condition",
-        "add": "Ajouter une branche"
+        "pattern": "Motif",
+        "add": "Ajouter une branche",
+        "defaultHint": "Quand aucune branche ne correspond.",
+        "match": {
+          "contains": "contient",
+          "startsWith": "commence par",
+          "firstLine": "la première ligne est",
+          "regex": "expression régulière"
+        }
       },
       "chat": {
         "hint": "Conversation de l’exécution. Un orchestrateur peut poser des questions ici jusqu’à ce qu’il termine l’exécution.",
@@ -838,7 +927,13 @@
       "orchestratorLlm": "L’orchestrateur a besoin d’exactement une arête LLM.",
       "orchestratorChat": "Le chat doit être relié à l’orchestrateur.",
       "orchestratorFanout": "Avec un orchestrateur, le chat ne se relie qu’à lui.",
-      "orchestratorEnd": "L’orchestrateur a besoin d’une arête message vers une fin.",
+      "orchestratorEnd": "L’orchestrateur a besoin d’un message vers une fin, directement ou via un routeur qui ne mène qu’à des fins.",
+      "routerName": "Les noms de branche doivent être remplis et uniques.",
+      "routerPattern": "Chaque branche a besoin d’un motif d’au plus 200 caractères.",
+      "routerRegex": "Le motif n’est pas une expression régulière valide.",
+      "routerEdge": "Chaque branche et la sortie par défaut ont besoin d’exactement une arête.",
+      "routerTarget": "Un routeur mène à un agent, un routeur ou une fin.",
+      "routerOrchestrator": "Un routeur après l’orchestrateur ne mène qu’à des fins.",
       "orchestratorLooseAgent": "Avec un orchestrateur, chaque agent a besoin d’un canal depuis lui.",
       "agentMode": "Un agent est soit dans la chaîne, soit sur l’orchestrateur.",
       "agentChannel": "Un agent a au plus un canal.",
@@ -934,7 +1029,9 @@
       "none": "Aucun réseau sélectionné.",
       "multi": "{{count}} sélectionnés",
       "noDescription": "Aucune description.",
-      "lastRun": "Dernière exécution"
+      "lastRun": "Dernière exécution",
+      "resize": "Modifier la largeur des détails",
+      "graphLoading": "Chargement du graphe…"
     },
     "empty": {
       "library": "Aucun réseau enregistré pour le moment.",
@@ -984,6 +1081,26 @@
       "skip": "Ignorer ce fichier",
       "include": "Importer quand même",
       "continue": "Importer"
+    },
+    "transfer": {
+      "exportTitle": "Exporter le réseau",
+      "exportBody": "Le réseau est enregistré en JSON (schemaVersion 1). Les secrets n’y figurent pas. Les références d’accès restent.",
+      "importTitle": "Importer un réseau",
+      "importBody": "Choisis un fichier JSON en schemaVersion 1. Il devient un nouveau réseau. Les secrets du fichier sont écartés.",
+      "pick": "Choisir un fichier",
+      "name": "Nom",
+      "counts": "{{nodes}} nœuds · {{edges}} arêtes",
+      "secrets": "Les secrets du fichier sont écartés.",
+      "fileUnreadable": "Ce n’est pas un fichier de réseau.",
+      "fileSchema": "Cette schemaVersion n’est pas prise en charge.",
+      "collision": "Ce nom est déjà utilisé.",
+      "nameRequired": "Le nom manque.",
+      "download": "Exporter",
+      "confirmImport": "Importer",
+      "empty": "Pas encore de fichier.",
+      "zipNote": "Plusieurs réseaux sont enregistrés dans un ZIP, un JSON chacun.",
+      "skip": "Ignorer",
+      "include": "Inclure"
     },
     "notify": {
       "error": "L’action a échoué",
@@ -1071,7 +1188,8 @@
       "waiting": "En attente",
       "running": "En cours",
       "done": "Terminé",
-      "error": "Erreur"
+      "error": "Erreur",
+      "halted": "Arrêté"
     },
     "wait": {
       "none": "Aucune attente",
@@ -1304,6 +1422,8 @@
       "outcome": "Résultat",
       "error": "Erreur",
       "models": "Modèles",
+      "move": "Déplacer {{column}}",
+      "resize": "Modifier la largeur de {{column}}",
       "live": "Voir en direct",
       "page": "Page {{page}} sur {{pages}}",
       "prev": "Précédent",
@@ -1404,11 +1524,13 @@
       "agent": {
         "start": "Agent démarré",
         "done": "Agent terminé",
-        "toolFailures": "Agent arrêté après {{failed}} appels d'outil en échec",
+        "toolFailures": "Agent arrêté après {{failed}} appels d'outil en échec d'affilée",
         "toolJson": "Appel d’outil {{name}} ignoré : arguments JSON incomplets (essai {{attempt}}/{{max}}).",
         "think": "L’agent réfléchit (ce n’est pas un résultat).",
         "thinkLimit": "Trop d’étapes de réflexion sans résultat.",
         "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes.",
+        "emptyStop": "Réponse vide écartée ({{attempt}}/{{max}}). La tâche continue.",
+        "emptyStops": "Tâche incomplète : cinq réponses vides d’affilée.",
         "truncated": "Réponse tronquée ; ce n’est pas un résultat."
       },
       "knowledge": "Recherche de connaissances ({{count}} résultats)",
@@ -1421,12 +1543,15 @@
       },
       "llm": {
         "start": "LLM {{model}}",
-        "done": "LLM terminé ({{durationMs}} ms)"
+        "done": "LLM terminé ({{durationMs}} ms)",
+        "vram": "VRAM {{model}} : estimation {{estimated}}, utilisé {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
+        "modelInfo": "Données du modèle {{model}} manquantes. L'exécution a été arrêtée.",
+        "moeUnsplit": "La répartition des experts de {{model}} est inconnue. num_gpu n'est pas envoyé."
       },
       "tool": {
         "call": "Outil {{name}}"
       },
-      "router": "Routeur → {{target}}",
+      "router": "Routeur {{branch}} → {{target}}",
       "end": "Fin atteinte",
       "succeeded": "Exécution réussie",
       "failed": "Exécution échouée",
@@ -1443,7 +1568,13 @@
         "think": "L’orchestrateur réfléchit (ne compte pas comme une étape).",
         "thinkLimit": "Trop de tours de réflexion sans appel.",
         "thinkLoop": "Boucle de réflexion à 1 jeton arrêtée après {{thinks}} étapes.",
-        "window": "L’invite ne tient dans aucune fenêtre de contexte."
+        "window": "L’invite ne tient dans aucune fenêtre de contexte.",
+        "toolThink": "Cinq appels d’outil ont échoué. Tour de réflexion {{round}}.",
+        "toolFailures": "Orchestrateur arrêté après deux tours de réflexion en échec",
+        "takeoverStart": "{{agent}} a utilisé {{misses}} essais de fichier sans modification. L’orchestrateur prend le relais.",
+        "takeoverBlocked": "Appel de {{agent}} refusé. L’orchestrateur doit écrire le fichier.",
+        "takeover": "{{agent}} a atteint la limite d’essais. L’orchestrateur n’a pas écrit de fichier.",
+        "takeoverNoTool": "{{agent}} a atteint la limite d’essais. L’orchestrateur n’a pas d’outil de fichiers."
       }
     },
     "graph": {
@@ -1527,7 +1658,8 @@
     "call": {
       "failed": "L’appel MCP a échoué."
     },
-    "notFound": "Serveur MCP introuvable."
+    "notFound": "Serveur MCP introuvable.",
+    "unavailable": "Cette recette sera bientôt disponible."
   },
   "graph": {
     "mcp": {
@@ -1535,6 +1667,15 @@
       "disabled": "Ce serveur MCP est désactivé.",
       "root": "Ce serveur MCP a besoin d’un chemin racine dans Paramètres.",
       "unavailable": "MCP n’est pas disponible dans cette installation."
+    },
+    "router": {
+      "name": "Les noms de branche doivent être remplis et uniques.",
+      "pattern": "Chaque branche a besoin d’un motif d’au plus 200 caractères.",
+      "regex": "Le motif n’est pas une expression régulière valide.",
+      "edge": "Chaque branche et la sortie par défaut ont besoin d’exactement une arête.",
+      "target": "Un routeur mène à un agent, un routeur ou une fin.",
+      "orchestrator": "Un routeur après l’orchestrateur ne mène qu’à des fins.",
+      "noEdge": "Le routeur n’a pas d’arête correspondante"
     }
   }
 }

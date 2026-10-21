@@ -38,6 +38,7 @@ def list_recipes() -> list[McpRecipe]:
             root_on_node=item.root_on_node,
             runtime=item.runtime,
             notes=item.notes,
+            available=item.available,
         )
         for item in load_recipes()
     ]
@@ -103,6 +104,11 @@ def _seed_listed_tools(payload: dict[str, Any], recipe: RecipeRecord | None) -> 
         payload["status"] = "ok"
 
 
+def _check_available(recipe: RecipeRecord | None, enabled: bool) -> None:
+    if enabled and recipe is not None and not recipe.available:
+        raise AppError("mcp.unavailable", status_code=400)
+
+
 def _check_root(recipe: RecipeRecord | None, root_path: str | None, enabled: bool) -> None:
     if not enabled:
         return
@@ -145,6 +151,7 @@ def create_server(body: McpServerCreate) -> McpServerListItem:
         kinds = recipe.credential_kinds
         creds = list(body.credential_ids or [])[: len(kinds)] if kinds else list(body.credential_ids or [])
         enabled = bool(body.enabled)
+        _check_available(recipe, enabled)
         _check_root(recipe, body.root_path, enabled)
         _check_credentials(recipe, creds, enabled)
         payload = {
@@ -207,6 +214,7 @@ def patch_server(server_id: str, body: McpServerPatch) -> McpServerListItem:
         row["transport"] = body.transport
     enabled = row.get("enabled", False) if body.enabled is None else body.enabled
     row["enabled"] = enabled
+    _check_available(recipe, bool(enabled))
     _check_root(recipe, row.get("root_path"), bool(enabled))
     _check_credentials(recipe, row.get("credential_ids"), bool(enabled))
     _seed_listed_tools(row, recipe)
@@ -217,6 +225,7 @@ def set_enabled(server_id: str, enabled: bool) -> McpServerListItem:
     row = dict(_require(server_id))
     recipe = get_recipe(str(row.get("recipe_id") or "")) if row.get("recipe_id") else None
     if enabled:
+        _check_available(recipe, True)
         _check_root(recipe, row.get("root_path"), True)
         _check_credentials(recipe, row.get("credential_ids"), True)
         _seed_listed_tools(row, recipe)

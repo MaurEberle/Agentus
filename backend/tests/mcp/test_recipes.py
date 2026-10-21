@@ -6,7 +6,6 @@ EXPECTED = {
     "github",
     "azure",
     "gitlab",
-    "filesystem",
     "git",
     "playwright",
     "postgres",
@@ -15,7 +14,6 @@ EXPECTED = {
     "notion",
     "atlassian",
     "linear",
-    "fetch",
     "sentry",
     "excel",
 }
@@ -25,19 +23,11 @@ def test_load_recipes_has_known_ids() -> None:
     recipes = load_recipes()
     ids = {r.id for r in recipes}
     assert ids == EXPECTED
-    assert len(recipes) == 15
+    assert len(recipes) == 13
     for recipe in recipes:
         assert "enabled" not in recipe.__dataclass_fields__ or True
         dumped = recipe.__dict__
         assert "enabled" not in dumped or dumped.get("enabled") is None
-
-
-def test_filesystem_needs_root_placeholder() -> None:
-    recipe = next(r for r in load_recipes() if r.id == "filesystem")
-    assert recipe.needs_root is True
-    assert recipe.root_on_node is True
-    assert any("{{rootPath}}" in arg for arg in recipe.args)
-    assert recipe.tool_schemas["list_directory"]["required"] == ["path"]
 
 
 def test_github_needs_pat_and_no_root() -> None:
@@ -49,15 +39,6 @@ def test_github_needs_pat_and_no_root() -> None:
     assert recipe.command == "github-mcp-server"
     assert recipe.args == ["stdio"]
     assert "query" in recipe.tool_schemas["search_repositories"]["properties"]
-
-
-def test_fetch_needs_no_credentials() -> None:
-    recipe = next(r for r in load_recipes() if r.id == "fetch")
-    assert recipe.credential_kinds == []
-    assert recipe.needs_root is False
-    assert recipe.runtime == "uvx"
-    assert recipe.command == "uvx"
-    assert recipe.args == ["mcp-server-fetch"]
 
 
 def test_git_uses_uvx_repository() -> None:
@@ -79,3 +60,9 @@ def test_excel_stdio_transport() -> None:
 def test_azure_starts_server() -> None:
     recipe = next(r for r in load_recipes() if r.id == "azure")
     assert recipe.args[-2:] == ["server", "start"]
+
+
+def test_only_shipped_recipes_are_available() -> None:
+    recipes = load_recipes()
+    available = {r.id for r in recipes if r.available}
+    assert available == {"github", "git", "excel"}

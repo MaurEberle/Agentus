@@ -8,13 +8,14 @@ state does not grow with context.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from app.runtime.ollama import (
     clamp_gpu_layers,
     gpu_layers_for_percent,
     list_ollama_models,
+    ollama_num_gpu,
     parse_block_count,
     tag_key,
 )
@@ -49,6 +50,13 @@ class VramProfile:
     kv_swa_bytes_per_token: int | None = None
     swa_window: int | None = None
     kv_layers: tuple[LayerKv, ...] = ()
+    expert_count: int | None = None
+    expert_used_count: int | None = None
+    routed_expert_bytes: int | None = None
+    non_expert_bytes: int | None = None
+    leading_dense_blocks: int | None = None
+    expert_layers: int | None = None
+    projector_bytes: int = 0
 
 
 def _positive_int(value: object) -> int | None:
@@ -168,6 +176,7 @@ def _classify_layer(
     arch: str,
     window: int | None,
     interval: int | None,
+    interval_is_recurrent: bool,
     mla: bool,
 ) -> str:
     if index >= kv_end:
@@ -184,7 +193,8 @@ def _classify_layer(
         elif arch in {"gemma3", "gemma3n"} and window:
             kind = "swa" if (index + 1) % 6 != 0 else "full"
         elif interval and interval > 1:
-            kind = "full" if index % interval == 0 else "skip"
+            # Qwen3.5-style hybrids: the other layers are DeltaNet, not empty.
+            kind = "full" if index % interval == 0 else ("recurrent" if interval_is_recurrent else "skip")
         elif window and not mla:
             kind = "swa"
         else:
@@ -291,6 +301,7 @@ def _build_kv_layers(info: dict[str, Any], arch: str, layers: int) -> tuple[Laye
             arch=arch,
             window=window,
             interval=interval,
+            interval_is_recurrent=bool(_info_int(info, arch, "ssm.inner_size")),
             mla=mla,
         )
         if kind == "skip":
@@ -348,6 +359,89 @@ def _sum_kv(layers: tuple[LayerKv, ...], num_ctx: int, on: int) -> int:
     return total
 
 
+def _clamp_leading(leading: int | None, layers: int) -> int:
+    n = leading or 0
+    if n < 0:
+        return 0
+    if n > layers:
+        return layers
+    return n
+
+
+def _attention_params(info: dict[str, Any], arch: str, n_embd: int) -> int:
+    """Q, K, V and output projection. Missing head metadata falls back to a square block."""
+    n_head = _info_int(info, arch, "attention.head_count")
+    n_kv = _info_int(info, arch, "attention.head_count_kv") or n_head
+    key = _info_int(info, arch, "attention.key_length")
+    value = _info_int(info, arch, "attention.value_length") or key
+    if n_head and n_kv and key and value:
+        return (
+            n_embd * n_head * key
+            + n_embd * n_kv * key
+            + n_embd * n_kv * value
+            + n_head * value * n_embd
+        )
+    return 4 * n_embd * n_embd
+
+
+def _moe_weight_split(
+    info: dict[str, Any], arch: str, layers: int | None, size_bytes: int | None
+) -> tuple[int, int | None, int, int, int, int] | None:
+    """Split the GGUF size into routed-expert bytes and everything else.
+
+    The ratio uses parameter counts from ``/api/show``. Shared experts and the
+    leading dense blocks stay on the non-expert side. ``expert_used_count`` is
+    not part of the size.
+    """
+    experts = _info_int(info, arch, "expert_count")
+    expert_ffn = _info_int(info, arch, "expert_feed_forward_length")
+    # Llama-arch merges publish expert_count but keep the FFN width on
+    # feed_forward_length. Without that fallback the file is estimated as dense.
+    if not expert_ffn:
+        expert_ffn = _info_int(info, arch, "feed_forward_length")
+    n_embd = _info_int(info, arch, "embedding_length")
+    if (
+        not experts
+        or experts <= 1
+        or not expert_ffn
+        or not n_embd
+        or not layers
+        or not isinstance(size_bytes, int)
+        or size_bytes <= 0
+    ):
+        return None
+    leading = _clamp_leading(_info_int(info, arch, "leading_dense_block_count"), layers)
+    expert_layers = layers - leading
+    if expert_layers < 1:
+        return None
+    routed_params = experts * 3 * n_embd * expert_ffn * expert_layers
+    shared_count = _info_int(info, arch, "expert_shared_count") or 0
+    shared_ffn = _info_int(info, arch, "expert_shared_feed_forward_length")
+    if shared_count and not shared_ffn:
+        shared_ffn = _info_int(info, arch, "feed_forward_length") or expert_ffn
+    shared_params = (
+        shared_count * 3 * n_embd * shared_ffn * expert_layers if shared_count and shared_ffn else 0
+    )
+    dense_ffn = _info_int(info, arch, "feed_forward_length") or 0
+    dense_params = 3 * n_embd * dense_ffn * leading if dense_ffn and leading else 0
+    other_params = _attention_params(info, arch, n_embd) * layers + shared_params + dense_params
+    total_params = routed_params + other_params
+    if total_params <= 0 or routed_params <= 0:
+        return None
+    routed_bytes = size_bytes * routed_params // total_params
+    # MXFP4 experts sit near 4.5 bits. A uniform parameter split gives those
+    # bytes to the experts and starves the denser attention and embedding
+    # tensors. The measured Qwen3.6 load kept 2.4 GiB of dense weights on GPU.
+    expert_cap = routed_params * 9 // 16
+    # Only when experts stay the majority. A synthetic file that is far
+    # heavier than its expert params keeps the uniform split.
+    if 0 < expert_cap < routed_bytes and expert_cap > size_bytes - expert_cap:
+        routed_bytes = expert_cap
+    non_expert_bytes = size_bytes - routed_bytes
+    used = _info_int(info, arch, "expert_used_count")
+    return experts, used, routed_bytes, non_expert_bytes, leading, expert_layers
+
+
 def _overhead_bytes(info: dict[str, Any], arch: str, layers: int | None) -> int:
     overhead = _BASE_OVERHEAD
     experts = _info_int(info, arch, "expert_count")
@@ -390,7 +484,8 @@ def parse_vram_profile(payload: object, size_bytes: int | None) -> VramProfile |
             kv_per_token, kv_swa, swa_window = _aggregates(kv_layers)
         overhead = _overhead_bytes(info, arch, layers)
     weight = size_bytes if isinstance(size_bytes, int) and size_bytes > 0 else None
-    if layers is None and weight is None and kv_per_token is None and kv_swa is None:
+    split = _moe_weight_split(info, arch, layers, weight) if arch else None
+    if layers is None and weight is None and kv_per_token is None and kv_swa is None and split is None:
         return None
     return VramProfile(
         layers=layers,
@@ -400,6 +495,37 @@ def parse_vram_profile(payload: object, size_bytes: int | None) -> VramProfile |
         kv_swa_bytes_per_token=kv_swa,
         swa_window=swa_window,
         kv_layers=kv_layers,
+        expert_count=split[0] if split else (_info_int(info, arch, "expert_count") if arch else None),
+        expert_used_count=(
+            split[1] if split else (_info_int(info, arch, "expert_used_count") if arch else None)
+        ),
+        routed_expert_bytes=split[2] if split else None,
+        non_expert_bytes=split[3] if split else None,
+        leading_dense_blocks=split[4] if split else None,
+        expert_layers=split[5] if split else None,
+        projector_bytes=_projector_bytes(payload),
+    )
+
+
+def with_kv_cache(profile: VramProfile | None, kind: str | None) -> VramProfile | None:
+    """q8_0 stores each KV element in one byte. Recurrent state stays f32."""
+    if profile is None or kind != "q8_0":
+        return profile
+    layers = tuple(
+        LayerKv(
+            bytes_per_token=layer.bytes_per_token // 2,
+            window=layer.window,
+            fixed_bytes=layer.fixed_bytes,
+        )
+        for layer in profile.kv_layers
+    )
+    return replace(
+        profile,
+        kv_layers=layers,
+        kv_bytes_per_token=None if profile.kv_bytes_per_token is None else profile.kv_bytes_per_token // 2,
+        kv_swa_bytes_per_token=(
+            None if profile.kv_swa_bytes_per_token is None else profile.kv_swa_bytes_per_token // 2
+        ),
     )
 
 
@@ -435,6 +561,164 @@ def estimate_vram_bytes(
         kv = int(kv_bytes_for_ctx(profile, num_ctx) * frac)
     overhead = int((profile.overhead_bytes or 0) * frac)
     return weights + kv + overhead
+
+
+@dataclass(frozen=True)
+class MoeFit:
+    """Automatic placement: attention first, then as many whole expert layers as fit."""
+
+    gpu_bytes: int
+    ram_bytes: int
+    experts_on_gpu: int
+    expert_layers: int
+    attention_layers_on_gpu: int
+    non_expert_on_gpu: int
+    expert_on_gpu_bytes: int
+    kv_bytes: int
+    overhead_bytes: int
+
+
+def _fixed_gpu(profile: VramProfile, num_ctx: int, on: int, layers: int) -> tuple[int, int, int]:
+    non_expert = int((profile.non_expert_bytes or 0) * on // layers)
+    overhead = int((profile.overhead_bytes or 0) * on // layers)
+    if profile.kv_layers:
+        kv = _sum_kv(profile.kv_layers, num_ctx, on)
+    else:
+        kv = int(kv_bytes_for_ctx(profile, num_ctx) * on // layers) if layers else 0
+    return non_expert, kv, overhead
+
+
+# llama.cpp --fit leaves this much device memory free. Ollama replaces it
+# with projector weights plus the same 1 GiB when a vision projector is offloaded.
+_FIT_MARGIN = 1024 * 1024 * 1024
+# CUDA already holds about 1 GiB that the Windows dedicated-memory counter
+# still reports as free. The Qwen3.6 card showed 7.72 GiB here and 6.84 GiB free in CUDA.
+_DEVICE_HOLD = 1024 * 1024 * 1024
+_COMPUTE_RESERVE = 256 * 1024 * 1024
+# /api/ps size_vram was 248 MiB above the buffer sum on both measured Qwen loads.
+_PS_OVERHEAD = 256 * 1024 * 1024
+
+
+def _projector_bytes(payload: dict[str, Any]) -> int:
+    """F16/F32 byte size of a separate mmproj. Missing projector is zero."""
+    info = payload.get("projector_info")
+    if not isinstance(info, dict):
+        return 0
+    count = _positive_int(info.get("general.parameter_count"))
+    if not count:
+        return 0
+    file_type = info.get("general.file_type")
+    width = 4 if file_type == 0 else 2
+    return count * width
+
+
+def _fit_margin(profile: VramProfile) -> int:
+    return _FIT_MARGIN + max(0, profile.projector_bytes)
+
+
+def fit_moe(profile: VramProfile, *, num_ctx: int, pool_bytes: int) -> MoeFit | None:
+    """How many routed expert layers fit beside the dense tensors and this context.
+
+    The count is redone for every ``num_ctx``. KV and the recurrent state grow
+    with that context and push expert tensors off the GPU. llama.cpp keeps the
+    dense tensors, then whole expert layers, then the gate fraction of one more
+    layer (up and gate) or, if that does not fit, only its up matrix.
+    """
+    layers = profile.layers or 0
+    routed = profile.routed_expert_bytes or 0
+    non_expert = profile.non_expert_bytes or 0
+    if layers < 1 or routed <= 0 or non_expert <= 0 or pool_bytes <= 0:
+        return None
+    leading = _clamp_leading(profile.leading_dense_blocks, layers)
+    expert_layers = profile.expert_layers or (layers - leading)
+    if expert_layers < 1:
+        return None
+    usable = pool_bytes - _DEVICE_HOLD - _fit_margin(profile)
+    if usable <= 0:
+        return MoeFit(
+            gpu_bytes=0,
+            ram_bytes=non_expert + routed,
+            experts_on_gpu=0,
+            expert_layers=expert_layers,
+            attention_layers_on_gpu=0,
+            non_expert_on_gpu=0,
+            expert_on_gpu_bytes=0,
+            kv_bytes=0,
+            overhead_bytes=0,
+        )
+    on = layers
+    while on > 0:
+        weights, kv, _overhead = _fixed_gpu(profile, num_ctx, on, layers)
+        if weights + kv + _COMPUTE_RESERVE <= usable:
+            break
+        on -= 1
+    weights, kv, _overhead = _fixed_gpu(profile, num_ctx, on, layers)
+    room = max(0, usable - (weights + kv + _COMPUTE_RESERVE))
+    cap = min(on, expert_layers)
+    per_layer = routed // expert_layers if expert_layers else 0
+    experts_on = min(cap, room // per_layer) if per_layer and cap > 0 else 0
+    expert_on_gpu = per_layer * experts_on
+    gate = (2 * per_layer) // 3
+    up = per_layer // 3
+    if experts_on < cap and gate > 0 and room - expert_on_gpu >= gate:
+        expert_on_gpu += gate
+    elif experts_on < cap and up > 0 and room - expert_on_gpu >= up:
+        expert_on_gpu += up
+    non_total = profile.non_expert_bytes or 0
+    ram_bytes = max(0, non_total - weights) + max(0, routed - expert_on_gpu)
+    overhead = _COMPUTE_RESERVE + _PS_OVERHEAD
+    return MoeFit(
+        gpu_bytes=weights + kv + overhead + expert_on_gpu,
+        ram_bytes=ram_bytes,
+        experts_on_gpu=experts_on,
+        expert_layers=expert_layers,
+        attention_layers_on_gpu=on,
+        non_expert_on_gpu=weights,
+        expert_on_gpu_bytes=expert_on_gpu,
+        kv_bytes=kv,
+        overhead_bytes=overhead,
+    )
+
+
+@dataclass(frozen=True)
+class MoeOffload:
+    """Expert-layer split the run can send, plus the GPU bytes that split implies."""
+
+    num_gpu: int
+    num_cpu_moe: int
+    estimated_gpu_bytes: int
+    ram_bytes: int
+    experts_on_gpu: int
+    expert_layers: int
+    attention_layers_on_gpu: int
+
+
+def plan_moe_offload(
+    profile: VramProfile | None, *, num_ctx: int, pool_bytes: int
+) -> MoeOffload | None:
+    """Map a fit onto ``num_gpu`` and ``num_cpu_moe``.
+
+    ``num_cpu_moe`` is the leading block count whose expert tensors stay in RAM:
+    dense prefix plus every expert layer that does not fit. ``num_gpu`` is the
+    llama.cpp offload of the attention layers that fit, including the output slot.
+    """
+    if profile is None:
+        return None
+    fit = fit_moe(profile, num_ctx=num_ctx, pool_bytes=pool_bytes)
+    if fit is None:
+        return None
+    layers = profile.layers or 0
+    cpu_experts = max(0, fit.expert_layers - fit.experts_on_gpu)
+    leading = profile.leading_dense_blocks or 0
+    return MoeOffload(
+        num_gpu=ollama_num_gpu(fit.attention_layers_on_gpu, layers if layers else None),
+        num_cpu_moe=(leading + cpu_experts) if cpu_experts else 0,
+        estimated_gpu_bytes=fit.gpu_bytes,
+        ram_bytes=fit.ram_bytes,
+        experts_on_gpu=fit.experts_on_gpu,
+        expert_layers=fit.expert_layers,
+        attention_layers_on_gpu=fit.attention_layers_on_gpu,
+    )
 
 
 def _size_bytes(tag: str, *, base_url: str | None) -> int | None:

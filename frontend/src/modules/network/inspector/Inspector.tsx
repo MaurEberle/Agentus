@@ -16,22 +16,37 @@ import {
   useEditorNetworksQuery,
   useMcpServersQuery,
   reindexNetworkKnowledge,
-  testLlmConnection,
 } from '@/modules/network/api';
 import { uniqueTags } from '@/modules/networks/model/filter';
 import { useHostResourcesQuery, useMcpRecipesQuery, useModelStatsQuery, useRuntimeModelsQuery } from '@/modules/settings/api';
-import type { GraphNode, ValidationIssue } from '@/modules/network/model/document';
-import { newId } from '@/modules/network/model/document';
+import {
+  ROUTER_MATCHES,
+  newId,
+  routerMatchOf,
+  routerPatternOf,
+  type GraphNode,
+  type RouterMatch,
+  type ValidationIssue,
+} from '@/modules/network/model/document';
 import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
-import { estimateVramParts, inferenceGpus, resolveGpuLayers } from '@/modules/network/inspector/vram';
+import {
+  estimateVramParts,
+  fitMoe,
+  hasWindowedKv,
+  inferenceGpus,
+  kvCacheScale,
+  moeLeavesPlacementToRuntime,
+  resolveGpuLayers,
+  scaleKvLayers,
+} from '@/modules/network/inspector/vram';
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
   credentialMatchesProvider,
-  credentialMatchesToolKind,
+  credentialMatchesSearchProvider,
   embeddingNeedsCredential,
   isCloudCatalogProvider,
   isEmbeddingModelName,
@@ -291,6 +306,16 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     enabled: Boolean(model),
   });
   const layers = stats.data?.gpuLayers && stats.data.gpuLayers > 0 ? stats.data.gpuLayers : null;
+  const expertCount = stats.data?.expertCount ?? 0;
+  const isMoe = expertCount > 1;
+  const placement = typeof node.data.gpuPlacement === 'string' ? node.data.gpuPlacement : null;
+  const auto = moeLeavesPlacementToRuntime({
+    expertCount,
+    gpuLayers: layers,
+    numGpuLayers: Number(node.data.numGpuLayers),
+    numGpuPercent: Number(node.data.numGpuPercent),
+    gpuPlacement: placement,
+  });
   const value =
     layers == null
       ? 1
@@ -298,6 +323,40 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
 
   useEffect(() => {
     if (readOnly || layers == null) return;
+    if (isMoe && auto) {
+      if (
+        node.data.gpuPlacement === 'auto' &&
+        node.data.numGpuLayers === undefined &&
+        node.data.numGpuPercent === undefined &&
+        node.data.numGpu === undefined
+      ) {
+        return;
+      }
+      editorUpdateNodeData(node.id, {
+        gpuPlacement: 'auto',
+        numGpuLayers: undefined,
+        numGpuPercent: undefined,
+        numGpu: undefined,
+      });
+      return;
+    }
+    if (isMoe) {
+      if (
+        node.data.gpuPlacement === 'layers' &&
+        node.data.numGpuLayers === value &&
+        node.data.numGpuPercent === undefined &&
+        node.data.numGpu === undefined
+      ) {
+        return;
+      }
+      editorUpdateNodeData(node.id, {
+        gpuPlacement: 'layers',
+        numGpuLayers: value,
+        numGpuPercent: undefined,
+        numGpu: undefined,
+      });
+      return;
+    }
     if (
       node.data.numGpuLayers === value &&
       node.data.numGpuPercent === undefined &&
@@ -306,7 +365,18 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
       return;
     }
     editorUpdateNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
-  }, [layers, node.data.numGpu, node.data.numGpuLayers, node.data.numGpuPercent, node.id, readOnly, value]);
+  }, [
+    auto,
+    isMoe,
+    layers,
+    node.data.gpuPlacement,
+    node.data.numGpu,
+    node.data.numGpuLayers,
+    node.data.numGpuPercent,
+    node.id,
+    readOnly,
+    value,
+  ]);
 
   if (stats.isPending && !stats.data) {
     return (
@@ -323,32 +393,95 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     );
   }
 
+  const used = stats.data?.expertUsedCount;
+  const knownSplit = (stats.data?.routedExpertBytes ?? 0) > 0;
   return (
     <Field label={t('network.inspector.llm.numGpu')}>
-      <input
-        type="range"
-        min={1}
-        max={layers}
-        step={1}
-        value={value}
-        disabled={readOnly}
-        className="w-full accent-primary"
-        onChange={(event) =>
-          editorUpdateNodeData(node.id, {
-            numGpuLayers: Number(event.target.value),
-            numGpuPercent: undefined,
-            numGpu: undefined,
-          })
-        }
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>1</span>
-        <span className="font-medium text-foreground">
-          {t('network.inspector.llm.numGpuLayers', { offload: value, total: layers })}
-        </span>
-        <span>{layers}</span>
-      </div>
-      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numGpuHint')}</p>
+      {isMoe ? (
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={auto}
+            disabled={readOnly}
+            onCheckedChange={(checked) => {
+              if (checked === true) {
+                editorUpdateNodeData(node.id, {
+                  gpuPlacement: 'auto',
+                  numGpuLayers: undefined,
+                  numGpuPercent: undefined,
+                  numGpu: undefined,
+                });
+                return;
+              }
+              editorUpdateNodeData(node.id, {
+                gpuPlacement: 'layers',
+                numGpuLayers: layers,
+                numGpuPercent: undefined,
+                numGpu: undefined,
+              });
+            }}
+          />
+          {t('network.inspector.llm.moeAuto')}
+        </label>
+      ) : null}
+      {isMoe && auto ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={readOnly}
+          onClick={() =>
+            editorUpdateNodeData(node.id, {
+              gpuPlacement: 'layers',
+              numGpuLayers: layers,
+              numGpuPercent: undefined,
+              numGpu: undefined,
+            })
+          }
+        >
+          {t('network.inspector.llm.moeForce')}
+        </Button>
+      ) : null}
+      {isMoe && auto ? (
+        <p className="text-xs text-muted-foreground">
+          {used
+            ? t('network.inspector.llm.moeAutoHint', { count: expertCount, used })
+            : t('network.inspector.llm.moeAutoHintNoUsed', { count: expertCount })}
+        </p>
+      ) : null}
+      {isMoe && auto && !knownSplit ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.llm.moeUnknown')}</p>
+      ) : null}
+      {auto ? null : (
+        <>
+          <input
+            type="range"
+            min={1}
+            max={layers}
+            step={1}
+            value={value}
+            disabled={readOnly}
+            className="w-full accent-primary"
+            onChange={(event) =>
+              editorUpdateNodeData(node.id, {
+                gpuPlacement: isMoe ? 'layers' : undefined,
+                numGpuLayers: Number(event.target.value),
+                numGpuPercent: undefined,
+                numGpu: undefined,
+              })
+            }
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>1</span>
+            <span className="font-medium text-foreground">
+              {t('network.inspector.llm.numGpuLayers', { offload: value, total: layers })}
+            </span>
+            <span>{layers}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {isMoe ? t('network.inspector.llm.moeLayerWarn') : t('network.inspector.llm.numGpuHint')}
+          </p>
+        </>
+      )}
     </Field>
   );
 }
@@ -368,14 +501,32 @@ function VramNeedField({ node }: { node: GraphNode }) {
   const resources = useHostResourcesQuery({ live: false });
   const ctxRaw = Number(node.data.numCtx);
   const ctx = Number.isFinite(ctxRaw) && ctxRaw > 0 ? ctxRaw : (stats.data?.contextMax ?? 0);
+  const placement = typeof node.data.gpuPlacement === 'string' ? node.data.gpuPlacement : null;
+  const auto = moeLeavesPlacementToRuntime({
+    expertCount: stats.data?.expertCount,
+    gpuLayers: stats.data?.gpuLayers,
+    numGpuLayers: Number(node.data.numGpuLayers),
+    numGpuPercent: Number(node.data.numGpuPercent),
+    gpuPlacement: placement,
+  });
+  const kvScale = kvCacheScale(node.data.kvCacheType);
+  const kvLayers = scaleKvLayers(stats.data?.kvLayers, kvScale);
+  const kvPerToken =
+    stats.data?.kvBytesPerToken && kvScale !== 1
+      ? Math.round(stats.data.kvBytesPerToken * kvScale)
+      : stats.data?.kvBytesPerToken;
+  const kvSwaPerToken =
+    stats.data?.kvSwaBytesPerToken && kvScale !== 1
+      ? Math.round(stats.data.kvSwaBytesPerToken * kvScale)
+      : stats.data?.kvSwaBytesPerToken;
   const parts = estimateVramParts({
     weightBytes: stats.data?.weightBytes,
-    kvBytesPerToken: stats.data?.kvBytesPerToken,
-    kvSwaBytesPerToken: stats.data?.kvSwaBytesPerToken,
+    kvBytesPerToken: kvPerToken,
+    kvSwaBytesPerToken: kvSwaPerToken,
     swaWindow: stats.data?.swaWindow,
     overheadBytes: stats.data?.overheadBytes,
     gpuLayers: stats.data?.gpuLayers,
-    kvLayers: stats.data?.kvLayers,
+    kvLayers,
     numCtx: ctx,
     numGpuLayers: Number(node.data.numGpuLayers),
     numGpuPercent: Number(node.data.numGpuPercent),
@@ -413,10 +564,39 @@ function VramNeedField({ node }: { node: GraphNode }) {
     .map((gpu) => gpu.name?.trim())
     .filter((name): name is string => Boolean(name))
     .join(' · ');
-  const percent = parts && gpuTotal > 0 ? (parts.total / gpuTotal) * 100 : 0;
-  const over = Boolean(parts && gpuTotal > 0 && parts.total > gpuTotal);
-  const tight = Boolean(parts && gpuTotal > 0 && !over && percent >= 85);
-  const tone = meterTone(Math.min(100, percent), Boolean(parts && gpuTotal > 0));
+  const fit =
+    (stats.data?.routedExpertBytes ?? 0) > 0
+      ? fitMoe({
+          nonExpertBytes: stats.data?.nonExpertBytes,
+          routedExpertBytes: stats.data?.routedExpertBytes,
+          overheadBytes: stats.data?.overheadBytes,
+          gpuLayers: stats.data?.gpuLayers,
+          kvLayers,
+          kvBytesPerToken: kvPerToken,
+          leadingDenseBlocks: stats.data?.leadingDenseBlocks,
+          projectorBytes: stats.data?.projectorBytes,
+          numCtx: ctx,
+          poolBytes: gpuTotal,
+        })
+      : null;
+  const placed = auto ? fit : null;
+  const need = placed ? placed.gpuBytes : (parts?.total ?? 0);
+  const weightBytes = placed ? placed.nonExpertOnGpu : (parts?.weights ?? 0);
+  const kvBytes = placed ? placed.kvBytes : (parts?.kv ?? 0);
+  const overheadBytes = placed ? placed.overheadBytes : (parts?.overhead ?? 0);
+  const percent = (placed || parts) && gpuTotal > 0 ? (need / gpuTotal) * 100 : 0;
+  const over = Boolean(!placed && parts && gpuTotal > 0 && parts.total > gpuTotal);
+  const tight = Boolean((placed || parts) && gpuTotal > 0 && !over && percent >= 85);
+  const tone = meterTone(Math.min(100, percent), Boolean((placed || parts) && gpuTotal > 0));
+  const ramTotal = resources.data?.ramTotalBytes ?? 0;
+  const ramFree = Math.max(0, ramTotal - (resources.data?.ramUsedBytes ?? 0));
+  const ramTight = Boolean(placed && placed.ramBytes > 0 && ramTotal > 0 && placed.ramBytes > ramFree);
+  const windowed = hasWindowedKv({
+    kvSwaBytesPerToken: stats.data?.kvSwaBytesPerToken,
+    swaWindow: stats.data?.swaWindow,
+    kvLayers: stats.data?.kvLayers,
+  });
+  const layerCount = stats.data?.gpuLayers ?? 0;
 
   if (stats.isPending && !stats.data) {
     return (
@@ -425,7 +605,7 @@ function VramNeedField({ node }: { node: GraphNode }) {
       </Field>
     );
   }
-  if (!parts) return null;
+  if (!parts && !placed) return null;
 
   return (
     <Field label={t('network.inspector.llm.vram')}>
@@ -454,10 +634,10 @@ function VramNeedField({ node }: { node: GraphNode }) {
         <span className={cn('tabular-nums', over && 'font-medium text-destructive', tight && 'font-medium text-warning')}>
           {gpuTotal > 0
             ? t('network.inspector.llm.vramNeed', {
-                need: formatBytes(parts.total, locale),
+                need: formatBytes(need, locale),
                 total: formatBytes(gpuTotal, locale),
               })
-            : t('network.inspector.llm.vramNeedOnly', { need: formatBytes(parts.total, locale) })}
+            : t('network.inspector.llm.vramNeedOnly', { need: formatBytes(need, locale) })}
         </span>
         {gpuTotal > 0 ? (
           <span className="tabular-nums text-muted-foreground">{formatPercent(percent, locale)}</span>
@@ -466,15 +646,80 @@ function VramNeedField({ node }: { node: GraphNode }) {
       {gpuNames ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramPool', { names: gpuNames })}</p> : null}
       <p className="text-xs text-muted-foreground">
         {t('network.inspector.llm.vramParts', {
-          weights: formatBytes(parts.weights, locale),
-          kv: formatBytes(parts.kv, locale),
-          overhead: formatBytes(parts.overhead, locale),
+          weights: formatBytes(weightBytes, locale),
+          kv: formatBytes(kvBytes, locale),
+          overhead: formatBytes(overheadBytes, locale),
         })}
       </p>
-      {formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
+      {placed ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeExpertsGpu', { experts: formatBytes(placed.expertOnGpuBytes, locale) })}
+        </p>
+      ) : null}
+      {!auto && fit ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeAutoFit', {
+            gpu: formatBytes(fit.gpuBytes, locale),
+            ram: formatBytes(fit.ramBytes, locale),
+          })}
+        </p>
+      ) : null}
+      {placed && placed.ramBytes > 0 ? (
+        <p className={cn('text-xs', ramTight ? 'text-warning' : 'text-muted-foreground')}>
+          {t('network.inspector.llm.moeRam', { ram: formatBytes(placed.ramBytes, locale) })}
+        </p>
+      ) : null}
+      {ramTight ? <p className="text-xs text-warning">{t('network.inspector.llm.moeRamTight')}</p> : null}
+      {placed && layerCount > 0 && placed.attentionLayersOnGpu < layerCount ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeAttention', { on: placed.attentionLayersOnGpu, total: layerCount })}
+        </p>
+      ) : null}
+      {placed && windowed ? <p className="text-xs text-muted-foreground">{t('network.inspector.llm.moeSwa')}</p> : null}
+      {placed && placed.fullLayers > 0 && placed.bytesPerToken > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {t('network.inspector.llm.moeKvFormula', {
+            full: placed.fullLayers,
+            perToken: count(placed.bytesPerToken),
+            ctx: count(ctx),
+          })}
+        </p>
+      ) : null}
+      {!placed && formula ? <p className="text-xs text-muted-foreground">{formula}</p> : null}
       {over ? <p className="text-xs text-destructive">{t('network.inspector.llm.vramOver')}</p> : null}
       {tight ? <p className="text-xs text-warning">{t('network.inspector.llm.vramTight')}</p> : null}
-      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.vramHint')}</p>
+      <p className="text-xs text-muted-foreground">
+        {placed ? t('network.inspector.llm.moeEstimate') : t('network.inspector.llm.vramHint')}
+      </p>
+    </Field>
+  );
+}
+
+function standardThreads(threads: number): number {
+  return Math.max(1, Math.round(threads / 2));
+}
+
+function KvCacheField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const value = node.data.kvCacheType === 'q8_0' ? 'q8_0' : 'f16';
+  return (
+    <Field label={t('network.inspector.llm.kvCache')}>
+      <Select
+        value={value}
+        disabled={readOnly}
+        onValueChange={(next) =>
+          editorUpdateNodeData(node.id, { kvCacheType: next === 'q8_0' ? 'q8_0' : 'f16' })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="f16">{t('network.inspector.llm.kvCacheF16')}</SelectItem>
+          <SelectItem value="q8_0">{t('network.inspector.llm.kvCacheQ8')}</SelectItem>
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.llm.kvCacheHint')}</p>
     </Field>
   );
 }
@@ -483,15 +728,19 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
   const { t } = useTranslation();
   const resources = useHostResourcesQuery({ live: false });
   const threads = resources.data?.cpuThreads ?? resources.data?.cpuCores ?? null;
-  const cores = resources.data?.cpuCores ?? threads;
   const current = Number(node.data.numThread);
+  const touched = node.data.numThreadTouched === true;
+  const standard = threads == null ? 1 : standardThreads(threads);
 
   useEffect(() => {
-    if (readOnly || threads == null || cores == null) return;
-    if (!Number.isFinite(current) || current < 1 || current > threads) {
-      editorUpdateNodeData(node.id, { numThread: cores });
+    if (readOnly || threads == null) return;
+    const missing = !Number.isFinite(current) || current < 1 || current > threads;
+    // Full load was the old automatic default. A value the user picked stays.
+    const oldFullDefault = !touched && current === threads;
+    if (missing || oldFullDefault) {
+      editorUpdateNodeData(node.id, { numThread: standard, numThreadTouched: true });
     }
-  }, [cores, current, node.id, readOnly, threads]);
+  }, [current, node.id, readOnly, standard, threads, touched]);
 
   if (resources.isPending && !resources.data) {
     return (
@@ -500,7 +749,7 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
       </Field>
     );
   }
-  if (threads == null || cores == null) {
+  if (threads == null) {
     return (
       <Field label={t('network.inspector.llm.numThread')}>
         <p className="text-xs text-muted-foreground">{t('network.inspector.llm.numThreadUnavailable')}</p>
@@ -508,7 +757,7 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
     );
   }
 
-  const value = Number.isFinite(current) ? Math.min(threads, Math.max(1, current)) : cores;
+  const value = Number.isFinite(current) ? Math.min(threads, Math.max(1, current)) : standard;
 
   return (
     <Field label={t('network.inspector.llm.numThread')}>
@@ -520,7 +769,9 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
         value={value}
         disabled={readOnly}
         className="w-full accent-primary"
-        onChange={(event) => editorUpdateNodeData(node.id, { numThread: Number(event.target.value) })}
+        onChange={(event) =>
+          editorUpdateNodeData(node.id, { numThread: Number(event.target.value), numThreadTouched: true })
+        }
       />
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>1</span>
@@ -549,7 +800,6 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
   const [advanced, setAdvanced] = useState(false);
-  const [pinging, setPinging] = useState(false);
   const provider = String(node.data.provider ?? 'ollama');
   const model = String(node.data.model ?? '');
   const credentialId = String(node.data.credentialId ?? '') || undefined;
@@ -565,15 +815,26 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     enabled: catalogProvider && Boolean(credentialId),
   });
 
+  const ollamaChat = useMemo(
+    () => (ollamaModels.data?.items ?? []).filter((item) => !isEmbeddingModelName(item.name)),
+    [ollamaModels.data?.items],
+  );
+  const denseNames = useMemo(() => ollamaChat.filter((item) => !item.moe).map((item) => item.name), [ollamaChat]);
+  const moeNames = useMemo(() => ollamaChat.filter((item) => item.moe).map((item) => item.name), [ollamaChat]);
+  const ollamaListReady = provider === 'ollama' && ollamaModels.isSuccess && !ollamaModels.isFetching;
+  const onlyMoe = ollamaListReady && moeNames.length > 0 && denseNames.length === 0;
+  const onlyDense = ollamaListReady && denseNames.length > 0 && moeNames.length === 0;
+  const storedKind = node.data.modelKind === 'moe' ? 'moe' : node.data.modelKind === 'dense' ? 'dense' : null;
+  const modelKind: 'dense' | 'moe' = onlyMoe
+    ? 'moe'
+    : onlyDense
+      ? 'dense'
+      : (storedKind ?? (moeNames.includes(model) ? 'moe' : 'dense'));
   const modelOptions = useMemo(() => {
-    const items =
-      provider === 'ollama'
-        ? (ollamaModels.data?.items ?? [])
-        : catalogProvider
-          ? (catalogModels.data?.items ?? [])
-          : [];
-    return items.map((item) => item.name).filter((name) => !isEmbeddingModelName(name));
-  }, [catalogModels.data?.items, catalogProvider, ollamaModels.data?.items, provider]);
+    if (provider === 'ollama') return modelKind === 'moe' ? moeNames : denseNames;
+    if (!catalogProvider) return [];
+    return (catalogModels.data?.items ?? []).map((item) => item.name).filter((name) => !isEmbeddingModelName(name));
+  }, [catalogModels.data?.items, catalogProvider, denseNames, moeNames, modelKind, provider]);
   const modelsLoading =
     provider === 'ollama'
       ? ollamaModels.isPending || ollamaModels.isFetching
@@ -584,14 +845,20 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
 
   useEffect(() => {
     if (readOnly || modelLocked || modelsLoading) return;
+    const patch: Record<string, unknown> = {};
+    if (provider === 'ollama' && node.data.modelKind !== modelKind) patch.modelKind = modelKind;
     if (modelOptions.length === 0) {
-      if (model) editorUpdateNodeData(node.id, { model: '' });
-      return;
+      if (model) patch.model = '';
+    } else if (!modelOptions.includes(model)) {
+      patch.model = modelOptions[0];
+      patch.numCtx = undefined;
+      patch.numGpu = undefined;
+      patch.numGpuPercent = undefined;
+      patch.numGpuLayers = undefined;
+      patch.gpuPlacement = undefined;
     }
-    if (!modelOptions.includes(model)) {
-      editorUpdateNodeData(node.id, { model: modelOptions[0] });
-    }
-  }, [model, modelLocked, modelOptions, modelsLoading, node.id, readOnly]);
+    if (Object.keys(patch).length > 0) editorUpdateNodeData(node.id, patch);
+  }, [model, modelKind, modelLocked, modelOptions, modelsLoading, node.data.modelKind, node.id, provider, readOnly]);
   const catalogFailed =
     catalogProvider &&
     Boolean(credentialId) &&
@@ -610,6 +877,9 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numGpu = undefined;
       patch.numGpuPercent = undefined;
       patch.numGpuLayers = undefined;
+      patch.gpuPlacement = undefined;
+      patch.kvCacheType = undefined;
+      patch.modelKind = undefined;
     }
     if (next === 'ollama') {
       patch.credentialId = undefined;
@@ -621,24 +891,6 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       }
     }
     editorUpdateNodeData(node.id, patch);
-  }
-
-  async function ping() {
-    setPinging(true);
-    try {
-      const result = await testLlmConnection({
-        provider,
-        model,
-        baseUrl: String(node.data.baseUrl ?? '') || undefined,
-        credentialId,
-      });
-      notify({
-        titleKey: result.messageKey ?? (result.ok ? 'network.inspector.llm.pingOk' : 'network.inspector.llm.pingFail'),
-        variant: result.ok ? 'success' : 'error',
-      });
-    } finally {
-      setPinging(false);
-    }
   }
 
   const credentialField =
@@ -696,6 +948,39 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         </Select>
       </Field>
       {catalogProvider ? credentialField : null}
+      {provider === 'ollama' ? (
+        <Field label={t('network.inspector.llm.modelKind')}>
+          <Select
+            value={modelKind}
+            disabled={readOnly || modelsLoading}
+            onValueChange={(value) => {
+              const next = value === 'moe' ? 'moe' : 'dense';
+              const options = next === 'moe' ? moeNames : denseNames;
+              editorUpdateNodeData(node.id, {
+                modelKind: next,
+                model: options.includes(model) ? model : (options[0] ?? ''),
+                numCtx: undefined,
+                numGpu: undefined,
+                numGpuPercent: undefined,
+                numGpuLayers: undefined,
+                gpuPlacement: undefined,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dense" disabled={ollamaListReady && denseNames.length === 0 && moeNames.length > 0}>
+                {t('network.inspector.llm.kindDense')}
+              </SelectItem>
+              <SelectItem value="moe" disabled={ollamaListReady && moeNames.length === 0 && denseNames.length > 0}>
+                {t('network.inspector.llm.kindMoe')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
       <Field label={t('network.inspector.llm.model')}>
         <ModelCombobox
           value={modelLocked ? '' : model}
@@ -713,6 +998,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
               numGpu: undefined,
               numGpuPercent: undefined,
               numGpuLayers: undefined,
+              gpuPlacement: undefined,
             })
           }
         />
@@ -723,22 +1009,13 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       {model && !modelLocked ? <ContextWindowField node={node} readOnly={readOnly} /> : null}
       {provider === 'ollama' && model && !modelLocked ? (
         <>
+          <KvCacheField node={node} readOnly={readOnly} />
           <CpuThreadField node={node} readOnly={readOnly} />
           <GpuOffloadField node={node} readOnly={readOnly} />
           <VramNeedField node={node} />
         </>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pinging || !model || modelLocked}
-          loading={pinging}
-          onClick={() => void ping()}
-        >
-          {t('network.inspector.llm.ping')}
-        </Button>
+      <div className="pt-1">
         <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setAdvanced((v) => !v)}>
           {t('network.inspector.llm.advanced')}
         </button>
@@ -789,6 +1066,26 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
           onChange={(event) => editorUpdateNodeData(node.id, { systemPrompt: event.target.value })}
         />
       </Field>
+      <Field label={t('network.inspector.orchestrator.agentMissLimit')}>
+        <Input
+          type="number"
+          min={1}
+          max={8}
+          value={node.data.agentMissLimit == null ? 3 : String(node.data.agentMissLimit)}
+          disabled={readOnly}
+          onChange={(event) => {
+            const raw = event.target.value;
+            if (raw === '') {
+              editorUpdateNodeData(node.id, { agentMissLimit: undefined });
+              return;
+            }
+            const next = Math.round(Number(raw));
+            if (!Number.isFinite(next)) return;
+            editorUpdateNodeData(node.id, { agentMissLimit: Math.max(1, Math.min(8, next)) });
+          }}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.agentMissLimitHint')}</p>
     </>
   );
 }
@@ -820,8 +1117,11 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   const credentials = useEditorCredentialsQuery();
   const kind = String(node.data.kind ?? 'datetime');
   const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access'] as const;
+  const searchProvider = String(node.data.searchProvider ?? 'brave');
   const items = credentials.data?.items ?? [];
-  const matching = items.filter((item) => credentialMatchesToolKind(item.kind, kind));
+  const matching = items.filter((item) =>
+    kind === 'web_search' ? credentialMatchesSearchProvider(item.kind, searchProvider) : true,
+  );
   const credentialId = String(node.data.credentialId ?? '');
   const listedId = matching.some((item) => item.id === credentialId) ? credentialId : 'none';
 
@@ -829,7 +1129,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
     if (readOnly || kind !== 'web_search' || !credentials.data) return;
     if (!credentialId) return;
     const ok = (credentials.data.items ?? []).some(
-      (item) => item.id === credentialId && item.kind === 'web_search',
+      (item) => item.id === credentialId && credentialMatchesSearchProvider(item.kind, searchProvider),
     );
     if (!ok) editorUpdateNodeData(node.id, { credentialId: undefined });
   }, [kind, credentialId, credentials.data, readOnly, node.id]);
@@ -844,7 +1144,10 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
             const patch: Record<string, unknown> = { kind: value };
             if (value === 'web_search') {
               const current = items.find((item) => item.id === node.data.credentialId);
-              if (!current || current.kind !== 'web_search') patch.credentialId = undefined;
+              const provider = String(node.data.searchProvider ?? 'brave');
+              if (!current || !credentialMatchesSearchProvider(current.kind, provider)) {
+                patch.credentialId = undefined;
+              }
             }
             editorUpdateNodeData(node.id, patch);
           }}
@@ -879,7 +1182,8 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
           </Field>
         </>
       ) : null}
-      {kind === 'http' || kind === 'web_search' ? (
+      {kind === 'web_search' ? <WebSearchFields node={node} readOnly={readOnly} items={items} /> : null}
+      {kind === 'http' ? (
         <Field label={t('network.inspector.tool.credential')}>
           <Select
             value={listedId}
@@ -903,6 +1207,12 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
         </Field>
       ) : null}
       {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
+      {kind === 'datetime' ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.tool.dateHint')}</p>
+      ) : null}
+      {kind === 'calculator' ? (
+        <p className="text-xs text-muted-foreground">{t('network.inspector.tool.calculatorHint')}</p>
+      ) : null}
     </>
   );
 }
@@ -1084,11 +1394,123 @@ function McpFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   );
 }
 
+const FILE_ACTIONS = [
+  'list',
+  'stat',
+  'read',
+  'read_many',
+  'write',
+  'mkdir',
+  'delete',
+  'edit',
+  'move',
+  'search',
+  'tree',
+] as const;
+const FILE_WRITE_ACTIONS = new Set(['write', 'mkdir', 'edit', 'move']);
+const SEARCH_PROVIDERS = ['brave', 'tavily', 'exa', 'searxng'] as const;
+
+function WebSearchFields({
+  node,
+  readOnly,
+  items,
+}: {
+  node: GraphNode;
+  readOnly: boolean;
+  items: { id: string; name: string; kind: string }[];
+}) {
+  const { t } = useTranslation();
+  const provider = String(node.data.searchProvider ?? 'brave');
+  const matching = items.filter((item) => item.kind === provider);
+  const credentialId = String(node.data.credentialId ?? '');
+  const listedId = matching.some((item) => item.id === credentialId) ? credentialId : 'none';
+  const maxResults = Number(node.data.maxResults ?? 5);
+
+  return (
+    <>
+      <Field label={t('network.inspector.tool.searchProvider')}>
+        <Select
+          value={provider}
+          disabled={readOnly}
+          onValueChange={(value) => {
+            const current = items.find((item) => item.id === node.data.credentialId);
+            editorUpdateNodeData(node.id, {
+              searchProvider: value,
+              credentialId: current && current.kind === value ? current.id : undefined,
+              searchBaseUrl: value === 'searxng' ? node.data.searchBaseUrl : undefined,
+            });
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SEARCH_PROVIDERS.map((item) => (
+              <SelectItem key={item} value={item}>
+                {t(`network.inspector.tool.searchProviderName.${item}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      {provider === 'searxng' ? (
+        <Field label={t('network.inspector.tool.searchBaseUrl')}>
+          <Input
+            value={String(node.data.searchBaseUrl ?? '')}
+            disabled={readOnly}
+            spellCheck={false}
+            autoComplete="off"
+            placeholder="https://"
+            onChange={(event) => editorUpdateNodeData(node.id, { searchBaseUrl: event.target.value })}
+          />
+        </Field>
+      ) : null}
+      <Field label={t('network.inspector.tool.maxResults')}>
+        <Input
+          type="number"
+          min={1}
+          max={10}
+          value={Number.isFinite(maxResults) ? maxResults : 5}
+          disabled={readOnly}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            editorUpdateNodeData(node.id, {
+              maxResults: Number.isFinite(next) ? Math.max(1, Math.min(10, next)) : 5,
+            });
+          }}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">{t(`network.inspector.tool.searchHint.${provider}`)}</p>
+      <Field label={t('network.inspector.tool.credential')}>
+        <Select
+          value={listedId}
+          disabled={readOnly}
+          onValueChange={(value) =>
+            editorUpdateNodeData(node.id, { credentialId: value === 'none' ? undefined : value })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t('network.inspector.llm.credentialEmpty')}</SelectItem>
+            {matching.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+    </>
+  );
+}
+
 function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const [picking, setPicking] = useState(false);
-  const allowWrite = node.data.allowWrite !== false;
-  const allowDelete = node.data.allowDelete !== false;
+  const stored = Array.isArray(node.data.fileActions) ? node.data.fileActions.map(String) : null;
+  const selected = new Set(stored ?? FILE_ACTIONS);
 
   function applyPath(path: string) {
     const trimmed = path.trim();
@@ -1128,22 +1550,29 @@ function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boole
         </div>
       </Field>
       <p className="text-xs text-muted-foreground">{t('network.inspector.tool.fileAccessHint')}</p>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox
-          checked={allowWrite}
-          disabled={readOnly}
-          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowWrite: value === true })}
-        />
-        {t('network.inspector.tool.allowWrite')}
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox
-          checked={allowDelete}
-          disabled={readOnly}
-          onCheckedChange={(value) => editorUpdateNodeData(node.id, { allowDelete: value === true })}
-        />
-        {t('network.inspector.tool.allowDelete')}
-      </label>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">{t('network.inspector.tool.fileActions')}</p>
+        {FILE_ACTIONS.map((action) => (
+          <label key={action} className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={selected.has(action)}
+              disabled={readOnly}
+              onCheckedChange={(value) => {
+                const next = new Set(selected);
+                if (value === true) next.add(action);
+                else next.delete(action);
+                const ordered = FILE_ACTIONS.filter((item) => next.has(item));
+                editorUpdateNodeData(node.id, {
+                  fileActions: ordered.length === FILE_ACTIONS.length ? undefined : [...ordered],
+                  allowWrite: ordered.some((item) => FILE_WRITE_ACTIONS.has(item)),
+                  allowDelete: ordered.includes('delete'),
+                });
+              }}
+            />
+            {t(`network.inspector.tool.fileAction.${action}`)}
+          </label>
+        ))}
+      </div>
     </>
   );
 }
@@ -1364,53 +1793,92 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
 
 function RouterFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
-  const branches = Array.isArray(node.data.branches) ? (node.data.branches as Array<{ id: string; name: string; condition: string }>) : [];
+  const branches = Array.isArray(node.data.branches)
+    ? (node.data.branches as Array<{ id: string; name?: string; match?: string; pattern?: string; condition?: string }>)
+    : [];
 
-  function update(next: typeof branches) {
-    editorUpdateNodeData(node.id, { branches: next });
+  function stored(next: typeof branches) {
+    editorUpdateNodeData(node.id, {
+      branches: next.map((branch) => ({
+        id: branch.id,
+        name: branch.name ?? '',
+        match: routerMatchOf(branch.match),
+        pattern: routerPatternOf(branch),
+      })),
+    });
   }
 
   return (
     <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{t('network.inspector.router.hint')}</p>
       <p className="text-sm font-medium">{t('network.inspector.router.branches')}</p>
-      {branches.map((branch, index) => (
-        <div key={branch.id} className="grid gap-1 rounded-md border p-2">
-          <Input
-            value={branch.name}
-            disabled={readOnly}
-            placeholder={t('network.inspector.router.branchName')}
-            onChange={(event) =>
-              update(branches.map((item, i) => (i === index ? { ...item, name: event.target.value } : item)))
-            }
-          />
-          <Input
-            value={branch.condition}
-            disabled={readOnly}
-            placeholder={t('network.inspector.router.condition')}
-            onChange={(event) =>
-              update(branches.map((item, i) => (i === index ? { ...item, condition: event.target.value } : item)))
-            }
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={readOnly || branches.length < 1}
-            onClick={() => update(branches.filter((item) => item.id !== branch.id))}
-          >
-            {t('network.context.delete')}
-          </Button>
-        </div>
-      ))}
+      {branches.map((branch, index) => {
+        const match = routerMatchOf(branch.match);
+        return (
+          <div key={branch.id} className="grid gap-1.5 rounded-md border p-2">
+            <Input
+              value={branch.name ?? ''}
+              disabled={readOnly}
+              placeholder={t('network.inspector.router.branchName')}
+              onChange={(event) =>
+                stored(branches.map((item, i) => (i === index ? { ...item, name: event.target.value } : item)))
+              }
+            />
+            <Select
+              value={match}
+              disabled={readOnly}
+              onValueChange={(next) =>
+                stored(
+                  branches.map((item, i) =>
+                    i === index ? { ...item, match: next as RouterMatch } : item,
+                  ),
+                )
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROUTER_MATCHES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {t(`network.inspector.router.match.${item}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={routerPatternOf(branch)}
+              disabled={readOnly}
+              placeholder={t('network.inspector.router.pattern')}
+              onChange={(event) =>
+                stored(branches.map((item, i) => (i === index ? { ...item, pattern: event.target.value } : item)))
+              }
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={readOnly}
+              onClick={() => stored(branches.filter((item) => item.id !== branch.id))}
+            >
+              {t('network.context.delete')}
+            </Button>
+          </div>
+        );
+      })}
       <Button
         type="button"
         size="sm"
         variant="outline"
         disabled={readOnly}
-        onClick={() => update([...branches, { id: newId('br'), name: '', condition: '' }])}
+        onClick={() => stored([...branches, { id: newId('br'), name: '', match: 'contains', pattern: '' }])}
       >
         {t('network.inspector.router.add')}
       </Button>
+      <div className="rounded-md border border-dashed p-2">
+        <p className="text-sm font-medium">{t('network.ports.default')}</p>
+        <p className="text-xs text-muted-foreground">{t('network.inspector.router.defaultHint')}</p>
+      </div>
     </div>
   );
 }

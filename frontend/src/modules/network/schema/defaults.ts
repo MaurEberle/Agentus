@@ -6,7 +6,7 @@ export function defaultData(type: NodeType): Record<string, unknown> {
     case 'chat_input':
       return { displayName: '', placeholder: '', startMessage: '', requireInput: false };
     case 'orchestrator':
-      return { displayName: '', systemPrompt: '' };
+      return { displayName: '', systemPrompt: '', agentMissLimit: 3 };
     case 'llm':
       return { displayName: '', provider: 'ollama', model: '' };
     case 'agent':
@@ -20,7 +20,7 @@ export function defaultData(type: NodeType): Record<string, unknown> {
     case 'router':
       return {
         displayName: '',
-        branches: [{ id: newId('br'), name: 'A', condition: '' }],
+        branches: [{ id: newId('br'), name: 'A', match: 'contains', pattern: '' }],
       };
     case 'end':
       return { displayName: '' };

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import logging
 import traceback
 import time
 import uuid
 from collections import deque
+
+log = logging.getLogger("agentus.run")
 
 from app.common.secrets import mask_obj
 from app.db.engine import utc_now
 from app.db.runs import insert_call, upsert_step
 from app.db.vault import get as vault_get
 from app.run.compile import CompiledGraph
+from app.run.router_rules import resolve_route
 from app.run.controller import RunController, emit_log, node_label
 from app.run.wait_ask import excerpt as ask_excerpt
 from app.run.knowledge import retrieve
@@ -19,14 +23,17 @@ from app.run.limits import (
     MAX_AGENT_INVOCATIONS,
     MAX_AGENT_THINKS,
     MAX_CLOSING_THINK_TOKENS,
+    MAX_EMPTY_STOPS,
     MAX_SHORT_THINKS,
     MAX_CONTROL_REPAIRS,
     MAX_FAILED_TOOL_CALLS,
     MAX_TOOL_JSON_ATTEMPTS,
+    MAX_ORCHESTRATOR_FAILED_THINKS,
+    MAX_ORCHESTRATOR_FAILED_TOOLS,
     MAX_ORCHESTRATOR_STEPS,
     MAX_ORCHESTRATOR_THINKS,
-    MAX_ORCHESTRATOR_TOOL_ROUNDS,
     MAX_SAME_RETRIES,
+    MAX_TAKEOVER_THINKS,
     LAST_MESSAGE_MAX,
     STREAM_IDLE_TIMEOUT_SEC,
     SUBSTANTIAL_RESULT_CHARS,
@@ -65,6 +72,10 @@ _REPAIR_NOTE = (
     "Reply with one JSON object only. The task must be a short instruction. Do not paste an agent result."
 )
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
+_TOOL_THINK_NOTE = (
+    "Five tool calls failed in a row. Think, then decide with one JSON object or a working tool call. "
+    "Do not repeat the same failed call."
+)
 _AGENT_THINK = (
     "You may think first with {\"action\":\"think\",\"text\":\"...\"} or a think block. "
     "Think is not the result and is not shown to the user. After think, write the visible result."
@@ -89,6 +100,10 @@ _TOOL_DONE = (
     "The file work succeeded. Write a short visible result for the next node. "
     "Do not think again."
 )
+_EMPTY_STOP_NOTE = (
+    "The last reply was empty and was discarded. The task is not finished. "
+    "Call a tool with a tool call and continue the remaining work."
+)
 _TOOL_JSON_NOTE = (
     "The last tool call to {name} was discarded: its JSON arguments were truncated. "
     "Call the tool again with complete JSON. Prefer a smaller write if the file is large."
@@ -99,7 +114,8 @@ _FINISH_FILES_NOTE = (
 )
 _SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
 _TRUNCATED_REASONS = frozenset({"length", "max_tokens", "truncated"})
-_FILE_PREP_ACTIONS = frozenset({"read", "list", "stat", "mkdir"})
+_FILE_MUTATIONS = frozenset({"write", "delete", "edit", "move"})
+_FILE_PREP_ACTIONS = frozenset({"read", "list", "stat", "mkdir", "search", "tree", "read_many"})
 
 
 def _control_raw(result: CompletionResult) -> str:
@@ -176,10 +192,17 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
             outcome = _run_linear(ctrl, compiled, user_text or "")
     except Exception as exc:
         fail_exc = exc
+        log_message = str(exc)
+        payload = _runtime_error_payload(exc)
+        if isinstance(exc, RuntimeApiError) and exc.error_key == "runtime.modelInfoFailed":
+            log_message = "run.llm.modelInfo"
+            detail = {"model": exc.detail or ""}
+            payload = {**(payload or {}), **detail}
+            log.error("ollama model info failed model=%s", exc.detail or "")
         emit_log(
             "error",
-            str(exc),
-            payload=_runtime_error_payload(exc),
+            log_message,
+            payload=payload,
             stack=traceback.format_exc(),
         )
         outcome = "failed"
@@ -236,18 +259,11 @@ def _queue_get(ctrl: RunController) -> str | None:
     return None
 
 
-def _route(compiled: CompiledGraph, router_id: str, text: str) -> str | None:
-    line = text.splitlines()[0].strip() if text else ""
-    edges = compiled.routers.get(router_id) or []
-    for handle, target in edges:
-        if handle == line:
-            return target
-        elif handle == "default":
-            return target
-    # for handle, target in edges:
-    #     if handle == "default":
-    #         return target
-    return edges[0][1] if edges else None
+def _route(compiled: CompiledGraph, router_id: str, text: str) -> tuple[str | None, str]:
+    router = compiled.routers.get(router_id)
+    if router is None:
+        return None, "default"
+    return resolve_route(router, text)
 
 
 def _fail_step_limit(ctrl: RunController, node_id: str) -> str:
@@ -265,6 +281,39 @@ def _fail_think_limit(ctrl: RunController, node_id: str) -> str:
     ctrl.fail_class = "orchestrator"
     ctrl.last_error_node_id = node_id
     _set_node(ctrl, node_id, "error", error="run.orchestrator.thinkLimit")
+    return "failed"
+
+
+def _fail_orch_tools(ctrl: RunController, node_id: str, failed: int) -> dict[str, str]:
+    emit_log(
+        "error",
+        "run.orchestrator.toolFailures",
+        node_id=node_id,
+        payload={"failed": failed},
+    )
+    ctrl.fail_message = "run.orchestrator.toolFailures"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error="run.orchestrator.toolFailures")
+    return {"action": "failed-tools"}
+
+
+def _fail_takeover(ctrl: RunController, node_id: str, memory: RunMemory, *, no_tool: bool = False) -> str:
+    item = memory.takeover
+    name = item.name if item else ""
+    task = item.task if item else ""
+    misses = memory.misses.get(item.agent_id, 0) if item else 0
+    key = "run.orchestrator.takeoverNoTool" if no_tool else "run.orchestrator.takeover"
+    emit_log(
+        "error",
+        key,
+        node_id=node_id,
+        payload={"agent": name, "misses": misses, "task": task[:300]},
+    )
+    ctrl.fail_message = key
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    _set_node(ctrl, node_id, "error", error=key)
     return "failed"
 
 
@@ -302,16 +351,20 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
             emit_log("debug", "run.end", node_id=node_id)
             continue
         if node.type == "router":
-            target = _route(compiled, node_id, payload)
+            target, branch = _route(compiled, node_id, payload)
             if target is None:
-                emit_log("error", "graph.router.noEdge", node_id=node_id)
+                emit_log("error", "graph.router.noEdge", node_id=node_id, payload={"branch": branch})
+                ctrl.fail_message = "graph.router.noEdge"
+                ctrl.last_error_node_id = node_id
+                _set_node(ctrl, node_id, "error", error="graph.router.noEdge")
                 return "failed"
             emit_log(
                 "info",
                 "run.router",
                 node_id=node_id,
-                payload={"target": target},
+                payload={"target": target, "branch": branch},
             )
+            _set_node(ctrl, node_id, "done")
             pending.append((target, payload))
             continue
         if node.type != "agent":
@@ -334,9 +387,11 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
 
 
 def _tool_schemas(
-    kinds: list[str], mcp_pairs: list[tuple[str, list[str] | None, str | None]]
+    kinds: list[str],
+    mcp_pairs: list[tuple[str, list[str] | None, str | None]],
+    file_actions: list[str] | None = None,
 ) -> list[dict]:
-    tools = openai_tools_for_kinds(kinds)
+    tools = openai_tools_for_kinds(kinds, file_actions=file_actions)
     bridge = get_mcp()
     if bridge and mcp_pairs:
         from app.run.mcp_bridge import mcp_openai_tools
@@ -492,6 +547,29 @@ def _agent_tool_failures_stop(
     return False
 
 
+def _agent_empty_stops_stop(
+    ctrl: RunController,
+    agent_id: str,
+    record: AgentRecord | None,
+    stops: int,
+) -> bool:
+    """True: orchestrator anomaly (break). False: fail the linear run."""
+    emit_log(
+        "warn",
+        "run.agent.emptyStops",
+        node_id=agent_id,
+        payload={"stops": stops},
+    )
+    if record is not None:
+        record.error = "empty stops"
+        return True
+    _set_node(ctrl, agent_id, "error", error="run.agent.emptyStops")
+    ctrl.fail_message = "run.agent.emptyStops"
+    ctrl.fail_class = "unknown"
+    ctrl.last_error_node_id = agent_id
+    return False
+
+
 def _agent_turn(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -538,7 +616,7 @@ def _agent_turn(
         )
     context = "\n".join(snippets) if snippets else "No document context."
     system = (agent.system_prompt + "\n\n# Document context\n" + context).strip()
-    tools = _tool_schemas(agent.tool_kinds, agent.mcp)
+    tools = _tool_schemas(agent.tool_kinds, agent.mcp, agent.file_actions)
     system = system + "\n\n" + (_AGENT_THINK_TOOLS if tools else _AGENT_THINK)
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
@@ -554,6 +632,7 @@ def _agent_turn(
     nudges = 0
     thinks = 0
     short_thinks = 0
+    empty_stops = 0
     content = ""
     best_visible = ""
     offered = tools
@@ -565,7 +644,7 @@ def _agent_turn(
         for fact in record.files:
             if not fact.ok:
                 continue
-            if fact.action in {"write", "delete"}:
+            if fact.action in _FILE_MUTATIONS:
                 wrote_ok = True
                 if fact.path:
                     wrote_paths.append(fact.path)
@@ -780,10 +859,12 @@ def _agent_turn(
                     },
                 ),
             )
+            _log_vram_compare(agent.llm, options, choice, llm_node_id)
             result = _with_salvaged_tools(result, offered)
             if result.tool_calls:
                 thinks = 0
                 short_thinks = 0
+                empty_stops = 0
                 _set_node(ctrl, agent_id, "running", wait="tool")
                 messages.append(
                     LlmMessage(
@@ -792,6 +873,7 @@ def _agent_turn(
                         tool_calls=result.tool_calls,
                     )
                 )
+                hit_failure_limit = False
                 for call in result.tool_calls:
                     body, _fact, ok_call = _dispatch_tool(
                         ctrl,
@@ -805,8 +887,9 @@ def _agent_turn(
                         reuse=reuse,
                     )
                     if ok_call:
+                        failed_tools = 0
                         tool_ok = True
-                        if _fact is not None and _fact.action in {"write", "delete"}:
+                        if _fact is not None and _fact.action in _FILE_MUTATIONS:
                             wrote_ok = True
                             if _fact.path:
                                 wrote_paths.append(_fact.path)
@@ -822,16 +905,19 @@ def _agent_turn(
                             name=call.name or None,
                         )
                     )
+                    if failed_tools >= MAX_FAILED_TOOL_CALLS:
+                        if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
+                            content = result.content or ""
+                            hit_failure_limit = True
+                            break
+                        return None
+                if hit_failure_limit:
+                    break
                 if wrote_ok:
                     _set_system_note(messages, _TOOL_REQUIRED, _TOOL_DONE)
                     _set_system_note(messages, _TOOL_ANSWER, _TOOL_DONE)
                 elif tool_ok and not file_prep:
                     _set_system_note(messages, _TOOL_REQUIRED, _TOOL_ANSWER)
-                if failed_tools >= MAX_FAILED_TOOL_CALLS:
-                    if _agent_tool_failures_stop(ctrl, agent_id, record, failed_tools):
-                        content = result.content or ""
-                        break
-                    return None
                 continue
             truncated = _result_truncated(result)
             think_body = agent_think_text(
@@ -859,6 +945,7 @@ def _agent_turn(
                     short_thinks += 1
                 else:
                     short_thinks = 0
+                    empty_stops = 0
                 emit_log(
                     "info",
                     "run.agent.think",
@@ -914,7 +1001,22 @@ def _agent_turn(
                 messages.append(LlmMessage(role="user", content=_TOOL_USE_NOTE))
                 continue
             if wrote_ok and not (content or "").strip():
-                content = _think_as_result("", wrote_paths, "")
+                empty_stops += 1
+                if empty_stops < MAX_EMPTY_STOPS:
+                    emit_log(
+                        "warn",
+                        "run.agent.emptyStop",
+                        node_id=agent_id,
+                        payload={"attempt": empty_stops, "max": MAX_EMPTY_STOPS},
+                    )
+                    _set_system_note(messages, _TOOL_DONE, _TOOL_REQUIRED)
+                    messages.append(LlmMessage(role="user", content=_EMPTY_STOP_NOTE))
+                    _set_node(ctrl, agent_id, "running", wait="llm")
+                    continue
+                if _agent_empty_stops_stop(ctrl, agent_id, record, empty_stops):
+                    content = ""
+                    break
+                return None
             if not wrote_ok and len(visible_text(content or "")) < len(best_visible):
                 content = best_visible
             break
@@ -1042,6 +1144,104 @@ def _static_context_max(num_ctx: int | None) -> int | None:
     return None
 
 
+def _inference_pool_bytes() -> int:
+    from app.run.resources import latest
+
+    gpus = list(latest().gpus or [])
+    pool = [gpu for gpu in gpus if gpu.inference]
+    if not pool:
+        pool = [gpu for gpu in gpus if gpu.vram_total_bytes >= 512 * 1024 * 1024]
+    if not pool and gpus:
+        pool = [max(gpus, key=lambda gpu: gpu.vram_total_bytes)]
+    return sum(max(0, gpu.vram_total_bytes) for gpu in pool)
+
+
+def _display_count(value: object) -> str | int:
+    if isinstance(value, bool) or value is None:
+        return "—"
+    if isinstance(value, int):
+        return value
+    return "—"
+
+
+def _moe_auto_options(llm, choice, layers: int | None) -> dict:
+    """Leave GPU placement to llama.cpp.
+
+    Ollama 0.40 ignores ``num_cpu_moe`` and honors ``num_gpu``. Sending a
+    partial ``num_gpu`` disables that fitter. The Qwen3.6 run then loaded
+    12 of 41 layers, and the next attempt used ``num_gpu`` 0. The inspector
+    estimate predicts the fitter. It is not sent as a layer command.
+    """
+    from app.runtime.vram_est import vram_profile
+
+    del choice, layers
+    profile = vram_profile(llm.model, base_url=llm.base_url)
+    if profile is None or not profile.routed_expert_bytes:
+        emit_log(
+            "warn",
+            "run.llm.moeUnsplit",
+            node_id=getattr(llm, "node_id", None),
+            payload={"model": llm.model},
+        )
+    return {}
+
+
+def _log_vram_compare(llm, options, choice, node_id: str) -> None:
+    if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
+        return
+    try:
+        from app.runtime.ollama import loaded_memory
+        from app.runtime.vram_est import estimate_vram_bytes, plan_moe_offload, vram_profile, with_kv_cache
+
+        profile = with_kv_cache(vram_profile(llm.model, base_url=llm.base_url), getattr(llm, "kv_cache_type", None))
+        num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
+        opts = options if isinstance(options, dict) else {}
+        num_gpu = opts.get("num_gpu")
+        num_cpu = opts.get("num_cpu_moe")
+        plan = (
+            plan_moe_offload(profile, num_ctx=num_ctx, pool_bytes=_inference_pool_bytes())
+            if profile is not None
+            else None
+        )
+        estimated: int | None
+        if plan is not None and (isinstance(num_cpu, int) or "num_gpu" not in opts):
+            estimated = plan.estimated_gpu_bytes
+        elif profile is not None:
+            gpu = num_gpu if isinstance(num_gpu, int) and num_gpu > 0 else None
+            estimated = estimate_vram_bytes(profile, num_ctx=num_ctx, num_gpu=gpu)
+        else:
+            estimated = None
+        size, size_vram = loaded_memory(llm.model, base_url=llm.base_url)
+        if estimated is None and size_vram is None:
+            return
+        delta = None if estimated is None or size_vram is None else size_vram - estimated
+        payload = {
+            "model": llm.model,
+            "estimatedBytes": _display_count(estimated),
+            "actualVramBytes": _display_count(size_vram),
+            "actualBytes": _display_count(size),
+            "deltaBytes": _display_count(delta),
+            "expertsOnGpu": plan.experts_on_gpu if plan else "—",
+            "expertLayers": plan.expert_layers if plan else "—",
+            "attentionLayersOnGpu": plan.attention_layers_on_gpu if plan else "—",
+            "numGpu": _display_count(num_gpu),
+            "numCpuMoe": _display_count(num_cpu),
+            "numCtx": num_ctx,
+        }
+        emit_log("info", "run.llm.vram", node_id=node_id, payload=payload)
+        log.info(
+            "vram compare model=%s estimated=%s actual_vram=%s delta=%s num_gpu=%s num_cpu_moe=%s",
+            llm.model,
+            estimated,
+            size_vram,
+            delta,
+            num_gpu,
+            num_cpu,
+        )
+    except Exception:
+        log.exception("vram compare failed model=%s", getattr(llm, "model", ""))
+
+
 def _ollama_options(llm, choice) -> dict | None:
     if llm.provider != "ollama":
         return None
@@ -1050,19 +1250,40 @@ def _ollama_options(llm, choice) -> dict | None:
         options["num_ctx"] = choice.num_ctx
     if isinstance(llm.num_thread, int) and llm.num_thread > 0:
         options["num_thread"] = llm.num_thread
-    if isinstance(llm.num_gpu, int) and llm.num_gpu > 0:
-        from app.runtime.ollama import clamp_gpu_layers, model_block_count, ollama_num_gpu
+    if getattr(llm, "kv_cache_type", None) == "q8_0":
+        options["kv_cache_type"] = "q8_0"
+    wants_layers = isinstance(llm.num_gpu, int) and llm.num_gpu > 0
+    wants_percent = isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0
+    placement = getattr(llm, "gpu_placement", None)
+    from app.runtime.ollama import (
+        clamp_gpu_layers,
+        gpu_layers_for_percent,
+        model_block_count,
+        model_is_moe,
+        moe_omits_num_gpu,
+        ollama_num_gpu,
+    )
 
-        layers = model_block_count(llm.model, base_url=llm.base_url)
-        options["num_gpu"] = ollama_num_gpu(clamp_gpu_layers(llm.num_gpu, layers), layers)
-    elif isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0:
-        from app.runtime.ollama import gpu_layers_for_percent, model_block_count, ollama_num_gpu
-
-        layers = model_block_count(llm.model, base_url=llm.base_url)
-        options["num_gpu"] = ollama_num_gpu(
-            gpu_layers_for_percent(llm.num_gpu_percent, layers),
-            layers,
-        )
+    is_moe = model_is_moe(llm.model, base_url=llm.base_url)
+    layers = model_block_count(llm.model, base_url=llm.base_url)
+    offload = None
+    if wants_layers:
+        offload = clamp_gpu_layers(llm.num_gpu, layers)
+    elif wants_percent:
+        offload = gpu_layers_for_percent(llm.num_gpu_percent, layers)
+    elif placement == "layers" and isinstance(layers, int) and layers > 0:
+        offload = layers
+    elif placement == "layers":
+        offload = 999
+    if is_moe and moe_omits_num_gpu(
+        is_moe=True,
+        placement=placement,
+        offload_layers=offload,
+        block_count=layers,
+    ):
+        options.update(_moe_auto_options(llm, choice, layers))
+    elif offload is not None:
+        options["num_gpu"] = ollama_num_gpu(offload, layers)
     return options or None
 
 
@@ -1253,6 +1474,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     if orch is None:
         return "failed"
     memory = RunMemory()
+    memory.miss_limit = orch.agent_miss_limit
     if user_text:
         memory.add_user(user_text)
     roster: list[tuple[str, str, str]] = []
@@ -1264,15 +1486,20 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             name = str(node.data.get("displayName") or node.data.get("role") or agent_id).strip() or agent_id
             instructions = str(node.data.get("systemPrompt") or "")
         roster.append((agent_id, name, instructions))
-    tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp)
+    tool_schemas = _tool_schemas(orch.tool_kinds, orch.mcp, orch.file_actions)
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
     thinks = 0
     short_thinks = 0
     spoke = False
     while not ctrl.stop_event.is_set():
-        offered = tool_schemas if memory.allow_own_tools else []
-        system = orchestrator_instructions(orch.system_prompt, roster, _function_names(offered))
+        offered = tool_schemas if memory.allow_own_tools or memory.takeover is not None else []
+        system = orchestrator_instructions(
+            orch.system_prompt,
+            roster,
+            _function_names(offered),
+            takeover=memory.takeover is not None,
+        )
         action = _orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
         tokens = _pop_tokens(action)
         memory.clear_anomaly()
@@ -1281,6 +1508,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             return "cancelled" if ctrl.stop_event.is_set() else "failed"
         if action.get("action") == "failed-window":
             _set_node(ctrl, orch.node_id, "error", error="run.orchestrator.window")
+            return "failed"
+        if action.get("action") == "failed-tools":
             return "failed"
         if action.get("action") == "unreadable":
             ctrl.fail_message = "run.orchestrator.unreadable"
@@ -1307,6 +1536,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 _store_memory(ctrl, memory)
                 _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
                 return _fail_think_loop(ctrl, orch.node_id, short_thinks)
+            if memory.takeover and thinks > MAX_TAKEOVER_THINKS:
+                _store_memory(ctrl, memory)
+                _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _fail_takeover(ctrl, orch.node_id, memory)
             if thinks >= MAX_ORCHESTRATOR_THINKS:
                 _store_memory(ctrl, memory)
                 _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
@@ -1335,16 +1568,36 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             spoke = False
             thinks = 0
             short_thinks = 0
+            if memory.refuses_agent(action.get("agent") or "", names):
+                memory.takeover_rejects += 1
+                closed = memory.takeover
+                emit_log(
+                    "warn",
+                    "run.orchestrator.takeoverBlocked",
+                    node_id=orch.node_id,
+                    payload={"agent": closed.name if closed else ""},
+                )
+                if memory.takeover_rejects >= 2:
+                    _store_memory(ctrl, memory)
+                    return _fail_takeover(ctrl, orch.node_id, memory)
+                memory.add_note("That agent is closed for this task. Use your tools. Do not call it.")
+                continue
             if steps >= MAX_ORCHESTRATOR_STEPS:
                 _store_memory(ctrl, memory)
                 return _fail_step_limit(ctrl, orch.node_id)
             outcome = _orchestrator_call(ctrl, compiled, memory, names, action, user_text)
             if outcome == "cancelled":
                 return "cancelled"
+            if memory.takeover_unarmed:
+                _store_memory(ctrl, memory)
+                return _fail_takeover(ctrl, orch.node_id, memory, no_tool=True)
             if outcome == "ran":
                 steps += 1
             continue
         if kind == "finish":
+            if memory.takeover:
+                _store_memory(ctrl, memory)
+                return _fail_takeover(ctrl, orch.node_id, memory)
             if _tool_work_unverified(memory) and not memory.finish_warned:
                 memory.finish_warned = True
                 memory.add_note(_FINISH_FILES_NOTE)
@@ -1355,6 +1608,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             _finish_targets(ctrl, compiled, orch, text)
             _store_memory(ctrl, memory)
             return "succeeded"
+        if memory.takeover:
+            _store_memory(ctrl, memory)
+            return _fail_takeover(ctrl, orch.node_id, memory)
         if text.strip():
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
@@ -1365,6 +1621,39 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     _store_memory(ctrl, memory)
     _set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
     return "cancelled"
+
+
+def _count_file_attempt(
+    compiled: CompiledGraph,
+    memory: RunMemory,
+    agent,
+    record: AgentRecord,
+) -> None:
+    if "file_access" not in (agent.tool_kinds or []):
+        return
+    wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
+    opened = memory.note_file_attempt(
+        agent_id=agent.node_id,
+        name=record.name,
+        task=record.task,
+        wrote=wrote,
+    )
+    if not opened:
+        return
+    orch = compiled.orchestrator
+    if orch is None or "file_access" not in (orch.tool_kinds or []):
+        memory.takeover_unarmed = True
+        return
+    emit_log(
+        "info",
+        "run.orchestrator.takeoverStart",
+        node_id=orch.node_id,
+        payload={
+            "agent": record.name,
+            "misses": memory.misses.get(agent.node_id, 0),
+            "task": (record.task or "")[:300],
+        },
+    )
 
 
 def _orchestrator_call(
@@ -1392,6 +1681,11 @@ def _orchestrator_call(
     name = dict(names).get(agent_id, agent_id)
     record = memory.begin_call(agent_id, name, task, has_tools)
     memory.allow_own_tools = True
+
+    def _ran() -> str:
+        _count_file_attempt(compiled, memory, agent, record)
+        return "ran"
+
     orch = compiled.orchestrator
     if orch is not None:
         _set_node(ctrl, orch.node_id, "waiting")
@@ -1414,13 +1708,13 @@ def _orchestrator_call(
             return "cancelled" if ctrl.stop_event.is_set() else "ran"
         if record.error == "prompt does not fit":
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         if record.error == "too many tool failures":
             memory.set_anomaly(record)
-            return "ran"
-        if record.error in {"too many thinks", "think loop"}:
+            return _ran()
+        if record.error in {"too many thinks", "think loop", "empty stops"}:
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         if record.error:
             if record.tool_ok and not continued:
                 continued = True
@@ -1437,25 +1731,25 @@ def _orchestrator_call(
                 record.error = ""
                 continue
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         visible = visible_text(text or "")
         if text and not visible:
             memory.reject(text, "empty")
-        wrote = any(fact.ok and fact.action in {"write", "delete"} for fact in record.files)
+        wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
         if not visible and not record.tool_ok:
             record.error = "empty result"
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         record.text = visible
         if has_tools and not record.tool_ok:
             record.error = "no tool used"
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         if not visible and not wrote:
             record.error = "empty result"
             emit_log("warn", "run.agent.empty", node_id=agent_id)
             memory.set_anomaly(record)
-            return "ran"
+            return _ran()
         record.finished = True
         if any(not fact.ok for fact in record.files):
             record.error = "tool failed"
@@ -1463,7 +1757,7 @@ def _orchestrator_call(
         else:
             _publish_progress(ctrl, name, record)
             memory.add_note(f"Status already shown to the user: {name} finished.")
-        return "ran"
+        return _ran()
     return "cancelled"
 
 
@@ -1472,7 +1766,7 @@ def _tool_work_unverified(memory: RunMemory) -> bool:
     if not called:
         return False
     if any(
-        fact.ok and fact.action in {"write", "delete"}
+        fact.ok and fact.action in _FILE_MUTATIONS
         for rec in called
         for fact in rec.files
     ):
@@ -1505,9 +1799,16 @@ def _finish_targets(ctrl: RunController, compiled: CompiledGraph, orch, text: st
             _set_node(ctrl, target, "done")
             emit_log("debug", "run.end", node_id=target)
         elif node.type == "router":
-            nxt = _route(compiled, target, text)
+            nxt, branch = _route(compiled, target, text)
+            emit_log(
+                "info",
+                "run.router",
+                node_id=target,
+                payload={"target": nxt or "", "branch": branch},
+            )
             end = compiled.by_id.get(nxt or "")
             if end is not None and end.type == "end":
+                _set_node(ctrl, target, "done")
                 _set_node(ctrl, end.id, "done")
                 emit_log("debug", "run.end", node_id=end.id)
     _set_node(ctrl, orch.node_id, "done")
@@ -1578,7 +1879,6 @@ def _orchestrator_action(
         return None
     repairs = 0
     model_retries = 0
-    rounds = 0
     offered = list(tools)
     messages = memory.orchestrator_messages(system)
     mcp = get_mcp()
@@ -1708,8 +2008,9 @@ def _orchestrator_action(
                     },
                 ),
             )
-            if result.tool_calls and rounds < MAX_ORCHESTRATOR_TOOL_ROUNDS and offered:
-                rounds += 1
+            _log_vram_compare(llm, options, choice, llm_node_id)
+            result = _with_salvaged_tools(result, offered)
+            if result.tool_calls and offered:
                 model_retries = 0
                 memory.allow_own_tools = False
                 _set_node(ctrl, orch.node_id, "running", wait="tool")
@@ -1749,9 +2050,33 @@ def _orchestrator_action(
                             name=call.name or None,
                         )
                     )
-                if rounds >= MAX_ORCHESTRATOR_TOOL_ROUNDS:
-                    offered = []
-                    messages.append(LlmMessage(role="user", content=_TOOL_DECIDE_NOTE))
+                    if ok_tool:
+                        memory.orch_failed_tools = 0
+                        memory.orch_failed_thinks = 0
+                        continue
+                    memory.orch_failed_tools += 1
+                    if memory.orch_failed_tools < MAX_ORCHESTRATOR_FAILED_TOOLS:
+                        continue
+                    if memory.orch_failed_thinks >= MAX_ORCHESTRATOR_FAILED_THINKS:
+                        action = _fail_orch_tools(
+                            ctrl, orch.node_id, memory.orch_failed_tools
+                        )
+                        return action
+                    memory.orch_failed_thinks += 1
+                    memory.orch_failed_tools = 0
+                    memory.allow_own_tools = True
+                    emit_log(
+                        "warn",
+                        "run.orchestrator.toolThink",
+                        node_id=orch.node_id,
+                        payload={
+                            "failed": MAX_ORCHESTRATOR_FAILED_TOOLS,
+                            "round": memory.orch_failed_thinks,
+                        },
+                    )
+                    memory.add_note(_TOOL_THINK_NOTE)
+                    messages.append(LlmMessage(role="user", content=_TOOL_THINK_NOTE))
+                    break
                 continue
             if result.tool_calls:
                 offered = []
@@ -1830,6 +2155,9 @@ def _orchestrator_action(
                     }
                     return _tag_tokens(action, result, out_final)
                 parsed["agent"] = agent_id
+            if kind in {"call", "ask", "reply", "finish"}:
+                memory.orch_failed_tools = 0
+                memory.orch_failed_thinks = 0
             action = parsed
             return _tag_tokens(action, result, out_final)
         return None

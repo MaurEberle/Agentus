@@ -18,6 +18,7 @@ class PingResult(ApiModel):
 class OllamaModel(ApiModel):
     name: str
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    moe: bool = False
 
 
 class ToolCall(ApiModel):
@@ -99,6 +100,7 @@ class TestLlmRequest(ApiModel):
 class RuntimeModelOut(ApiModel):
     name: str
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    moe: bool = False
 
 
 class RuntimeModelsResponse(ApiModel):
@@ -123,4 +125,10 @@ class RuntimeModelStats(ApiModel):
     swa_window: int | None = Field(default=None, alias="swaWindow")
     overhead_bytes: int | None = Field(default=None, alias="overheadBytes")
     kv_layers: list[KvLayerOut] | None = Field(default=None, alias="kvLayers")
+    expert_count: int | None = Field(default=None, alias="expertCount")
+    expert_used_count: int | None = Field(default=None, alias="expertUsedCount")
+    routed_expert_bytes: int | None = Field(default=None, alias="routedExpertBytes")
+    non_expert_bytes: int | None = Field(default=None, alias="nonExpertBytes")
+    leading_dense_blocks: int | None = Field(default=None, alias="leadingDenseBlocks")
+    projector_bytes: int | None = Field(default=None, alias="projectorBytes")
     message_key: str | None = Field(default=None, alias="messageKey")

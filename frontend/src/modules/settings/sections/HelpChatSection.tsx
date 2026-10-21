@@ -36,8 +36,9 @@ import { startHelpReindex, useHelpReindexProgress, useHelpReindexRunning } from 
 import {
   EMBEDDING_PROVIDERS,
   LLM_PROVIDERS,
+  SEARCH_PROVIDERS,
   credentialMatchesProvider,
-  credentialMatchesToolKind,
+  credentialMatchesSearchProvider,
   embeddingNeedsCredential,
   helpChatConfigured,
   helpChatWritePayload,
@@ -140,8 +141,9 @@ export function HelpChatSection() {
     credentialMatchesProvider(item.kind, help?.provider ?? ''),
   );
   const kindCredentials = (credentials?.items ?? []).filter((item) => item.kind === help?.provider);
+  const searchProvider = help?.webSearchProvider || 'brave';
   const searchCredentials = (credentials?.items ?? []).filter((item) =>
-    credentialMatchesToolKind(item.kind, 'web_search'),
+    credentialMatchesSearchProvider(item.kind, searchProvider),
   );
   const runtimeModels = models?.items ?? [];
   const hasRuntimeModels = runtimeModels.length > 0;
@@ -189,7 +191,12 @@ export function HelpChatSection() {
     }
   }
 
-  function persistWebSearch(patch: { webSearchEnabled?: boolean; webSearchCredentialId?: string | null }) {
+  function persistWebSearch(patch: {
+    webSearchEnabled?: boolean;
+    webSearchProvider?: string;
+    webSearchBaseUrl?: string | null;
+    webSearchCredentialId?: string | null;
+  }) {
     return patchSettings({ helpChat: patch as HelpChatSettings }).catch(() => {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
       return Promise.reject();
@@ -447,9 +454,63 @@ export function HelpChatSection() {
             />
           </div>
           {help.webSearchEnabled ? (
-            <div className="grid gap-1.5">
+            <div className="grid gap-3">
+              <div className="grid gap-1.5">
+                <Label>{t('settings.helpChat.webSearchProvider')}</Label>
+                <Select
+                  value={searchProvider}
+                  onValueChange={(value) => {
+                    const previous = help.webSearchProvider;
+                    const previousCredential = help.webSearchCredentialId;
+                    const stillMatches = searchCredentials.some(
+                      (item) => item.id === previousCredential && item.kind === value,
+                    );
+                    setHelpChat({
+                      webSearchProvider: value,
+                      webSearchCredentialId: stillMatches ? previousCredential : undefined,
+                      webSearchBaseUrl: value === 'searxng' ? help.webSearchBaseUrl : '',
+                    });
+                    void persistWebSearch({
+                      webSearchProvider: value,
+                      webSearchCredentialId: stillMatches ? previousCredential ?? null : null,
+                      webSearchBaseUrl: value === 'searxng' ? help.webSearchBaseUrl ?? null : null,
+                    }).catch(() => {
+                      setHelpChat({
+                        webSearchProvider: previous,
+                        webSearchCredentialId: previousCredential,
+                      });
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SEARCH_PROVIDERS.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {t(`network.inspector.tool.searchProviderName.${item}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {searchProvider === 'searxng' ? (
+                <div className="grid gap-1.5">
+                  <Label>{t('settings.helpChat.webSearchBaseUrl')}</Label>
+                  <Input
+                    value={help.webSearchBaseUrl ?? ''}
+                    spellCheck={false}
+                    autoComplete="off"
+                    placeholder="https://"
+                    onChange={(event) => setHelpChat({ webSearchBaseUrl: event.target.value })}
+                    onBlur={() => {
+                      void persistWebSearch({ webSearchBaseUrl: help.webSearchBaseUrl ?? null });
+                    }}
+                  />
+                </div>
+              ) : null}
               <Label>{t('settings.helpChat.webSearchCredential')}</Label>
-              {searchCredentials.length === 0 ? (
+              {searchProvider !== 'searxng' && searchCredentials.length === 0 ? (
                 <p className="text-sm text-destructive">{t('settings.helpChat.webSearchMissing')}</p>
               ) : (
                 <Select

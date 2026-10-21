@@ -5,6 +5,12 @@
     "sha256": "81c01751c8cc385a5991abb104205d42ac70094350ee8fb9e8ea580b51bb9554",
     "comment": "Evergreen WebView2 bootstrapper. Build re-downloads and accepts a new hash when Authenticode is Microsoft Corporation."
   },
+  "uv_windows": {
+    "name": "uv-x86_64-pc-windows-msvc.zip",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.13.1/uv-x86_64-pc-windows-msvc.zip",
+    "sha256": "3b2661a463a5baea7f5076ea2b25ab71d77f36a6c0d809e5350651792f80a672",
+    "comment": "Astral uv 0.13.1 for Windows x64. The installer extracts uv.exe and uvx.exe beside the app."
+  },
   "ollama_setup": {
     "name": "OllamaSetup.exe",
     "url": "https://github.com/ollama/ollama/releases/download/v0.34.4/OllamaSetup.exe",

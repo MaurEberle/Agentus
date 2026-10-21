@@ -114,6 +114,10 @@ function Inner({ graph, steps }: { graph: GraphSnapshot; steps?: RunStep[] }) {
         nodesConnectable={false}
         elementsSelectable={false}
         panOnDrag
+        zoomOnScroll={false}
+        panOnScroll={false}
+        zoomOnPinch
+        preventScrolling={false}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         onInit={(instance) => {

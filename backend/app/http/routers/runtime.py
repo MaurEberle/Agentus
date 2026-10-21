@@ -70,7 +70,9 @@ def runtime_models(
             return RuntimeModelsResponse(items=[])
         return RuntimeModelsResponse(items=[], message_key=exc.error_key)
     return RuntimeModelsResponse(
-        items=[RuntimeModelOut(name=item.name, size_bytes=item.size_bytes) for item in models]
+        items=[
+            RuntimeModelOut(name=item.name, size_bytes=item.size_bytes, moe=item.moe) for item in models
+        ]
     )
 
 
@@ -105,6 +107,12 @@ def runtime_model_stats(
         swa_window=profile.swa_window if profile else None,
         overhead_bytes=profile.overhead_bytes if profile else None,
         kv_layers=_kv_layer_models(profile) if profile else None,
+        expert_count=getattr(profile, "expert_count", None) if profile else None,
+        expert_used_count=getattr(profile, "expert_used_count", None) if profile else None,
+        routed_expert_bytes=getattr(profile, "routed_expert_bytes", None) if profile else None,
+        non_expert_bytes=getattr(profile, "non_expert_bytes", None) if profile else None,
+        leading_dense_blocks=getattr(profile, "leading_dense_blocks", None) if profile else None,
+        projector_bytes=(profile.projector_bytes or None) if profile else None,
     )
 
 
