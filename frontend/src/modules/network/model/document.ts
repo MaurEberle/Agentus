@@ -89,7 +89,7 @@ export type OrchestratorNodeData = {
   agentMissLimit?: number;
 };
 
-export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'terminal';
+export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'terminal' | 'zip';
 
 export type ToolNodeData = {
   displayName?: string;

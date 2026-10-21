@@ -1136,7 +1136,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
   const kind = String(node.data.kind ?? 'datetime');
-  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access', 'terminal'] as const;
+  const kinds = ['http', 'web_search', 'datetime', 'calculator', 'file_access', 'terminal', 'zip'] as const;
   const searchProvider = String(node.data.searchProvider ?? 'brave');
   const items = credentials.data?.items ?? [];
   const matching = items.filter((item) =>
@@ -1228,6 +1228,7 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
       ) : null}
       {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
       {kind === 'terminal' ? <TerminalFields node={node} readOnly={readOnly} /> : null}
+      {kind === 'zip' ? <ZipFields node={node} readOnly={readOnly} /> : null}
       {kind === 'datetime' ? (
         <p className="text-xs text-muted-foreground">{t('network.inspector.tool.dateHint')}</p>
       ) : null}
@@ -1594,6 +1595,52 @@ function FileAccessFields({ node, readOnly }: { node: GraphNode; readOnly: boole
           </label>
         ))}
       </div>
+    </>
+  );
+}
+
+function ZipFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
+
+  function applyPath(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed) return;
+    editorUpdateNodeData(node.id, { rootPath: trimmed });
+    if (isForbiddenDataRoot(trimmed)) {
+      notify({ titleKey: 'network.validation.zipRoot', variant: 'error' });
+    }
+  }
+
+  async function pick() {
+    setPicking(true);
+    try {
+      const path = await pickFolderPath();
+      if (path) applyPath(path);
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  return (
+    <>
+      <Field label={t('network.inspector.tool.rootPath')}>
+        <div className="flex gap-2">
+          <Input
+            value={String(node.data.rootPath ?? '')}
+            disabled={readOnly}
+            spellCheck={false}
+            autoComplete="off"
+            title={String(node.data.rootPath ?? '')}
+            className="min-w-0 font-mono text-xs"
+            onChange={(event) => editorUpdateNodeData(node.id, { rootPath: event.target.value })}
+          />
+          <Button type="button" size="sm" variant="outline" disabled={readOnly || picking} loading={picking} onClick={() => void pick()}>
+            {t('network.inspector.tool.pickRoot')}
+          </Button>
+        </div>
+      </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.tool.zipHint')}</p>
     </>
   );
 }

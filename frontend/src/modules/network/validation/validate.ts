@@ -313,6 +313,12 @@ function validateNode(
         issues.push({ nodeId: node.id, messageKey: 'network.validation.terminalPrograms' });
       }
     }
+    if (kind === 'zip') {
+      const root = asString(node.data.rootPath);
+      if (!root || isForbiddenDataRoot(root)) {
+        issues.push({ nodeId: node.id, messageKey: 'network.validation.zipRoot' });
+      }
+    }
   }
   if (node.type === 'router') {
     issues.push(...validateRouter(node, doc));

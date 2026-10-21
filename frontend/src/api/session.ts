@@ -24,6 +24,7 @@ const START_ERROR_DESC: Record<string, string> = {
   'graph.knowledge.dataDir': 'network.validation.knowledgeDataDir',
   'graph.fileAccess.root': 'network.validation.fileAccessRoot',
   'graph.terminal.root': 'network.validation.terminalRoot',
+  'graph.zip.root': 'network.validation.zipRoot',
   'graph.terminal.programs': 'network.validation.terminalPrograms',
   'graph.cycle': 'network.validation.cycle',
   'graph.agent.noLlm': 'network.validation.agentLlm',

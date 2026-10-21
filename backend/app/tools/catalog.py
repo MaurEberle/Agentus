@@ -144,6 +144,20 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
     },
 }
 
+ZIP_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["action", "path"],
+    "properties": {
+        "action": {"type": "string", "enum": ["list", "extract"]},
+        "path": {"type": "string", "description": "Zip file relative to the tool root"},
+        "destination": {
+            "type": "string",
+            "description": "extract: folder relative to the tool root. Defaults to the archive name.",
+        },
+    },
+}
+
 TERMINAL_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
@@ -178,6 +192,12 @@ _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     ),
     "file_access": "Read and write files under the configured root. Actions: list, stat, read (optional head or tail), read_many, write (creates missing parent folders), mkdir, delete, edit (oldText/newText or edits), move (destination), search (pattern), tree.",
     "terminal": "Run a command in the configured working directory. Output and runtime are limited. There is no elevation and no interactive input.",
+    "zip": (
+        "List or extract a .zip file under the configured root. "
+        "action list returns entry names and sizes. "
+        "action extract writes the files into destination, or into a folder named after the archive when destination is omitted. "
+        "Paths stay inside the root."
+    ),
 }
 
 _mcp_provider: Callable[[], list[CatalogGroup]] | None = None
@@ -249,6 +269,15 @@ def list_first_party_tools() -> list[CatalogTool]:
             credential_kind=None,
             title_key="tools.kind.terminal",
             description_key="tools.kind.terminal.desc",
+        ),
+        CatalogTool(
+            name="zip",
+            kind="zip",
+            description=_MODEL_DESCRIPTIONS["zip"],
+            json_schema=ZIP_SCHEMA,
+            credential_kind=None,
+            title_key="tools.kind.zip",
+            description_key="tools.kind.zip.desc",
         ),
     ]
 
