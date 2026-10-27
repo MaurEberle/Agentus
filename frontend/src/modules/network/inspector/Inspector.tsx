@@ -39,6 +39,7 @@ import {
   hasWindowedKv,
   inferenceGpus,
   kvCacheScale,
+  moeAutoOffload,
   moeLeavesPlacementToRuntime,
   resolveGpuLayers,
   scaleKvLayers,
@@ -327,7 +328,6 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     if (isMoe && auto) {
       if (
         node.data.gpuPlacement === 'auto' &&
-        node.data.numGpuLayers === undefined &&
         node.data.numGpuPercent === undefined &&
         node.data.numGpu === undefined
       ) {
@@ -335,7 +335,6 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
       }
       editorUpdateNodeData(node.id, {
         gpuPlacement: 'auto',
-        numGpuLayers: undefined,
         numGpuPercent: undefined,
         numGpu: undefined,
       });
@@ -346,7 +345,8 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
         node.data.gpuPlacement === 'layers' &&
         node.data.numGpuLayers === value &&
         node.data.numGpuPercent === undefined &&
-        node.data.numGpu === undefined
+        node.data.numGpu === undefined &&
+        node.data.numCpuMoe === undefined
       ) {
         return;
       }
@@ -355,6 +355,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
         numGpuLayers: value,
         numGpuPercent: undefined,
         numGpu: undefined,
+        numCpuMoe: undefined,
       });
       return;
     }
@@ -407,7 +408,6 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
               if (checked === true) {
                 editorUpdateNodeData(node.id, {
                   gpuPlacement: 'auto',
-                  numGpuLayers: undefined,
                   numGpuPercent: undefined,
                   numGpu: undefined,
                 });
@@ -418,6 +418,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
                 numGpuLayers: layers,
                 numGpuPercent: undefined,
                 numGpu: undefined,
+                numCpuMoe: undefined,
               });
             }}
           />
@@ -436,6 +437,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
               numGpuLayers: layers,
               numGpuPercent: undefined,
               numGpu: undefined,
+              numCpuMoe: undefined,
             })
           }
         >
@@ -468,6 +470,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
                 numGpuLayers: Number(event.target.value),
                 numGpuPercent: undefined,
                 numGpu: undefined,
+                numCpuMoe: undefined,
               })
             }
           />
@@ -487,7 +490,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
   );
 }
 
-function VramNeedField({ node }: { node: GraphNode }) {
+function VramNeedField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const provider = String(node.data.provider ?? 'ollama');
@@ -580,6 +583,37 @@ function VramNeedField({ node }: { node: GraphNode }) {
           poolBytes: gpuTotal,
         })
       : null;
+  useEffect(() => {
+    if (readOnly || !auto || !fit) return;
+    const next = moeAutoOffload(fit, stats.data?.leadingDenseBlocks);
+    if (
+      node.data.gpuPlacement === 'auto' &&
+      node.data.numGpuLayers === next.numGpuLayers &&
+      node.data.numCpuMoe === next.numCpuMoe &&
+      node.data.numGpuPercent === undefined &&
+      node.data.numGpu === undefined
+    ) {
+      return;
+    }
+    editorUpdateNodeData(node.id, {
+      gpuPlacement: 'auto',
+      numGpuLayers: next.numGpuLayers,
+      numCpuMoe: next.numCpuMoe,
+      numGpuPercent: undefined,
+      numGpu: undefined,
+    });
+  }, [
+    auto,
+    fit,
+    node.data.gpuPlacement,
+    node.data.numCpuMoe,
+    node.data.numGpu,
+    node.data.numGpuLayers,
+    node.data.numGpuPercent,
+    node.id,
+    readOnly,
+    stats.data?.leadingDenseBlocks,
+  ]);
   const placed = auto ? fit : null;
   const need = placed ? placed.gpuBytes : (parts?.total ?? 0);
   const weightBytes = placed ? placed.nonExpertOnGpu : (parts?.weights ?? 0);
@@ -856,6 +890,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numGpu = undefined;
       patch.numGpuPercent = undefined;
       patch.numGpuLayers = undefined;
+      patch.numCpuMoe = undefined;
       patch.gpuPlacement = undefined;
     }
     if (Object.keys(patch).length > 0) editorUpdateNodeData(node.id, patch);
@@ -878,6 +913,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numGpu = undefined;
       patch.numGpuPercent = undefined;
       patch.numGpuLayers = undefined;
+      patch.numCpuMoe = undefined;
       patch.gpuPlacement = undefined;
       patch.kvCacheType = undefined;
       patch.modelKind = undefined;
@@ -964,6 +1000,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
                 numGpu: undefined,
                 numGpuPercent: undefined,
                 numGpuLayers: undefined,
+                numCpuMoe: undefined,
                 gpuPlacement: undefined,
               });
             }}
@@ -999,6 +1036,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
               numGpu: undefined,
               numGpuPercent: undefined,
               numGpuLayers: undefined,
+              numCpuMoe: undefined,
               gpuPlacement: undefined,
             })
           }
@@ -1013,7 +1051,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
           <KvCacheField node={node} readOnly={readOnly} />
           <CpuThreadField node={node} readOnly={readOnly} />
           <GpuOffloadField node={node} readOnly={readOnly} />
-          <VramNeedField node={node} />
+          <VramNeedField node={node} readOnly={readOnly} />
         </>
       ) : null}
       <div className="pt-1">

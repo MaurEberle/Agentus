@@ -24,6 +24,7 @@ class CompiledLlm:
     num_gpu_percent: int | None
     node_id: str
     gpu_placement: str | None = None
+    num_cpu_moe: int | None = None
 
 
 @dataclass
@@ -83,11 +84,29 @@ def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id
         num_ctx=_positive_int(data, "numCtx"),
         num_thread=_positive_int(data, "numThread"),
         kv_cache_type=_kv_cache_type(data),
-        num_gpu=_positive_int(data, "numGpuLayers"),
+        num_gpu=_gpu_layer_count(data),
         num_gpu_percent=_gpu_percent(data),
         node_id=llm_node.id if llm_node else "",
         gpu_placement=_gpu_placement(data),
+        num_cpu_moe=_non_negative_int(data, "numCpuMoe"),
     )
+
+
+def _non_negative_int(data: dict, key: str) -> int | None:
+    raw = data.get(key)
+    if isinstance(raw, bool) or raw is None:
+        return None
+    if isinstance(raw, int) and raw >= 0:
+        return raw
+    if isinstance(raw, float) and raw >= 0 and raw == int(raw):
+        return int(raw)
+    return None
+
+
+def _gpu_layer_count(data: dict) -> int | None:
+    if data.get("gpuPlacement") == "auto":
+        return _non_negative_int(data, "numGpuLayers")
+    return _positive_int(data, "numGpuLayers")
 
 
 def _positive_int(data: dict, key: str) -> int | None:

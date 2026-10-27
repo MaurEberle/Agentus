@@ -59,6 +59,23 @@ def test_library_dirs_hip_on_amd(tmp_path: Path) -> None:
     assert library_dirs_for_llama(exe, vendor="hip")[0] == hip
 
 
+def test_amd_prefers_vulkan_when_hip_is_also_present(tmp_path: Path) -> None:
+    from app.runtime.ollama_embed_runner import AMD_VENDOR, backend_kind_for_vendor
+
+    root = tmp_path / "ollama"
+    hip = root / "rocm_v7_1"
+    vulkan = root / "vulkan"
+    hip.mkdir(parents=True)
+    vulkan.mkdir()
+    (hip / "ggml-hip.dll").write_bytes(b"hip")
+    (vulkan / "ggml-vulkan.dll").write_bytes(b"vk")
+    assert backend_kind_for_vendor(root, AMD_VENDOR) == "vulkan"
+    env = spawn_env(root / "llama-server.exe", base={"PATH": "C:\\Windows"}, vendor="vulkan")
+    assert env["OLLAMA_LLM_LIBRARY"] == "vulkan"
+    assert env["OLLAMA_VULKAN"] == "1"
+    assert str(vulkan) in env["OLLAMA_LIBRARY_PATH"]
+
+
 def test_library_dirs_vulkan_without_cuda(tmp_path: Path) -> None:
     root = tmp_path / "ollama"
     vulkan = root / "vulkan"

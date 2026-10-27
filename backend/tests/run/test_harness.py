@@ -1168,7 +1168,7 @@ def _finish(options: list[object]):
     return _complete
 
 
-def test_moe_full_layer_default_omits_num_gpu(monkeypatch, api_env) -> None:
+def test_moe_full_layer_default_sends_num_gpu_on_one_card(monkeypatch, api_env) -> None:
     from tests.run.test_validate import _orchestrator_doc
 
     options: list[object] = []
@@ -1180,7 +1180,7 @@ def test_moe_full_layer_default_omits_num_gpu(monkeypatch, api_env) -> None:
     monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
     stored = _drive(monkeypatch, _finish(options), doc=doc)
     assert stored["outcome"] == "succeeded"
-    assert options[0] is None
+    assert options[0]["num_gpu"] == 33
 
 
 def test_moe_partial_layers_still_send_num_gpu(monkeypatch, api_env) -> None:
@@ -1217,7 +1217,7 @@ def test_moe_forced_layers_send_full_offload(monkeypatch, api_env) -> None:
 def test_moe_auto_sends_expert_layer_count(monkeypatch, api_env) -> None:
     from tests.run.test_validate import _orchestrator_doc
     from tests.runtime.test_vram_est import _qwen_moe
-    from app.runtime.vram_est import parse_vram_profile
+    from app.runtime.vram_est import parse_vram_profile, plan_moe_offload
 
     options: list[object] = []
     doc = _orchestrator_doc()
@@ -1230,8 +1230,49 @@ def test_moe_auto_sends_expert_layer_count(monkeypatch, api_env) -> None:
     stored = _drive(monkeypatch, _finish(options), doc=doc)
     assert stored["outcome"] == "succeeded"
     sent = options[0] or {}
-    assert "num_cpu_moe" not in sent
+    ctx = int(sent["num_ctx"]) if isinstance(sent, dict) and sent.get("num_ctx") else 0
+    plan = plan_moe_offload(profile, num_ctx=ctx, pool_bytes=8 * 1024**3)
+    assert plan is not None
+    assert sent["num_gpu"] == plan.num_gpu
+    assert sent["num_cpu_moe"] == plan.num_cpu_moe
+
+
+def test_moe_auto_stored_fit_is_sent(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["gpuPlacement"] = "auto"
+            node["data"]["numGpuLayers"] = 12
+            node["data"]["numCpuMoe"] = 8
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 32)
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    sent = options[0] or {}
+    assert sent["num_gpu"] == 13
+    assert sent["num_cpu_moe"] == 8
+
+
+def test_moe_auto_on_two_gpus_leaves_the_fitter(monkeypatch, api_env) -> None:
+    from tests.run.test_validate import _orchestrator_doc
+
+    options: list[object] = []
+    doc = _orchestrator_doc()
+    for node in doc["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["gpuPlacement"] = "auto"
+            node["data"]["numGpuLayers"] = 12
+            node["data"]["numCpuMoe"] = 8
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
+    monkeypatch.setattr("app.run.turn_runtime._single_inference_gpu", lambda: False)
+    stored = _drive(monkeypatch, _finish(options), doc=doc)
+    assert stored["outcome"] == "succeeded"
+    sent = options[0] or {}
     assert "num_gpu" not in sent
+    assert "num_cpu_moe" not in sent
 
 
 def test_moe_auto_placement_omits_num_gpu(monkeypatch, api_env) -> None:

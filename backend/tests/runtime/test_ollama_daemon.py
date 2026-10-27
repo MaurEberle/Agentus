@@ -93,6 +93,22 @@ def test_ensure_spawns_once_when_down(monkeypatch: pytest.MonkeyPatch) -> None:
     assert spawned == [cmd]
 
 
+def test_process_env_points_amd_at_vulkan(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from app.runtime.ollama_daemon import ollama_process_env
+
+    lib = tmp_path / "Ollama" / "lib" / "ollama"
+    vulkan = lib / "vulkan"
+    vulkan.mkdir(parents=True)
+    (vulkan / "ggml-vulkan.dll").write_bytes(b"vk")
+    (lib / "llama-server.exe").write_bytes(b"MZ")
+    launch = tmp_path / "Ollama" / "ollama app.exe"
+    launch.write_bytes(b"MZ")
+    monkeypatch.setattr("app.runtime.ollama_daemon._inference_vendor_id", lambda: 0x1002)
+    env = ollama_process_env(launch)
+    assert env["OLLAMA_LLM_LIBRARY"] == "vulkan"
+    assert str(vulkan) in env["OLLAMA_LIBRARY_PATH"]
+
+
 def test_background_start_skipped_in_pytest(monkeypatch: pytest.MonkeyPatch) -> None:
     called: list[str] = []
     monkeypatch.setattr(

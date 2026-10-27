@@ -68,6 +68,39 @@ def _configured_base(override: str | None) -> str:
         return DEFAULT_OLLAMA_BASE_URL
 
 
+def _ollama_lib_dir(launch_exe: Path) -> Path:
+    lib = launch_exe.parent / "lib" / "ollama"
+    if lib.is_dir():
+        return lib
+    return launch_exe.parent
+
+
+def _inference_vendor_id() -> int | None:
+    try:
+        from app.run.gpu_win import sample_gpus
+    except Exception:
+        return None
+    try:
+        rows = sample_gpus()
+    except Exception:
+        return None
+    chosen = [row for row in rows if row.get("inference")] or rows
+    if not chosen:
+        return None
+    vendor = chosen[0].get("vendor_id")
+    return int(vendor) if isinstance(vendor, int) else None
+
+
+def ollama_process_env(launch_exe: Path) -> dict[str, str]:
+    """Point the Ollama process at the GPU backend for the inference card."""
+    from app.runtime.ollama_embed_runner import backend_kind_for_vendor, spawn_env
+
+    lib = _ollama_lib_dir(launch_exe)
+    kind = backend_kind_for_vendor(lib, _inference_vendor_id())
+    marker = lib / "llama-server.exe"
+    return spawn_env(marker if marker.is_file() else lib / "llama-server.exe", vendor=kind)
+
+
 def _spawn_detached(cmd: list[str]) -> None:
     kwargs: dict = {
         "args": cmd,
@@ -75,6 +108,7 @@ def _spawn_detached(cmd: list[str]) -> None:
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
         "cwd": str(Path(cmd[0]).parent),
+        "env": ollama_process_env(Path(cmd[0])),
         "close_fds": True,
     }
     if sys.platform == "win32":

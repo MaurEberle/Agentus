@@ -118,6 +118,22 @@ def _scan_gpu_dirs(root: Path) -> tuple[Path | None, Path | None, Path | None]:
     return cuda_best, hip_best, vulkan
 
 
+AMD_VENDOR = 0x1002
+NVIDIA_VENDOR = 0x10DE
+
+
+def backend_kind_for_vendor(root: Path, vendor_id: int | None) -> str | None:
+    """AMD uses the bundled Vulkan backend. A System32 HIP DLL is not a usable stack."""
+    _cuda, hip, vulkan = _scan_gpu_dirs(root)
+    if vendor_id == AMD_VENDOR and vulkan is not None:
+        return "vulkan"
+    if vendor_id == AMD_VENDOR and hip is not None:
+        return "hip"
+    if vendor_id == NVIDIA_VENDOR:
+        return "cuda"
+    return None
+
+
 def preferred_gpu_dir(root: Path, vendor: str | None = None) -> Path | None:
     """Pick Ollama's GPU backend folder for the installed GPU."""
     cuda_best, hip_best, vulkan = _scan_gpu_dirs(root)
@@ -153,6 +169,11 @@ def spawn_env(
     joined = os.pathsep.join(str(path) for path in library_dirs_for_llama(exe, vendor=vendor))
     env["OLLAMA_LIBRARY_PATH"] = joined
     env["PATH"] = joined + os.pathsep + env.get("PATH", "")
+    gpu = preferred_gpu_dir(exe.parent, vendor=vendor)
+    if gpu is not None:
+        env["OLLAMA_LLM_LIBRARY"] = gpu.name
+        if gpu.name.lower() == "vulkan":
+            env["OLLAMA_VULKAN"] = "1"
     return env
 
 

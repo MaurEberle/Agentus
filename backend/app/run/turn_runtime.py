@@ -256,7 +256,7 @@ def _static_context_max(num_ctx: int | None) -> int | None:
         return num_ctx
     return None
 
-def _inference_pool_bytes() -> int:
+def _inference_gpus() -> list:
     from app.run.resources import latest
 
     gpus = list(latest().gpus or [])
@@ -265,7 +265,14 @@ def _inference_pool_bytes() -> int:
         pool = [gpu for gpu in gpus if gpu.vram_total_bytes >= 512 * 1024 * 1024]
     if not pool and gpus:
         pool = [max(gpus, key=lambda gpu: gpu.vram_total_bytes)]
-    return sum(max(0, gpu.vram_total_bytes) for gpu in pool)
+    return pool
+
+def _inference_pool_bytes() -> int:
+    return sum(max(0, gpu.vram_total_bytes) for gpu in _inference_gpus())
+
+def _single_inference_gpu() -> bool:
+    """One card, or no sample yet. Two cards of one vendor keep the fitter."""
+    return len(_inference_gpus()) <= 1
 
 def _display_count(value: object) -> str | int:
     if isinstance(value, bool) or value is None:
@@ -275,12 +282,9 @@ def _display_count(value: object) -> str | int:
     return "—"
 
 def _moe_auto_options(llm, choice, layers: int | None) -> dict:
-    """Leave GPU placement to llama.cpp.
+    """Two GPUs of one vendor keep llama.cpp's fitter, so no layer command is sent.
 
-    Ollama 0.40 ignores ``num_cpu_moe`` and honors ``num_gpu``. Sending a
-    partial ``num_gpu`` disables that fitter. The Qwen3.6 run then loaded
-    12 of 41 layers, and the next attempt used ``num_gpu`` 0. The inspector
-    estimate predicts the fitter. It is not sent as a layer command.
+    A partial ``num_gpu`` disables that fitter. One GPU does not use this path.
     """
     from app.runtime.vram_est import vram_profile
 
@@ -294,6 +298,33 @@ def _moe_auto_options(llm, choice, layers: int | None) -> dict:
             payload={"model": llm.model},
         )
     return {}
+
+def _fill_single_gpu_moe(options: dict, llm, choice, layers: int | None) -> None:
+    """Send the saved fit. Without one, send a plan for the current card."""
+    from app.runtime.ollama import ollama_num_gpu
+    from app.runtime.vram_est import plan_moe_offload, vram_profile, with_kv_cache
+
+    stored_layers = llm.num_gpu if isinstance(llm.num_gpu, int) else None
+    stored_cpu = getattr(llm, "num_cpu_moe", None)
+    stored_cpu = stored_cpu if isinstance(stored_cpu, int) else None
+    if getattr(llm, "gpu_placement", None) == "auto" and (stored_layers is not None or stored_cpu is not None):
+        if stored_layers is not None:
+            options["num_gpu"] = ollama_num_gpu(stored_layers, layers)
+        if stored_cpu is not None:
+            options["num_cpu_moe"] = stored_cpu
+        return
+    profile = with_kv_cache(
+        vram_profile(llm.model, base_url=llm.base_url),
+        getattr(llm, "kv_cache_type", None),
+    )
+    num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
+    plan = plan_moe_offload(profile, num_ctx=num_ctx, pool_bytes=_inference_pool_bytes()) if profile else None
+    if plan is not None:
+        options["num_gpu"] = plan.num_gpu
+        options["num_cpu_moe"] = plan.num_cpu_moe
+        return
+    if stored_layers is not None:
+        options["num_gpu"] = ollama_num_gpu(stored_layers, layers)
 
 def _log_vram_compare(llm, options, choice, node_id: str) -> None:
     if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
@@ -360,9 +391,9 @@ def _ollama_options(llm, choice) -> dict | None:
         options["num_thread"] = llm.num_thread
     if getattr(llm, "kv_cache_type", None) == "q8_0":
         options["kv_cache_type"] = "q8_0"
-    wants_layers = isinstance(llm.num_gpu, int) and llm.num_gpu > 0
-    wants_percent = isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0
     placement = getattr(llm, "gpu_placement", None)
+    wants_layers = placement != "auto" and isinstance(llm.num_gpu, int) and llm.num_gpu > 0
+    wants_percent = placement != "auto" and isinstance(llm.num_gpu_percent, int) and llm.num_gpu_percent > 0
     from app.runtime.ollama import (
         clamp_gpu_layers,
         gpu_layers_for_percent,
@@ -389,7 +420,10 @@ def _ollama_options(llm, choice) -> dict | None:
         offload_layers=offload,
         block_count=layers,
     ):
-        options.update(_moe_auto_options(llm, choice, layers))
+        if _single_inference_gpu():
+            _fill_single_gpu_moe(options, llm, choice, layers)
+        else:
+            options.update(_moe_auto_options(llm, choice, layers))
     elif offload is not None:
         options["num_gpu"] = ollama_num_gpu(offload, layers)
     return options or None

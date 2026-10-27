@@ -186,7 +186,7 @@ export type MoeFit = {
   bytesPerToken: number;
 };
 
-/** MoE with no explicit partial layer choice. The runtime then omits num_gpu. */
+/** MoE without an explicit layer choice. "auto" stays automatic even when the fit is stored. */
 export function moeLeavesPlacementToRuntime(opts: {
   expertCount?: number | null;
   gpuLayers?: number | null;
@@ -196,6 +196,7 @@ export function moeLeavesPlacementToRuntime(opts: {
 }): boolean {
   if ((opts.expertCount ?? 0) <= 1) return false;
   if (opts.gpuPlacement === 'layers') return false;
+  if (opts.gpuPlacement === 'auto') return true;
   const total = opts.gpuLayers ?? 0;
   const stored = opts.numGpuLayers;
   if (total > 0 && Number.isFinite(stored) && (stored as number) >= 1 && (stored as number) < total) return false;
@@ -327,5 +328,19 @@ export function fitMoe(opts: {
     overheadBytes: overhead,
     fullLayers: shape.full,
     bytesPerToken: shape.bytesPerToken,
+  };
+}
+
+/** Attention layers on the GPU, and expert layers whose tensors stay in RAM. */
+export function moeAutoOffload(
+  fit: MoeFit,
+  leadingDenseBlocks: number | null | undefined,
+): { numGpuLayers: number; numCpuMoe: number } {
+  let leading = leadingDenseBlocks ?? 0;
+  if (!Number.isFinite(leading) || leading < 0) leading = 0;
+  const cpuExperts = Math.max(0, fit.expertLayers - fit.expertsOnGpu);
+  return {
+    numGpuLayers: fit.attentionLayersOnGpu,
+    numCpuMoe: cpuExperts > 0 ? leading + cpuExperts : 0,
   };
 }
