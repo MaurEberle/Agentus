@@ -70,6 +70,8 @@ def test_amd_prefers_vulkan_when_hip_is_also_present(tmp_path: Path) -> None:
     (hip / "ggml-hip.dll").write_bytes(b"hip")
     (vulkan / "ggml-vulkan.dll").write_bytes(b"vk")
     assert backend_kind_for_vendor(root, AMD_VENDOR) == "vulkan"
+    assert backend_kind_for_vendor(root, 0x8086) is None
+    assert backend_kind_for_vendor(root, None) is None
     env = spawn_env(root / "llama-server.exe", base={"PATH": "C:\\Windows"}, vendor="vulkan")
     assert env["OLLAMA_LLM_LIBRARY"] == "vulkan"
     assert env["OLLAMA_VULKAN"] == "1"

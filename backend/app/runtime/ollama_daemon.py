@@ -92,11 +92,15 @@ def _inference_vendor_id() -> int | None:
 
 
 def ollama_process_env(launch_exe: Path) -> dict[str, str]:
-    """Point the Ollama process at the GPU backend for the inference card."""
+    """Point NVIDIA and AMD at their backend. Intel stays on Ollama's discovery."""
+    import os
+
     from app.runtime.ollama_embed_runner import backend_kind_for_vendor, spawn_env
 
     lib = _ollama_lib_dir(launch_exe)
     kind = backend_kind_for_vendor(lib, _inference_vendor_id())
+    if kind is None:
+        return dict(os.environ)
     marker = lib / "llama-server.exe"
     return spawn_env(marker if marker.is_file() else lib / "llama-server.exe", vendor=kind)
 

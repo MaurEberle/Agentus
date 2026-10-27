@@ -120,11 +120,18 @@ def _scan_gpu_dirs(root: Path) -> tuple[Path | None, Path | None, Path | None]:
 
 AMD_VENDOR = 0x1002
 NVIDIA_VENDOR = 0x10DE
+INTEL_VENDOR = 0x8086
 
 
 def backend_kind_for_vendor(root: Path, vendor_id: int | None) -> str | None:
-    """AMD uses the bundled Vulkan backend. A System32 HIP DLL is not a usable stack."""
+    """Pin a backend only for NVIDIA and AMD.
+
+    Intel keeps Ollama's own discovery. Forcing Vulkan there drops the CPU
+    runner, because ``vulkan-1.dll`` is present on almost every Windows host.
+    """
     _cuda, hip, vulkan = _scan_gpu_dirs(root)
+    if vendor_id == INTEL_VENDOR or vendor_id is None:
+        return None
     if vendor_id == AMD_VENDOR and vulkan is not None:
         return "vulkan"
     if vendor_id == AMD_VENDOR and hip is not None:
