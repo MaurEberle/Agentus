@@ -460,7 +460,7 @@ def test_reasoning_only_json_calls_the_agent(monkeypatch, api_env) -> None:
 
 
 def test_orchestrator_step_limit_is_stored(monkeypatch, api_env) -> None:
-    monkeypatch.setattr("app.run.harness.MAX_ORCHESTRATOR_STEPS", 2)
+    monkeypatch.setattr("app.run.orchestrator_loop.MAX_ORCHESTRATOR_STEPS", 2)
     orch_n = {"n": 0}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
@@ -482,7 +482,7 @@ def test_orchestrator_step_limit_is_stored(monkeypatch, api_env) -> None:
 
 
 def test_think_does_not_consume_the_step_limit(monkeypatch, api_env) -> None:
-    monkeypatch.setattr("app.run.harness.MAX_ORCHESTRATOR_STEPS", 2)
+    monkeypatch.setattr("app.run.orchestrator_loop.MAX_ORCHESTRATOR_STEPS", 2)
     orch_n = {"n": 0}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
@@ -528,7 +528,7 @@ def test_think_does_not_consume_the_step_limit(monkeypatch, api_env) -> None:
 
 
 def test_think_limit_is_stored(monkeypatch, api_env) -> None:
-    monkeypatch.setattr("app.run.harness.MAX_ORCHESTRATOR_THINKS", 2)
+    monkeypatch.setattr("app.run.orchestrator_loop.MAX_ORCHESTRATOR_THINKS", 2)
     orch_n = {"n": 0}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
@@ -699,7 +699,7 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
         assert args.get("action") == "list"
         return ExecuteResult(ok=True, result={"path": ".", "entries": [raw_listing]})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -801,7 +801,7 @@ def test_orchestrator_keeps_tool_rounds_then_calls_an_agent(monkeypatch, api_env
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": ".", "entries": ["x"]})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -848,7 +848,7 @@ def test_orchestrator_runs_a_third_xml_tool_instead_of_chatting(monkeypatch, api
         executed.append(str(args.get("path") or ""))
         return ExecuteResult(ok=True, result={"path": args.get("path") or ".", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -920,7 +920,7 @@ def test_orchestrator_starts_a_think_round_after_five_failed_tools(monkeypatch, 
         executed["n"] += 1
         return ExecuteResult(ok=False, result="denied")
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -968,7 +968,7 @@ def test_orchestrator_stops_after_two_failed_think_rounds(monkeypatch, api_env) 
         executed["n"] += 1
         return ExecuteResult(ok=False, result="denied")
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -1010,7 +1010,7 @@ def test_orchestrator_failed_tool_streak_resets_after_a_success(monkeypatch, api
         ok = path == "ok.txt"
         return ExecuteResult(ok=ok, result={"path": path, "bytes": 1} if ok else "denied")
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -1226,7 +1226,7 @@ def test_moe_auto_sends_expert_layer_count(monkeypatch, api_env) -> None:
     monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 24)
     monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: True)
     monkeypatch.setattr("app.runtime.vram_est.vram_profile", lambda *a, **k: profile)
-    monkeypatch.setattr("app.run.harness._inference_pool_bytes", lambda: 8 * 1024**3)
+    monkeypatch.setattr("app.run.turn_runtime._inference_pool_bytes", lambda: 8 * 1024**3)
     stored = _drive(monkeypatch, _finish(options), doc=doc)
     assert stored["outcome"] == "succeeded"
     sent = options[0] or {}
@@ -1313,8 +1313,8 @@ def test_tool_and_knowledge_nodes_run_while_used(monkeypatch, api_env, tmp_path)
             seen_tool.append("files")
         return ExecuteResult(ok=True, result={"path": ".", "entries": []})
 
-    monkeypatch.setattr("app.run.harness.retrieve", _retrieve)
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.agent_turn.retrieve", _retrieve)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
     agent_n = {"n": 0}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
@@ -1426,7 +1426,7 @@ def test_tool_agent_prose_is_nudged_then_calls(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 3})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -1575,7 +1575,7 @@ def test_mcp_answer_after_success_is_published(monkeypatch, api_env) -> None:
             }
 
     fake = FakeMcp()
-    monkeypatch.setattr("app.run.harness.get_mcp", lambda: fake)
+    monkeypatch.setattr("app.run.turn_runtime.get_mcp", lambda: fake)
     monkeypatch.setattr("app.run.controller.get_mcp", lambda: fake)
     n = {"n": 0}
 
@@ -1782,7 +1782,7 @@ def test_empty_tool_agent_result_is_an_anomaly(monkeypatch, api_env) -> None:
         del kind, config, args, secret
         return ExecuteResult(ok=True, result={"path": ".", "entries": []})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -1831,7 +1831,7 @@ def test_agent_keeps_going_after_many_successful_tools(monkeypatch, api_env) -> 
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": f"f{executed['n']}.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -1887,7 +1887,7 @@ def test_agent_stops_after_ten_failed_tools(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=False, result="denied")
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -1966,7 +1966,7 @@ def test_failed_tool_streak_resets_after_a_success(monkeypatch, api_env) -> None
             return ExecuteResult(ok=True, result={"path": path, "bytes": 1})
         return ExecuteResult(ok=False, result="denied")
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         if any(message.role == "tool" for message in req.messages) and agent_n["n"] >= 3:
@@ -2011,7 +2011,7 @@ def test_ten_failures_in_a_row_still_stop_after_a_success(monkeypatch, api_env) 
             return ExecuteResult(ok=True, result={"path": path, "bytes": 1})
         return ExecuteResult(ok=False, result="denied")
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         agent_n["n"] += 1
@@ -2053,7 +2053,7 @@ def test_tool_agent_think_then_calls(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 3})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -2131,7 +2131,7 @@ def test_agent_two_thinks_then_calls(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 3})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -2207,7 +2207,7 @@ def test_agent_think_from_reasoning_then_calls(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 3})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -2260,7 +2260,7 @@ def test_agent_think_from_reasoning_then_calls(monkeypatch, api_env) -> None:
 def test_agent_think_limit_is_an_anomaly(monkeypatch, api_env) -> None:
     from app.db.runs import list_logs
 
-    monkeypatch.setattr("app.run.harness.MAX_AGENT_THINKS", 2)
+    monkeypatch.setattr("app.run.agent_turn.MAX_AGENT_THINKS", 2)
     agent_n = {"n": 0}
     prompts: list[str] = []
 
@@ -2377,7 +2377,7 @@ def test_linear_write_then_short_think_succeeds(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": args.get("path") or "tiger.txt", "bytes": 20})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         if not any(m.role == "tool" for m in req.messages):
@@ -2439,7 +2439,7 @@ def test_linear_empty_stop_after_write_continues(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         blob = "\n".join(message.content or "" for message in req.messages)
@@ -2500,7 +2500,7 @@ def test_linear_five_empty_stops_fail_the_run(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": "tiger.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         agent_n["n"] += 1
@@ -2549,7 +2549,7 @@ def test_orchestrator_empty_stops_are_an_anomaly(monkeypatch, api_env) -> None:
         del kind, config, args, secret
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -2608,7 +2608,7 @@ def test_write_then_long_think_then_second_write(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 3})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -2671,16 +2671,16 @@ def test_write_then_long_think_then_second_write(monkeypatch, api_env) -> None:
 
 
 def test_agent_think_keeps_llm_busy(monkeypatch, api_env) -> None:
-    from app.run import harness as harness_mod
+    from app.run import turn_runtime as turn_runtime_mod
 
     flags: list[bool] = []
-    real = harness_mod._set_llm
+    real = turn_runtime_mod._set_llm
 
     def _wrap(ctrl, compiled, llm_node_id, *, busy: bool) -> None:
         flags.append(busy)
         real(ctrl, compiled, llm_node_id, busy=busy)
 
-    monkeypatch.setattr("app.run.harness._set_llm", _wrap)
+    monkeypatch.setattr("app.run.turn_runtime._set_llm", _wrap)
     agent_n = {"n": 0}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
@@ -2741,7 +2741,7 @@ def test_linear_retries_truncated_tool_json_then_writes(monkeypatch, api_env) ->
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         agent_n["n"] += 1
@@ -2789,7 +2789,7 @@ def test_linear_truncated_tool_json_gives_up_after_three_then_writes(
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         blob = "\n".join(message.content or "" for message in req.messages)
@@ -2856,7 +2856,7 @@ def test_orchestrator_retries_truncated_tool_json(monkeypatch, api_env) -> None:
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -2929,7 +2929,7 @@ def test_successful_read_keeps_tool_required(monkeypatch, api_env) -> None:
         executed.append(str(args.get("action") or ""))
         return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "content": "x", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         systems.append(req.messages[0].content or "")
@@ -2984,7 +2984,7 @@ def test_linear_truncated_completion_is_not_a_result(monkeypatch, api_env) -> No
         executed.append(str(args.get("action") or ""))
         return ExecuteResult(ok=True, result={"path": args.get("path") or "a.txt", "bytes": 3})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         n["n"] += 1
@@ -3221,7 +3221,7 @@ def test_file_prep_keeps_a_long_plan(monkeypatch, api_env) -> None:
         del kind, config, secret
         return ExecuteResult(ok=True, result={"path": args.get("path") or ".", "entries": []})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -3274,7 +3274,7 @@ def test_tool_agent_think_json_is_nudged_then_calls(monkeypatch, api_env) -> Non
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 3})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -3337,7 +3337,7 @@ def test_xml_tool_call_is_salvaged(monkeypatch, api_env) -> None:
         assert args.get("path") == "a.txt"
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -3435,7 +3435,7 @@ def test_file_miss_limit_hands_the_task_to_the_orchestrator(monkeypatch, api_env
         executed["n"] += 1
         return ExecuteResult(ok=True, result={"path": "a.txt", "bytes": 1})
 
-    monkeypatch.setattr("app.run.harness.tools_execute.execute_first_party", _execute)
+    monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""

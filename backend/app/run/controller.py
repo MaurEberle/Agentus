@@ -271,7 +271,7 @@ class RunController:
                 payload={"networkId": row.id, "networkName": row.name},
             )
             start_resources()
-            from app.run.harness import run_harness
+            from app.run.orchestrator_loop import run_harness
 
             self.thread = threading.Thread(
                 target=run_harness, args=(self, compiled), name="run-harness", daemon=True
@@ -393,7 +393,7 @@ class RunController:
         wait: str | None = None,
         error: str | None = None,
     ) -> None:
-        from app.run.harness import _set_node
+        from app.run.turn_runtime import _set_node
 
         _set_node(self, node_id, status, wait=wait, error=error)
 
