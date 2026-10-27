@@ -176,11 +176,11 @@ def spawn_env(
     joined = os.pathsep.join(str(path) for path in library_dirs_for_llama(exe, vendor=vendor))
     env["OLLAMA_LIBRARY_PATH"] = joined
     env["PATH"] = joined + os.pathsep + env.get("PATH", "")
-    gpu = preferred_gpu_dir(exe.parent, vendor=vendor)
-    if gpu is not None:
-        env["OLLAMA_LLM_LIBRARY"] = gpu.name
-        if gpu.name.lower() == "vulkan":
-            env["OLLAMA_VULKAN"] = "1"
+    # One library name hides the others. CPU backends (ggml-cpu-*.dll) sit next
+    # to llama-server, not inside cuda_v13 or vulkan. A pin drops that runner,
+    # so num_thread and expert offload never reach the CPU.
+    env.pop("OLLAMA_LLM_LIBRARY", None)
+    env.pop("OLLAMA_VULKAN", None)
     return env
 
 

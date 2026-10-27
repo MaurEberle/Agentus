@@ -100,7 +100,10 @@ def ollama_process_env(launch_exe: Path) -> dict[str, str]:
     lib = _ollama_lib_dir(launch_exe)
     kind = backend_kind_for_vendor(lib, _inference_vendor_id())
     if kind is None:
-        return dict(os.environ)
+        env = dict(os.environ)
+        env.pop("OLLAMA_LLM_LIBRARY", None)
+        env.pop("OLLAMA_VULKAN", None)
+        return env
     marker = lib / "llama-server.exe"
     return spawn_env(marker if marker.is_file() else lib / "llama-server.exe", vendor=kind)
 

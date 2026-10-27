@@ -104,9 +104,13 @@ def test_process_env_points_amd_at_vulkan(monkeypatch: pytest.MonkeyPatch, tmp_p
     launch = tmp_path / "Ollama" / "ollama app.exe"
     launch.write_bytes(b"MZ")
     monkeypatch.setattr("app.runtime.ollama_daemon._inference_vendor_id", lambda: 0x1002)
+    monkeypatch.setenv("OLLAMA_LLM_LIBRARY", "cuda_v13")
+    monkeypatch.setenv("OLLAMA_VULKAN", "1")
     env = ollama_process_env(launch)
-    assert env["OLLAMA_LLM_LIBRARY"] == "vulkan"
+    assert "OLLAMA_LLM_LIBRARY" not in env
+    assert "OLLAMA_VULKAN" not in env
     assert str(vulkan) in env["OLLAMA_LIBRARY_PATH"]
+    assert str(lib) in env["OLLAMA_LIBRARY_PATH"]
 
 
 def test_process_env_leaves_intel_discovery_alone(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -120,8 +124,8 @@ def test_process_env_leaves_intel_discovery_alone(monkeypatch: pytest.MonkeyPatc
     launch = tmp_path / "Ollama" / "ollama app.exe"
     launch.write_bytes(b"MZ")
     monkeypatch.setattr("app.runtime.ollama_daemon._inference_vendor_id", lambda: 0x8086)
-    monkeypatch.delenv("OLLAMA_LLM_LIBRARY", raising=False)
-    monkeypatch.delenv("OLLAMA_VULKAN", raising=False)
+    monkeypatch.setenv("OLLAMA_LLM_LIBRARY", "vulkan")
+    monkeypatch.setenv("OLLAMA_VULKAN", "1")
     env = ollama_process_env(launch)
     assert "OLLAMA_LLM_LIBRARY" not in env
     assert "OLLAMA_VULKAN" not in env
