@@ -144,9 +144,6 @@
   "footer": {
     "copyright": "© {{year}} Agentus Network"
   },
-  "stub": {
-    "body": "Dieses Modul wird im nächsten Schritt implementiert."
-  },
   "notFound": {
     "title": "Seite nicht gefunden",
     "body": "Dieser Pfad existiert nicht.",

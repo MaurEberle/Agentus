@@ -1,17 +1,15 @@
 import type { LlmProvider, RunOutcome } from '@/modules/history/model/types';
+import { pad2, shortId as clipId } from '@/lib/format';
 
-export function pad2(value: number): string {
-  return value.toString().padStart(2, '0');
-}
-
-export function formatDuration(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const seconds = total % 60;
-  if (hours > 0) return `${hours}:${pad2(minutes)}:${pad2(seconds)}`;
-  return `${minutes}:${pad2(seconds)}`;
-}
+export {
+  fileStamp,
+  formatDateTime,
+  formatDuration,
+  formatPercent,
+  formatTime,
+  pad2,
+  safeFilePart,
+} from '@/lib/format';
 
 export function durationMs(startedAt: string, endedAt?: string): number | null {
   const start = Date.parse(startedAt);
@@ -22,29 +20,13 @@ export function durationMs(startedAt: string, endedAt?: string): number | null {
   return Math.max(0, end - start);
 }
 
-export function formatPercent(value: number, locale: string): string {
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value)} %`;
-}
-
 export function formatInt(value: number, locale: string): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-export function formatDateTime(iso: string, locale: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'medium' });
-}
-
-export function formatTime(iso: string, locale: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
 export function shortId(id: string | undefined, keep = 8): string {
   if (!id) return '—';
-  return id.length <= keep ? id : id.slice(0, keep);
+  return clipId(id, keep);
 }
 
 export function modelKey(provider: LlmProvider, model: string): string {
@@ -77,15 +59,6 @@ export function outcomeBadgeVariant(
   if (outcome === 'failed') return 'destructive';
   if (outcome === 'timeout') return 'warning';
   return 'secondary';
-}
-
-export function fileStamp(date = new Date()): string {
-  return `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}-${pad2(date.getHours())}${pad2(date.getMinutes())}`;
-}
-
-export function safeFilePart(value: string): string {
-  const trimmed = value.trim().replace(/[<>:"/\\|?*]+/g, '-').replace(/\s+/g, '_');
-  return trimmed.slice(0, 48) || 'run';
 }
 
 export function median(values: number[]): number | null {
