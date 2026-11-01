@@ -11,11 +11,16 @@ from typing import Any
 
 from pydantic import Field
 
-from app.db.engine import locked, transaction, utc_now
+from app.common.http import client
+from app.db.engine import json_dumps, locked, transaction, utc_now
 from app.http.app import ApiModel
+from app.llm.blobs import discard_blob_files, fetch_manifest_digests, stored_digests
 from app.llm.hub import valid_pull_model
 from app.llm.pull import pull_events
+from app.llm.usage import model_usages
 from app.runtime.errors import RuntimeApiError
+from app.runtime.ollama import resident_index, tag_key
+from app.runtime.urls import ollama_native_root, settings_roots
 
 _LOCK = threading.Lock()
 _CANCEL = threading.Event()
@@ -212,17 +217,56 @@ def stop_one(download_id: str) -> DownloadList:
     return list_downloads()
 
 
+def _save_digests(download_id: str, digests: set[str]) -> None:
+    with transaction("workspace") as conn:
+        conn.execute(
+            "UPDATE model_downloads SET digests = ?, updated_at = ? WHERE id = ?",
+            (json_dumps(sorted(digests)), utc_now(), download_id),
+        )
+
+
+def _forget_installed(model: str) -> None:
+    if model_usages(model) or tag_key(model) in resident_index():
+        return
+    root = settings_roots()[0] or ollama_native_root("")
+    if not root:
+        return
+    try:
+        with client(timeout_sec=120.0) as http:
+            response = http.request("DELETE", f"{root}/api/delete", json={"model": model})
+        if response.status_code not in {200, 404}:
+            return
+    except Exception:
+        return
+
+
+def _discard(model: str, remembered: list[str]) -> None:
+    digests = list(dict.fromkeys([*remembered, *fetch_manifest_digests(model)]))
+    _forget_installed(model)
+    discard_blob_files(digests)
+
+
 def remove_downloads(ids: list[str]) -> DownloadList:
     clean = [item.strip() for item in ids if item.strip()]
     if not clean:
         return list_downloads()
     with transaction("workspace") as conn:
+        marks = ",".join("?" for _ in clean)
+        rows = conn.execute(
+            f"SELECT id, model, digests, status FROM model_downloads WHERE id IN ({marks})",
+            clean,
+        ).fetchall()
         running = _running_id(conn)
         if running and running in clean:
             _set_status(conn, running, "stopped")
             _CANCEL.set()
-        marks = ",".join("?" for _ in clean)
         conn.execute(f"DELETE FROM model_downloads WHERE id IN ({marks})", clean)
+    cancelled = any(row["status"] == "running" for row in rows)
+    if cancelled:
+        time.sleep(0.4)
+    for row in rows:
+        remembered = stored_digests(str(row["digests"]) if row["digests"] is not None else "[]")
+        _discard(str(row["model"]), remembered)
     return list_downloads()
 
 
@@ -297,9 +341,15 @@ def _loop() -> None:
         _SAMPLES.clear()
         _PROGRESS[download_id] = {"completed": 0, "total": 0, "rate": 0}
 
+        seen_digests: set[str] = set()
+
         def on_event(event: dict[str, object]) -> None:
             completed = event.get("completed")
             total = event.get("total")
+            digest = event.get("digest")
+            if isinstance(digest, str) and digest.startswith("sha256:") and digest not in seen_digests:
+                seen_digests.add(digest)
+                _save_digests(download_id, seen_digests)
             _note_progress(
                 download_id,
                 completed if isinstance(completed, int) else None,

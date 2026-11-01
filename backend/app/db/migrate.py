@@ -329,3 +329,13 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
         except Exception:
             conn.execute("ROLLBACK")
             raise
+        current = 6
+    if store == "workspace" and current < 7:
+        conn.execute("BEGIN")
+        try:
+            conn.execute("ALTER TABLE model_downloads ADD COLUMN digests TEXT NOT NULL DEFAULT '[]'")
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (7)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise

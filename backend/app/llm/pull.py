@@ -48,10 +48,13 @@ def pull_events(
                     event: dict[str, object] = {"status": status or "pulling"}
                     completed = payload.get("completed")
                     total = payload.get("total")
+                    digest = payload.get("digest")
                     if isinstance(completed, int):
                         event["completed"] = completed
                     if isinstance(total, int):
                         event["total"] = total
+                    if isinstance(digest, str):
+                        event["digest"] = digest
                     if on_event is not None:
                         on_event(event)
                     if status == "success":
