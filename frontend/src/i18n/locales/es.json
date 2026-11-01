@@ -787,6 +787,7 @@
         "empty": "Aún no hay prompts.",
         "filter": "Ningún prompt coincide con este filtro.",
         "library": "Ir a los prompts",
+        "split": "Cambiar el ancho de la lista y las etiquetas",
         "failed": "No se pudo cargar el prompt."
       },
       "tool": {

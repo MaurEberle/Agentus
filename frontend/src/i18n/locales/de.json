@@ -854,6 +854,7 @@
         "empty": "Noch keine Prompts.",
         "filter": "Keine Prompts für diesen Filter.",
         "library": "Zu den Prompts",
+        "split": "Breite von Liste und Tags ändern",
         "failed": "Der Prompt konnte nicht geladen werden."
       },
       "tool": {

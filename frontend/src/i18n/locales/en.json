@@ -854,6 +854,7 @@
         "empty": "No prompts saved yet.",
         "filter": "No prompts match this filter.",
         "library": "Go to prompts",
+        "split": "Resize the list and the tags",
         "failed": "The prompt could not be loaded."
       },
       "tool": {
