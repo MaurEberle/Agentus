@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { MarkdownView } from '@/components/MarkdownView';
@@ -71,6 +72,18 @@ function loadPanes(): Panes {
 function safeName(name: string): string {
   const cleaned = name.trim().replace(/[^\w.-]+/g, '-').replace(/-+/g, '-');
   return cleaned || 'prompt';
+}
+
+/** Inner width that wraps the chips into a roughly square cloud. */
+function squareCloudWidth(tags: string[]): number {
+  const chip = (tag: string) => Math.ceil(tag.length * 6.6 + 22);
+  const widths = tags.map(chip);
+  const longest = Math.max(...widths);
+  const total = widths.reduce((sum, width) => sum + width, 0) + 6 * Math.max(0, tags.length - 1);
+  const hint = 24;
+  const row = 28;
+  const side = (hint + Math.sqrt(hint * hint + 4 * total * row)) / 2;
+  return Math.ceil(Math.max(side, longest));
 }
 
 export function PromptsModule() {
@@ -210,6 +223,50 @@ export function PromptsModule() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b p-3">
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" size="sm" variant="outline">
+              {t('prompts.filter.tags')}
+              {tagFilter.length ? ` (${tagFilter.length})` : ''}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            style={
+              tagSuggestions.length
+                ? { width: `min(50vw, ${squareCloudWidth(tagSuggestions) + 24}px)` }
+                : undefined
+            }
+            className="flex max-h-[50vh] max-w-[50vw] flex-col overflow-auto p-3"
+          >
+            <p className="text-center text-xs text-muted-foreground">{t('prompts.filter.tagsHint')}</p>
+            {tagSuggestions.length === 0 ? (
+              <p className="mt-2 text-center text-sm text-muted-foreground">{t('prompts.filter.noTags')}</p>
+            ) : (
+              <div className="mt-2 flex min-w-0 flex-wrap justify-start gap-1.5" role="group" aria-label={t('prompts.filter.tags')}>
+                {tagSuggestions.map((tag) => {
+                  const on = tagFilter.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleTag(tag)}
+                      className={cn(
+                        'rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                        on
+                          ? 'border-transparent bg-primary text-primary-foreground'
+                          : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                      )}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
         <div className="flex items-center gap-1">
           <Button
             type="button"
@@ -237,34 +294,6 @@ export function PromptsModule() {
             {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
           </Button>
         </div>
-      </div>
-      <div className="border-b px-3 py-2">
-        <p className="text-center text-xs text-muted-foreground">{t('prompts.filter.tagsHint')}</p>
-        {tagSuggestions.length === 0 ? (
-          <p className="mt-2 text-center text-sm text-muted-foreground">{t('prompts.filter.noTags')}</p>
-        ) : (
-          <div className="mt-2 flex flex-wrap justify-center gap-1.5" role="group" aria-label={t('prompts.filter.tags')}>
-            {tagSuggestions.map((tag) => {
-              const on = tagFilter.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => toggleTag(tag)}
-                  className={cn(
-                    'rounded-full border px-2.5 py-0.5 text-xs font-medium',
-                    on
-                      ? 'border-transparent bg-primary text-primary-foreground'
-                      : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  )}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <Checkbox
