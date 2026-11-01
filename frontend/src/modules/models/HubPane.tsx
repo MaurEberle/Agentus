@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { BrandMark } from '@/components/BrandMark';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
@@ -214,23 +215,18 @@ export function HubPane() {
         </Select>
       </div>
       <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-        <div className="min-h-0 overflow-auto border-b md:border-b-0 md:border-r">
-          {results.isFetching && !results.data ? (
-            <div className="flex flex-1 items-center justify-center p-10">
-              <Spinner size="lg" label={t('app.loading')} />
+        <div className="flex min-h-0 flex-col overflow-hidden border-b md:border-b-0 md:border-r">
+          {results.isFetching ? (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4" role="status" aria-label={t('app.loading')}>
+              <BrandMark spinning className="size-24" alt="" />
+              <p className="text-sm text-muted-foreground">{t('app.loading')}</p>
             </div>
-          ) : null}
-          {results.isFetching && results.data ? (
-            <div className="flex items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
-              <Spinner size="sm" label={t('app.loading')} />
-              <span>{t('app.loading')}</span>
-            </div>
-          ) : null}
-          {results.data?.messageKey ? <p className="p-4 text-sm text-muted-foreground">{t('models.hub.failed')}</p> : null}
-          {(results.data?.items.length ?? 0) === 0 && !results.isFetching ? (
+          ) : results.data?.messageKey ? (
+            <p className="p-4 text-sm text-muted-foreground">{t('models.hub.failed')}</p>
+          ) : (results.data?.items.length ?? 0) === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>
           ) : (
-            <ul>
+            <ul className="min-h-0 flex-1 overflow-auto">
               {results.data?.items.map((item) => (
                 <li key={item.id}>
                   <button
