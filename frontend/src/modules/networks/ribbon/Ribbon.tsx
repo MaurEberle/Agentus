@@ -111,9 +111,9 @@ export function LibraryRibbon({
   const rest = actions.filter((action) => !compactKeys.has(action.key));
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b bg-card px-2 py-1.5">
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
       {(isDesktop ? actions : primary).map(({ key, ...action }) => (
-        <RibbonAction key={key} {...action} />
+        <RibbonAction key={key} primary={key === 'new'} {...action} />
       ))}
       {!isDesktop ? (
         <DropdownMenu>
@@ -146,14 +146,16 @@ function RibbonAction({
   enabled,
   hint,
   onClick,
+  primary = false,
 }: {
   label: string;
   enabled: boolean;
   hint?: string;
   onClick: () => void;
+  primary?: boolean;
 }) {
   const button = (
-    <Button type="button" size="sm" variant="outline" disabled={!enabled} onClick={onClick}>
+    <Button type="button" size="sm" variant={primary ? 'default' : 'outline'} disabled={!enabled} onClick={onClick}>
       {label}
     </Button>
   );
