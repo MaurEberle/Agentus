@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownAZ, ArrowDownZA, ChevronDown } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownZA, ChevronDown, RotateCcw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -206,6 +206,27 @@ export function HubPane() {
   function togglePipeline(key: Pipeline) {
     setPipelines((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
   }
+  const filtersDirty =
+    search !== '' ||
+    pipelines.length > 0 ||
+    capabilities.length > 0 ||
+    size !== 'any' ||
+    minB !== '' ||
+    maxB !== '' ||
+    sort !== 'downloads' ||
+    sortDir !== 'desc';
+  function resetFilters() {
+    setSearch('');
+    setDebounced('');
+    setPipelines([]);
+    setCapabilities([]);
+    setSize('any');
+    setMinB('');
+    setMaxB('');
+    setBounds({ min: '', max: '' });
+    setSort('downloads');
+    setSortDir('desc');
+  }
 
   async function install(file: QuantFile) {
     const controller = new AbortController();
@@ -356,6 +377,18 @@ export function HubPane() {
             <span className="text-sm text-muted-foreground">B</span>
           </div>
         ) : null}
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="size-8"
+          aria-label={t('models.hub.reset')}
+          title={t('models.hub.reset')}
+          disabled={!filtersDirty}
+          onClick={resetFilters}
+        >
+          <RotateCcw className="size-4" />
+        </Button>
       </div>
       <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
         <div className="flex min-h-0 flex-col overflow-hidden border-b md:border-b-0 md:border-r">
