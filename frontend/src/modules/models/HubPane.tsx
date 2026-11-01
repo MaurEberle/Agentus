@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BrandMark } from '@/components/BrandMark';
+import { ModelName } from '@/components/ModelName';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
@@ -339,7 +340,7 @@ export function HubPane() {
                     onClick={() => setPicked(item.id)}
                     className={`flex w-full flex-col gap-0.5 border-b px-3 py-2 text-left ${picked === item.id ? 'bg-accent' : ''}`}
                   >
-                    <span className="truncate text-sm font-medium">{item.id}</span>
+                    <ModelName value={item.id} variant="tag" className="text-sm font-medium" />
                     <span className="truncate text-xs text-muted-foreground">
                       {[
                         t('models.hub.downloads', { count: item.downloads.toLocaleString(i18n.language) }),

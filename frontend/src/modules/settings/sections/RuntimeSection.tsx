@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ModelName } from '@/components/ModelName';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +39,7 @@ function ModelGroup({ title, items }: { title: string; items: RuntimeModel[] }) 
           <TableBody>
             {items.map((model) => (
               <TableRow key={model.name}>
-                <TableCell className="font-mono text-xs">{model.name}</TableCell>
+                <TableCell className="font-mono text-xs"><ModelName value={model.name} /></TableCell>
                 <TableCell className="whitespace-nowrap text-right tabular-nums">
                   {model.sizeBytes ? formatBytes(model.sizeBytes, i18n.language) : '—'}
                 </TableCell>

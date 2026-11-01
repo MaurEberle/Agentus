@@ -80,11 +80,32 @@ SORTS = {
     "modified": "last_modified",
 }
 
+_REGISTRY_HOSTS = frozenset({"hf.co", "huggingface.co", "www.huggingface.co"})
+
+
+def display_model_name(raw: str) -> str:
+    """Same visible name as frontend/src/lib/modelName.ts. The registry host is not part of it."""
+    text = raw.strip()
+    slash = text.rfind("/")
+    colon = text.rfind(":")
+    path = text
+    suffix = ""
+    if colon > slash:
+        path = text[:colon]
+        suffix = text[colon + 1 :]
+    parts = [part for part in path.split("/") if part]
+    while len(parts) > 1 and parts[0].lower() in _REGISTRY_HOSTS:
+        del parts[0]
+    repo = parts[-1] if parts else path
+    if suffix and suffix.lower() != "latest":
+        return f"{repo}:{suffix}"
+    return repo
+
 
 def order_hits(items: list[HubHit], sort: str, *, ascending: bool) -> None:
     """Name is ordered here. The Hub only sorts downloads, likes, trend, and date, and only descending."""
     if sort == "name":
-        items.sort(key=lambda item: item.id.casefold())
+        items.sort(key=lambda item: (display_model_name(item.id).casefold(), item.id.casefold()))
         if not ascending:
             items.reverse()
         return

@@ -36,16 +36,28 @@ def test_kind_uses_name_and_ollama_metadata() -> None:
 
 def test_name_sort_orders_the_page() -> None:
     hits = [
-        HubHit(id="zebra/model", url="https://huggingface.co/zebra/model"),
-        HubHit(id="alpha/model", url="https://huggingface.co/alpha/model"),
-        HubHit(id="Middle/model", url="https://huggingface.co/Middle/model"),
+        HubHit(id="hf.co/zzz/Alpha:Q8_0", url="https://huggingface.co/zzz/Alpha"),
+        HubHit(id="hf.co/aaa/beta", url="https://huggingface.co/aaa/beta"),
+        HubHit(id="nomic-embed-text:latest", url="https://ollama.com/library/nomic-embed-text"),
     ]
     order_hits(hits, "name", ascending=True)
-    assert [item.id for item in hits] == ["alpha/model", "Middle/model", "zebra/model"]
+    assert [item.id for item in hits] == [
+        "hf.co/zzz/Alpha:Q8_0",
+        "hf.co/aaa/beta",
+        "nomic-embed-text:latest",
+    ]
     order_hits(hits, "name", ascending=False)
-    assert [item.id for item in hits] == ["zebra/model", "Middle/model", "alpha/model"]
+    assert [item.id for item in hits] == [
+        "nomic-embed-text:latest",
+        "hf.co/aaa/beta",
+        "hf.co/zzz/Alpha:Q8_0",
+    ]
     order_hits(hits, "downloads", ascending=True)
-    assert [item.id for item in hits] == ["alpha/model", "Middle/model", "zebra/model"]
+    assert [item.id for item in hits] == [
+        "hf.co/zzz/Alpha:Q8_0",
+        "hf.co/aaa/beta",
+        "nomic-embed-text:latest",
+    ]
 
 
 def test_huggingface_url_strips_the_quant() -> None:

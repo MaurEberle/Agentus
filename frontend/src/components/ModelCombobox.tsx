@@ -3,6 +3,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { modelHover, modelLabel } from '@/lib/modelName';
 import { cn } from '@/lib/utils';
 
 export function ModelCombobox({
@@ -34,7 +35,12 @@ export function ModelCombobox({
   const names =
     restrictToOptions || !value || options.includes(value) ? options : [value, ...options];
   const query = search.trim().toLowerCase();
-  const filtered = query ? names.filter((item) => item.toLowerCase().includes(query)) : names;
+  const filtered = query
+    ? names.filter((item) => {
+        const label = modelLabel(item);
+        return [item, label.name, label.publisher ?? ''].some((part) => part.toLowerCase().includes(query));
+      })
+    : names;
   const exact = names.some((item) => item.toLowerCase() === query);
 
   function commit(next: string) {
@@ -43,6 +49,8 @@ export function ModelCombobox({
     setOpen(false);
     setSearch('');
   }
+
+  const shown = value ? modelLabel(value) : null;
 
   return (
     <Popover
@@ -60,11 +68,11 @@ export function ModelCombobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          title={value || undefined}
+          title={shown ? modelHover(shown) : undefined}
           className="h-8 w-full min-w-0 max-w-full justify-between overflow-hidden px-2.5 text-left font-normal"
         >
           <span className={cn('min-w-0 flex-1 truncate text-left', !value && 'text-muted-foreground')}>
-            {value || placeholder}
+            {shown?.name || placeholder}
           </span>
           <ChevronDown className="size-4 shrink-0 opacity-60" />
         </Button>
@@ -111,11 +119,11 @@ export function ModelCombobox({
               <button
                 type="button"
                 className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                title={item}
+                title={modelHover(modelLabel(item))}
                 onClick={() => commit(item)}
               >
                 <Check className={cn('size-3.5 shrink-0', item === value ? 'opacity-100' : 'opacity-0')} />
-                <span className="min-w-0 flex-1 truncate">{item}</span>
+                <span className="min-w-0 flex-1 truncate">{modelLabel(item).name}</span>
               </button>
             </li>
           ))}

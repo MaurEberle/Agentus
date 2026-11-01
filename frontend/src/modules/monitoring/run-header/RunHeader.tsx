@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
+import { ModelName } from '@/components/ModelName';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -118,7 +119,7 @@ export function RunHeader({
                     className="flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-xs"
                   >
                     <span className="font-medium">{name}</span>
-                    <span className="font-mono">{llm.model}</span>
+                    <ModelName value={llm.model} className="font-mono" />
                     <span className="text-muted-foreground">{t(`monitoring.provider.${llm.provider}`)}</span>
                     <Badge variant={local ? 'secondary' : 'outline'}>
                       {local ? t('monitoring.header.local') : t('monitoring.header.cloud')}

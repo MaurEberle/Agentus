@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ApiError, apiFetch, queryClient } from '@/api/client';
 import { HuggingFaceIcon } from '@/components/icons/HuggingFaceIcon';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
+import { ModelName } from '@/components/ModelName';
 import { Spinner } from '@/components/ui/spinner';
 import { TagCloud } from '@/components/tags/TagCloud';
 import { TagInput, type TagInputHandle } from '@/components/TagInput';
@@ -22,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { formatBytes, formatDateTime } from '@/lib/format';
+import { modelLabel } from '@/lib/modelName';
 import { applyTagEdit, matchesTags, parseTagTokens, sharedTagList, type TagMatch } from '@/lib/tags';
 import { cn } from '@/lib/utils';
 import { listInstalled, saveModelTags } from '@/modules/models/api';
@@ -101,7 +103,10 @@ function InstalledPane() {
     next.sort((a, b) => {
       if (sortKey === 'size') return ((a.sizeBytes ?? 0) - (b.sizeBytes ?? 0)) * dir;
       if (sortKey === 'modified') return (a.modifiedAt ?? '').localeCompare(b.modifiedAt ?? '') * dir;
-      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) * dir;
+      const aLabel = modelLabel(a.name);
+      const bLabel = modelLabel(b.name);
+      const byName = aLabel.name.localeCompare(bLabel.name, undefined, { sensitivity: 'base' });
+      return (byName || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })) * dir;
     });
     return next;
   }, [items, kind, search, sortDir, sortKey, tagFilter, tagMode]);
@@ -237,14 +242,14 @@ function InstalledPane() {
                     {rows.map((item) => (
                       <li key={item.name} className={cn('flex items-center border-b', selectedNames.includes(item.name) && 'bg-accent/60')}>
                         <div className="px-3" onClick={(event) => event.stopPropagation()}>
-                          <Checkbox checked={selectedNames.includes(item.name)} onCheckedChange={() => toggle(item.name)} aria-label={item.name} />
+                          <Checkbox checked={selectedNames.includes(item.name)} onCheckedChange={() => toggle(item.name)} aria-label={modelLabel(item.name).name} />
                         </div>
                         <button
                           type="button"
                           onClick={() => setSelectedNames([item.name])}
                           className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2 text-left"
                         >
-                          <span className="truncate font-mono text-xs">{item.name}</span>
+                          <ModelName value={item.name} variant="tag" className="font-mono text-xs" />
                           <span className="truncate text-xs text-muted-foreground">
                             {[
                               item.sizeBytes ? formatBytes(item.sizeBytes, i18n.language) : '',
@@ -313,7 +318,9 @@ function DetailPane({ item }: { item: InstalledModel | null }) {
   return (
     <div className="flex min-h-full flex-col">
       <div className="border-b px-3 py-2">
-        <h2 className="min-w-0 break-all font-mono text-xs font-medium">{item.name}</h2>
+        <h2 className="min-w-0 text-sm font-medium">
+          <ModelName value={item.name} variant="tag" className="font-mono text-xs" />
+        </h2>
       </div>
       <dl className="grid gap-2 p-3 text-sm">
         {rows.map(([label, value]) => (
@@ -472,7 +479,7 @@ function DeleteModelDialog({
             {blocked
               ? t('models.delete.inUseBodyMany', { count: blocks.length })
               : items.length === 1
-                ? t('models.delete.body', { name: items[0]?.name ?? '' })
+                ? t('models.delete.body', { name: modelLabel(items[0]?.name ?? '').name })
                 : t('models.delete.bodyMany', { count: items.length })}
           </DialogDescription>
         </DialogHeader>
@@ -480,7 +487,7 @@ function DeleteModelDialog({
           <ul className="grid max-h-60 gap-3 overflow-auto text-sm">
             {blocks.map((block) => (
               <li key={block.name}>
-                <p className="break-all font-mono text-xs">{block.name}</p>
+                <ModelName value={block.name} variant="tag" className="font-mono text-xs" />
                 <ul className="mt-1 grid gap-1">
                   {block.usages.map((usage, index) => (
                     <li key={`${usage.kind}-${index}`}>{usageText(t, usage)}</li>

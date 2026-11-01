@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ModelCombobox } from '@/components/ModelCombobox';
+import { modelLabel } from '@/lib/modelName';
 import { notify } from '@/lib/notifications';
 import {
   clearHelpChatMessages,
@@ -321,7 +322,7 @@ export function HelpChatSection() {
             <Alert>
               <AlertDescription>
                 {(help.fallbackModel || '').trim()
-                  ? t('settings.helpChat.missingModelFallback', { name: (help.fallbackModel || '').trim() })
+                  ? t('settings.helpChat.missingModelFallback', { name: modelLabel(help.fallbackModel || '').name })
                   : t('settings.helpChat.missingModel')}
               </AlertDescription>
             </Alert>

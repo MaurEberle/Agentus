@@ -1,6 +1,7 @@
 import { Copy, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ModelName } from '@/components/ModelName';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -196,7 +197,7 @@ function StepsCalls({ detail }: { detail: RunDetail }) {
           ) : (
             detail.calls.map((call) => (
               <TableRow key={call.id}>
-                <TableCell className="font-mono text-xs">{call.model}</TableCell>
+                <TableCell className="font-mono text-xs"><ModelName value={call.model} /></TableCell>
                 <TableCell>{t(`history.provider.${call.provider}`)}</TableCell>
                 <TableCell>{call.ok ? t('history.calls.yes') : t('history.calls.no')}</TableCell>
                 <TableCell className="tabular-nums">
