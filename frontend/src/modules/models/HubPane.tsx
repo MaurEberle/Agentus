@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownAZ, ArrowDownZA, ChevronDown, RotateCcw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +21,7 @@ import { modelLabel } from '@/lib/modelName';
 import type { HubFiles, QuantFile } from '@/modules/models/model';
 import { useHostResourcesQuery } from '@/modules/settings/api';
 import { inferenceVramBytes } from '@/modules/network/inspector/vram';
+import { HUB_PAGE_SIZES, rememberHubPageSize, useModelsUi, type HubCapability, type HubPageSize, type HubPipeline, type HubSize, type HubSort } from '@/modules/models/store';
 
 function yesNo(t: (key: string) => string, value: boolean): string {
   return t(value ? 'models.detail.loadedYes' : 'models.detail.loadedNo');
@@ -84,24 +85,13 @@ function HubFacts({ data }: { data: HubFiles }) {
   );
 }
 
-const PIPELINES = ['text', 'embed', 'vision', 'moe'] as const;
-type Pipeline = (typeof PIPELINES)[number];
+const PIPELINES = ['text', 'embed', 'vision', 'moe'] as const satisfies readonly HubPipeline[];
+type Pipeline = HubPipeline;
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified', 'name'] as const;
-const PAGE_SIZES = [10, 20, 30, 50, 100] as const;
-const CAPABILITIES = ['tools', 'thinking', 'vision'] as const;
-type Capability = (typeof CAPABILITIES)[number];
-const PAGE_SIZE_KEY = 'agentus.models.hubPageSize';
-
-function loadPageSize(): (typeof PAGE_SIZES)[number] {
-  try {
-    const value = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
-    if ((PAGE_SIZES as readonly number[]).includes(value)) return value as (typeof PAGE_SIZES)[number];
-  } catch {
-    // Storage can be blocked. The default page size still works.
-  }
-  return 30;
-}
+const CAPABILITIES = ['tools', 'thinking', 'vision'] as const satisfies readonly HubCapability[];
+type Capability = HubCapability;
+const HUB_CACHE = { staleTime: Number.POSITIVE_INFINITY, gcTime: Number.POSITIVE_INFINITY } as const;
 
 function billions(raw: string): string | null {
   const text = raw.trim().replace(',', '.');
@@ -129,22 +119,37 @@ function sizeQuery(size: string, minRaw: string, maxRaw: string): string {
 
 export function HubPane() {
   const { t, i18n } = useTranslation();
-  const [search, setSearch] = useState('');
-  const [debounced, setDebounced] = useState('');
-  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
-  const [size, setSize] = useState<(typeof SIZES)[number]>('any');
-  const [minB, setMinB] = useState('');
-  const [maxB, setMaxB] = useState('');
-  const [bounds, setBounds] = useState({ min: '', max: '' });
-  const [sort, setSort] = useState<(typeof SORTS)[number]>('downloads');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(loadPageSize);
-  const [capabilities, setCapabilities] = useState<Capability[]>([]);
-  const [page, setPage] = useState(0);
-  const [cursors, setCursors] = useState<(string | null)[]>([null]);
-  const [picked, setPicked] = useState<string | null>(null);
-  const [quant, setQuant] = useState<string | null>(null);
+  const hub = useModelsUi((state) => state.hub);
+  const patchHub = useModelsUi((state) => state.patchHub);
+  const resetHubFilters = useModelsUi((state) => state.resetHubFilters);
+  const {
+    search, debounced, pipelines, size, minB, maxB, bounds, sort, sortDir, capabilities, page, cursors, picked, quant,
+  } = hub;
+  const pageSize: HubPageSize = (HUB_PAGE_SIZES as readonly number[]).includes(hub.pageSize) ? hub.pageSize : 30;
+  const setSearch = (value: string) => patchHub({ search: value });
+  const setDebounced = (value: string) => patchHub((current) => (current.debounced === value ? current : { debounced: value }));
+  const setPipelines = (value: Pipeline[] | ((current: Pipeline[]) => Pipeline[])) =>
+    patchHub((current) => ({ pipelines: typeof value === 'function' ? value(current.pipelines) : value }));
+  const setSize = (value: HubSize) => patchHub({ size: value });
+  const setMinB = (value: string) => patchHub({ minB: value });
+  const setMaxB = (value: string) => patchHub({ maxB: value });
+  const setBounds = (value: { min: string; max: string }) =>
+    patchHub((current) => (current.bounds.min === value.min && current.bounds.max === value.max ? current : { bounds: value }));
+  const setSort = (value: HubSort) => patchHub({ sort: value });
+  const setSortDir = (value: 'asc' | 'desc' | ((current: 'asc' | 'desc') => 'asc' | 'desc')) =>
+    patchHub((current) => ({ sortDir: typeof value === 'function' ? value(current.sortDir) : value }));
+  const setPageSize = (value: HubPageSize) => patchHub({ pageSize: value });
+  const setCapabilities = (value: Capability[] | ((current: Capability[]) => Capability[])) =>
+    patchHub((current) => ({ capabilities: typeof value === 'function' ? value(current.capabilities) : value }));
+  const setPage = (value: number | ((current: number) => number)) =>
+    patchHub((current) => ({ page: typeof value === 'function' ? value(current.page) : value }));
+  const setCursors = (value: (string | null)[] | ((current: (string | null)[]) => (string | null)[])) =>
+    patchHub((current) => ({ cursors: typeof value === 'function' ? value(current.cursors) : value }));
+  const setPicked = (value: string | null) => patchHub({ picked: value });
+  const setQuant = (value: string | null) => patchHub({ quant: value });
   const [queuing, setQueuing] = useState(false);
+  const seenFilter = useRef<string | null>(null);
+  const filterKey = JSON.stringify([debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(search), 400);
     return () => window.clearTimeout(timer);
@@ -154,16 +159,15 @@ export function HubPane() {
     return () => window.clearTimeout(timer);
   }, [minB, maxB]);
   useEffect(() => {
-    try {
-      window.localStorage.setItem(PAGE_SIZE_KEY, String(pageSize));
-    } catch {
-      // Remembering the page size is optional.
-    }
+    rememberHubPageSize(pageSize);
   }, [pageSize]);
   useEffect(() => {
-    setPage(0);
-    setCursors([null]);
-  }, [debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
+    if (seenFilter.current === filterKey) return;
+    const first = seenFilter.current === null;
+    seenFilter.current = filterKey;
+    if (first) return;
+    patchHub({ page: 0, cursors: [null] });
+  }, [filterKey, patchHub]);
   const resources = useHostResourcesQuery({ live: false });
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   const results = useQuery({
@@ -183,19 +187,26 @@ export function HubPane() {
       return data;
     },
     retry: 1,
+    ...HUB_CACHE,
   });
   const files = useQuery({
     queryKey: ['models', 'hub', 'files', picked],
     queryFn: () => hubFiles(picked ?? ''),
     enabled: Boolean(picked),
+    ...HUB_CACHE,
   });
   const preferred = useMemo(() => {
     const rows = files.data?.quants ?? [];
     return rows.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? rows[0] ?? null;
   }, [files.data]);
   useEffect(() => {
-    setQuant(preferred?.tag ?? null);
-  }, [preferred]);
+    const tags = files.data?.quants ?? [];
+    if (tags.length === 0) return;
+    const current = useModelsUi.getState().hub.quant;
+    if (current && tags.some((item) => item.tag === current)) return;
+    const next = tags.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? tags[0];
+    if (next) patchHub({ quant: next.tag });
+  }, [files.data, patchHub]);
   const chosen = (files.data?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
   function toggleCapability(key: Capability) {
     setCapabilities((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
@@ -213,16 +224,7 @@ export function HubPane() {
     sort !== 'downloads' ||
     sortDir !== 'desc';
   function resetFilters() {
-    setSearch('');
-    setDebounced('');
-    setPipelines([]);
-    setCapabilities([]);
-    setSize('any');
-    setMinB('');
-    setMaxB('');
-    setBounds({ min: '', max: '' });
-    setSort('downloads');
-    setSortDir('desc');
+    resetHubFilters();
   }
 
   async function install(file: QuantFile) {
@@ -388,18 +390,9 @@ export function HubPane() {
       </div>
       <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
         <div className="flex min-h-0 flex-col overflow-hidden border-b md:border-b-0 md:border-r">
-          {results.isFetching ? (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4" role="status" aria-label={t('app.loading')}>
-              <BrandMark spinning className="size-24" alt="" />
-              <p className="text-sm text-muted-foreground">{t('app.loading')}</p>
-            </div>
-          ) : results.isError || results.data?.messageKey ? (
-            <p className="p-4 text-sm text-muted-foreground">{t('models.hub.failed')}</p>
-          ) : (results.data?.items.length ?? 0) === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>
-          ) : (
+          {results.data && results.data.items.length > 0 ? (
             <ul className="min-h-0 flex-1 overflow-auto">
-              {(results.data?.items ?? []).map((item) => (
+              {results.data.items.map((item) => (
                 <li key={item.id}>
                   <button
                     type="button"
@@ -421,6 +414,15 @@ export function HubPane() {
                 </li>
               ))}
             </ul>
+          ) : results.isFetching ? (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4" role="status" aria-label={t('app.loading')}>
+              <BrandMark spinning className="size-24" alt="" />
+              <p className="text-sm text-muted-foreground">{t('app.loading')}</p>
+            </div>
+          ) : results.isError || results.data?.messageKey ? (
+            <p className="p-4 text-sm text-muted-foreground">{t('models.hub.failed')}</p>
+          ) : (
+            <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
             <div className="flex flex-wrap items-center gap-1">
@@ -471,12 +473,12 @@ export function HubPane() {
                 {t('models.hub.next')}
               </Button>
             </div>
-            <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value) as (typeof PAGE_SIZES)[number])}>
+            <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value) as HubPageSize)}>
               <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.pageSize')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PAGE_SIZES.map((count) => (
+                {HUB_PAGE_SIZES.map((count) => (
                   <SelectItem key={count} value={String(count)}>{t('models.hub.perPage', { count })}</SelectItem>
                 ))}
               </SelectContent>

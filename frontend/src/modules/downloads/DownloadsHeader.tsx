@@ -25,7 +25,8 @@ export function DownloadsHeader() {
     const done = items.filter((item) => item.status === 'done').map((item) => item.id);
     const fresh = done.filter((id) => !seenDone.current.has(id));
     if (fresh.length > 0 && seenDone.current.size > 0) {
-      void queryClient.invalidateQueries({ queryKey: ['models'] });
+      void queryClient.invalidateQueries({ queryKey: ['models'], exact: true });
+      void queryClient.invalidateQueries({ queryKey: ['models', 'hub', 'files'] });
     }
     for (const id of done) seenDone.current.add(id);
   }, [items]);

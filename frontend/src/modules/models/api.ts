@@ -9,7 +9,7 @@ export async function saveModelTags(edits: { name: string; tags: string[] }[]): 
   for (const edit of edits) {
     await apiFetch('/models/tags', { method: 'PUT', body: JSON.stringify(edit) });
   }
-  await queryClient.invalidateQueries({ queryKey: ['models'] });
+  await queryClient.invalidateQueries({ queryKey: ['models'], exact: true });
 }
 
 export async function searchHub(params: {

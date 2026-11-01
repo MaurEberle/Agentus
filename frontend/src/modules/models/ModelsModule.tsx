@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { listInstalled, saveModelTags } from '@/modules/models/api';
 import { HubPane } from '@/modules/models/HubPane';
 import type { InstalledModel, ModelKind } from '@/modules/models/model';
+import { useModelsUi } from '@/modules/models/store';
 
 const KINDS: ModelKind[] = ['embedding', 'image', 'moe', 'normal'];
 
@@ -47,7 +48,8 @@ function clampShare(value: number): number {
 
 export function ModelsModule() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<'installed' | 'hub'>('installed');
+  const tab = useModelsUi((state) => state.tab);
+  const setTab = useModelsUi((state) => state.setTab);
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div role="tablist" className="flex gap-1 border-b px-3">
@@ -75,16 +77,22 @@ export function ModelsModule() {
 
 function InstalledPane() {
   const { t, i18n } = useTranslation();
-  const query = useQuery({ queryKey: ['models'], queryFn: listInstalled });
+  const query = useQuery({ queryKey: ['models'], queryFn: listInstalled, gcTime: Number.POSITIVE_INFINITY });
   const items = query.data?.items ?? [];
-  const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<'name' | 'size' | 'modified'>('name');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [kind, setKind] = useState<'all' | ModelKind>('all');
-  const [tagFilter, setTagFilter] = useState<string[]>([]);
-  const [tagMode, setTagMode] = useState<TagMatch>('or');
-  const [selectedNames, setSelectedNames] = useState<string[]>([]);
-  const [share, setShare] = useState(0.62);
+  const installed = useModelsUi((state) => state.installed);
+  const patchInstalled = useModelsUi((state) => state.patchInstalled);
+  const { search, sortKey, sortDir, kind, tagFilter, tagMode, selectedNames, share } = installed;
+  const setSearch = (value: string) => patchInstalled({ search: value });
+  const setSortKey = (value: 'name' | 'size' | 'modified') => patchInstalled({ sortKey: value });
+  const setSortDir = (value: 'asc' | 'desc' | ((current: 'asc' | 'desc') => 'asc' | 'desc')) =>
+    patchInstalled((current) => ({ sortDir: typeof value === 'function' ? value(current.sortDir) : value }));
+  const setKind = (value: 'all' | ModelKind) => patchInstalled({ kind: value });
+  const setTagFilter = (value: string[] | ((current: string[]) => string[])) =>
+    patchInstalled((current) => ({ tagFilter: typeof value === 'function' ? value(current.tagFilter) : value }));
+  const setTagMode = (value: TagMatch) => patchInstalled({ tagMode: value });
+  const setSelectedNames = (value: string[] | ((current: string[]) => string[])) =>
+    patchInstalled((current) => ({ selectedNames: typeof value === 'function' ? value(current.selectedNames) : value }));
+  const setShare = (value: number) => patchInstalled({ share: value });
   const [tagsOpen, setTagsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -460,7 +468,8 @@ function DeleteModelDialog({
           throw caught;
         }
       }
-      await queryClient.invalidateQueries({ queryKey: ['models'] });
+      await queryClient.invalidateQueries({ queryKey: ['models'], exact: true });
+      await queryClient.invalidateQueries({ queryKey: ['models', 'hub', 'files'] });
       onDeleted(removed);
       if (failed.length) setBlocks(failed);
       else onClose();
