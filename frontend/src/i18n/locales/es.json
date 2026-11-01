@@ -781,6 +781,7 @@
         "title": "Cargar prompt",
         "body": "Elige un prompt guardado. Sustituye el prompt de sistema de este nodo.",
         "search": "Buscar",
+        "sort": "Orden",
         "sortUpdated": "Modificado",
         "sortName": "Nombre",
         "apply": "Aplicar",

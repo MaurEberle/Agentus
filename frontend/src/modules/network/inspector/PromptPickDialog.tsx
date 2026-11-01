@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArrowUpDown } from 'lucide-react';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -100,15 +101,20 @@ export function PromptPickDialog({
         </DialogHeader>
         <div data-split-row className="flex h-80 w-full min-w-0">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t('network.inspector.prompt.search')}
-                className="min-w-0 flex-1"
+                aria-label={t('network.inspector.prompt.search')}
+                className="h-8 min-w-0 flex-1"
               />
               <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
-                <SelectTrigger className="w-32 shrink-0">
+                <SelectTrigger
+                  className="w-40 shrink-0"
+                  aria-label={`${t('network.inspector.prompt.sort')}: ${t(sort === 'name' ? 'network.inspector.prompt.sortName' : 'network.inspector.prompt.sortUpdated')}`}
+                >
+                  <ArrowUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

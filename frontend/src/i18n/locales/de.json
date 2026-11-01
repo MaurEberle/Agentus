@@ -848,6 +848,7 @@
         "title": "Prompt laden",
         "body": "Wähle einen gespeicherten Prompt. Er ersetzt den Systemprompt dieses Knotens.",
         "search": "Suchen",
+        "sort": "Sortierung",
         "sortUpdated": "Geändert",
         "sortName": "Name",
         "apply": "Übernehmen",

@@ -848,6 +848,7 @@
         "title": "Load prompt",
         "body": "Choose a saved prompt. It replaces this node's system prompt.",
         "search": "Search",
+        "sort": "Sort",
         "sortUpdated": "Updated",
         "sortName": "Name",
         "apply": "Apply",
