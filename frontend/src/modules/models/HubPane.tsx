@@ -84,6 +84,17 @@ const PIPELINES = ['text', 'embed', 'vision'] as const;
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified'] as const;
 const PAGE_SIZES = [10, 20, 30, 50, 100] as const;
+const PAGE_SIZE_KEY = 'agentus.models.hubPageSize';
+
+function loadPageSize(): (typeof PAGE_SIZES)[number] {
+  try {
+    const value = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
+    if ((PAGE_SIZES as readonly number[]).includes(value)) return value as (typeof PAGE_SIZES)[number];
+  } catch {
+    // Storage can be blocked. The default page size still works.
+  }
+  return 30;
+}
 
 function billions(raw: string): string | null {
   const text = raw.trim().replace(',', '.');
@@ -120,7 +131,7 @@ export function HubPane() {
   const [maxB, setMaxB] = useState('');
   const [bounds, setBounds] = useState({ min: '', max: '' });
   const [sort, setSort] = useState<(typeof SORTS)[number]>('downloads');
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(30);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(loadPageSize);
   const [page, setPage] = useState(0);
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [picked, setPicked] = useState<string | null>(null);
@@ -134,6 +145,13 @@ export function HubPane() {
     const timer = window.setTimeout(() => setBounds({ min: minB, max: maxB }), 400);
     return () => window.clearTimeout(timer);
   }, [minB, maxB]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PAGE_SIZE_KEY, String(pageSize));
+    } catch {
+      // Remembering the page size is optional.
+    }
+  }, [pageSize]);
   useEffect(() => {
     setPage(0);
     setCursors([null]);
