@@ -6,12 +6,6 @@ _LANGUAGE_NAMES = {
     "de": "German",
     "en": "English",
     "es": "Spanish",
-    "fr": "French",
-    "tr": "Turkish",
-    "pt": "Portuguese",
-    "zh": "Chinese",
-    "ja": "Japanese",
-    "ar": "Arabic",
 }
 
 

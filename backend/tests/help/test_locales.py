@@ -7,16 +7,16 @@ from app.help.locales import HELP_DOC_LOCALES, locale_from_corpus_path, resolve_
 
 def test_resolve_help_locale() -> None:
     assert resolve_help_locale(None) == "de"
-    assert resolve_help_locale("fr-FR") == "fr"
+    assert resolve_help_locale("es-ES") == "es"
     assert resolve_help_locale("zz") == "de"
 
 
 def test_locale_from_corpus_path(tmp_path: Path) -> None:
     root = tmp_path / "corpus"
-    (root / "fr").mkdir(parents=True)
-    path = root / "fr" / "00-user-guide.md"
+    (root / "es").mkdir(parents=True)
+    path = root / "es" / "00-user-guide.md"
     path.write_text("x", encoding="utf-8")
-    assert locale_from_corpus_path(path, root) == "fr"
+    assert locale_from_corpus_path(path, root) == "es"
     extra = root / "notes.md"
     extra.write_text("y", encoding="utf-8")
     assert locale_from_corpus_path(extra, root) is None

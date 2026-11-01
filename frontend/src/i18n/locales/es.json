@@ -43,24 +43,10 @@
     "languageDe": "Deutsch",
     "languageEn": "English",
     "languageEs": "Español",
-    "languageFr": "Français",
-    "languageTr": "Türkçe",
-    "languagePt": "Português",
-    "languageZh": "中文",
-    "languageJa": "日本語",
-    "languageAr": "العربية",
-    "languageRu": "Русский",
     "languageNames": {
       "de": "Alemán",
       "en": "Inglés",
-      "es": "Español",
-      "fr": "Francés",
-      "tr": "Turco",
-      "pt": "Portugués",
-      "zh": "Chino",
-      "ja": "Japonés",
-      "ar": "Árabe",
-      "ru": "Ruso"
+      "es": "Español"
     },
     "window": {
       "minimize": "Minimizar",
@@ -842,7 +828,12 @@
         "dateHint": "Muestra la hora actual en una zona IANA; por defecto UTC. Un instante se puede desplazar días, horas y minutos, también hacia atrás. La diferencia entre dos instantes sale en segundos, horas y días. Las partes son fecha, hora y día de la semana; el lunes es 1. El mismo instante se puede ver en otra zona.",
         "calculatorHint": "Calcula una expresión con + - * / // % ** y paréntesis. El exponente de ** puede ser como máximo 20. Constantes: pi y e. Funciones: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log y ln son el logaritmo natural; log puede llevar base. sin, cos y tan usan radianes. factorial solo admite enteros de 0 a 20.",
         "searchProvider": "Proveedor",
-        "searchProviderName": { "brave": "Brave", "tavily": "Tavily", "exa": "Exa", "searxng": "SearXNG" },
+        "searchProviderName": {
+          "brave": "Brave",
+          "tavily": "Tavily",
+          "exa": "Exa",
+          "searxng": "SearXNG"
+        },
         "searchBaseUrl": "Dirección base",
         "maxResults": "Resultados",
         "searchHint": {
@@ -1708,8 +1699,14 @@
   },
   "prompts": {
     "search": "Buscar",
-    "sort": { "name": "Nombre", "updated": "Modificado" },
-    "empty": { "library": "Aún no hay prompts.", "filter": "Ningún prompt coincide con este filtro." },
+    "sort": {
+      "name": "Nombre",
+      "updated": "Modificado"
+    },
+    "empty": {
+      "library": "Aún no hay prompts.",
+      "filter": "Ningún prompt coincide con este filtro."
+    },
     "ribbon": {
       "new": "Nuevo",
       "edit": "Editar",
@@ -1745,10 +1742,22 @@
       "unreadable": "No se pudo leer {{name}}.",
       "save": "Aplicar {{count}}"
     },
-    "delete": { "title": "¿Eliminar {{count}} prompts?" },
-    "dialog": { "close": "Cerrar", "cancel": "Cancelar" },
-    "error": { "title": "No se pudieron cargar los prompts", "body": "La biblioteca no está disponible ahora." },
-    "resize": { "listHeight": "Cambiar la altura de la colección", "detailHeight": "Cambiar la altura del detalle", "width": "Cambiar el ancho" },
+    "delete": {
+      "title": "¿Eliminar {{count}} prompts?"
+    },
+    "dialog": {
+      "close": "Cerrar",
+      "cancel": "Cancelar"
+    },
+    "error": {
+      "title": "No se pudieron cargar los prompts",
+      "body": "La biblioteca no está disponible ahora."
+    },
+    "resize": {
+      "listHeight": "Cambiar la altura de la colección",
+      "detailHeight": "Cambiar la altura del detalle",
+      "width": "Cambiar el ancho"
+    },
     "notify": {
       "created": "Prompt creado",
       "saved": "Prompt guardado",

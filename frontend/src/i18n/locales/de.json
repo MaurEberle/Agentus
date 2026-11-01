@@ -43,24 +43,10 @@
     "languageDe": "Deutsch",
     "languageEn": "English",
     "languageEs": "Español",
-    "languageFr": "Français",
-    "languageTr": "Türkçe",
-    "languagePt": "Português",
-    "languageZh": "中文",
-    "languageJa": "日本語",
-    "languageAr": "العربية",
-    "languageRu": "Русский",
     "languageNames": {
       "de": "Deutsch",
       "en": "Englisch",
-      "es": "Spanisch",
-      "fr": "Französisch",
-      "tr": "Türkisch",
-      "pt": "Portugiesisch",
-      "zh": "Chinesisch",
-      "ja": "Japanisch",
-      "ar": "Arabisch",
-      "ru": "Russisch"
+      "es": "Spanisch"
     },
     "window": {
       "minimize": "Minimieren",
@@ -1713,8 +1699,14 @@
   },
   "prompts": {
     "search": "Suche",
-    "sort": { "name": "Name", "updated": "Geändert" },
-    "empty": { "library": "Noch keine Prompts.", "filter": "Keine Prompts für diesen Filter." },
+    "sort": {
+      "name": "Name",
+      "updated": "Geändert"
+    },
+    "empty": {
+      "library": "Noch keine Prompts.",
+      "filter": "Keine Prompts für diesen Filter."
+    },
     "ribbon": {
       "new": "Neu",
       "edit": "Bearbeiten",
@@ -1750,10 +1742,22 @@
       "unreadable": "{{name}} konnte nicht gelesen werden.",
       "save": "{{count}} übernehmen"
     },
-    "delete": { "title": "{{count}} Prompts löschen?" },
-    "dialog": { "close": "Schließen", "cancel": "Abbrechen" },
-    "error": { "title": "Prompts nicht geladen", "body": "Die Bibliothek ist gerade nicht erreichbar." },
-    "resize": { "listHeight": "Höhe der Sammlung ändern", "detailHeight": "Höhe des Details ändern", "width": "Breite ändern" },
+    "delete": {
+      "title": "{{count}} Prompts löschen?"
+    },
+    "dialog": {
+      "close": "Schließen",
+      "cancel": "Abbrechen"
+    },
+    "error": {
+      "title": "Prompts nicht geladen",
+      "body": "Die Bibliothek ist gerade nicht erreichbar."
+    },
+    "resize": {
+      "listHeight": "Höhe der Sammlung ändern",
+      "detailHeight": "Höhe des Details ändern",
+      "width": "Breite ändern"
+    },
     "notify": {
       "created": "Prompt angelegt",
       "saved": "Prompt gespeichert",
