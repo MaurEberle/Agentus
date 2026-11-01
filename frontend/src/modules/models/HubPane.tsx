@@ -55,6 +55,7 @@ function HubFacts({ data }: { data: HubFiles }) {
     [t('models.hub.detail.tools'), yesNo(t, data.tools)],
     [t('models.hub.detail.thinking'), yesNo(t, data.thinking)],
     [t('models.hub.detail.vision'), yesNo(t, data.vision)],
+    [t('models.hub.detail.moe'), yesNo(t, data.moe)],
     [t('models.hub.detail.template'), yesNo(t, data.hasTemplate)],
   ].filter(([, value]) => value !== '') as [string, string][];
   return (
@@ -89,7 +90,7 @@ function HubFacts({ data }: { data: HubFiles }) {
   );
 }
 
-const PIPELINES = ['text', 'embed', 'vision'] as const;
+const PIPELINES = ['text', 'embed', 'vision', 'moe'] as const;
 type Pipeline = (typeof PIPELINES)[number];
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified', 'name'] as const;
@@ -383,6 +384,7 @@ export function HubPane() {
                         item.vision ? t('models.badges.vision') : '',
                         item.tools ? t('models.badges.tools') : '',
                         item.thinking ? t('models.badges.thinking') : '',
+                        item.moe ? t('models.badges.moe') : '',
                       ].filter(Boolean).join(' · ')}
                     </span>
                   </button>
@@ -468,7 +470,6 @@ export function HubPane() {
           {files.data?.reason === 'no-gguf' ? <p className="text-sm text-muted-foreground">{t('models.hub.noGguf')}</p> : null}
           {files.data ? (
             <div className="grid gap-3">
-              <a className="text-sm text-primary underline" href={files.data.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
               <HubFacts data={files.data} />
               <label className="grid gap-1 text-sm">
                 {t('models.hub.quants')}
@@ -494,6 +495,7 @@ export function HubPane() {
               >
                 {chosen?.installed ? t('models.hub.installed') : t('models.hub.install')}
               </Button>
+              <a className="text-sm text-primary underline" href={files.data.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
             </div>
           ) : null}
         </div>

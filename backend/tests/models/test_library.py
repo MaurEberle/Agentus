@@ -17,6 +17,7 @@ from app.llm.hub import (
     pipeline_tags,
     quant_token,
     template_flags,
+    type_selection,
     valid_pull_model,
 )
 from app.llm.usage import model_usages
@@ -83,6 +84,10 @@ def test_pipeline_tags_cover_every_type_when_unset() -> None:
     assert pipeline_tags("all") == pipeline_tags("")
     assert pipeline_tags("text,vision") == ("text-generation", "image-text-to-text")
     assert pipeline_tags("embed") == ("feature-extraction", "sentence-similarity")
+    assert pipeline_tags("moe") == pipeline_tags("")
+    assert type_selection("text,moe") == ("text", True)
+    assert type_selection("moe") == ("", True)
+    assert type_selection("text") == ("text", False)
 
 
 def test_huggingface_url_strips_the_quant() -> None:
@@ -144,15 +149,22 @@ def test_weight_files_skip_imatrix_and_projectors() -> None:
 def test_card_flags_match_the_detail_rules() -> None:
     from app.llm.hub import flags_from_card
 
-    tools, thinking, vision = flags_from_card(
+    tools, thinking, vision, moe = flags_from_card(
         {
             "pipeline_tag": "text-generation",
             "tags": ["conversational"],
             "gguf": {"chat_template": "use tool_call and <think>"},
         }
     )
-    assert (tools, thinking, vision) == (True, True, False)
+    assert (tools, thinking, vision, moe) == (True, True, False, False)
     assert flags_from_card({"pipeline_tag": "image-text-to-text", "gguf": {}})[2] is True
+    assert flags_from_card({"gguf": {"architecture": "qwen3moe"}}, "org/plain")[3] is True
+    assert flags_from_card({"tags": ["moe"]}, "org/plain")[3] is True
+    assert flags_from_card({}, "unsloth/Qwen3-30B-A3B-GGUF")[3] is True
+    assert flags_from_card({"gguf": {"architecture": "llama"}}, "TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF")[3] is True
+    assert flags_from_card({}, "unsloth/DeepSeek-V3-GGUF")[3] is True
+    assert flags_from_card({"gguf": {"architecture": "qwen2"}}, "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF")[3] is False
+    assert flags_from_card({"gguf": {"architecture": "gemma3"}}, "unsloth/gemma-3-27b-it-GGUF")[3] is False
 
 
 def test_template_flags_read_tools_and_thinking() -> None:

@@ -41,7 +41,7 @@
     "search": "Suche nach Name, Familie, Quantisierung",
     "sort": { "name": "Name", "size": "Größe", "modified": "Geändert" },
     "kind": { "label": "Art", "all": "Alle Arten", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Bild" },
-    "badges": { "vision": "Sehen", "tools": "Werkzeuge", "thinking": "Denken" },
+    "badges": { "vision": "Sehen", "tools": "Werkzeuge", "thinking": "Denken", "moe": "MoE" },
     "filter": { "tags": "Tags" },
     "empty": "Keine Modelle für diesen Filter.",
     "unreachable": "Ollama ist nicht erreichbar.",
@@ -90,7 +90,7 @@
       "type": "Typ",
       "size": "Größe",
       "sort": "Sortierung",
-      "types": { "text": "Text", "embed": "Embedding", "vision": "Bild verstehen" },
+      "types": { "text": "Text", "embed": "Embedding", "vision": "Bild verstehen", "moe": "MoE" },
       "sizes": { "any": "Alles", "3": "bis 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "über 70B", "custom": "Bereich", "from": "von", "to": "bis" },
       "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trend", "modified": "Geändert", "name": "Name" },
       "capabilities": "Fähigkeiten",
@@ -129,7 +129,8 @@
         "template": "Chat-Vorlage",
         "tools": "Werkzeuge",
         "thinking": "Denken",
-        "vision": "Sehen"
+        "vision": "Sehen",
+        "moe": "MoE"
       }
     },
     "pull": { "failed": "Der Download ist fehlgeschlagen.", "invalid": "Dieser Modellname kann nicht geladen werden." }

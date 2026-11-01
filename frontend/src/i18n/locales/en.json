@@ -41,7 +41,7 @@
     "search": "Search name, family, quantization",
     "sort": { "name": "Name", "size": "Size", "modified": "Updated" },
     "kind": { "label": "Kind", "all": "All kinds", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Image" },
-    "badges": { "vision": "Vision", "tools": "Tools", "thinking": "Thinking" },
+    "badges": { "vision": "Vision", "tools": "Tools", "thinking": "Thinking", "moe": "MoE" },
     "filter": { "tags": "Tags" },
     "empty": "No models match this filter.",
     "unreachable": "Ollama is unreachable.",
@@ -90,7 +90,7 @@
       "type": "Type",
       "size": "Size",
       "sort": "Sort",
-      "types": { "text": "Text", "embed": "Embedding", "vision": "Vision" },
+      "types": { "text": "Text", "embed": "Embedding", "vision": "Vision", "moe": "MoE" },
       "sizes": { "any": "All", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "custom": "Range", "from": "from", "to": "to" },
       "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated", "name": "Name" },
       "capabilities": "Capabilities",
@@ -129,7 +129,8 @@
         "template": "Chat template",
         "tools": "Tools",
         "thinking": "Thinking",
-        "vision": "Vision"
+        "vision": "Vision",
+        "moe": "MoE"
       }
     },
     "pull": { "failed": "The download failed.", "invalid": "This model name cannot be downloaded." }

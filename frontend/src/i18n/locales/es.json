@@ -41,7 +41,7 @@
     "search": "Buscar por nombre, familia, cuantización",
     "sort": { "name": "Nombre", "size": "Tamaño", "modified": "Modificado" },
     "kind": { "label": "Tipo", "all": "Todos los tipos", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Imagen" },
-    "badges": { "vision": "Visión", "tools": "Herramientas", "thinking": "Pensamiento" },
+    "badges": { "vision": "Visión", "tools": "Herramientas", "thinking": "Pensamiento", "moe": "MoE" },
     "filter": { "tags": "Etiquetas" },
     "empty": "Ningún modelo coincide con este filtro.",
     "unreachable": "Ollama no está disponible.",
@@ -90,7 +90,7 @@
       "type": "Tipo",
       "size": "Tamaño",
       "sort": "Orden",
-      "types": { "text": "Texto", "embed": "Embedding", "vision": "Visión" },
+      "types": { "text": "Texto", "embed": "Embedding", "vision": "Visión", "moe": "MoE" },
       "sizes": { "any": "Todo", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "custom": "Rango", "from": "desde", "to": "hasta" },
       "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado", "name": "Nombre" },
       "capabilities": "Capacidades",
@@ -129,7 +129,8 @@
         "template": "Plantilla de chat",
         "tools": "Herramientas",
         "thinking": "Pensamiento",
-        "vision": "Visión"
+        "vision": "Visión",
+        "moe": "MoE"
       }
     },
     "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." }

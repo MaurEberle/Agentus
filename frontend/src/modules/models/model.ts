@@ -37,6 +37,7 @@ export type HubHit = {
   tools: boolean;
   thinking: boolean;
   vision: boolean;
+  moe: boolean;
 };
 
 export type QuantFile = {
@@ -68,6 +69,7 @@ export type HubFiles = {
   tools: boolean;
   thinking: boolean;
   vision: boolean;
+  moe: boolean;
   installable: boolean;
   reason?: string;
   quants: QuantFile[];

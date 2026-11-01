@@ -40,9 +40,17 @@ PIPELINES = {
 }
 
 
+def type_selection(pipeline: str) -> tuple[str, bool]:
+    """Task keys, and whether MoE further restricts them. MoE alone means every task."""
+    keys = [part.strip() for part in (pipeline or "").split(",") if part.strip() and part.strip() != "all"]
+    moe = "moe" in keys
+    tasks = [key for key in keys if key in PIPELINES]
+    return ",".join(tasks), moe
+
+
 def pipeline_tags(pipeline: str) -> tuple[str, ...]:
     """UI keys, comma-separated. Empty or ``all`` means every type."""
-    keys = [part.strip() for part in pipeline.split(",") if part.strip() and part.strip() != "all"]
+    keys = [part.strip() for part in pipeline.split(",") if part.strip() and part.strip() != "all" and part.strip() != "moe"]
     if not keys:
         keys = ["text", "embed", "vision"]
     tags: list[str] = []
@@ -63,6 +71,13 @@ SIZES = {
     "xl": "min:70B",
 }
 _BOUND = re.compile(r"^\d+(?:\.\d+)?$")
+_MOE_NAME = re.compile(
+    r"(?i)(?:^|[^a-z0-9])moe(?:[^a-z0-9]|$)"
+    r"|\d+x\d+(?:\.\d+)?b"
+    r"|(?:^|[-_])a\d+(?:\.\d+)?b(?:[^a-z0-9]|$)"
+    r"|mixtral"
+)
+_DEEPSEEK_MOE = re.compile(r"(?i)deepseek[-_ ]?v[234]")
 
 
 def parameter_query(size: str) -> str | None:
@@ -137,6 +152,7 @@ class HubHit(ApiModel):
     tools: bool = False
     thinking: bool = False
     vision: bool = False
+    moe: bool = False
 
 
 class HubSearchResponse(ApiModel):
@@ -176,6 +192,7 @@ class HubFilesResponse(ApiModel):
     tools: bool = False
     thinking: bool = False
     vision: bool = False
+    moe: bool = False
     installable: bool = False
     reason: str | None = None
     quants: list[QuantFile] = Field(default_factory=list)
@@ -230,8 +247,41 @@ def keep_weight_file(path: str) -> bool:
     return "mmproj" not in name and "imatrix" not in name
 
 
-def flags_from_card(info: dict[str, Any]) -> tuple[bool, bool, bool]:
-    """Tools, thinking, and vision. Same rules as the detail pane."""
+def moe_from_name(model_id: str) -> bool:
+    """Name signals that survive a missing model card. A3B stays MoE even on a distill."""
+    text = model_id or ""
+    if _MOE_NAME.search(text):
+        return True
+    if "distill" in text.lower():
+        return False
+    return _DEEPSEEK_MOE.search(text) is not None
+
+
+def moe_from_card(info: dict[str, Any]) -> bool:
+    gguf = info.get("gguf") if isinstance(info.get("gguf"), dict) else {}
+    architecture = gguf.get("architecture") if isinstance(gguf, dict) else ""
+    if isinstance(architecture, str) and "moe" in architecture.lower():
+        return True
+    tags = info.get("tags") if isinstance(info.get("tags"), list) else []
+    for tag in tags:
+        if not isinstance(tag, str):
+            continue
+        low = tag.lower()
+        if low in {"moe", "mixtral"} or low.endswith("_moe") or "_moe" in low:
+            return True
+    return False
+
+
+def is_moe(model_id: str, info: dict[str, Any] | None = None) -> bool:
+    if moe_from_name(model_id):
+        return True
+    if isinstance(info, dict):
+        return moe_from_card(info)
+    return False
+
+
+def flags_from_card(info: dict[str, Any], model_id: str = "") -> tuple[bool, bool, bool, bool]:
+    """Tools, thinking, vision, and MoE. Same rules as the detail pane."""
     gguf = info.get("gguf") if isinstance(info.get("gguf"), dict) else {}
     template = gguf.get("chat_template") if isinstance(gguf, dict) else ""
     tags = info.get("tags") if isinstance(info.get("tags"), list) else []
@@ -241,10 +291,10 @@ def flags_from_card(info: dict[str, Any]) -> tuple[bool, bool, bool]:
     )
     pipeline = info.get("pipeline_tag")
     vision = pipeline == "image-text-to-text"
-    return tools, thinking, vision
+    return tools, thinking, vision, is_moe(model_id, info)
 
 
-def model_flags(model_id: str) -> tuple[bool, bool, bool]:
+def model_flags(model_id: str) -> tuple[bool, bool, bool, bool]:
     cached = _FLAG_CACHE.get(model_id)
     now = time.monotonic()
     if cached and now - cached[0] < _FLAG_SEC:
@@ -252,8 +302,8 @@ def model_flags(model_id: str) -> tuple[bool, bool, bool]:
     try:
         info = _get_json(f"{HUB}/api/models/{model_id}")
     except RuntimeApiError:
-        return False, False, False
-    flags = flags_from_card(info if isinstance(info, dict) else {})
+        return False, False, False, moe_from_name(model_id)
+    flags = flags_from_card(info if isinstance(info, dict) else {}, model_id)
     _FLAG_CACHE[model_id] = (now, flags)
     return flags
 
@@ -413,7 +463,9 @@ def parse_capabilities(raw: str) -> tuple[str, ...]:
     return tuple(found)
 
 
-def _matches(item: HubHit, wanted: tuple[str, ...]) -> bool:
+def _matches(item: HubHit, wanted: tuple[str, ...], moe: bool = False) -> bool:
+    if moe and not item.moe:
+        return False
     return all(getattr(item, key) for key in wanted)
 
 
@@ -479,6 +531,7 @@ def _search_capable(
     wanted: tuple[str, ...],
     direction: str,
     sort: str,
+    moe: bool = False,
 ) -> HubSearchResponse:
     """Keep reading Hub pages until the page is full of models with the chosen capabilities."""
     states = _unpack_scan(cursor, len(pipes))
@@ -512,7 +565,7 @@ def _search_capable(
                 for hit in hits:
                     if hit.id in skip or hit.id in seen:
                         continue
-                    if not _matches(hit, wanted):
+                    if not _matches(hit, wanted, moe):
                         continue
                     if len(collected) >= page:
                         pending = True
@@ -559,14 +612,15 @@ def search_hub(
     capabilities: str = "",
     direction: str = "desc",
 ) -> HubSearchResponse:
-    pipes = pipeline_tags(pipeline)
+    tasks, moe = type_selection(pipeline)
+    pipes = pipeline_tags(tasks or "all")
     size_query = parameter_query(size)
     sort_key = "downloads" if sort == "name" else SORTS.get(sort, "downloads")
     page = page_limit(limit)
     needle = search.strip()[:80]
     order = "1" if direction == "asc" else "-1"
     wanted = parse_capabilities(capabilities)
-    if wanted:
+    if wanted or moe:
         return _search_capable(
             pipes=pipes,
             needle=needle,
@@ -577,6 +631,7 @@ def search_hub(
             wanted=wanted,
             direction=order,
             sort=sort,
+            moe=moe,
         )
     incoming = unpack_cursors(cursor, len(pipes))
     try:
@@ -635,10 +690,11 @@ def _attach_flags(items: list[HubHit]) -> None:
         return
     with ThreadPoolExecutor(max_workers=min(8, len(items))) as pool:
         flags = list(pool.map(lambda item: model_flags(item.id), items))
-    for item, (tools, thinking, vision) in zip(items, flags, strict=True):
+    for item, (tools, thinking, vision, moe) in zip(items, flags, strict=True):
         item.tools = tools
         item.thinking = thinking
         item.vision = vision
+        item.moe = moe
 
 
 def _file_size(row: dict[str, Any]) -> int | None:
@@ -758,6 +814,7 @@ def repo_files(repo_id: str) -> HubFilesResponse:
         tools=tools,
         thinking=thinking,
         vision=pipeline == "image-text-to-text",
+        moe=is_moe(repo, info),
         installable=installable,
         reason=reason,
         quants=quants,
