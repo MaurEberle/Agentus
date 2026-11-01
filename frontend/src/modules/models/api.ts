@@ -5,8 +5,10 @@ export async function listInstalled(): Promise<{ items: InstalledModel[]; messag
   return apiFetch('/models');
 }
 
-export async function saveModelTags(name: string, tags: string[]): Promise<void> {
-  await apiFetch('/models/tags', { method: 'PUT', body: JSON.stringify({ name, tags }) });
+export async function saveModelTags(edits: { name: string; tags: string[] }[]): Promise<void> {
+  for (const edit of edits) {
+    await apiFetch('/models/tags', { method: 'PUT', body: JSON.stringify(edit) });
+  }
   await queryClient.invalidateQueries({ queryKey: ['models'] });
 }
 

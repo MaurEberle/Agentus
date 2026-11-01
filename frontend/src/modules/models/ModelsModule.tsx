@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { formatBytes, formatDateTime } from '@/lib/format';
-import { matchesTags, parseTagTokens, type TagMatch } from '@/lib/tags';
+import { applyTagEdit, matchesTags, parseTagTokens, sharedTagList, type TagMatch } from '@/lib/tags';
 import { cn } from '@/lib/utils';
 import { listInstalled, saveModelTags } from '@/modules/models/api';
 import { HubPane } from '@/modules/models/HubPane';
@@ -134,7 +134,7 @@ function InstalledPane() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Button type="button" size="sm" variant="outline" disabled={selectedItems.length !== 1} onClick={() => setTagsOpen(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={selectedItems.length === 0} onClick={() => setTagsOpen(true)}>
           <Tags />
           {t('models.ribbon.tags')}
         </Button>
@@ -277,7 +277,7 @@ function InstalledPane() {
       </div>
       <TagsEditor
         open={tagsOpen}
-        item={detailItem}
+        items={selectedItems}
         suggestions={suggestions}
         onClose={() => setTagsOpen(false)}
       />
@@ -343,12 +343,12 @@ function DetailPane({ item }: { item: InstalledModel | null }) {
 
 function TagsEditor({
   open,
-  item,
+  items,
   suggestions,
   onClose,
 }: {
   open: boolean;
-  item: InstalledModel | null;
+  items: InstalledModel[];
   suggestions: string[];
   onClose: () => void;
 }) {
@@ -356,15 +356,19 @@ function TagsEditor({
   const inputRef = useRef<TagInputHandle>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const selection = items.map((item) => item.name).join('\n');
   useEffect(() => {
-    if (open && item) setTags([...item.tags]);
-  }, [open, item]);
+    if (open) setTags(sharedTagList(items));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by selection, not the new array each render
+  }, [open, selection]);
 
   async function save() {
-    if (!item) return;
+    if (items.length === 0) return;
+    const next = inputRef.current?.commitDraft() ?? tags;
+    const seed = sharedTagList(items);
     setBusy(true);
     try {
-      await saveModelTags(item.name, inputRef.current?.commitDraft() ?? tags);
+      await saveModelTags(items.map((item) => ({ name: item.name, tags: applyTagEdit(item.tags, seed, next) })));
       onClose();
     } finally {
       setBusy(false);
@@ -376,7 +380,9 @@ function TagsEditor({
       <DialogContent closeLabel={t('models.dialog.close')}>
         <DialogHeader>
           <DialogTitle>{t('models.ribbon.tags')}</DialogTitle>
-          <DialogDescription>{item?.name}</DialogDescription>
+          <DialogDescription>
+            {items.length === 1 ? items[0]?.name : t('models.detail.many', { count: items.length })}
+          </DialogDescription>
         </DialogHeader>
         <TagInput
           ref={inputRef}
