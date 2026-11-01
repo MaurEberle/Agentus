@@ -47,6 +47,15 @@ def test_quant_token_and_pull_name() -> None:
     assert not valid_pull_model("hf.co/bartowski/Llama-GGUF")
 
 
+def test_capability_filter_parses_known_names() -> None:
+    from app.llm.hub import HubHit, _matches, parse_capabilities
+
+    assert parse_capabilities("tools, thinking, nope") == ("tools", "thinking")
+    hit = HubHit(id="a/b", url="https://huggingface.co/a/b", tools=True, thinking=False, vision=False)
+    assert _matches(hit, ("tools",))
+    assert not _matches(hit, ("tools", "thinking"))
+
+
 def test_page_marks_and_cursor_link() -> None:
     from app.llm.hub import cursor_from_link, pack_cursors, page_limit, unpack_cursors
 

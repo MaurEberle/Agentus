@@ -93,6 +93,7 @@
       "types": { "text": "Text", "embed": "Embedding", "vision": "Vision" },
       "sizes": { "any": "Any size", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "custom": "Range", "from": "from", "to": "to" },
       "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated" },
+      "capabilities": "Capabilities",
       "empty": "No matching models.",
       "failed": "The search failed.",
       "downloads": "{{count}} downloads",

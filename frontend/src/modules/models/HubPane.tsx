@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { BrandMark } from '@/components/BrandMark';
 import { Spinner } from '@/components/ui/spinner';
 import {
@@ -84,6 +91,8 @@ const PIPELINES = ['text', 'embed', 'vision'] as const;
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified'] as const;
 const PAGE_SIZES = [10, 20, 30, 50, 100] as const;
+const CAPABILITIES = ['tools', 'thinking', 'vision'] as const;
+type Capability = (typeof CAPABILITIES)[number];
 const PAGE_SIZE_KEY = 'agentus.models.hubPageSize';
 
 function loadPageSize(): (typeof PAGE_SIZES)[number] {
@@ -132,6 +141,7 @@ export function HubPane() {
   const [bounds, setBounds] = useState({ min: '', max: '' });
   const [sort, setSort] = useState<(typeof SORTS)[number]>('downloads');
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(loadPageSize);
+  const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [page, setPage] = useState(0);
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [picked, setPicked] = useState<string | null>(null);
@@ -155,11 +165,11 @@ export function HubPane() {
   useEffect(() => {
     setPage(0);
     setCursors([null]);
-  }, [debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize]);
+  }, [debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize, capabilities]);
   const resources = useHostResourcesQuery({ live: false });
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   const results = useQuery({
-    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize, cursors[page] ?? ''],
+    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize, cursors[page] ?? '', capabilities.join(',')],
     queryFn: () =>
       searchHub({
         search: debounced,
@@ -168,6 +178,7 @@ export function HubPane() {
         sort,
         limit: pageSize,
         cursor: cursors[page] ?? '',
+        caps: capabilities.join(','),
       }),
   });
   const files = useQuery({
@@ -183,6 +194,9 @@ export function HubPane() {
     setQuant(preferred?.tag ?? null);
   }, [preferred]);
   const chosen = (files.data?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
+  function toggleCapability(key: Capability) {
+    setCapabilities((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
+  }
 
   async function install(file: QuantFile) {
     const controller = new AbortController();
@@ -217,6 +231,42 @@ export function HubPane() {
             {PIPELINES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.types.${key}`)}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
+          <SelectTrigger className="w-36" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 w-auto min-w-36 shrink-0 justify-between gap-2 px-3 font-normal"
+              aria-label={t('models.hub.capabilities')}
+            >
+              <span>
+                {capabilities.length === 0
+                  ? t('models.hub.capabilities')
+                  : capabilities.map((key) => t(`models.badges.${key}`)).join(', ')}
+              </span>
+              <ChevronDown className="size-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {CAPABILITIES.map((key) => (
+              <DropdownMenuCheckboxItem
+                key={key}
+                checked={capabilities.includes(key)}
+                onCheckedChange={() => toggleCapability(key)}
+                onSelect={(event) => event.preventDefault()}
+              >
+                {t(`models.badges.${key}`)}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Select value={size} onValueChange={(value) => setSize(value as typeof size)}>
           <SelectTrigger className="w-36" aria-label={t('models.hub.size')}><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -248,12 +298,6 @@ export function HubPane() {
             <span className="text-xs text-muted-foreground">B</span>
           </div>
         ) : null}
-        <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
-          <SelectTrigger className="w-36" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
-          </SelectContent>
-        </Select>
       </div>
       <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
         <div className="flex min-h-0 flex-col overflow-hidden border-b md:border-b-0 md:border-r">
@@ -268,7 +312,7 @@ export function HubPane() {
             <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>
           ) : (
             <ul className="min-h-0 flex-1 overflow-auto">
-              {results.data?.items.map((item) => (
+              {(results.data?.items ?? []).map((item) => (
                 <li key={item.id}>
                   <button
                     type="button"

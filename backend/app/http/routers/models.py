@@ -102,6 +102,7 @@ def get_hub(
     sort: str = "downloads",
     limit: int = 30,
     cursor: str = "",
+    caps: str = "",
 ) -> HubSearchResponse:
     return search_hub(
         search=search,
@@ -110,6 +111,7 @@ def get_hub(
         sort=sort,
         limit=limit,
         cursor=cursor or None,
+        capabilities=caps,
     )
 
 

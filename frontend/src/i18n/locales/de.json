@@ -93,6 +93,7 @@
       "types": { "text": "Text", "embed": "Embedding", "vision": "Bild verstehen" },
       "sizes": { "any": "Jede Größe", "3": "bis 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "über 70B", "custom": "Bereich", "from": "von", "to": "bis" },
       "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trend", "modified": "Geändert" },
+      "capabilities": "Fähigkeiten",
       "empty": "Keine passenden Modelle.",
       "failed": "Die Suche ist fehlgeschlagen.",
       "downloads": "{{count}} Downloads",

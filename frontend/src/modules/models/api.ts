@@ -19,6 +19,7 @@ export async function searchHub(params: {
   sort: string;
   limit: number;
   cursor?: string;
+  caps?: string;
 }): Promise<{ items: HubHit[]; messageKey?: string; hasNext: boolean; nextCursor?: string; pageSize: number }> {
   const query = new URLSearchParams({
     search: params.search,
@@ -28,6 +29,7 @@ export async function searchHub(params: {
     limit: String(params.limit),
   });
   if (params.cursor) query.set('cursor', params.cursor);
+  if (params.caps) query.set('caps', params.caps);
   return apiFetch(`/models/hub?${query.toString()}`);
 }
 

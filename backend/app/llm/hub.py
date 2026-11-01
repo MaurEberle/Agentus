@@ -319,6 +319,149 @@ def _search_one(
     return clean, nxt
 
 
+_CAPABILITIES = ("tools", "thinking", "vision")
+_SCAN_PAGES = 8
+
+
+def parse_capabilities(raw: str) -> tuple[str, ...]:
+    found: list[str] = []
+    for part in (raw or "").split(","):
+        key = part.strip().lower()
+        if key in _CAPABILITIES and key not in found:
+            found.append(key)
+    return tuple(found)
+
+
+def _matches(item: HubHit, wanted: tuple[str, ...]) -> bool:
+    return all(getattr(item, key) for key in wanted)
+
+
+def _row_hit(row: dict[str, Any]) -> HubHit | None:
+    model_id = row.get("modelId") or row.get("id")
+    if not isinstance(model_id, str):
+        return None
+    downloads = row.get("downloads")
+    likes = row.get("likes")
+    tag = row.get("pipeline_tag")
+    return HubHit(
+        id=model_id,
+        pipeline=tag if isinstance(tag, str) else None,
+        downloads=int(downloads) if isinstance(downloads, int) else 0,
+        likes=int(likes) if isinstance(likes, int) else 0,
+        url=f"{HUB}/{model_id}",
+    )
+
+
+def _pack_scan(states: list[dict[str, Any]]) -> str | None:
+    if all(state.get("done") for state in states):
+        return None
+    raw = base64.urlsafe_b64encode(json.dumps(states).encode()).decode().rstrip("=")
+    return f"f1.{raw}"
+
+
+def _unpack_scan(token: str | None, count: int) -> list[dict[str, Any]] | None:
+    if not token:
+        return None
+    if not token.startswith("f1."):
+        return None
+    padded = token[3:] + "=" * (-len(token[3:]) % 4)
+    try:
+        loaded = json.loads(base64.urlsafe_b64decode(padded))
+    except (ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(loaded, list) or len(loaded) != count:
+        return None
+    states: list[dict[str, Any]] = []
+    for item in loaded:
+        if not isinstance(item, dict):
+            return None
+        skip = item.get("skip")
+        if skip is None:
+            skip = []
+        if not isinstance(skip, list) or any(not isinstance(name, str) for name in skip):
+            return None
+        hf = item.get("hf")
+        if hf is not None and not isinstance(hf, str):
+            return None
+        states.append({"hf": hf, "skip": skip, "done": bool(item.get("done"))})
+    return states
+
+
+def _search_capable(
+    *,
+    pipes: tuple[str, ...],
+    needle: str,
+    size_query: str | None,
+    sort_key: str,
+    page: int,
+    cursor: str | None,
+    wanted: tuple[str, ...],
+) -> HubSearchResponse:
+    """Keep reading Hub pages until the page is full of models with the chosen capabilities."""
+    states = _unpack_scan(cursor, len(pipes))
+    if states is None:
+        states = [{"hf": None, "skip": [], "done": False} for _ in pipes]
+    collected: list[HubHit] = []
+    seen: set[str] = set()
+    scanned = 0
+    try:
+        while len(collected) < page and scanned < _SCAN_PAGES:
+            moved = False
+            for index, pipe in enumerate(pipes):
+                state = states[index]
+                if state.get("done") or len(collected) >= page:
+                    continue
+                rows, nxt = _search_one(
+                    pipe,
+                    search=needle,
+                    size=size_query,
+                    sort=sort_key,
+                    limit=page,
+                    cursor=state.get("hf") if isinstance(state.get("hf"), str) else None,
+                )
+                scanned += 1
+                hits = [hit for row in rows if (hit := _row_hit(row)) and keep_hub_row(row, pipes)]
+                _attach_flags(hits)
+                skip = {name for name in state.get("skip", []) if isinstance(name, str)}
+                pending = False
+                taken = list(skip)
+                for hit in hits:
+                    if hit.id in skip or hit.id in seen:
+                        continue
+                    if not _matches(hit, wanted):
+                        continue
+                    if len(collected) >= page:
+                        pending = True
+                        break
+                    collected.append(hit)
+                    seen.add(hit.id)
+                    taken.append(hit.id)
+                if pending:
+                    states[index] = {"hf": state.get("hf"), "skip": taken, "done": False}
+                    break
+                if nxt:
+                    states[index] = {"hf": nxt, "skip": [], "done": False}
+                    moved = True
+                else:
+                    states[index] = {"hf": None, "skip": [], "done": True}
+                if scanned >= _SCAN_PAGES:
+                    break
+            if len(collected) >= page or not moved and all(item.get("done") for item in states):
+                break
+            if not moved:
+                break
+    except RuntimeApiError as exc:
+        return HubSearchResponse(items=[], page_size=page, message_key=exc.error_key)
+    collected.sort(key=lambda item: item.downloads, reverse=True)
+    nxt_token = _pack_scan(states)
+    return HubSearchResponse(
+        items=collected[:page],
+        page_size=page,
+        has_next=nxt_token is not None,
+        next_cursor=nxt_token,
+    )
+
+
 def search_hub(
     *,
     search: str,
@@ -327,12 +470,24 @@ def search_hub(
     sort: str,
     limit: int = _DEFAULT_PAGE_SIZE,
     cursor: str | None = None,
+    capabilities: str = "",
 ) -> HubSearchResponse:
     pipes = PIPELINES.get(pipeline, PIPELINES["text"])
     size_query = parameter_query(size)
     sort_key = SORTS.get(sort, "downloads")
     page = page_limit(limit)
     needle = search.strip()[:80]
+    wanted = parse_capabilities(capabilities)
+    if wanted:
+        return _search_capable(
+            pipes=pipes,
+            needle=needle,
+            size_query=size_query,
+            sort_key=sort_key,
+            page=page,
+            cursor=cursor,
+            wanted=wanted,
+        )
     incoming = unpack_cursors(cursor, len(pipes))
     try:
         batches: list[list[dict[str, Any]]] = []
