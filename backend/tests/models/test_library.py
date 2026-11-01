@@ -13,6 +13,7 @@ from app.llm.hub import (
     keep_weight_file,
     order_hits,
     parameter_label,
+    hf_sort_key,
     parameter_query,
     pipeline_tags,
     quant_token,
@@ -72,6 +73,14 @@ def test_parameter_label_uses_the_weight_count() -> None:
     assert parameter_label({"gguf": {"total": 27_009_346_304}}) == "27B"
     assert parameter_label({"safetensors": {"total": 596_000_000}}) == "596M"
     assert parameter_label({}) is None
+
+
+def test_hub_sort_keys_match_the_api() -> None:
+    assert hf_sort_key("downloads") == "downloads"
+    assert hf_sort_key("likes") == "likes"
+    assert hf_sort_key("trending") == "trendingScore"
+    assert hf_sort_key("modified") == "lastModified"
+    assert hf_sort_key("name") == "downloads"
 
 
 def test_pipeline_tags_cover_every_type_when_unset() -> None:

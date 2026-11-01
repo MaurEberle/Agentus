@@ -175,8 +175,8 @@ export function HubPane() {
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   const results = useQuery({
     queryKey: ['models', 'hub', debounced, pipelines.join(','), size, bounds.min, bounds.max, sort, sortDir, pageSize, cursors[page] ?? '', capabilities.join(',')],
-    queryFn: () =>
-      searchHub({
+    queryFn: async () => {
+      const data = await searchHub({
         search: debounced,
         pipeline: pipelines.length ? pipelines.join(',') : 'all',
         size: sizeQuery(size, bounds.min, bounds.max),
@@ -185,7 +185,11 @@ export function HubPane() {
         limit: pageSize,
         cursor: cursors[page] ?? '',
         caps: capabilities.join(','),
-      }),
+      });
+      if (data.messageKey) throw new Error(data.messageKey);
+      return data;
+    },
+    retry: 1,
   });
   const files = useQuery({
     queryKey: ['models', 'hub', 'files', picked],
@@ -256,7 +260,7 @@ export function HubPane() {
           className="h-8 max-w-56"
         />
         <div className="flex items-center gap-1">
-          <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
+          <Select value={sort} onValueChange={(value) => { setSort(value as typeof sort); setPage(0); setCursors([null]); }}>
             <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
             <SelectContent>
               {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
@@ -268,7 +272,7 @@ export function HubPane() {
             variant="outline"
             className="size-8"
             aria-label={t('networks.filter.direction')}
-            onClick={() => setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'))}
+            onClick={() => { setSortDir((current) => (current === 'asc' ? 'desc' : 'asc')); setPage(0); setCursors([null]); }}
           >
             {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
           </Button>
@@ -397,7 +401,7 @@ export function HubPane() {
               <BrandMark spinning className="size-24" alt="" />
               <p className="text-sm text-muted-foreground">{t('app.loading')}</p>
             </div>
-          ) : results.data?.messageKey ? (
+          ) : results.isError || results.data?.messageKey ? (
             <p className="p-4 text-sm text-muted-foreground">{t('models.hub.failed')}</p>
           ) : (results.data?.items.length ?? 0) === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>

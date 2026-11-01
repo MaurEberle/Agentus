@@ -106,9 +106,16 @@ def parameter_query(size: str) -> str | None:
 SORTS = {
     "downloads": "downloads",
     "likes": "likes",
-    "trending": "trending_score",
-    "modified": "last_modified",
+    "trending": "trendingScore",
+    "modified": "lastModified",
 }
+
+
+def hf_sort_key(sort: str) -> str:
+    """Hub names. Name is ordered locally, so the request stays on downloads."""
+    if sort == "name":
+        return "downloads"
+    return SORTS.get(sort, "downloads")
 
 _REGISTRY_HOSTS = frozenset({"hf.co", "huggingface.co", "www.huggingface.co"})
 
@@ -432,17 +439,28 @@ def _search_one(
     now = time.monotonic()
     if cached and now - cached[0] < _CACHE_SEC:
         return cached[1]
-    try:
-        with client(timeout_sec=20.0) as http:
-            response = http.get(url)
-        raise_for_status(response)
-        payload = response_json(response)
-    except RuntimeApiError:
-        raise
-    except Exception as exc:
-        if is_transport_error(exc):
-            raise_transport(exc)
-        raise RuntimeApiError("models.hub.failed") from exc
+    last: RuntimeApiError | None = None
+    for attempt in range(2):
+        try:
+            with client(timeout_sec=20.0) as http:
+                response = http.get(url)
+            raise_for_status(response)
+            payload = response_json(response)
+            break
+        except RuntimeApiError as exc:
+            last = exc
+            retry = exc.error_key in {"runtime.timeout", "runtime.unreachable", "runtime.upstream"} or exc.status == 429
+            if attempt == 0 and retry:
+                continue
+            raise
+        except Exception as exc:
+            if is_transport_error(exc):
+                raise_transport(exc)
+            raise RuntimeApiError("models.hub.failed") from exc
+    else:
+        if last:
+            raise last
+        raise RuntimeApiError("models.hub.failed")
     rows = payload if isinstance(payload, list) else []
     clean = [row for row in rows if isinstance(row, dict)]
     nxt = cursor_from_link(response.headers.get("link"))
@@ -547,15 +565,19 @@ def _search_capable(
                 state = states[index]
                 if state.get("done") or len(collected) >= page:
                     continue
-                rows, nxt = _search_one(
-                    pipe,
-                    search=needle,
-                    size=size_query,
-                    sort=sort_key,
-                    limit=page,
-                    cursor=state.get("hf") if isinstance(state.get("hf"), str) else None,
-                    direction=direction,
-                )
+                try:
+                    rows, nxt = _search_one(
+                        pipe,
+                        search=needle,
+                        size=size_query,
+                        sort=sort_key,
+                        limit=page,
+                        cursor=state.get("hf") if isinstance(state.get("hf"), str) else None,
+                        direction=direction,
+                    )
+                except RuntimeApiError:
+                    states[index] = {"hf": None, "skip": [], "done": True}
+                    continue
                 scanned += 1
                 hits = [hit for row in rows if (hit := _row_hit(row)) and keep_hub_row(row, pipes)]
                 _attach_flags(hits)
@@ -615,7 +637,7 @@ def search_hub(
     tasks, moe = type_selection(pipeline)
     pipes = pipeline_tags(tasks or "all")
     size_query = parameter_query(size)
-    sort_key = "downloads" if sort == "name" else SORTS.get(sort, "downloads")
+    sort_key = hf_sort_key(sort)
     page = page_limit(limit)
     needle = search.strip()[:80]
     order = "1" if direction == "asc" else "-1"
@@ -634,15 +656,16 @@ def search_hub(
             moe=moe,
         )
     incoming = unpack_cursors(cursor, len(pipes))
-    try:
-        batches: list[list[dict[str, Any]]] = []
-        following: list[str | None] = []
-        for index, pipe in enumerate(pipes):
-            pipe_cursor = None if incoming is None else incoming[index]
-            if incoming is not None and pipe_cursor is None:
-                batches.append([])
-                following.append(None)
-                continue
+    batches: list[list[dict[str, Any]]] = []
+    following: list[str | None] = []
+    failures = 0
+    for index, pipe in enumerate(pipes):
+        pipe_cursor = None if incoming is None else incoming[index]
+        if incoming is not None and pipe_cursor is None:
+            batches.append([])
+            following.append(None)
+            continue
+        try:
             rows, nxt = _search_one(
                 pipe,
                 search=needle,
@@ -652,10 +675,15 @@ def search_hub(
                 cursor=pipe_cursor,
                 direction=order,
             )
-            batches.append(rows)
-            following.append(nxt)
-    except RuntimeApiError as exc:
-        return HubSearchResponse(items=[], page_size=page, message_key=exc.error_key)
+        except RuntimeApiError:
+            failures += 1
+            batches.append([])
+            following.append(None)
+            continue
+        batches.append(rows)
+        following.append(nxt)
+    if failures == len(pipes):
+        return HubSearchResponse(items=[], page_size=page, message_key="models.hub.failed")
     seen: set[str] = set()
     items: list[HubHit] = []
     for row in (row for batch in batches for row in batch):
