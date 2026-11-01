@@ -36,7 +36,8 @@
   },
   "models": {
     "tabs": { "installed": "Installed", "hub": "Hugging Face" },
-    "ribbon": { "tags": "Set tags" },
+    "ribbon": { "tags": "Set tags", "delete": "Delete" },
+    "list": { "selectAll": "All" },
     "search": "Search name, family, quantization",
     "sort": { "name": "Name", "size": "Size", "modified": "Updated" },
     "kind": { "label": "Kind", "all": "All kinds", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Image" },
@@ -47,6 +48,7 @@
     "split": "Resize the list and the details",
     "detail": {
       "empty": "Select a model.",
+      "many": "{{count}} models selected.",
       "delete": "Delete",
       "hf": "Hugging Face",
       "loaded": "Loaded",
@@ -72,8 +74,10 @@
     "delete": {
       "title": "Delete model",
       "body": "{{name}} will be removed from Ollama.",
+      "bodyMany": "{{count}} models will be removed from Ollama.",
       "inUseTitle": "Model is in use",
       "inUseBody": "{{name}} cannot be deleted while it is in use.",
+      "inUseBodyMany": "{{count}} models cannot be deleted while they are in use.",
       "network": "{{network}} · {{node}}",
       "helpLlm": "Help chat",
       "helpEmbed": "Help embedding",

@@ -36,7 +36,8 @@
   },
   "models": {
     "tabs": { "installed": "Instalados", "hub": "Hugging Face" },
-    "ribbon": { "tags": "Poner etiquetas" },
+    "ribbon": { "tags": "Poner etiquetas", "delete": "Borrar" },
+    "list": { "selectAll": "Todos" },
     "search": "Buscar por nombre, familia, cuantización",
     "sort": { "name": "Nombre", "size": "Tamaño", "modified": "Modificado" },
     "kind": { "label": "Tipo", "all": "Todos los tipos", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Imagen" },
@@ -47,6 +48,7 @@
     "split": "Cambiar el ancho de la lista y los detalles",
     "detail": {
       "empty": "Elige un modelo.",
+      "many": "{{count}} modelos seleccionados.",
       "delete": "Borrar",
       "hf": "Hugging Face",
       "loaded": "Cargado",
@@ -72,8 +74,10 @@
     "delete": {
       "title": "Borrar modelo",
       "body": "{{name}} se eliminará de Ollama.",
+      "bodyMany": "Se eliminarán {{count}} modelos de Ollama.",
       "inUseTitle": "El modelo está en uso",
       "inUseBody": "{{name}} no se puede borrar mientras se usa.",
+      "inUseBodyMany": "{{count}} modelos no se pueden borrar mientras se usan.",
       "network": "{{network}} · {{node}}",
       "helpLlm": "Chat de ayuda",
       "helpEmbed": "Embedding de ayuda",

@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { TagCloud } from '@/components/tags/TagCloud';
 import { TagInput, type TagInputHandle } from '@/components/TagInput';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -80,11 +81,10 @@ function InstalledPane() {
   const [kind, setKind] = useState<'all' | ModelKind>('all');
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [tagMode, setTagMode] = useState<TagMatch>('or');
-  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [selectedNames, setSelectedNames] = useState<string[]>([]);
   const [share, setShare] = useState(0.62);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<ApiError | null>(null);
 
   const suggestions = useMemo(() => parseTagTokens(items.flatMap((item) => item.tags).join(',')), [items]);
   const filtered = useMemo(() => {
@@ -104,7 +104,23 @@ function InstalledPane() {
     });
     return next;
   }, [items, kind, search, sortDir, sortKey, tagFilter, tagMode]);
-  const selected = items.find((item) => item.name === selectedName) ?? null;
+  const selectedItems = items.filter((item) => selectedNames.includes(item.name));
+  const detailItem = selectedItems.length === 1 ? selectedItems[0] : null;
+  const visibleNames = filtered.map((item) => item.name);
+  const allVisibleSelected = visibleNames.length > 0 && visibleNames.every((name) => selectedNames.includes(name));
+
+  function toggle(name: string) {
+    setSelectedNames((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]));
+  }
+
+  function toggleAll() {
+    if (allVisibleSelected) {
+      const visible = new Set(visibleNames);
+      setSelectedNames((current) => current.filter((name) => !visible.has(name)));
+      return;
+    }
+    setSelectedNames((current) => [...new Set([...current, ...visibleNames])]);
+  }
 
   function chooseSort(key: 'name' | 'size' | 'modified') {
     if (sortKey === key) setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
@@ -117,9 +133,19 @@ function InstalledPane() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Button type="button" size="sm" variant="outline" disabled={!selected} onClick={() => setTagsOpen(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={selectedItems.length !== 1} onClick={() => setTagsOpen(true)}>
           <Tags />
           {t('models.ribbon.tags')}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="destructive"
+          disabled={selectedItems.length === 0}
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 />
+          {t('models.ribbon.delete')}
         </Button>
       </div>
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
@@ -172,6 +198,19 @@ function InstalledPane() {
         />
       </div>
       <div data-split-row className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {!query.isLoading && !query.data?.messageKey && filtered.length > 0 ? (
+            <div className="flex items-center border-b py-2">
+              <div className="px-3">
+                <Checkbox
+                  checked={allVisibleSelected ? true : visibleNames.some((name) => selectedNames.includes(name)) ? 'indeterminate' : false}
+                  onCheckedChange={toggleAll}
+                  aria-label={t('models.list.selectAll')}
+                />
+              </div>
+              <span className="px-3 text-sm text-muted-foreground">{t('models.list.selectAll')}</span>
+            </div>
+          ) : null}
         <div className="min-h-0 min-w-0 flex-1 overflow-auto">
           {query.isLoading ? (
             <ModuleLoading />
@@ -195,14 +234,14 @@ function InstalledPane() {
                   <h2 className="sticky top-0 border-b bg-background px-3 py-2 text-sm font-medium">{t(`models.kind.${group}`)}</h2>
                   <ul>
                     {rows.map((item) => (
-                      <li key={item.name}>
+                      <li key={item.name} className={cn('flex items-center border-b', selectedNames.includes(item.name) && 'bg-accent/60')}>
+                        <div className="px-3" onClick={(event) => event.stopPropagation()}>
+                          <Checkbox checked={selectedNames.includes(item.name)} onCheckedChange={() => toggle(item.name)} aria-label={item.name} />
+                        </div>
                         <button
                           type="button"
-                          onClick={() => setSelectedName(item.name)}
-                          className={cn(
-                            'flex w-full flex-col gap-0.5 border-b px-3 py-2 text-left',
-                            selectedName === item.name && 'bg-accent',
-                          )}
+                          onClick={() => setSelectedNames([item.name])}
+                          className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2 text-left"
                         >
                           <span className="truncate font-mono text-xs">{item.name}</span>
                           <span className="truncate text-xs text-muted-foreground">
@@ -225,39 +264,33 @@ function InstalledPane() {
             </>
           )}
         </div>
+        </div>
         <WidthGrip label={t('models.split')} share={share} onChange={(next) => setShare(clampShare(next))} />
         <div className="min-h-0 min-w-0 overflow-auto border-l" style={{ width: `${(1 - share) * 100}%` }}>
-          <DetailPane
-            item={selected}
-            onDelete={() => {
-              setDeleteError(null);
-              setDeleteOpen(true);
-            }}
-          />
+          {selectedItems.length > 1 ? (
+            <p className="p-4 text-sm text-muted-foreground">{t('models.detail.many', { count: selectedItems.length })}</p>
+          ) : (
+            <DetailPane item={detailItem} />
+          )}
         </div>
       </div>
       <TagsEditor
         open={tagsOpen}
-        item={selected}
+        item={detailItem}
         suggestions={suggestions}
         onClose={() => setTagsOpen(false)}
       />
       <DeleteModelDialog
         open={deleteOpen}
-        item={selected}
-        error={deleteError}
+        items={selectedItems}
         onClose={() => setDeleteOpen(false)}
-        onFailed={setDeleteError}
-        onDeleted={() => {
-          setDeleteOpen(false);
-          setSelectedName(null);
-        }}
+        onDeleted={(removed) => setSelectedNames((current) => current.filter((name) => !removed.includes(name)))}
       />
     </div>
   );
 }
 
-function DetailPane({ item, onDelete }: { item: InstalledModel | null; onDelete: () => void }) {
+function DetailPane({ item }: { item: InstalledModel | null }) {
   const { t, i18n } = useTranslation();
   const stats = useModelStatsQuery({ provider: 'ollama', model: item?.name ?? '', enabled: Boolean(item) });
   if (!item) return <p className="p-4 text-sm text-muted-foreground">{t('models.detail.empty')}</p>;
@@ -280,12 +313,8 @@ function DetailPane({ item, onDelete }: { item: InstalledModel | null; onDelete:
   if (stats.data?.weightBytes) rows.push([t('models.detail.weights'), formatBytes(stats.data.weightBytes, i18n.language)]);
   return (
     <div className="flex min-h-full flex-col">
-      <div className="flex items-start justify-between gap-2 border-b px-3 py-2">
+      <div className="border-b px-3 py-2">
         <h2 className="min-w-0 break-all font-mono text-xs font-medium">{item.name}</h2>
-        <Button type="button" size="sm" variant="destructive" onClick={onDelete}>
-          <Trash2 />
-          {t('models.detail.delete')}
-        </Button>
       </div>
       <dl className="grid gap-2 p-3 text-sm">
         {rows.map(([label, value]) => (
@@ -376,60 +405,100 @@ function TagsEditor({
 
 function DeleteModelDialog({
   open,
-  item,
-  error,
+  items,
   onClose,
-  onFailed,
   onDeleted,
 }: {
   open: boolean;
-  item: InstalledModel | null;
-  error: ApiError | null;
+  items: InstalledModel[];
   onClose: () => void;
-  onFailed: (error: ApiError) => void;
-  onDeleted: () => void;
+  onDeleted: (removed: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
-  const blocked = (error?.usages?.length ?? 0) > 0;
-  const loadedOnly = error?.messageKey === 'models.loaded';
+  const [blocks, setBlocks] = useState<{ name: string; usages: { kind: string; network?: string; node?: string }[] }[]>([]);
+  const anyLoaded = items.some((item) => item.loaded);
+  const blocked = blocks.length > 0;
 
-  async function confirm(unload: boolean) {
-    if (!item) return;
+  useEffect(() => {
+    if (open) setBlocks([]);
+  }, [open]);
+
+  async function confirm() {
+    if (items.length === 0) return;
     setBusy(true);
+    const removed: string[] = [];
+    const failed: { name: string; usages: { kind: string; network?: string; node?: string }[] }[] = [];
     try {
-      await apiFetch('/models/delete', { method: 'POST', body: JSON.stringify({ name: item.name, unload }) });
+      for (const item of items) {
+        try {
+          await apiFetch('/models/delete', {
+            method: 'POST',
+            body: JSON.stringify({ name: item.name, unload: item.loaded }),
+          });
+          removed.push(item.name);
+        } catch (caught) {
+          if (caught instanceof ApiError && caught.messageKey === 'models.loaded') {
+            try {
+              await apiFetch('/models/delete', { method: 'POST', body: JSON.stringify({ name: item.name, unload: true }) });
+              removed.push(item.name);
+            } catch (again) {
+              if (again instanceof ApiError && again.usages?.length) failed.push({ name: item.name, usages: again.usages });
+              else throw again;
+            }
+            continue;
+          }
+          if (caught instanceof ApiError && caught.usages?.length) {
+            failed.push({ name: item.name, usages: caught.usages });
+            continue;
+          }
+          throw caught;
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ['models'] });
-      onDeleted();
-    } catch (caught) {
-      if (caught instanceof ApiError) onFailed(caught);
+      onDeleted(removed);
+      if (failed.length) setBlocks(failed);
+      else onClose();
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+    <Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
       <DialogContent closeLabel={t('models.dialog.close')}>
         <DialogHeader>
           <DialogTitle>{blocked ? t('models.delete.inUseTitle') : t('models.delete.title')}</DialogTitle>
           <DialogDescription>
-            {blocked ? t('models.delete.inUseBody', { name: item?.name ?? '' }) : t('models.delete.body', { name: item?.name ?? '' })}
+            {blocked
+              ? t('models.delete.inUseBodyMany', { count: blocks.length })
+              : items.length === 1
+                ? t('models.delete.body', { name: items[0]?.name ?? '' })
+                : t('models.delete.bodyMany', { count: items.length })}
           </DialogDescription>
         </DialogHeader>
         {blocked ? (
-          <ul className="grid gap-1 text-sm">
-            {error?.usages?.map((usage, index) => (
-              <li key={`${usage.kind}-${index}`}>{usageText(t, usage)}</li>
+          <ul className="grid max-h-60 gap-3 overflow-auto text-sm">
+            {blocks.map((block) => (
+              <li key={block.name}>
+                <p className="break-all font-mono text-xs">{block.name}</p>
+                <ul className="mt-1 grid gap-1">
+                  {block.usages.map((usage, index) => (
+                    <li key={`${usage.kind}-${index}`}>{usageText(t, usage)}</li>
+                  ))}
+                </ul>
+              </li>
             ))}
           </ul>
         ) : null}
-        {loadedOnly ? <p className="text-sm">{t('models.delete.loaded')}</p> : null}
+        {!blocked && anyLoaded ? <p className="text-sm">{t('models.delete.loaded')}</p> : null}
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>{blocked ? t('models.dialog.close') : t('models.dialog.cancel')}</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+            {blocked ? t('models.dialog.close') : t('models.dialog.cancel')}
+          </Button>
           {blocked ? null : (
-            <Button type="button" variant="destructive" disabled={busy} loading={busy} onClick={() => void confirm(loadedOnly)}>
-              {t('models.detail.delete')}
+            <Button type="button" variant="destructive" disabled={busy || items.length === 0} loading={busy} onClick={() => void confirm()}>
+              {t('models.ribbon.delete')}
             </Button>
           )}
         </DialogFooter>

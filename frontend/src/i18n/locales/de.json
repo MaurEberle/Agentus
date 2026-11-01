@@ -36,7 +36,8 @@
   },
   "models": {
     "tabs": { "installed": "Installiert", "hub": "Hugging Face" },
-    "ribbon": { "tags": "Tags setzen" },
+    "ribbon": { "tags": "Tags setzen", "delete": "Löschen" },
+    "list": { "selectAll": "Alle" },
     "search": "Suche nach Name, Familie, Quantisierung",
     "sort": { "name": "Name", "size": "Größe", "modified": "Geändert" },
     "kind": { "label": "Art", "all": "Alle Arten", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Bild" },
@@ -47,6 +48,7 @@
     "split": "Breite von Liste und Details ändern",
     "detail": {
       "empty": "Wähle ein Modell.",
+      "many": "{{count}} Modelle ausgewählt.",
       "delete": "Löschen",
       "hf": "Hugging Face",
       "loaded": "Geladen",
@@ -72,8 +74,10 @@
     "delete": {
       "title": "Modell löschen",
       "body": "{{name}} wird aus Ollama entfernt.",
+      "bodyMany": "{{count}} Modelle werden aus Ollama entfernt.",
       "inUseTitle": "Modell wird benutzt",
       "inUseBody": "{{name}} kann nicht gelöscht werden, solange es benutzt wird.",
+      "inUseBodyMany": "{{count}} Modelle können nicht gelöscht werden, solange sie benutzt werden.",
       "network": "{{network}} · {{node}}",
       "helpLlm": "Hilfe-Chat",
       "helpEmbed": "Hilfe-Embedding",
