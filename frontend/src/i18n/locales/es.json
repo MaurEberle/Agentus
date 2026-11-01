@@ -105,7 +105,24 @@
       "vramHint": "El archivo es mayor que la memoria gráfica.",
       "progress": "Descargando el modelo",
       "cancel": "Cancelar",
-      "open": "Abrir en Hugging Face"
+      "open": "Abrir en Hugging Face",
+      "detail": {
+        "author": "Autor",
+        "updated": "Modificado",
+        "downloads": "Descargas",
+        "likes": "Me gusta",
+        "pipeline": "Tarea",
+        "license": "Licencia",
+        "base": "Modelo base",
+        "languages": "Idiomas",
+        "architecture": "Arquitectura",
+        "context": "Contexto",
+        "repo": "Repositorio",
+        "template": "Plantilla de chat",
+        "tools": "Herramientas",
+        "thinking": "Pensamiento",
+        "vision": "Visión"
+      }
     },
     "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." }
   },

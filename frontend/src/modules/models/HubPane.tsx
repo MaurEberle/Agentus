@@ -13,11 +13,71 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { queryClient } from '@/api/client';
-import { formatBytes } from '@/lib/format';
+import { formatBytes, formatDateTime } from '@/lib/format';
 import { hubFiles, pullModel, searchHub } from '@/modules/models/api';
-import type { PullEvent, QuantFile } from '@/modules/models/model';
+import type { HubFiles, PullEvent, QuantFile } from '@/modules/models/model';
 import { useHostResourcesQuery } from '@/modules/settings/api';
 import { inferenceVramBytes } from '@/modules/network/inspector/vram';
+
+function yesNo(t: (key: string) => string, value: boolean): string {
+  return t(value ? 'models.detail.loadedYes' : 'models.detail.loadedNo');
+}
+
+function pipelineLabel(t: (key: string) => string, pipeline?: string): string | null {
+  if (pipeline === 'text-generation') return t('models.hub.types.text');
+  if (pipeline === 'feature-extraction' || pipeline === 'sentence-similarity') return t('models.hub.types.embed');
+  if (pipeline === 'image-text-to-text') return t('models.hub.types.vision');
+  return pipeline ?? null;
+}
+
+function HubFacts({ data }: { data: HubFiles }) {
+  const { t, i18n } = useTranslation();
+  const rows: [string, string][] = [
+    [t('models.hub.detail.author'), data.author ?? ''],
+    [t('models.hub.detail.pipeline'), pipelineLabel(t, data.pipeline) ?? ''],
+    [t('models.hub.detail.downloads'), data.downloads ? data.downloads.toLocaleString(i18n.language) : ''],
+    [t('models.hub.detail.likes'), data.likes ? data.likes.toLocaleString(i18n.language) : ''],
+    [t('models.hub.detail.updated'), data.updatedAt ? formatDateTime(data.updatedAt, i18n.language) : ''],
+    [t('models.hub.detail.architecture'), data.architecture ?? ''],
+    [t('models.hub.detail.context'), data.contextLength ? String(data.contextLength) : ''],
+    [t('models.hub.detail.repo'), data.repoBytes ? formatBytes(data.repoBytes, i18n.language) : ''],
+    [t('models.hub.detail.languages'), data.languages?.length ? data.languages.join(', ') : ''],
+    [t('models.hub.detail.tools'), yesNo(t, data.tools)],
+    [t('models.hub.detail.thinking'), yesNo(t, data.thinking)],
+    [t('models.hub.detail.vision'), yesNo(t, data.vision)],
+    [t('models.hub.detail.template'), yesNo(t, data.hasTemplate)],
+  ].filter(([, value]) => value !== '') as [string, string][];
+  return (
+    <dl className="grid gap-2 text-sm">
+      {rows.map(([label, value]) => (
+        <div key={label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
+          <dt className="text-muted-foreground">{label}</dt>
+          <dd className="min-w-0 break-words">{value}</dd>
+        </div>
+      ))}
+      {data.license ? (
+        <div className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
+          <dt className="text-muted-foreground">{t('models.hub.detail.license')}</dt>
+          <dd className="min-w-0 break-words">
+            {data.licenseUrl ? (
+              <a className="text-primary underline" href={data.licenseUrl} target="_blank" rel="noreferrer">{data.license}</a>
+            ) : data.license}
+          </dd>
+        </div>
+      ) : null}
+      {data.baseModel ? (
+        <div className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
+          <dt className="text-muted-foreground">{t('models.hub.detail.base')}</dt>
+          <dd className="min-w-0 break-words">
+            {data.baseUrl ? (
+              <a className="text-primary underline" href={data.baseUrl} target="_blank" rel="noreferrer">{data.baseModel}</a>
+            ) : data.baseModel}
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  );
+}
 
 const PIPELINES = ['text', 'embed', 'vision'] as const;
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl'] as const;
@@ -130,9 +190,13 @@ export function HubPane() {
                     className={`flex w-full flex-col gap-0.5 border-b px-3 py-2 text-left ${picked === item.id ? 'bg-accent' : ''}`}
                   >
                     <span className="truncate text-sm font-medium">{item.id}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {t('models.hub.downloads', { count: item.downloads.toLocaleString(i18n.language) })}
-                      {item.pipeline ? ` · ${item.pipeline}` : ''}
+                    <span className="truncate text-xs text-muted-foreground">
+                      {[
+                        t('models.hub.downloads', { count: item.downloads.toLocaleString(i18n.language) }),
+                        item.vision ? t('models.badges.vision') : '',
+                        item.tools ? t('models.badges.tools') : '',
+                        item.thinking ? t('models.badges.thinking') : '',
+                      ].filter(Boolean).join(' · ')}
                     </span>
                   </button>
                 </li>
@@ -158,7 +222,7 @@ export function HubPane() {
           {files.data ? (
             <div className="grid gap-3">
               <a className="text-sm text-primary underline" href={files.data.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
-              {files.data.architecture ? <p className="text-xs text-muted-foreground">{files.data.architecture}{files.data.contextLength ? ` · ${files.data.contextLength}` : ''}</p> : null}
+              <HubFacts data={files.data} />
               <label className="grid gap-1 text-sm">
                 {t('models.hub.quants')}
                 <Select value={quant ?? ''} onValueChange={setQuant} disabled={!files.data.quants.length}>

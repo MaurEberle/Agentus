@@ -34,6 +34,9 @@ export type HubHit = {
   downloads: number;
   likes: number;
   url: string;
+  tools: boolean;
+  thinking: boolean;
+  vision: boolean;
 };
 
 export type QuantFile = {
@@ -47,9 +50,23 @@ export type QuantFile = {
 export type HubFiles = {
   id: string;
   url: string;
+  author?: string;
+  pipeline?: string;
+  downloads: number;
+  likes: number;
+  updatedAt?: string;
+  repoBytes?: number;
   architecture?: string;
   contextLength?: number;
   license?: string;
+  licenseUrl?: string;
+  baseModel?: string;
+  baseUrl?: string;
+  languages: string[];
+  hasTemplate: boolean;
+  tools: boolean;
+  thinking: boolean;
+  vision: boolean;
   installable: boolean;
   reason?: string;
   quants: QuantFile[];

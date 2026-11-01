@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from urllib.parse import urlencode
 
@@ -17,6 +18,8 @@ from app.runtime.ollama import list_ollama_models, tag_key
 HUB = "https://huggingface.co"
 _CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 _CACHE_SEC = 60.0
+_FLAG_CACHE: dict[str, tuple[float, tuple[bool, bool, bool]]] = {}
+_FLAG_SEC = 600.0
 _LIMIT = 30
 _REPO_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}/[A-Za-z0-9][A-Za-z0-9._-]{0,120}$")
 _QUANT = re.compile(
@@ -54,6 +57,9 @@ class HubHit(ApiModel):
     downloads: int = 0
     likes: int = 0
     url: str
+    tools: bool = False
+    thinking: bool = False
+    vision: bool = False
 
 
 class HubSearchResponse(ApiModel):
@@ -72,9 +78,23 @@ class QuantFile(ApiModel):
 class HubFilesResponse(ApiModel):
     id: str
     url: str
+    author: str | None = None
+    pipeline: str | None = None
+    downloads: int = 0
+    likes: int = 0
+    updated_at: str | None = Field(default=None, alias="updatedAt")
+    repo_bytes: int | None = Field(default=None, alias="repoBytes")
     architecture: str | None = None
     context_length: int | None = Field(default=None, alias="contextLength")
     license: str | None = None
+    license_url: str | None = Field(default=None, alias="licenseUrl")
+    base_model: str | None = Field(default=None, alias="baseModel")
+    base_url: str | None = Field(default=None, alias="baseUrl")
+    languages: list[str] = Field(default_factory=list)
+    has_template: bool = Field(default=False, alias="hasTemplate")
+    tools: bool = False
+    thinking: bool = False
+    vision: bool = False
     installable: bool = False
     reason: str | None = None
     quants: list[QuantFile] = Field(default_factory=list)
@@ -87,6 +107,51 @@ def valid_repo_id(repo_id: str) -> bool:
 
 def valid_pull_model(model: str) -> bool:
     return bool(_PULL.fullmatch((model or "").strip()))
+
+
+def keep_weight_file(path: str) -> bool:
+    """A weight file Ollama can pull. Imatrix and vision projectors are not models."""
+    name = (path or "").lower()
+    if not name.endswith(".gguf"):
+        return False
+    return "mmproj" not in name and "imatrix" not in name
+
+
+def flags_from_card(info: dict[str, Any]) -> tuple[bool, bool, bool]:
+    """Tools, thinking, and vision. Same rules as the detail pane."""
+    gguf = info.get("gguf") if isinstance(info.get("gguf"), dict) else {}
+    template = gguf.get("chat_template") if isinstance(gguf, dict) else ""
+    tags = info.get("tags") if isinstance(info.get("tags"), list) else []
+    tools, thinking = template_flags(
+        template if isinstance(template, str) else "",
+        [str(item) for item in tags],
+    )
+    pipeline = info.get("pipeline_tag")
+    vision = pipeline == "image-text-to-text"
+    return tools, thinking, vision
+
+
+def model_flags(model_id: str) -> tuple[bool, bool, bool]:
+    cached = _FLAG_CACHE.get(model_id)
+    now = time.monotonic()
+    if cached and now - cached[0] < _FLAG_SEC:
+        return cached[1]
+    try:
+        info = _get_json(f"{HUB}/api/models/{model_id}")
+    except RuntimeApiError:
+        return False, False, False
+    flags = flags_from_card(info if isinstance(info, dict) else {})
+    _FLAG_CACHE[model_id] = (now, flags)
+    return flags
+
+
+def template_flags(template: str, tags: list[str]) -> tuple[bool, bool]:
+    """Tool calling and thinking from the GGUF chat template and Hub tags."""
+    text = (template or "").lower()
+    tools = "tool_call" in text or "tool_calls" in text
+    tag_set = {item.lower() for item in tags if isinstance(item, str)}
+    thinking = "<think" in text or bool(tag_set & {"reasoning", "thinking", "efficient-thinking"})
+    return tools, thinking
 
 
 def quant_token(filename: str) -> str:
@@ -182,7 +247,19 @@ def search_hub(*, search: str, pipeline: str, size: str, sort: str) -> HubSearch
         )
         if len(items) >= _LIMIT:
             break
+    _attach_flags(items)
     return HubSearchResponse(items=items)
+
+
+def _attach_flags(items: list[HubHit]) -> None:
+    if not items:
+        return
+    with ThreadPoolExecutor(max_workers=min(8, len(items))) as pool:
+        flags = list(pool.map(lambda item: model_flags(item.id), items))
+    for item, (tools, thinking, vision) in zip(items, flags, strict=True):
+        item.tools = tools
+        item.thinking = thinking
+        item.vision = vision
 
 
 def _file_size(row: dict[str, Any]) -> int | None:
@@ -219,18 +296,43 @@ def repo_files(repo_id: str) -> HubFilesResponse:
     gguf = info.get("gguf") if isinstance(info.get("gguf"), dict) else {}
     arch = gguf.get("architecture") if isinstance(gguf, dict) else None
     context = gguf.get("context_length") if isinstance(gguf, dict) else None
+    template = gguf.get("chat_template") if isinstance(gguf, dict) else ""
+    template = template if isinstance(template, str) else ""
+    tags = info.get("tags") if isinstance(info.get("tags"), list) else []
+    tools, thinking = template_flags(template, [str(item) for item in tags])
     license_name = None
-    if isinstance(card, dict) and isinstance(card.get("license"), str):
-        license_name = card["license"]
+    license_url = None
+    languages: list[str] = []
+    base_model = None
+    if isinstance(card, dict):
+        raw_license = card.get("license_name") or card.get("license")
+        if isinstance(raw_license, str) and raw_license.strip():
+            license_name = raw_license.strip()
+        if isinstance(card.get("license_link"), str):
+            license_url = card["license_link"]
+        raw_lang = card.get("language")
+        if isinstance(raw_lang, str) and raw_lang.strip():
+            languages = [raw_lang.strip()]
+        elif isinstance(raw_lang, list):
+            languages = [str(item) for item in raw_lang if str(item).strip()]
+        raw_base = card.get("base_model")
+        if isinstance(raw_base, list) and raw_base:
+            raw_base = raw_base[0]
+        if isinstance(raw_base, str) and raw_base.strip() and valid_repo_id(raw_base.strip()):
+            base_model = raw_base.strip()
+    pipeline = info.get("pipeline_tag") if isinstance(info.get("pipeline_tag"), str) else None
+    author = info.get("author") if isinstance(info.get("author"), str) else None
+    updated = info.get("lastModified") if isinstance(info.get("lastModified"), str) else None
+    downloads = info.get("downloads")
+    likes = info.get("likes")
+    storage = info.get("usedStorage")
     rows = tree if isinstance(tree, list) else []
     files: list[tuple[str, str, int | None]] = []
     for row in rows:
         if not isinstance(row, dict):
             continue
         path = row.get("path") or row.get("rfilename")
-        if not isinstance(path, str) or not path.lower().endswith(".gguf"):
-            continue
-        if "mmproj" in path.lower():
+        if not isinstance(path, str) or not keep_weight_file(path):
             continue
         files.append((path.rsplit("/", 1)[-1], path, _file_size(row)))
     tokens = [quant_token(name) for name, _, _ in files]
@@ -259,9 +361,23 @@ def repo_files(repo_id: str) -> HubFilesResponse:
     return HubFilesResponse(
         id=repo,
         url=url,
+        author=author,
+        pipeline=pipeline,
+        downloads=int(downloads) if isinstance(downloads, int) else 0,
+        likes=int(likes) if isinstance(likes, int) else 0,
+        updated_at=updated,
+        repo_bytes=int(storage) if isinstance(storage, int) and storage > 0 else None,
         architecture=arch if isinstance(arch, str) else None,
         context_length=int(context) if isinstance(context, int) else None,
         license=license_name,
+        license_url=license_url,
+        base_model=base_model,
+        base_url=f"{HUB}/{base_model}" if base_model else None,
+        languages=languages,
+        has_template=bool(template.strip()),
+        tools=tools,
+        thinking=thinking,
+        vision=pipeline == "image-text-to-text",
         installable=installable,
         reason=reason,
         quants=quants,

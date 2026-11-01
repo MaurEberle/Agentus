@@ -105,7 +105,24 @@
       "vramHint": "Die Datei ist größer als der Grafikspeicher.",
       "progress": "Modell wird geladen",
       "cancel": "Abbrechen",
-      "open": "Auf Hugging Face öffnen"
+      "open": "Auf Hugging Face öffnen",
+      "detail": {
+        "author": "Autor",
+        "updated": "Geändert",
+        "downloads": "Downloads",
+        "likes": "Likes",
+        "pipeline": "Aufgabe",
+        "license": "Lizenz",
+        "base": "Basis-Modell",
+        "languages": "Sprachen",
+        "architecture": "Architektur",
+        "context": "Kontext",
+        "repo": "Repository",
+        "template": "Chat-Vorlage",
+        "tools": "Werkzeuge",
+        "thinking": "Denken",
+        "vision": "Sehen"
+      }
     },
     "pull": { "failed": "Der Download ist fehlgeschlagen.", "invalid": "Dieser Modellname kann nicht geladen werden." }
   },

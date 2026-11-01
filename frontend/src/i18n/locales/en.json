@@ -105,7 +105,24 @@
       "vramHint": "The file is larger than the graphics memory.",
       "progress": "Downloading model",
       "cancel": "Cancel",
-      "open": "Open on Hugging Face"
+      "open": "Open on Hugging Face",
+      "detail": {
+        "author": "Author",
+        "updated": "Updated",
+        "downloads": "Downloads",
+        "likes": "Likes",
+        "pipeline": "Task",
+        "license": "License",
+        "base": "Base model",
+        "languages": "Languages",
+        "architecture": "Architecture",
+        "context": "Context",
+        "repo": "Repository",
+        "template": "Chat template",
+        "tools": "Tools",
+        "thinking": "Thinking",
+        "vision": "Vision"
+      }
     },
     "pull": { "failed": "The download failed.", "invalid": "This model name cannot be downloaded." }
   },

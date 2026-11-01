@@ -6,7 +6,7 @@ from app.db.engine import utc_now
 from app.db.networks import NetworkRow, upsert_network
 from app.db.settings import put_settings
 from app.llm.catalog import huggingface_url, model_kind
-from app.llm.hub import keep_hub_row, quant_token, valid_pull_model
+from app.llm.hub import keep_hub_row, keep_weight_file, quant_token, template_flags, valid_pull_model
 from app.llm.usage import model_usages
 
 
@@ -38,6 +38,37 @@ def test_quant_token_and_pull_name() -> None:
     assert valid_pull_model("hf.co/bartowski/Llama-GGUF:Q4_K_M")
     assert not valid_pull_model("llama3.2:1b")
     assert not valid_pull_model("hf.co/bartowski/Llama-GGUF")
+
+
+def test_weight_files_skip_imatrix_and_projectors() -> None:
+    assert keep_weight_file("model-Q4_K_M.gguf")
+    assert not keep_weight_file("imatrix-swift15-v1mix.gguf")
+    assert not keep_weight_file("mmproj-model.gguf")
+    assert not keep_weight_file("README.md")
+
+
+def test_card_flags_match_the_detail_rules() -> None:
+    from app.llm.hub import flags_from_card
+
+    tools, thinking, vision = flags_from_card(
+        {
+            "pipeline_tag": "text-generation",
+            "tags": ["conversational"],
+            "gguf": {"chat_template": "use tool_call and <think>"},
+        }
+    )
+    assert (tools, thinking, vision) == (True, True, False)
+    assert flags_from_card({"pipeline_tag": "image-text-to-text", "gguf": {}})[2] is True
+
+
+def test_template_flags_read_tools_and_thinking() -> None:
+    tools, thinking = template_flags("call tool_call then <think>", ["conversational"])
+    assert tools is True
+    assert thinking is True
+    tools, thinking = template_flags("hello", ["reasoning"])
+    assert tools is False
+    assert thinking is True
+    assert template_flags("", []) == (False, False)
 
 
 def test_hub_row_drops_gated_and_other_tasks() -> None:
