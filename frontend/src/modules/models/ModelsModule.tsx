@@ -120,6 +120,15 @@ function InstalledPane() {
   const selectedItems = items.filter((item) => selectedNames.includes(item.name));
   const detailItem = selectedItems.length === 1 ? selectedItems[0] : null;
   const visibleNames = filtered.map((item) => item.name);
+  const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
+  useEffect(() => {
+    if (query.isLoading) return;
+    const visible = new Set(visibleNames);
+    setSelectedNames((current) => {
+      const next = current.filter((name) => visible.has(name));
+      return next.length === current.length ? current : next;
+    });
+  }, [tagSelectionKey]);
   const allVisibleSelected = visibleNames.length > 0 && visibleNames.every((name) => selectedNames.includes(name));
 
   function toggle(name: string) {

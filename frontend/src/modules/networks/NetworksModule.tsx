@@ -88,6 +88,11 @@ export function NetworksModule() {
   const tags = useMemo(() => uniqueTags(items), [items]);
   const seedTags = useMemo(() => sharedTags(selected), [selected]);
   const filtersOn = Boolean(filterQuery.trim() || tagFilter.length || onlyValid || onlyActive);
+  const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
+  useEffect(() => {
+    if (query.isLoading) return;
+    pruneSelection(filtered.map((item) => item.id));
+  }, [tagSelectionKey]);
 
   const [busy, setBusy] = useState(false);
   const [renameItem, setRenameItem] = useState<NetworkListItem | null>(null);

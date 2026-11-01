@@ -170,6 +170,15 @@ export function PromptsModule() {
   }
 
   const visibleIds = filtered.map((item) => item.id);
+  const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
+  useEffect(() => {
+    if (query.isLoading) return;
+    const visible = new Set(visibleIds);
+    setSelectedIds((current) => {
+      const next = current.filter((id) => visible.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [tagSelectionKey]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 
   function toggleAll() {

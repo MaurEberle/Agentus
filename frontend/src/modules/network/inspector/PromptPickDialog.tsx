@@ -79,6 +79,11 @@ export function PromptPickDialog({
     return filtered;
   }, [library, query, sort, tagFilter, tagMode]);
 
+  const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
+  useEffect(() => {
+    setSelected((current) => (current && items.some((item) => item.id === current) ? current : null));
+  }, [tagSelectionKey]);
+
   async function apply() {
     if (!selected || busy) return;
     setBusy(true);
