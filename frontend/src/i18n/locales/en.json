@@ -98,6 +98,7 @@
       "empty": "No matching models.",
       "failed": "The search failed.",
       "downloads": "{{count}} downloads",
+      "likes": "{{count}} likes",
       "pick": "Select a model.",
       "first": "First",
       "previous": "Previous",

@@ -98,6 +98,7 @@
       "empty": "Ningún modelo coincide.",
       "failed": "La búsqueda falló.",
       "downloads": "{{count}} descargas",
+      "likes": "{{count}} me gusta",
       "pick": "Elige un modelo.",
       "first": "Inicio",
       "previous": "Anterior",

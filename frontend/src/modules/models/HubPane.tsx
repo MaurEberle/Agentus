@@ -418,6 +418,7 @@ export function HubPane() {
                     <span className="truncate text-xs text-muted-foreground">
                       {[
                         t('models.hub.downloads', { count: item.downloads.toLocaleString(i18n.language) }),
+                        t('models.hub.likes', { count: item.likes.toLocaleString(i18n.language) }),
                         item.vision ? t('models.badges.vision') : '',
                         item.tools ? t('models.badges.tools') : '',
                         item.thinking ? t('models.badges.thinking') : '',
