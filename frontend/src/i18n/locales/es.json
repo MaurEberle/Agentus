@@ -91,7 +91,7 @@
       "size": "Parámetros",
       "sort": "Orden",
       "types": { "text": "Texto", "embed": "Embedding", "vision": "Visión" },
-      "sizes": { "any": "Cualquier tamaño", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B" },
+      "sizes": { "any": "Cualquier tamaño", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "custom": "Rango", "from": "desde", "to": "hasta" },
       "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado" },
       "empty": "Ningún modelo coincide.",
       "failed": "La búsqueda falló.",

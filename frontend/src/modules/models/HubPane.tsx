@@ -80,8 +80,25 @@ function HubFacts({ data }: { data: HubFiles }) {
 }
 
 const PIPELINES = ['text', 'embed', 'vision'] as const;
-const SIZES = ['any', '3', '8', '14', '32', '70', 'xl'] as const;
+const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified'] as const;
+
+function billions(raw: string): string | null {
+  const text = raw.trim().replace(',', '.');
+  if (!text || !/^\d+(\.\d+)?$/.test(text)) return null;
+  return text;
+}
+
+function sizeQuery(size: string, minRaw: string, maxRaw: string): string {
+  if (size !== 'custom') return size;
+  let minimum = billions(minRaw);
+  let maximum = billions(maxRaw);
+  if (minimum && maximum && Number(minimum) > Number(maximum)) {
+    [minimum, maximum] = [maximum, minimum];
+  }
+  const parts = [minimum ? `min:${minimum}B` : '', maximum ? `max:${maximum}B` : ''].filter(Boolean);
+  return parts.join(',') || 'any';
+}
 
 export function HubPane() {
   const { t, i18n } = useTranslation();
@@ -90,6 +107,9 @@ export function HubPane() {
   const abortRef = useRef<AbortController | null>(null);
   const [pipeline, setPipeline] = useState<(typeof PIPELINES)[number]>('text');
   const [size, setSize] = useState<(typeof SIZES)[number]>('any');
+  const [minB, setMinB] = useState('');
+  const [maxB, setMaxB] = useState('');
+  const [bounds, setBounds] = useState({ min: '', max: '' });
   const [sort, setSort] = useState<(typeof SORTS)[number]>('downloads');
   const [picked, setPicked] = useState<string | null>(null);
   const [quant, setQuant] = useState<string | null>(null);
@@ -98,11 +118,15 @@ export function HubPane() {
     const timer = window.setTimeout(() => setDebounced(search), 400);
     return () => window.clearTimeout(timer);
   }, [search]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setBounds({ min: minB, max: maxB }), 400);
+    return () => window.clearTimeout(timer);
+  }, [minB, maxB]);
   const resources = useHostResourcesQuery({ live: false });
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   const results = useQuery({
-    queryKey: ['models', 'hub', debounced, pipeline, size, sort],
-    queryFn: () => searchHub({ search: debounced, pipeline, size, sort }),
+    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort],
+    queryFn: () => searchHub({ search: debounced, pipeline, size: sizeQuery(size, bounds.min, bounds.max), sort }),
   });
   const files = useQuery({
     queryKey: ['models', 'hub', 'files', picked],
@@ -157,6 +181,31 @@ export function HubPane() {
             {SIZES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sizes.${key}`)}</SelectItem>)}
           </SelectContent>
         </Select>
+        {size === 'custom' ? (
+          <div className="flex items-center gap-1">
+            <Input
+              value={minB}
+              onChange={(event) => setMinB(event.target.value)}
+              inputMode="decimal"
+              placeholder={t('models.hub.sizes.from')}
+              aria-label={t('models.hub.sizes.from')}
+              aria-invalid={minB.trim() !== '' && billions(minB) == null}
+              className="h-8 w-16"
+            />
+            <span className="text-xs text-muted-foreground">B</span>
+            <span className="text-xs text-muted-foreground" aria-hidden>–</span>
+            <Input
+              value={maxB}
+              onChange={(event) => setMaxB(event.target.value)}
+              inputMode="decimal"
+              placeholder={t('models.hub.sizes.to')}
+              aria-label={t('models.hub.sizes.to')}
+              aria-invalid={maxB.trim() !== '' && billions(maxB) == null}
+              className="h-8 w-16"
+            />
+            <span className="text-xs text-muted-foreground">B</span>
+          </div>
+        ) : null}
         <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
           <SelectTrigger className="w-36" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
           <SelectContent>

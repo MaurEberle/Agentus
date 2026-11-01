@@ -43,6 +43,32 @@ SIZES = {
     "70": "min:32B,max:70B",
     "xl": "min:70B",
 }
+_BOUND = re.compile(r"^\d+(?:\.\d+)?$")
+
+
+def parameter_query(size: str) -> str | None:
+    """Preset key or ``min:0.6B,max:4B``. Anything else is ignored."""
+    if size in SIZES:
+        return SIZES[size]
+    parts = [part.strip() for part in size.split(",") if part.strip()]
+    if not parts or len(parts) > 2:
+        return None
+    minimum: str | None = None
+    maximum: str | None = None
+    for part in parts:
+        kind, _, raw = part.partition(":")
+        if not raw.endswith("B") or not _BOUND.fullmatch(raw[:-1]):
+            return None
+        if kind == "min" and minimum is None:
+            minimum = f"min:{raw}"
+        elif kind == "max" and maximum is None:
+            maximum = f"max:{raw}"
+        else:
+            return None
+    ordered = [item for item in (minimum, maximum) if item]
+    return ",".join(ordered) or None
+
+
 SORTS = {
     "downloads": "downloads",
     "likes": "likes",
@@ -215,7 +241,7 @@ def _search_one(pipeline: str, *, search: str, size: str | None, sort: str) -> l
 
 def search_hub(*, search: str, pipeline: str, size: str, sort: str) -> HubSearchResponse:
     pipes = PIPELINES.get(pipeline, PIPELINES["text"])
-    size_query = SIZES.get(size, None)
+    size_query = parameter_query(size)
     sort_key = SORTS.get(sort, "downloads")
     needle = search.strip()[:80]
     try:

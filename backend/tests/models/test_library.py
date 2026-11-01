@@ -6,7 +6,14 @@ from app.db.engine import utc_now
 from app.db.networks import NetworkRow, upsert_network
 from app.db.settings import put_settings
 from app.llm.catalog import huggingface_url, model_kind
-from app.llm.hub import keep_hub_row, keep_weight_file, quant_token, template_flags, valid_pull_model
+from app.llm.hub import (
+    keep_hub_row,
+    keep_weight_file,
+    parameter_query,
+    quant_token,
+    template_flags,
+    valid_pull_model,
+)
 from app.llm.usage import model_usages
 
 
@@ -38,6 +45,15 @@ def test_quant_token_and_pull_name() -> None:
     assert valid_pull_model("hf.co/bartowski/Llama-GGUF:Q4_K_M")
     assert not valid_pull_model("llama3.2:1b")
     assert not valid_pull_model("hf.co/bartowski/Llama-GGUF")
+
+
+def test_parameter_query_accepts_decimal_billions() -> None:
+    assert parameter_query("any") is None
+    assert parameter_query("3") == "max:3B"
+    assert parameter_query("min:0.6B,max:4B") == "min:0.6B,max:4B"
+    assert parameter_query("max:0.6B") == "max:0.6B"
+    assert parameter_query("min:0.6B,max:nope") is None
+    assert parameter_query("min:0,6B") is None
 
 
 def test_weight_files_skip_imatrix_and_projectors() -> None:
