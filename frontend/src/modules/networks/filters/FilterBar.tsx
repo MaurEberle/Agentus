@@ -63,11 +63,11 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
         label={t('networks.filter.tags')}
       />
       <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-xs">
         <Switch checked={onlyValid} onCheckedChange={(value) => setOnlyValid(value === true)} />
         <span>{t('networks.filter.onlyValid')}</span>
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-xs">
         <Switch checked={onlyActive} onCheckedChange={(value) => setOnlyActive(value === true)} />
         <span>{t('networks.filter.onlyActive')}</span>
       </label>

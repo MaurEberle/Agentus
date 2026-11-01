@@ -62,6 +62,14 @@ export function mergeTags(existing: string[], incoming: string[]): string[] {
 }
 
 /** Drop seed tags that left `next`, keep other current tags, then add `next`. */
+/** Tags present on every item. Empty selection yields none. Order follows the first item. */
+export function sharedTagList(items: readonly { tags?: readonly string[] | null }[]): string[] {
+  if (items.length === 0) return [];
+  const [first, ...rest] = items;
+  const firstTags = first.tags ?? [];
+  return firstTags.filter((tag) => rest.every((item) => (item.tags ?? []).includes(tag)));
+}
+
 export function applyTagEdit(current: string[] | undefined, seed: string[], next: string[]): string[] {
   const removed = new Set(seed.filter((tag) => !next.includes(tag)));
   const kept = (current ?? []).filter((tag) => !removed.has(tag));

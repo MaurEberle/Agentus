@@ -1,5 +1,5 @@
 import type { NetworkListItem } from '@/modules/dashboard/model';
-import { matchesTags, type TagMatch } from '@/lib/tags';
+import { matchesTags, sharedTagList, type TagMatch } from '@/lib/tags';
 import type { NetworksSortDir, NetworksSortKey } from '@/modules/networks/store';
 
 export function uniqueTags(items: NetworkListItem[]): string[] {
@@ -11,9 +11,7 @@ export function uniqueTags(items: NetworkListItem[]): string[] {
 }
 
 export function sharedTags(items: NetworkListItem[]): string[] {
-  if (items.length === 0) return [];
-  const [first, ...rest] = items;
-  return (first.tags ?? []).filter((tag) => rest.every((item) => (item.tags ?? []).includes(tag)));
+  return sharedTagList(items);
 }
 
 export function applyNetworkFilters(

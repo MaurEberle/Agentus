@@ -23,7 +23,7 @@ import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
 import { ExportCancelled, saveExportFile } from '@/lib/saveFile';
-import { matchesTags, parseTagTokens, type TagMatch } from '@/lib/tags';
+import { matchesTags, parseTagTokens, sharedTagList, type TagMatch } from '@/lib/tags';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { formatDateTime } from '@/modules/history/model/format';
 import {
@@ -124,6 +124,7 @@ export function PromptsModule() {
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is PromptListItem => Boolean(item)),
     [items, selectedIds],
   );
+  const seedTags = useMemo(() => sharedTagList(selected), [selected]);
   const activeId = selected.length === 1 ? selected[0].id : undefined;
   const detailQuery = useQuery({
     queryKey: ['prompts', activeId],
@@ -385,12 +386,11 @@ export function PromptsModule() {
         open={tagsOpen}
         count={selected.length}
         busy={busy}
-        initialTags={parseTagTokens(selected.flatMap((item) => item.tags).join(','))}
+        initialTags={seedTags}
         suggestions={parseTagTokens(items.flatMap((item) => item.tags).join(','))}
         onClose={() => setTagsOpen(false)}
         onSave={(next) => void run(async () => {
-          const seed = selected[0]?.tags ?? [];
-          await savePromptTags(selected, seed, next);
+          await savePromptTags(selected, seedTags, next);
           setTagsOpen(false);
         }, 'prompts.notify.tagged')}
       />
