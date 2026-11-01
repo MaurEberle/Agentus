@@ -214,6 +214,7 @@ export function PromptsModule() {
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
         <TagCloud
           tags={tagSuggestions}
+          tagSets={items.map((item) => item.tags)}
           selected={tagFilter}
           mode={tagMode}
           onToggle={toggleTag}

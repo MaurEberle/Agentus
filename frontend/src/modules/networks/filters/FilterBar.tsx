@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useNetworksUi, type NetworksSortKey } from '@/modules/networks/store';
 
-export function FilterBar({ tags }: { tags: string[] }) {
+export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly (readonly string[])[] }) {
   const { t } = useTranslation();
   const query = useNetworksUi((state) => state.query);
   const sortKey = useNetworksUi((state) => state.sortKey);
@@ -56,6 +56,7 @@ export function FilterBar({ tags }: { tags: string[] }) {
       <div className="flex flex-wrap items-center gap-3">
         <TagCloud
           tags={tags}
+          tagSets={tagSets}
           selected={tagFilter}
           mode={tagMode}
           onToggle={toggleTag}

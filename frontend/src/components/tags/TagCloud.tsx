@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import type { TagMatch } from '@/lib/tags';
+import { compatibleTags, type TagMatch } from '@/lib/tags';
 import { cn } from '@/lib/utils';
 
 /** Inner width that wraps the chips into a roughly square cloud, including the mode row. */
@@ -20,6 +20,7 @@ function squareCloudWidth(tags: string[]): number {
 
 export function TagCloud({
   tags,
+  tagSets,
   selected,
   mode,
   onToggle,
@@ -28,6 +29,7 @@ export function TagCloud({
   label,
 }: {
   tags: string[];
+  tagSets: readonly (readonly string[])[];
   selected: string[];
   mode: TagMatch;
   onToggle: (tag: string) => void;
@@ -36,6 +38,7 @@ export function TagCloud({
   label: string;
 }) {
   const { t } = useTranslation();
+  const allowed = compatibleTags(tagSets, selected, mode);
   return (
     <Popover>
       <div className="inline-flex">
@@ -83,17 +86,20 @@ export function TagCloud({
           <div className="mt-2 flex min-w-0 flex-wrap justify-start gap-1.5" role="group" aria-label={label}>
             {tags.map((tag) => {
               const on = selected.includes(tag);
+              const blocked = allowed !== null && !allowed.has(tag);
               return (
                 <button
                   key={tag}
                   type="button"
                   aria-pressed={on}
+                  disabled={blocked}
                   onClick={() => onToggle(tag)}
                   className={cn(
                     'rounded-full border px-2.5 py-0.5 text-xs font-medium',
                     on
                       ? 'border-transparent bg-primary text-primary-foreground'
                       : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                    blocked && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
                   )}
                 >
                   {tag}

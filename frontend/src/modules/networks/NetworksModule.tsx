@@ -229,7 +229,7 @@ export function NetworksModule() {
           onRefresh: () => void query.refetch(),
         }}
       />
-      <FilterBar tags={tags} />
+      <FilterBar tags={tags} tagSets={items.map((item) => item.tags ?? [])} />
       {query.isError ? (
         <Alert variant="destructive" className="m-3">
           <AlertTitle>{t('networks.error.title')}</AlertTitle>

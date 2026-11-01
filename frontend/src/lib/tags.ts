@@ -14,6 +14,25 @@ export function matchesTags(
   return selected.some((tag) => tags.includes(tag));
 }
 
+/**
+ * Tags that can still be combined with the current AND selection.
+ * `null` means every tag stays available (OR, or nothing selected yet).
+ * Already selected tags stay available so they can be turned off.
+ */
+export function compatibleTags(
+  tagSets: readonly (readonly string[])[],
+  selected: readonly string[],
+  mode: TagMatch,
+): ReadonlySet<string> | null {
+  if (mode !== 'and' || selected.length === 0) return null;
+  const allowed = new Set<string>(selected);
+  for (const tags of tagSets) {
+    if (!selected.every((tag) => tags.includes(tag))) continue;
+    for (const tag of tags) allowed.add(tag);
+  }
+  return allowed;
+}
+
 export function normalizeTag(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
 }
