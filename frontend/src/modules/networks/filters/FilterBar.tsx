@@ -27,52 +27,48 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
   const sorts: NetworksSortKey[] = ['name', 'updatedAt', 'lastUsedAt'];
 
   return (
-    <div className="flex flex-col gap-2 border-b px-3 py-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('networks.filter.search')}
-          className="max-w-sm"
-          aria-label={t('networks.filter.search')}
-        />
-        <div className="flex flex-wrap items-center gap-1">
-          {sorts.map((key) => (
-            <Button
-              key={key}
-              type="button"
-              size="sm"
-              variant={sortKey === key ? 'secondary' : 'outline'}
-              onClick={() => setSortKey(key)}
-            >
-              {t(`networks.filter.sort.${key}`)}
-            </Button>
-          ))}
-          <Button type="button" size="icon" variant="outline" onClick={toggleSortDir} aria-label={t('networks.filter.direction')}>
-            {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <Input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={t('networks.filter.search')}
+        className="max-w-xs"
+        aria-label={t('networks.filter.search')}
+      />
+      <TagCloud
+        tags={tags}
+        tagSets={tagSets}
+        selected={tagFilter}
+        mode={tagMode}
+        onToggle={toggleTag}
+        onClear={clearTags}
+        onModeChange={setTagMode}
+        label={t('networks.filter.tags')}
+      />
+      <div className="flex items-center gap-1">
+        {sorts.map((key) => (
+          <Button
+            key={key}
+            type="button"
+            size="sm"
+            variant={sortKey === key ? 'secondary' : 'outline'}
+            onClick={() => setSortKey(key)}
+          >
+            {t(`networks.filter.sort.${key}`)}
           </Button>
-        </div>
+        ))}
+        <Button type="button" size="icon" variant="outline" onClick={toggleSortDir} aria-label={t('networks.filter.direction')}>
+          {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
+        </Button>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <TagCloud
-          tags={tags}
-          tagSets={tagSets}
-          selected={tagFilter}
-          mode={tagMode}
-          onToggle={toggleTag}
-          onClear={clearTags}
-          onModeChange={setTagMode}
-          label={t('networks.filter.tags')}
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={onlyValid} onCheckedChange={(value) => setOnlyValid(value === true)} />
-          <span>{t('networks.filter.onlyValid')}</span>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={onlyActive} onCheckedChange={(value) => setOnlyActive(value === true)} />
-          <span>{t('networks.filter.onlyActive')}</span>
-        </label>
-      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <Switch checked={onlyValid} onCheckedChange={(value) => setOnlyValid(value === true)} />
+        <span>{t('networks.filter.onlyValid')}</span>
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <Switch checked={onlyActive} onCheckedChange={(value) => setOnlyActive(value === true)} />
+        <span>{t('networks.filter.onlyActive')}</span>
+      </label>
     </div>
   );
 }
