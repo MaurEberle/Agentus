@@ -1702,7 +1702,7 @@
     "unauthorized": "The embedding credential was rejected."
   },
   "prompts": {
-    "search": "Search",
+    "search": "Search name, description, tags",
     "filter": {
       "tags": "Tags"
     },

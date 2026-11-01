@@ -1702,7 +1702,7 @@
     }
   },
   "prompts": {
-    "search": "Buscar",
+    "search": "Buscar por nombre, descripción, etiquetas",
     "filter": {
       "tags": "Etiquetas"
     },

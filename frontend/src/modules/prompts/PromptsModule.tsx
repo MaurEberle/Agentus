@@ -252,26 +252,30 @@ export function PromptsModule() {
           label={t('prompts.filter.tags')}
         />
       </div>
-      <div className="flex items-center gap-2 border-b px-3 py-2">
-        <Checkbox
-          checked={allVisibleSelected}
-          onCheckedChange={toggleAll}
-          disabled={filtered.length === 0}
-          aria-label={t('prompts.list.selectAll')}
-        />
-        <span className="text-sm text-muted-foreground">{t('prompts.list.selectAll')}</span>
+      <div className="flex items-center border-b py-2">
+        <div className="px-3">
+          <Checkbox
+            checked={allVisibleSelected}
+            onCheckedChange={toggleAll}
+            disabled={filtered.length === 0}
+            aria-label={t('prompts.list.selectAll')}
+          />
+        </div>
+        <span className="px-3 text-sm text-muted-foreground">{t('prompts.list.selectAll')}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {filtered.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">{t(items.length ? 'prompts.empty.filter' : 'prompts.empty.library')}</p>
         ) : (
-          <ul>
+          <ul className="text-sm">
             {filtered.map((item) => (
-              <li key={item.id} className={cn('flex items-center gap-2 border-b px-3 py-2', activeId === item.id && 'bg-accent/60')}>
-                <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggle(item.id)} aria-label={item.name} className="p-0" />
+              <li key={item.id} className={cn('flex items-center border-b py-2', activeId === item.id && 'bg-accent/60')}>
+                <div className="px-3">
+                  <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggle(item.id)} aria-label={item.name} />
+                </div>
                 <button
                   type="button"
-                  className="min-w-0 flex-1 text-left"
+                  className="min-w-0 flex-1 px-3 text-left"
                   onClick={() => setSelectedIds([item.id])}
                   onDoubleClick={() => void openEditor(item.id)}
                 >
