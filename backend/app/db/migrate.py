@@ -278,3 +278,20 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
         except Exception:
             conn.execute("ROLLBACK")
             raise
+        current = 4
+    if store == "workspace" and current < 5:
+        conn.execute("BEGIN")
+        try:
+            conn.execute(
+                """
+                CREATE TABLE model_tags (
+                  model_key TEXT PRIMARY KEY,
+                  tags TEXT NOT NULL DEFAULT '[]'
+                )
+                """
+            )
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (5)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise

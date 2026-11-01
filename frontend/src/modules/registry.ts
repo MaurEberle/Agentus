@@ -1,16 +1,17 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { Activity, GitBranch, History, LayoutDashboard, Library, ScrollText, Settings } from 'lucide-react';
+import { Activity, Cpu, GitBranch, History, LayoutDashboard, Library, ScrollText, Settings } from 'lucide-react';
 import { DashboardPage } from '@/modules/dashboard';
 import { HistoryPage } from '@/modules/history';
 import { MonitoringPage } from '@/modules/monitoring';
 import { NetworkPage } from '@/modules/network';
 import { NetworksPage } from '@/modules/networks';
+import { ModelsPage } from '@/modules/models';
 import { PromptsPage } from '@/modules/prompts';
 import { SettingsPage } from '@/modules/settings';
 
 export interface AppModule {
-  id: 'dashboard' | 'network' | 'networks' | 'prompts' | 'monitoring' | 'history' | 'settings';
+  id: 'dashboard' | 'network' | 'networks' | 'prompts' | 'models' | 'monitoring' | 'history' | 'settings';
   titleKey: string;
   path: string;
   icon: LucideIcon;
@@ -45,6 +46,13 @@ export const NAV_MODULES: AppModule[] = [
     path: '/prompts',
     icon: ScrollText,
     component: PromptsPage,
+  },
+  {
+    id: 'models',
+    titleKey: 'nav.models',
+    path: '/models',
+    icon: Cpu,
+    component: ModelsPage,
   },
   {
     id: 'monitoring',

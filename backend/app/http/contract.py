@@ -20,6 +20,7 @@ RUNTIME = "runtime"
 RUN = "run"
 NETWORKS = "networks"
 PROMPTS = "prompts"
+MODELS = "models"
 MCP = "mcp"
 TOOLS = "tools"
 HELP_CHAT = "help_chat"
@@ -68,6 +69,12 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("DELETE", "/api/prompts/:id", PROMPTS),
     ContractRoute("POST", "/api/prompts/:id/duplicate", PROMPTS),
     ContractRoute("GET", "/api/prompts/:id/export", PROMPTS),
+    ContractRoute("GET", "/api/models", MODELS),
+    ContractRoute("PUT", "/api/models/tags", MODELS),
+    ContractRoute("POST", "/api/models/delete", MODELS),
+    ContractRoute("GET", "/api/models/hub", MODELS),
+    ContractRoute("GET", "/api/models/hub/files", MODELS),
+    ContractRoute("POST", "/api/models/pull", MODELS),
     ContractRoute("GET", "/api/settings", SETTINGS),
     ContractRoute("PATCH", "/api/settings", SETTINGS),
     ContractRoute("GET", "/api/data-location", DATA_LOCATION),
@@ -117,6 +124,7 @@ OWNER_BY_MODULE = {
     "app.http.routers.mcp": MCP,
     "app.http.routers.networks": NETWORKS,
     "app.http.routers.prompts": PROMPTS,
+    "app.http.routers.models": MODELS,
     "app.http.routers.run": RUN,
     "app.http.routers.runs": RUNS,
     "app.http.routers.help_chat": HELP_CHAT,

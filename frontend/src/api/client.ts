@@ -12,21 +12,34 @@ export const queryClient = new QueryClient({
   },
 });
 
+export type ApiUsage = { kind: string; network?: string; node?: string };
+
 export class ApiError extends Error {
   status: number;
   messageKey?: string;
+  usages?: ApiUsage[];
+  loaded?: boolean;
 
-  constructor(status: number, messageKey?: string, message?: string) {
+  constructor(
+    status: number,
+    messageKey?: string,
+    message?: string,
+    extra?: { usages?: ApiUsage[]; loaded?: boolean },
+  ) {
     super(message ?? messageKey ?? `HTTP ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.messageKey = messageKey;
+    this.usages = extra?.usages;
+    this.loaded = extra?.loaded;
   }
 }
 
 interface ErrorBody {
   messageKey?: string;
   message?: string;
+  usages?: ApiUsage[];
+  loaded?: boolean;
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -47,7 +60,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     } catch {
       body = undefined;
     }
-    throw new ApiError(response.status, body?.messageKey, body?.message);
+    throw new ApiError(response.status, body?.messageKey, body?.message, {
+      usages: body?.usages,
+      loaded: body?.loaded,
+    });
   }
 
   if (response.status === 204) {

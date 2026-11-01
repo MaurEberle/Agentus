@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -121,6 +122,9 @@ export function RuntimeSection() {
         </div>
       </div>
       <div className="space-y-4">
+        <Button asChild variant="outline" size="sm">
+          <Link to="/models">{t('settings.runtime.openModels')}</Link>
+        </Button>
         {(models?.items.length ?? 0) === 0 ? (
           <p className="text-sm text-muted-foreground">{t('settings.runtime.modelsEmpty')}</p>
         ) : (

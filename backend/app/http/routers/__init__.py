@@ -17,6 +17,7 @@ MODULES = [
     "app.http.routers.mcp",
     "app.http.routers.networks",
     "app.http.routers.prompts",
+    "app.http.routers.models",
     "app.http.routers.run",
     "app.http.routers.runs",
     "app.http.routers.help_chat",

@@ -25,6 +25,7 @@ from app.runtime.urls import ollama_native_root, settings_roots
 _block_counts: dict[str, int] = {}
 _moe_flags: dict[str, bool] = {}
 _show_seen: set[str] = set()
+_show_payloads: dict[str, dict[str, Any]] = {}
 
 
 def _root(base_url: str | None) -> str:
@@ -159,6 +160,8 @@ def _cache_key(tag: str, base_url: str | None) -> str:
 
 
 def _remember_show(key: str, payload: object) -> None:
+    if isinstance(payload, dict):
+        _show_payloads[key] = payload
     experts = _expert_count(payload)
     _moe_flags[key] = bool(experts and experts > 1)
     count = parse_block_count(payload)
@@ -203,6 +206,12 @@ def ensure_model_show(tag: str, *, base_url: str | None = None, required: bool =
         raise RuntimeApiError("runtime.modelInfoFailed", status=exc.status, detail=name) from exc
     _remember_show(key, payload)
     return True
+
+
+def cached_show(tag: str, *, base_url: str | None = None) -> dict[str, Any] | None:
+    """Last ``/api/show`` body for ``tag``, after ``ensure_model_show`` or a list."""
+    payload = _show_payloads.get(_cache_key(tag, base_url))
+    return payload if isinstance(payload, dict) else None
 
 
 def model_block_count(tag: str, *, base_url: str | None = None) -> int | None:
@@ -270,7 +279,16 @@ def list_ollama_models(*, base_url: str | None = None) -> list[OllamaModel]:
             continue
         size = item.get("size")
         size_bytes = int(size) if isinstance(size, int) else None
-        out.append(OllamaModel(name=name, size_bytes=size_bytes))
+        digest = item.get("digest")
+        modified = item.get("modified_at")
+        out.append(
+            OllamaModel(
+                name=name,
+                size_bytes=size_bytes,
+                digest=digest if isinstance(digest, str) else None,
+                modified_at=modified if isinstance(modified, str) else None,
+            )
+        )
     if not out:
         return out
     with ThreadPoolExecutor(max_workers=min(8, len(out))) as pool:
@@ -317,6 +335,35 @@ def list_loaded_models(*, base_url: str | None = None) -> list[str]:
         if isinstance(name, str) and name:
             names.append(name)
     return names
+
+
+def resident_index(*, base_url: str | None = None) -> dict[str, tuple[int | None, int | None]]:
+    """``tag_key`` → ``(size, size_vram)``. An unreachable daemon yields an empty map."""
+    url = f"{_root(base_url)}/api/ps"
+    try:
+        with client(timeout_sec=5.0) as http:
+            response = http.get(url)
+        raise_for_status(response)
+        payload = response_json(response)
+    except Exception:
+        return {}
+    models = payload.get("models") if isinstance(payload, dict) else None
+    if not isinstance(models, list):
+        return {}
+    out: dict[str, tuple[int | None, int | None]] = {}
+    for item in models:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name") or item.get("model")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        size = item.get("size")
+        vram = item.get("size_vram")
+        out[tag_key(name)] = (
+            int(size) if isinstance(size, int) else None,
+            int(vram) if isinstance(vram, int) else None,
+        )
+    return out
 
 
 def loaded_memory(tag: str, *, base_url: str | None = None) -> tuple[int | None, int | None]:
