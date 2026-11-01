@@ -47,7 +47,9 @@ DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayNam
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 6, ...props }, ref) => (
+>(({ className, sideOffset = 6, onCloseAutoFocus, onPointerDown, ...props }, ref) => {
+  const closedByPointer = React.useRef(false);
+  return (
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       ref={ref}
@@ -56,10 +58,20 @@ const DropdownMenuContent = React.forwardRef<
         'z-50 min-w-36 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
         className,
       )}
+      onPointerDown={(event) => {
+        closedByPointer.current = true;
+        onPointerDown?.(event);
+      }}
+      onCloseAutoFocus={(event) => {
+        onCloseAutoFocus?.(event);
+        if (!event.defaultPrevented && closedByPointer.current) event.preventDefault();
+        closedByPointer.current = false;
+      }}
       {...props}
     />
   </DropdownMenuPrimitive.Portal>
-));
+  );
+});
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
 const DropdownMenuItem = React.forwardRef<

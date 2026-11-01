@@ -14,7 +14,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-8 w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-md border border-input bg-background px-2.5 py-1 text-left text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate [&>span]:text-left',
+      'flex h-8 w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-md border border-input bg-background px-2.5 py-1 text-left text-sm shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate [&>span]:text-left',
       className,
     )}
     {...props}
@@ -58,7 +58,9 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
+>(({ className, children, position = 'popper', onCloseAutoFocus, onPointerDown, ...props }, ref) => {
+  const closedByPointer = React.useRef(false);
+  return (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
@@ -68,6 +70,15 @@ const SelectContent = React.forwardRef<
         className,
       )}
       position={position}
+      onPointerDown={(event) => {
+        closedByPointer.current = true;
+        onPointerDown?.(event);
+      }}
+      onCloseAutoFocus={(event) => {
+        onCloseAutoFocus?.(event);
+        if (!event.defaultPrevented && closedByPointer.current) event.preventDefault();
+        closedByPointer.current = false;
+      }}
       {...props}
     >
       <SelectScrollUpButton />
@@ -83,7 +94,8 @@ const SelectContent = React.forwardRef<
       <SelectScrollDownButton />
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
-));
+  );
+});
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 const SelectItem = React.forwardRef<
