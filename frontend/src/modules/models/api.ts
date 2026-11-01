@@ -1,5 +1,5 @@
 import { API_BASE, ApiError, apiFetch, queryClient } from '@/api/client';
-import type { HubFiles, HubHit, InstalledModel, PullEvent } from '@/modules/models/model';
+import type { DownloadList, HubFiles, HubHit, InstalledModel, PullEvent } from '@/modules/models/model';
 
 export async function listInstalled(): Promise<{ items: InstalledModel[]; messageKey?: string }> {
   return apiFetch('/models');
@@ -38,6 +38,49 @@ export async function searchHub(params: {
 export async function hubFiles(id: string): Promise<HubFiles> {
   const query = new URLSearchParams({ id });
   return apiFetch(`/models/hub/files?${query.toString()}`);
+}
+
+function rememberDownloads(data: DownloadList): DownloadList {
+  queryClient.setQueryData(['models', 'downloads'], data);
+  return data;
+}
+
+export async function listDownloads(): Promise<DownloadList> {
+  return apiFetch('/models/downloads');
+}
+
+export async function enqueueDownload(body: {
+  model: string;
+  label: string;
+  publisher?: string | null;
+  sizeBytes?: number;
+}): Promise<DownloadList> {
+  const data = await apiFetch<DownloadList>('/models/downloads', { method: 'POST', body: JSON.stringify(body) });
+  return rememberDownloads(data);
+}
+
+export async function pauseDownloads(): Promise<DownloadList> {
+  return rememberDownloads(await apiFetch('/models/downloads/pause', { method: 'POST' }));
+}
+
+export async function resumeDownloads(): Promise<DownloadList> {
+  return rememberDownloads(await apiFetch('/models/downloads/resume', { method: 'POST' }));
+}
+
+export async function pauseDownload(id: string): Promise<DownloadList> {
+  return rememberDownloads(await apiFetch(`/models/downloads/${id}/pause`, { method: 'POST' }));
+}
+
+export async function resumeDownload(id: string): Promise<DownloadList> {
+  return rememberDownloads(await apiFetch(`/models/downloads/${id}/resume`, { method: 'POST' }));
+}
+
+export async function stopDownload(id: string): Promise<DownloadList> {
+  return rememberDownloads(await apiFetch(`/models/downloads/${id}/stop`, { method: 'POST' }));
+}
+
+export async function removeDownloads(ids: string[]): Promise<DownloadList> {
+  return rememberDownloads(await apiFetch('/models/downloads/remove', { method: 'POST', body: JSON.stringify({ ids }) }));
 }
 
 export async function pullModel(

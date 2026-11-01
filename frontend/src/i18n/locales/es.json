@@ -135,7 +135,27 @@
         "moe": "MoE"
       }
     },
-    "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." }
+    "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." },
+    "downloads": {
+      "title": "Descargas",
+      "pauseAll": "Pausar descargas",
+      "resumeAll": "Reanudar descargas",
+      "lead": "Una descarga a la vez. El resto espera.",
+      "empty": "No hay descargas.",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "stop": "Detener",
+      "remove": "Quitar",
+      "removeMany": "Quitar {{count}}",
+      "status": {
+        "queued": "En espera",
+        "running": "Descargando",
+        "paused": "Pausada",
+        "stopped": "Detenida",
+        "done": "Lista",
+        "error": "Fallida"
+      }
+    }
   },
   "shell": {
     "start": "Iniciar",

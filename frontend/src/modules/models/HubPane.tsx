@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowDownAZ, ArrowDownZA, ChevronDown, RotateCcw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -12,19 +12,13 @@ import {
 import { BrandMark } from '@/components/BrandMark';
 import { ModelName } from '@/components/ModelName';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { queryClient } from '@/api/client';
 import { formatBytes, formatDateTime } from '@/lib/format';
-import { hubFiles, pullModel, searchHub } from '@/modules/models/api';
-import type { HubFiles, PullEvent, QuantFile } from '@/modules/models/model';
+import { enqueueDownload, hubFiles, searchHub } from '@/modules/models/api';
+import { modelLabel } from '@/lib/modelName';
+import type { HubFiles, QuantFile } from '@/modules/models/model';
 import { useHostResourcesQuery } from '@/modules/settings/api';
 import { inferenceVramBytes } from '@/modules/network/inspector/vram';
 
@@ -137,7 +131,6 @@ export function HubPane() {
   const { t, i18n } = useTranslation();
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
-  const abortRef = useRef<AbortController | null>(null);
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [size, setSize] = useState<(typeof SIZES)[number]>('any');
   const [minB, setMinB] = useState('');
@@ -151,7 +144,7 @@ export function HubPane() {
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [picked, setPicked] = useState<string | null>(null);
   const [quant, setQuant] = useState<string | null>(null);
-  const [pulling, setPulling] = useState<PullEvent | null>(null);
+  const [queuing, setQueuing] = useState(false);
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(search), 400);
     return () => window.clearTimeout(timer);
@@ -233,21 +226,20 @@ export function HubPane() {
   }
 
   async function install(file: QuantFile) {
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setPulling({ status: 'pulling' });
+    const label = modelLabel(file.tag);
+    setQueuing(true);
     try {
-      await pullModel(file.tag, (event) => setPulling(event), controller.signal);
-      await queryClient.invalidateQueries({ queryKey: ['models'] });
-    } catch {
-      if (!controller.signal.aborted) setPulling({ status: 'error', messageKey: 'models.pull.failed' });
+      await enqueueDownload({
+        model: file.tag,
+        label: label.name,
+        publisher: label.publisher,
+        sizeBytes: file.sizeBytes,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['models', 'downloads'] });
+    } finally {
+      setQueuing(false);
     }
   }
-
-  const pullingBusy = Boolean(pulling && pulling.status !== 'error' && pulling.status !== 'success');
-
-  const percent =
-    pulling?.completed && pulling.total ? Math.min(100, Math.round((pulling.completed / pulling.total) * 100)) : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -527,8 +519,8 @@ export function HubPane() {
               ) : null}
               <Button
                 type="button"
-                disabled={!chosen || chosen.installed || !files.data.installable || pullingBusy}
-                loading={pullingBusy}
+                disabled={!chosen || chosen.installed || !files.data.installable || queuing}
+                loading={queuing}
                 onClick={() => chosen && void install(chosen)}
               >
                 {chosen?.installed ? t('models.hub.installed') : t('models.hub.install')}
@@ -538,32 +530,6 @@ export function HubPane() {
           ) : null}
         </div>
       </div>
-      <Dialog open={Boolean(pulling)} onOpenChange={(next) => !next && !pullingBusy && setPulling(null)}>
-        <DialogContent closeLabel={t('models.dialog.close')}>
-          <DialogHeader>
-            <DialogTitle>{t('models.hub.progress')}</DialogTitle>
-          </DialogHeader>
-          <p className="flex items-center gap-2 text-sm">
-            {pullingBusy ? <Spinner size="sm" label={t('app.loading')} /> : null}
-            <span>
-              {pulling?.messageKey ? t(pulling.messageKey) : pulling?.status}
-              {percent != null ? ` · ${percent}%` : ''}
-            </span>
-          </p>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                abortRef.current?.abort();
-                setPulling(null);
-              }}
-            >
-              {t('models.hub.cancel')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -1,17 +1,18 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { Activity, Cpu, GitBranch, History, LayoutDashboard, Library, ScrollText, Settings } from 'lucide-react';
+import { Activity, Cpu, Download, GitBranch, History, LayoutDashboard, Library, ScrollText, Settings } from 'lucide-react';
 import { DashboardPage } from '@/modules/dashboard';
 import { HistoryPage } from '@/modules/history';
 import { MonitoringPage } from '@/modules/monitoring';
 import { NetworkPage } from '@/modules/network';
 import { NetworksPage } from '@/modules/networks';
+import { DownloadsPage } from '@/modules/downloads';
 import { ModelsPage } from '@/modules/models';
 import { PromptsPage } from '@/modules/prompts';
 import { SettingsPage } from '@/modules/settings';
 
 export interface AppModule {
-  id: 'dashboard' | 'network' | 'networks' | 'prompts' | 'models' | 'monitoring' | 'history' | 'settings';
+  id: 'dashboard' | 'network' | 'networks' | 'prompts' | 'models' | 'monitoring' | 'history' | 'downloads' | 'settings';
   titleKey: string;
   path: string;
   icon: LucideIcon;
@@ -70,6 +71,14 @@ export const NAV_MODULES: AppModule[] = [
   },
 ];
 
+export const DOWNLOADS_MODULE: AppModule = {
+  id: 'downloads',
+  titleKey: 'models.downloads.title',
+  path: '/downloads',
+  icon: Download,
+  component: DownloadsPage,
+};
+
 export const SETTINGS_MODULE: AppModule = {
   id: 'settings',
   titleKey: 'nav.settings',
@@ -78,4 +87,4 @@ export const SETTINGS_MODULE: AppModule = {
   component: SettingsPage,
 };
 
-export const ALL_MODULES: AppModule[] = [...NAV_MODULES, SETTINGS_MODULE];
+export const ALL_MODULES: AppModule[] = [...NAV_MODULES, DOWNLOADS_MODULE, SETTINGS_MODULE];

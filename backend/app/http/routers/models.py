@@ -13,6 +13,19 @@ from app.db.model_tags import save_model_tags
 from app.http.app import ApiModel
 from app.llm.catalog import InstalledResponse, list_installed
 from app.llm.hub import HubFilesResponse, HubSearchResponse, repo_files, search_hub
+from app.llm.downloads import (
+    DownloadCreate,
+    DownloadIds,
+    DownloadList,
+    enqueue,
+    list_downloads,
+    pause_all,
+    pause_one,
+    remove_downloads,
+    resume_all,
+    resume_one,
+    stop_one,
+)
 from app.llm.pull import pull_lines
 from app.llm.usage import model_usages
 from app.runtime.errors import raise_for_status
@@ -120,6 +133,46 @@ def get_hub(
 @router.get("/models/hub/files", response_model=HubFilesResponse, response_model_exclude_none=True)
 def get_hub_files(repo_id: Annotated[str, Query(alias="id")]) -> HubFilesResponse:
     return repo_files(repo_id)
+
+
+@router.get("/models/downloads", response_model=DownloadList, response_model_exclude_none=True)
+def get_downloads() -> DownloadList:
+    return list_downloads()
+
+
+@router.post("/models/downloads", response_model=DownloadList, response_model_exclude_none=True)
+def post_download(body: DownloadCreate) -> DownloadList:
+    return enqueue(body)
+
+
+@router.post("/models/downloads/pause", response_model=DownloadList, response_model_exclude_none=True)
+def post_downloads_pause() -> DownloadList:
+    return pause_all()
+
+
+@router.post("/models/downloads/resume", response_model=DownloadList, response_model_exclude_none=True)
+def post_downloads_resume() -> DownloadList:
+    return resume_all()
+
+
+@router.post("/models/downloads/remove", response_model=DownloadList, response_model_exclude_none=True)
+def post_downloads_remove(body: DownloadIds) -> DownloadList:
+    return remove_downloads(body.ids)
+
+
+@router.post("/models/downloads/{download_id}/pause", response_model=DownloadList, response_model_exclude_none=True)
+def post_download_pause(download_id: str) -> DownloadList:
+    return pause_one(download_id)
+
+
+@router.post("/models/downloads/{download_id}/resume", response_model=DownloadList, response_model_exclude_none=True)
+def post_download_resume(download_id: str) -> DownloadList:
+    return resume_one(download_id)
+
+
+@router.post("/models/downloads/{download_id}/stop", response_model=DownloadList, response_model_exclude_none=True)
+def post_download_stop(download_id: str) -> DownloadList:
+    return stop_one(download_id)
 
 
 @router.post("/models/pull")

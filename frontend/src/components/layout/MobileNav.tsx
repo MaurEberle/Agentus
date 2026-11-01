@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { NAV_MODULES, SETTINGS_MODULE } from '@/modules/registry';
+import { DOWNLOADS_MODULE, NAV_MODULES, SETTINGS_MODULE } from '@/modules/registry';
 import { useAppStore } from '@/store';
 
 export function MobileNav() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const waitAsk = useAppStore((state) => state.waitAsk);
-  const items = [...NAV_MODULES, SETTINGS_MODULE];
+  const items = [...NAV_MODULES, DOWNLOADS_MODULE, SETTINGS_MODULE];
 
   return (
     <div className="app-no-drag md:hidden">

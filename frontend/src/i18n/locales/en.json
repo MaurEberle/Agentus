@@ -135,7 +135,27 @@
         "moe": "MoE"
       }
     },
-    "pull": { "failed": "The download failed.", "invalid": "This model name cannot be downloaded." }
+    "pull": { "failed": "The download failed.", "invalid": "This model name cannot be downloaded." },
+    "downloads": {
+      "title": "Downloads",
+      "pauseAll": "Pause downloads",
+      "resumeAll": "Resume downloads",
+      "lead": "One download runs at a time. The rest wait.",
+      "empty": "No downloads.",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "remove": "Remove",
+      "removeMany": "Remove {{count}}",
+      "status": {
+        "queued": "Waiting",
+        "running": "Downloading",
+        "paused": "Paused",
+        "stopped": "Stopped",
+        "done": "Done",
+        "error": "Failed"
+      }
+    }
   },
   "shell": {
     "start": "Start",

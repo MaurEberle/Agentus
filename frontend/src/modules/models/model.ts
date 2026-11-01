@@ -76,6 +76,26 @@ export type HubFiles = {
   messageKey?: string;
 };
 
+export type DownloadStatus = 'queued' | 'running' | 'paused' | 'stopped' | 'done' | 'error';
+
+export type DownloadJob = {
+  id: string;
+  model: string;
+  label: string;
+  publisher?: string;
+  sizeBytes?: number;
+  status: DownloadStatus;
+  errorKey?: string;
+  completed?: number;
+  total?: number;
+  rateBps?: number;
+};
+
+export type DownloadList = {
+  paused: boolean;
+  items: DownloadJob[];
+};
+
 export type PullEvent = {
   status: string;
   completed?: number;

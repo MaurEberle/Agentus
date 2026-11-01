@@ -295,3 +295,37 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
         except Exception:
             conn.execute("ROLLBACK")
             raise
+        current = 5
+    if store == "workspace" and current < 6:
+        conn.execute("BEGIN")
+        try:
+            conn.execute(
+                """
+                CREATE TABLE model_downloads (
+                  id TEXT PRIMARY KEY,
+                  model TEXT NOT NULL,
+                  label TEXT NOT NULL,
+                  publisher TEXT,
+                  size_bytes INTEGER,
+                  status TEXT NOT NULL,
+                  position INTEGER NOT NULL,
+                  error_key TEXT,
+                  created_at TEXT NOT NULL,
+                  updated_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE download_gate (
+                  id INTEGER PRIMARY KEY CHECK (id = 1),
+                  paused INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            conn.execute("INSERT INTO download_gate (id, paused) VALUES (1, 0)")
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (6)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise

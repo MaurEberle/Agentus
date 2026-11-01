@@ -135,7 +135,27 @@
         "moe": "MoE"
       }
     },
-    "pull": { "failed": "Der Download ist fehlgeschlagen.", "invalid": "Dieser Modellname kann nicht geladen werden." }
+    "pull": { "failed": "Der Download ist fehlgeschlagen.", "invalid": "Dieser Modellname kann nicht geladen werden." },
+    "downloads": {
+      "title": "Downloads",
+      "pauseAll": "Downloads pausieren",
+      "resumeAll": "Downloads fortsetzen",
+      "lead": "Ein Download läuft. Die übrigen warten.",
+      "empty": "Keine Downloads.",
+      "pause": "Pausieren",
+      "resume": "Fortsetzen",
+      "stop": "Stoppen",
+      "remove": "Entfernen",
+      "removeMany": "{{count}} entfernen",
+      "status": {
+        "queued": "Wartet",
+        "running": "Lädt",
+        "paused": "Pausiert",
+        "stopped": "Gestoppt",
+        "done": "Fertig",
+        "error": "Fehlgeschlagen"
+      }
+    }
   },
   "shell": {
     "start": "Start",

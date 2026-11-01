@@ -45,6 +45,9 @@ def _bootstrap() -> None:
         from app.db import init as db_init
 
         db_init()
+        from app.llm.downloads import ensure_worker
+
+        ensure_worker()
     except ImportError:
         pass
     try:
