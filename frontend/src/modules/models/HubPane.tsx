@@ -234,7 +234,7 @@ export function HubPane() {
         />
         <div className="flex items-center gap-1">
           <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
-            <SelectTrigger className="w-36" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
             <SelectContent>
               {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
             </SelectContent>
@@ -292,7 +292,7 @@ export function HubPane() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 w-auto min-w-36 shrink-0 justify-between gap-2 px-2.5 text-sm font-normal shadow-sm"
+              className="h-8 w-auto shrink-0 gap-1.5 px-2.5 text-sm font-normal shadow-sm"
               aria-label={
                 capabilities.length > 0
                   ? `${t('models.hub.capabilities')}: ${capabilities.length}`
@@ -322,7 +322,7 @@ export function HubPane() {
           </DropdownMenuContent>
         </DropdownMenu>
         <Select value={size} onValueChange={(value) => setSize(value as typeof size)}>
-          <SelectTrigger className="w-36" aria-label={t('models.hub.size')}>
+          <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.size')}>
             <SelectValue>{size === 'any' ? t('models.hub.size') : t(`models.hub.sizes.${size}`)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -439,7 +439,7 @@ export function HubPane() {
               </Button>
             </div>
             <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value) as (typeof PAGE_SIZES)[number])}>
-              <SelectTrigger className="h-8 w-44 shrink-0" aria-label={t('models.hub.pageSize')}>
+              <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.pageSize')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

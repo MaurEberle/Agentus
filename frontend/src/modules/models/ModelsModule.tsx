@@ -3,10 +3,9 @@ import { ArrowDownAZ, ArrowUpAZ, Tags, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError, apiFetch, queryClient } from '@/api/client';
+import { BrandMark } from '@/components/BrandMark';
 import { HuggingFaceIcon } from '@/components/icons/HuggingFaceIcon';
-import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { ModelName } from '@/components/ModelName';
-import { Spinner } from '@/components/ui/spinner';
 import { TagCloud } from '@/components/tags/TagCloud';
 import { TagInput, type TagInputHandle } from '@/components/TagInput';
 import { Button } from '@/components/ui/button';
@@ -217,21 +216,14 @@ function InstalledPane() {
               <span className="px-3 text-sm text-muted-foreground">{t('models.list.selectAll')}</span>
             </div>
           ) : null}
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto">
-          {query.isLoading ? (
-            <ModuleLoading />
-          ) : query.data?.messageKey ? (
+        <div className="relative min-h-0 min-w-0 flex-1">
+          <div className="h-full overflow-auto">
+          {query.isLoading ? null : query.data?.messageKey ? (
             <p className="p-4 text-sm text-muted-foreground">{t('models.unreachable')}</p>
           ) : filtered.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">{t('models.empty')}</p>
           ) : (
             <>
-            {query.isFetching ? (
-              <div className="flex items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
-                <Spinner size="sm" label={t('app.loading')} />
-                <span>{t('app.loading')}</span>
-              </div>
-            ) : null}
             {KINDS.map((group) => {
               const rows = filtered.filter((item) => item.kind === group);
               if (rows.length === 0) return null;
@@ -269,6 +261,13 @@ function InstalledPane() {
             })}
             </>
           )}
+          </div>
+          {query.isLoading || (query.isFetching && !query.data) ? (
+            <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-4" role="status" aria-label={t('app.loading')}>
+              <BrandMark spinning className="size-24" alt="" />
+              {query.isLoading ? <p className="text-sm text-muted-foreground">{t('app.loading')}</p> : null}
+            </div>
+          ) : null}
         </div>
         </div>
         <WidthGrip label={t('models.split')} share={share} onChange={(next) => setShare(clampShare(next))} />
