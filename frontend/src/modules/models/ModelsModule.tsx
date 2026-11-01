@@ -3,6 +3,7 @@ import { ArrowDownAZ, ArrowUpAZ, Tags, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError, apiFetch, queryClient } from '@/api/client';
+import { HuggingFaceIcon } from '@/components/icons/HuggingFaceIcon';
 import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { Spinner } from '@/components/ui/spinner';
 import { TagCloud } from '@/components/tags/TagCloud';
@@ -56,11 +57,12 @@ export function ModelsModule() {
             role="tab"
             aria-selected={tab === key}
             className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm',
+              '-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm',
               tab === key ? 'border-primary font-semibold' : 'border-transparent font-medium text-muted-foreground',
             )}
             onClick={() => setTab(key)}
           >
+            {key === 'hub' ? <HuggingFaceIcon /> : null}
             {t(`models.tabs.${key}`)}
           </button>
         ))}
