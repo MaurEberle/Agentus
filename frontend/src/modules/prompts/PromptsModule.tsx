@@ -212,16 +212,6 @@ export function PromptsModule() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b p-3">
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
-        <TagCloud
-          tags={tagSuggestions}
-          tagSets={items.map((item) => item.tags)}
-          selected={tagFilter}
-          mode={tagMode}
-          onToggle={toggleTag}
-          onClear={() => setTagFilter([])}
-          onModeChange={setTagMode}
-          label={t('prompts.filter.tags')}
-        />
         <div className="flex items-center gap-1">
           <Button
             type="button"
@@ -249,6 +239,17 @@ export function PromptsModule() {
             {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
           </Button>
         </div>
+        <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
+        <TagCloud
+          tags={tagSuggestions}
+          tagSets={items.map((item) => item.tags)}
+          selected={tagFilter}
+          mode={tagMode}
+          onToggle={toggleTag}
+          onClear={() => setTagFilter([])}
+          onModeChange={setTagMode}
+          label={t('prompts.filter.tags')}
+        />
       </div>
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <Checkbox

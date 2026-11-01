@@ -35,16 +35,6 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
         className="max-w-xs"
         aria-label={t('networks.filter.search')}
       />
-      <TagCloud
-        tags={tags}
-        tagSets={tagSets}
-        selected={tagFilter}
-        mode={tagMode}
-        onToggle={toggleTag}
-        onClear={clearTags}
-        onModeChange={setTagMode}
-        label={t('networks.filter.tags')}
-      />
       <div className="flex items-center gap-1">
         {sorts.map((key) => (
           <Button
@@ -61,6 +51,18 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
           {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
         </Button>
       </div>
+      <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
+      <TagCloud
+        tags={tags}
+        tagSets={tagSets}
+        selected={tagFilter}
+        mode={tagMode}
+        onToggle={toggleTag}
+        onClear={clearTags}
+        onModeChange={setTagMode}
+        label={t('networks.filter.tags')}
+      />
+      <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
       <label className="flex items-center gap-2 text-sm">
         <Switch checked={onlyValid} onCheckedChange={(value) => setOnlyValid(value === true)} />
         <span>{t('networks.filter.onlyValid')}</span>
