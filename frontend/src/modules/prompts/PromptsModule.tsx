@@ -503,7 +503,13 @@ function PromptEditor({
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="prompt-description">{t('prompts.editor.description')}</Label>
-            <Input id="prompt-description" value={description} onChange={(event) => setDescription(event.target.value)} />
+            <Textarea
+              id="prompt-description"
+              value={description}
+              rows={2}
+              onChange={(event) => setDescription(event.target.value)}
+              className="min-h-14 resize-y"
+            />
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="prompt-tags">{t('prompts.editor.tags')}</Label>
