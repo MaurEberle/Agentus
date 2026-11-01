@@ -265,6 +265,8 @@ def remove_downloads(ids: list[str]) -> DownloadList:
     if cancelled:
         time.sleep(0.4)
     for row in rows:
+        if row["status"] == "done":
+            continue
         remembered = stored_digests(str(row["digests"]) if row["digests"] is not None else "[]")
         _discard(str(row["model"]), remembered)
     return list_downloads()

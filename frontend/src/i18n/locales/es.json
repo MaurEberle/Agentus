@@ -149,7 +149,10 @@
       "removeMany": "Quitar {{count}}",
       "confirmTitle": "Quitar descarga",
       "confirmBody": "Se quitará {{name}}. Se borrarán los archivos descargados.",
+      "confirmBodyDone": "Se quitará {{name}} de la lista. Los archivos del modelo se conservan.",
       "confirmBodyMany": "Se quitarán {{count}} descargas. Se borrarán los archivos descargados.",
+      "confirmBodyManyDone": "Se quitarán {{count}} descargas terminadas de la lista. Los archivos del modelo se conservan.",
+      "confirmBodyManyMixed": "Se quitarán {{count}} descargas. Se borrarán los archivos de las descargas no terminadas. Los modelos terminados se conservan.",
       "status": {
         "queued": "En espera",
         "running": "Descargando",

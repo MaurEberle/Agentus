@@ -39,6 +39,18 @@ export function DownloadsPage() {
   const canPause = !paused && items.some((item) => item.status === 'queued' || item.status === 'running');
   const canResume = !canPause && (paused || items.some((item) => item.status === 'paused'));
   const selectable = items.filter((item) => item.status !== 'running').map((item) => item.id);
+  const pendingItems = items.filter((item) => pending.includes(item.id));
+  const doneCount = pendingItems.filter((item) => item.status === 'done').length;
+  const confirmKey =
+    pendingItems.length <= 1
+      ? pendingItems[0]?.status === 'done'
+        ? 'models.downloads.confirmBodyDone'
+        : 'models.downloads.confirmBody'
+      : doneCount === pendingItems.length
+        ? 'models.downloads.confirmBodyManyDone'
+        : doneCount === 0
+          ? 'models.downloads.confirmBodyMany'
+          : 'models.downloads.confirmBodyManyMixed';
   const allSelected = selectable.length > 0 && selectable.every((id) => selected.includes(id));
 
   function toggle(id: string) {
@@ -119,11 +131,7 @@ export function DownloadsPage() {
           <DialogHeader>
             <DialogTitle>{t('models.downloads.confirmTitle')}</DialogTitle>
             <DialogDescription>
-              {pending.length === 1
-                ? t('models.downloads.confirmBody', {
-                    name: items.find((item) => item.id === pending[0])?.label ?? '',
-                  })
-                : t('models.downloads.confirmBodyMany', { count: pending.length })}
+              {t(confirmKey, { name: pendingItems[0]?.label ?? '', count: pendingItems.length })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -149,7 +149,10 @@
       "removeMany": "Remove {{count}}",
       "confirmTitle": "Remove download",
       "confirmBody": "{{name}} will be removed. The files downloaded for it will be deleted.",
+      "confirmBodyDone": "{{name}} will be removed from the list. The model files stay.",
       "confirmBodyMany": "{{count}} downloads will be removed. The files downloaded for them will be deleted.",
+      "confirmBodyManyDone": "{{count}} finished downloads will be removed from the list. The model files stay.",
+      "confirmBodyManyMixed": "{{count}} downloads will be removed. Files of unfinished downloads will be deleted. Finished models stay.",
       "status": {
         "queued": "Waiting",
         "running": "Downloading",

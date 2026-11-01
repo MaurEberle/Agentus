@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.db import init
+from app.db.engine import transaction
 from app.llm.blobs import discard_blob_files, parse_manifest_digests
 from app.llm.downloads import DownloadCreate, enqueue, pause_all, pause_one, remove_downloads, resume_all, resume_one
 
@@ -56,3 +57,28 @@ def test_remove_deletes_partial_blobs(api_env, tmp_path, monkeypatch) -> None:
     names = sorted(path.name for path in blobs.iterdir())
     assert names == [kept_stem]
     assert parse_manifest_digests({"config": {"digest": digest}, "layers": [{"digest": kept}]}) == [digest, kept]
+
+
+def test_remove_finished_keeps_the_model_files(api_env, tmp_path, monkeypatch) -> None:
+    init()
+    digest = "sha256:" + "ef" * 32
+    stem = digest.replace(":", "-")
+    blobs = tmp_path / "blobs"
+    blobs.mkdir()
+    (blobs / stem).write_bytes(b"model")
+    (blobs / f"{stem}-partial").write_bytes(b"partial")
+    monkeypatch.setattr("app.llm.downloads.fetch_manifest_digests", lambda _model: [digest])
+    monkeypatch.setattr(
+        "app.llm.downloads.discard_blob_files",
+        lambda digests, root=None: (_ for _ in ()).throw(AssertionError("finished download must keep its files")),
+    )
+    monkeypatch.setattr(
+        "app.llm.downloads._forget_installed",
+        lambda _model: (_ for _ in ()).throw(AssertionError("finished model must stay installed")),
+    )
+    created = enqueue(DownloadCreate(model="hf.co/acme/Model-GGUF:Q4_K_M", label="Model"))
+    with transaction("workspace") as conn:
+        conn.execute("UPDATE model_downloads SET status = 'done' WHERE id = ?", (created.items[0].id,))
+    removed = remove_downloads([created.items[0].id])
+    assert removed.items == []
+    assert sorted(path.name for path in blobs.iterdir()) == [stem, f"{stem}-partial"]

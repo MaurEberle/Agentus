@@ -149,7 +149,10 @@
       "removeMany": "{{count}} entfernen",
       "confirmTitle": "Download entfernen",
       "confirmBody": "{{name}} wird entfernt. Die dazu geladenen Dateien werden gelöscht.",
+      "confirmBodyDone": "{{name}} wird aus der Liste entfernt. Die Modelldateien bleiben erhalten.",
       "confirmBodyMany": "{{count}} Downloads werden entfernt. Die dazu geladenen Dateien werden gelöscht.",
+      "confirmBodyManyDone": "{{count}} fertige Downloads werden aus der Liste entfernt. Die Modelldateien bleiben erhalten.",
+      "confirmBodyManyMixed": "{{count}} Downloads werden entfernt. Dateien noch nicht fertiger Downloads werden gelöscht. Fertige Modelle bleiben erhalten.",
       "status": {
         "queued": "Wartet",
         "running": "Lädt",
