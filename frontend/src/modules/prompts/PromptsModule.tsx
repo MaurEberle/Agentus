@@ -209,49 +209,52 @@ export function PromptsModule() {
     }, 'prompts.notify.exported');
   }
 
+  const filters = (
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} aria-label={t('prompts.search')} className="max-w-xs" />
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={sortKey === 'name' ? 'secondary' : 'outline'}
+          onClick={() => chooseSort('name')}
+        >
+          {t('prompts.sort.name')}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={sortKey === 'updated' ? 'secondary' : 'outline'}
+          onClick={() => chooseSort('updated')}
+        >
+          {t('prompts.sort.updated')}
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          onClick={() => setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))}
+          aria-label={t('networks.filter.direction')}
+        >
+          {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
+        </Button>
+      </div>
+      <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
+      <TagCloud
+        tags={tagSuggestions}
+        tagSets={items.map((item) => item.tags)}
+        selected={tagFilter}
+        mode={tagMode}
+        onToggle={toggleTag}
+        onClear={() => setTagFilter([])}
+        onModeChange={setTagMode}
+        label={t('prompts.filter.tags')}
+      />
+    </div>
+  );
+
   const listPane = (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={sortKey === 'name' ? 'secondary' : 'outline'}
-            onClick={() => chooseSort('name')}
-          >
-            {t('prompts.sort.name')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={sortKey === 'updated' ? 'secondary' : 'outline'}
-            onClick={() => chooseSort('updated')}
-          >
-            {t('prompts.sort.updated')}
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))}
-            aria-label={t('networks.filter.direction')}
-          >
-            {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
-          </Button>
-        </div>
-        <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
-        <TagCloud
-          tags={tagSuggestions}
-          tagSets={items.map((item) => item.tags)}
-          selected={tagFilter}
-          mode={tagMode}
-          onToggle={toggleTag}
-          onClear={() => setTagFilter([])}
-          onModeChange={setTagMode}
-          label={t('prompts.filter.tags')}
-        />
-      </div>
       <div className="flex items-center border-b py-2">
         <div className="px-3">
           <Checkbox
@@ -354,6 +357,7 @@ export function PromptsModule() {
           {t('prompts.ribbon.export')}
         </Button>
       </div>
+      {filters}
       {query.isError ? (
         <Alert variant="destructive" className="m-3">
           <AlertTitle>{t('prompts.error.title')}</AlertTitle>
