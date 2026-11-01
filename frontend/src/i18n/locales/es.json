@@ -68,8 +68,7 @@
       "template": "Hay plantilla de chat",
       "size": "Tamaño",
       "modified": "Modificado",
-      "vramNow": "VRAM en uso",
-      "weights": "Pesos"
+      "vramNow": "VRAM en uso"
     },
     "delete": {
       "title": "Borrar modelo",

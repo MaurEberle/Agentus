@@ -114,18 +114,53 @@ def _license(payload: dict[str, Any]) -> tuple[str | None, bool]:
     return text[:_LICENSE_CAP], True
 
 
-def model_kind(name: str, capabilities: list[str], *, moe: bool) -> str:
+def _named_embedding(name: str) -> bool:
+    return "embed" in (name or "").lower()
+
+
+def _ollama_embedding(capabilities: list[str], info: dict[str, Any]) -> bool:
+    """Capability list or the GGUF pooling type Ollama uses for embedders."""
+    if "embedding" in capabilities:
+        return True
+    for key, value in info.items():
+        if not str(key).endswith(".pooling_type"):
+            continue
+        if value is None or value == "":
+            continue
+        return True
+    return False
+
+
+def is_embedding(name: str, capabilities: list[str], info: dict[str, Any] | None = None) -> bool:
+    """Name and Ollama data together.
+
+    An ``embedding`` capability or a pooling type is enough. A name that says
+    embedder counts when Ollama did not mark the model as an image generator.
+    Chat models also have an embedding length, so that field alone does not count.
+    """
+    meta = info or {}
+    caps = [item.lower() for item in capabilities]
+    if _ollama_embedding(caps, meta):
+        return True
+    if not _named_embedding(name):
+        return False
+    return "image" not in caps
+
+
+def model_kind(
+    name: str,
+    capabilities: list[str],
+    *,
+    moe: bool,
+    info: dict[str, Any] | None = None,
+) -> str:
+    if is_embedding(name, capabilities, info):
+        return "embedding"
     caps = set(capabilities)
     if "image" in caps:
         return "image"
-    if "embedding" in caps and "completion" not in caps:
-        return "embedding"
-    if not caps and "embed" in name.lower():
-        return "embedding"
     if moe:
         return "moe"
-    if "embedding" in caps:
-        return "embedding"
     return "normal"
 
 
@@ -135,6 +170,8 @@ def describe_show(name: str, payload: dict[str, Any] | None, *, moe: bool) -> di
     details = details if isinstance(details, dict) else {}
     info = info if isinstance(info, dict) else {}
     caps = _capabilities(payload) if isinstance(payload, dict) else []
+    if is_embedding(name, caps, info) and "embedding" not in caps:
+        caps = ["embedding", *caps]
     arch = _text(info.get("general.architecture"))
     context = _positive(info.get(f"{arch}.context_length")) if arch else None
     embedding = _positive(info.get(f"{arch}.embedding_length")) if arch else None
@@ -152,7 +189,7 @@ def describe_show(name: str, payload: dict[str, Any] | None, *, moe: bool) -> di
         "block_count": parse_block_count(payload) if isinstance(payload, dict) else None,
         "expert_count": experts if experts and experts > 1 else None,
         "capabilities": caps,
-        "kind": model_kind(name, caps, moe=moe),
+        "kind": model_kind(name, caps, moe=moe, info=info),
         "vision": "vision" in caps,
         "tools": "tools" in caps,
         "thinking": "thinking" in caps,

@@ -68,8 +68,7 @@
       "template": "Chat-Vorlage vorhanden",
       "size": "Größe",
       "modified": "Geändert",
-      "vramNow": "VRAM belegt",
-      "weights": "Gewichte"
+      "vramNow": "VRAM belegt"
     },
     "delete": {
       "title": "Modell löschen",

@@ -68,8 +68,7 @@
       "template": "Chat template present",
       "size": "Size",
       "modified": "Updated",
-      "vramNow": "VRAM in use",
-      "weights": "Weights"
+      "vramNow": "VRAM in use"
     },
     "delete": {
       "title": "Delete model",

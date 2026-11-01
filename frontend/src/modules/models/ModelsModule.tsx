@@ -26,7 +26,6 @@ import { cn } from '@/lib/utils';
 import { listInstalled, saveModelTags } from '@/modules/models/api';
 import { HubPane } from '@/modules/models/HubPane';
 import type { InstalledModel, ModelKind } from '@/modules/models/model';
-import { useModelStatsQuery } from '@/modules/settings/api';
 
 const KINDS: ModelKind[] = ['embedding', 'image', 'moe', 'normal'];
 
@@ -292,7 +291,6 @@ function InstalledPane() {
 
 function DetailPane({ item }: { item: InstalledModel | null }) {
   const { t, i18n } = useTranslation();
-  const stats = useModelStatsQuery({ provider: 'ollama', model: item?.name ?? '', enabled: Boolean(item) });
   if (!item) return <p className="p-4 text-sm text-muted-foreground">{t('models.detail.empty')}</p>;
   const rows: [string, string][] = [
     [t('models.detail.size'), item.sizeBytes ? formatBytes(item.sizeBytes, i18n.language) : '—'],
@@ -310,7 +308,6 @@ function DetailPane({ item }: { item: InstalledModel | null }) {
     [t('models.detail.capabilities'), item.capabilities.length ? item.capabilities.join(', ') : '—'],
   ];
   if (item.loaded && item.vramBytes) rows.push([t('models.detail.vramNow'), formatBytes(item.vramBytes, i18n.language)]);
-  if (stats.data?.weightBytes) rows.push([t('models.detail.weights'), formatBytes(stats.data.weightBytes, i18n.language)]);
   return (
     <div className="flex min-h-full flex-col">
       <div className="border-b px-3 py-2">
@@ -337,12 +334,6 @@ function DetailPane({ item }: { item: InstalledModel | null }) {
           </details>
         ) : null}
         {item.digest ? <p className="break-all font-mono text-xs text-muted-foreground">{item.digest}</p> : null}
-        {stats.isFetching ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Spinner size="sm" label={t('app.loading')} />
-            <span>{t('app.loading')}</span>
-          </div>
-        ) : null}
       </dl>
     </div>
   );

@@ -10,11 +10,18 @@ from app.llm.hub import keep_hub_row, quant_token, valid_pull_model
 from app.llm.usage import model_usages
 
 
-def test_kind_prefers_capabilities_over_the_name() -> None:
-    assert model_kind("weird-embed", ["completion"], moe=False) == "normal"
+def test_kind_uses_name_and_ollama_metadata() -> None:
+    vl = "hf.co/bealore/Qwen3-VL-Embedding-2B-GGUF:Q8_0"
+    vl_info = {"general.architecture": "qwen3vl", "qwen3vl.embedding_length": 2048}
+    assert model_kind(vl, ["tools", "completion", "vision"], moe=False, info=vl_info) == "embedding"
+    chat_info = {"general.architecture": "llama", "llama.embedding_length": 2048}
+    assert model_kind("llama3.2:1b", ["completion", "tools"], moe=False, info=chat_info) == "normal"
+    pooled = {"nomic-bert.pooling_type": 1, "nomic-bert.embedding_length": 768}
+    assert model_kind("custom-encoder", ["completion"], moe=False, info=pooled) == "embedding"
     assert model_kind("chat", ["embedding"], moe=False) == "embedding"
     assert model_kind("chat", ["completion", "vision"], moe=True) == "moe"
     assert model_kind("painter", ["image"], moe=False) == "image"
+    assert model_kind("embed-painter", ["image"], moe=False) == "image"
     assert model_kind("nomic-embed-text", [], moe=False) == "embedding"
 
 
