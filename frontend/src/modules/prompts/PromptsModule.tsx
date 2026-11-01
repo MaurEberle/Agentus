@@ -211,7 +211,7 @@ export function PromptsModule() {
 
   const listPane = (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b p-3">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
         <div className="flex items-center gap-1">
           <Button
