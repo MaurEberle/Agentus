@@ -59,6 +59,7 @@ type HubUi = {
   cursors: (string | null)[];
   picked: string | null;
   quant: string | null;
+  share: number;
 };
 
 type ModelsUiStore = {
@@ -105,6 +106,7 @@ export const useModelsUi = create<ModelsUiStore>((set) => ({
     cursors: [null],
     picked: null,
     quant: null,
+    share: 0.68,
   },
   setTab: (tab) => set({ tab }),
   patchInstalled: (patch) =>

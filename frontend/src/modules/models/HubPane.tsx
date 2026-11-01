@@ -21,7 +21,25 @@ import { modelLabel } from '@/lib/modelName';
 import type { HubFiles, QuantFile } from '@/modules/models/model';
 import { useHostResourcesQuery } from '@/modules/settings/api';
 import { inferenceVramBytes } from '@/modules/network/inspector/vram';
+import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { HUB_PAGE_SIZES, rememberHubPageSize, useModelsUi, type HubCapability, type HubPageSize, type HubPipeline, type HubSize, type HubSort } from '@/modules/models/store';
+
+function clampShare(value: number): number {
+  if (!Number.isFinite(value)) return 0.68;
+  return Math.min(0.75, Math.max(0.4, value));
+}
+
+function useWideLayout(): boolean {
+  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 768px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px)');
+    const apply = () => setWide(media.matches);
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, []);
+  return wide;
+}
 
 function yesNo(t: (key: string) => string, value: boolean): string {
   return t(value ? 'models.detail.loadedYes' : 'models.detail.loadedNo');
@@ -123,7 +141,7 @@ export function HubPane() {
   const patchHub = useModelsUi((state) => state.patchHub);
   const resetHubFilters = useModelsUi((state) => state.resetHubFilters);
   const {
-    search, debounced, pipelines, size, minB, maxB, bounds, sort, sortDir, capabilities, page, cursors, picked, quant,
+    search, debounced, pipelines, size, minB, maxB, bounds, sort, sortDir, capabilities, page, cursors, picked, quant, share,
   } = hub;
   const pageSize: HubPageSize = (HUB_PAGE_SIZES as readonly number[]).includes(hub.pageSize) ? hub.pageSize : 30;
   const setSearch = (value: string) => patchHub({ search: value });
@@ -148,6 +166,7 @@ export function HubPane() {
   const setPicked = (value: string | null) => patchHub({ picked: value });
   const setQuant = (value: string | null) => patchHub({ quant: value });
   const [queuing, setQueuing] = useState(false);
+  const wide = useWideLayout();
   const seenFilter = useRef<string | null>(null);
   const filterKey = JSON.stringify([debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
   useEffect(() => {
@@ -388,8 +407,8 @@ export function HubPane() {
           <RotateCcw className="size-4" />
         </Button>
       </div>
-      <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-        <div className="flex min-h-0 flex-col overflow-hidden border-b md:border-b-0 md:border-r">
+      <div data-split-row className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b md:border-b-0">
           {results.data && results.data.items.length > 0 ? (
             <ul className="min-h-0 flex-1 overflow-auto">
               {results.data.items.map((item) => (
@@ -485,7 +504,11 @@ export function HubPane() {
             </Select>
           </div>
         </div>
-        <div className="min-h-0 overflow-auto p-3">
+        <WidthGrip label={t('models.split')} share={share} onChange={(next) => patchHub({ share: clampShare(next) })} />
+        <div
+          className="min-h-0 min-w-0 overflow-auto p-3 max-md:flex-1 md:border-l"
+          style={wide ? { width: `${(1 - share) * 100}%`, flex: 'none' } : undefined}
+        >
           {!picked ? <p className="text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
           {picked && files.isFetching && !files.data ? (
             <div className="flex justify-center py-10">
