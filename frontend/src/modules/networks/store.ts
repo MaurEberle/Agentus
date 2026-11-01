@@ -18,6 +18,7 @@ type NetworksUiStore = {
   setSortKey: (key: NetworksSortKey) => void;
   toggleSortDir: () => void;
   toggleTag: (tag: string) => void;
+  clearTags: () => void;
   setTagMode: (mode: TagMatch) => void;
   setOnlyValid: (value: boolean) => void;
   setOnlyActive: (value: boolean) => void;
@@ -53,6 +54,7 @@ export const useNetworksUi = create<NetworksUiStore>((set, get) => ({
         ? state.tagFilter.filter((item) => item !== tag)
         : [...state.tagFilter, tag],
     })),
+  clearTags: () => set({ tagFilter: [] }),
   setTagMode: (tagMode) => set({ tagMode }),
   setOnlyValid: (onlyValid) => set({ onlyValid }),
   setOnlyActive: (onlyActive) => set({ onlyActive }),

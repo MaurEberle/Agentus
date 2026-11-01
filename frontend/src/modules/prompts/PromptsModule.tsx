@@ -217,6 +217,7 @@ export function PromptsModule() {
           selected={tagFilter}
           mode={tagMode}
           onToggle={toggleTag}
+          onClear={() => setTagFilter([])}
           onModeChange={setTagMode}
           label={t('prompts.filter.tags')}
         />

@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -22,6 +23,7 @@ export function TagCloud({
   selected,
   mode,
   onToggle,
+  onClear,
   onModeChange,
   label,
 }: {
@@ -29,18 +31,33 @@ export function TagCloud({
   selected: string[];
   mode: TagMatch;
   onToggle: (tag: string) => void;
+  onClear: () => void;
   onModeChange: (mode: TagMatch) => void;
   label: string;
 }) {
   const { t } = useTranslation();
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button type="button" size="sm" variant="outline">
-          {label}
-          {selected.length ? ` (${selected.length})` : ''}
-        </Button>
-      </PopoverTrigger>
+      <div className="inline-flex">
+        <PopoverTrigger asChild>
+          <Button type="button" size="sm" variant="outline" className={selected.length ? 'rounded-r-none' : undefined}>
+            {label}
+            {selected.length ? ` (${selected.length})` : ''}
+          </Button>
+        </PopoverTrigger>
+        {selected.length > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="rounded-l-none border-l-0 px-1.5"
+            aria-label={t('tagCloud.clear')}
+            onClick={onClear}
+          >
+            <X className="size-3.5" />
+          </Button>
+        ) : null}
+      </div>
       <PopoverContent
         align="start"
         style={tags.length ? { width: `min(50vw, ${squareCloudWidth(tags) + 24}px)` } : undefined}

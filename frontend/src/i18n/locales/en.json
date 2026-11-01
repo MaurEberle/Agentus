@@ -30,7 +30,8 @@
     "and": "And",
     "or": "Or",
     "mode": "Combine tags",
-    "empty": "No tags"
+    "empty": "No tags",
+    "clear": "Clear all tags"
   },
   "shell": {
     "start": "Start",

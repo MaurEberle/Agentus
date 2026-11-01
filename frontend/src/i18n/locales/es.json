@@ -30,7 +30,8 @@
     "and": "Y",
     "or": "O",
     "mode": "Combinar etiquetas",
-    "empty": "Sin etiquetas"
+    "empty": "Sin etiquetas",
+    "clear": "Quitar todas las etiquetas"
   },
   "shell": {
     "start": "Iniciar",

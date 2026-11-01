@@ -30,7 +30,8 @@
     "and": "Und",
     "or": "Oder",
     "mode": "Tags verknüpfen",
-    "empty": "Keine Tags"
+    "empty": "Keine Tags",
+    "clear": "Alle Tags abwählen"
   },
   "shell": {
     "start": "Start",

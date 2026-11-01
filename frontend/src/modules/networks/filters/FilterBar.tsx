@@ -19,6 +19,7 @@ export function FilterBar({ tags }: { tags: string[] }) {
   const setSortKey = useNetworksUi((state) => state.setSortKey);
   const toggleSortDir = useNetworksUi((state) => state.toggleSortDir);
   const toggleTag = useNetworksUi((state) => state.toggleTag);
+  const clearTags = useNetworksUi((state) => state.clearTags);
   const setTagMode = useNetworksUi((state) => state.setTagMode);
   const setOnlyValid = useNetworksUi((state) => state.setOnlyValid);
   const setOnlyActive = useNetworksUi((state) => state.setOnlyActive);
@@ -58,6 +59,7 @@ export function FilterBar({ tags }: { tags: string[] }) {
           selected={tagFilter}
           mode={tagMode}
           onToggle={toggleTag}
+          onClear={clearTags}
           onModeChange={setTagMode}
           label={t('networks.filter.tags')}
         />
