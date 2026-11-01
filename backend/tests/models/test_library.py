@@ -8,9 +8,11 @@ from app.db.settings import put_settings
 from app.llm.catalog import huggingface_url, model_kind
 from app.llm.hub import (
     HubHit,
+    format_parameter_count,
     keep_hub_row,
     keep_weight_file,
     order_hits,
+    parameter_label,
     parameter_query,
     pipeline_tags,
     quant_token,
@@ -59,6 +61,16 @@ def test_name_sort_orders_the_page() -> None:
         "hf.co/aaa/beta",
         "nomic-embed-text:latest",
     ]
+
+
+def test_parameter_label_uses_the_weight_count() -> None:
+    assert format_parameter_count(27_009_346_304) == "27B"
+    assert format_parameter_count(1_720_000_000) == "1.72B"
+    assert format_parameter_count(29_900_000_000) == "29.9B"
+    assert format_parameter_count(307_581_696) == "308M"
+    assert parameter_label({"gguf": {"total": 27_009_346_304}}) == "27B"
+    assert parameter_label({"safetensors": {"total": 596_000_000}}) == "596M"
+    assert parameter_label({}) is None
 
 
 def test_pipeline_tags_cover_every_type_when_unset() -> None:

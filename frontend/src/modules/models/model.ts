@@ -57,6 +57,7 @@ export type HubFiles = {
   updatedAt?: string;
   repoBytes?: number;
   architecture?: string;
+  parameters?: string;
   contextLength?: number;
   license?: string;
   licenseUrl?: string;

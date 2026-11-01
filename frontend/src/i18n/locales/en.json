@@ -123,6 +123,7 @@
         "base": "Base model",
         "languages": "Languages",
         "architecture": "Architecture",
+        "parameters": "Parameters",
         "context": "Context",
         "repo": "Repository",
         "template": "Chat template",

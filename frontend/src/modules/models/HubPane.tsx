@@ -48,6 +48,7 @@ function HubFacts({ data }: { data: HubFiles }) {
     [t('models.hub.detail.likes'), data.likes ? data.likes.toLocaleString(i18n.language) : ''],
     [t('models.hub.detail.updated'), data.updatedAt ? formatDateTime(data.updatedAt, i18n.language) : ''],
     [t('models.hub.detail.architecture'), data.architecture ?? ''],
+    [t('models.hub.detail.parameters'), data.parameters ?? ''],
     [t('models.hub.detail.context'), data.contextLength ? String(data.contextLength) : ''],
     [t('models.hub.detail.repo'), data.repoBytes ? formatBytes(data.repoBytes, i18n.language) : ''],
     [t('models.hub.detail.languages'), data.languages?.length ? data.languages.join(', ') : ''],

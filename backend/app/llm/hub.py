@@ -165,6 +165,7 @@ class HubFilesResponse(ApiModel):
     updated_at: str | None = Field(default=None, alias="updatedAt")
     repo_bytes: int | None = Field(default=None, alias="repoBytes")
     architecture: str | None = None
+    parameters: str | None = None
     context_length: int | None = Field(default=None, alias="contextLength")
     license: str | None = None
     license_url: str | None = Field(default=None, alias="licenseUrl")
@@ -187,6 +188,38 @@ def valid_repo_id(repo_id: str) -> bool:
 
 def valid_pull_model(model: str) -> bool:
     return bool(_PULL.fullmatch((model or "").strip()))
+
+
+def format_parameter_count(count: int) -> str | None:
+    """27B, 1.72B, 596M. The same scale the installed list shows."""
+    if count <= 0:
+        return None
+    if count >= 1_000_000_000:
+        scaled, suffix = count / 1_000_000_000, "B"
+    elif count >= 1_000_000:
+        scaled, suffix = count / 1_000_000, "M"
+    elif count >= 1_000:
+        scaled, suffix = count / 1_000, "K"
+    else:
+        return str(count)
+    if scaled >= 100:
+        text = str(round(scaled))
+    elif scaled >= 10:
+        text = f"{scaled:.1f}".rstrip("0").rstrip(".")
+    else:
+        text = f"{scaled:.2f}".rstrip("0").rstrip(".")
+    return f"{text}{suffix}"
+
+
+def parameter_label(info: dict[str, Any]) -> str | None:
+    gguf = info.get("gguf") if isinstance(info.get("gguf"), dict) else {}
+    total = gguf.get("total") if isinstance(gguf, dict) else None
+    if not isinstance(total, int) or total <= 0:
+        safe = info.get("safetensors") if isinstance(info.get("safetensors"), dict) else {}
+        total = safe.get("total") if isinstance(safe, dict) else None
+    if isinstance(total, int):
+        return format_parameter_count(total)
+    return None
 
 
 def keep_weight_file(path: str) -> bool:
@@ -714,6 +747,7 @@ def repo_files(repo_id: str) -> HubFilesResponse:
         updated_at=updated,
         repo_bytes=int(storage) if isinstance(storage, int) and storage > 0 else None,
         architecture=arch if isinstance(arch, str) else None,
+        parameters=parameter_label(info),
         context_length=int(context) if isinstance(context, int) else None,
         license=license_name,
         license_url=license_url,
