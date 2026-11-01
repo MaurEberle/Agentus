@@ -1035,7 +1035,9 @@
       "graph": "Grafo",
       "updated": "Modificada",
       "lastUsed": "Último uso",
-      "counts": "{{nodes}} nodos · {{edges}} aristas"
+      "counts": "{{nodes}} nodos · {{edges}} aristas",
+      "move": "Mover {{column}}",
+      "resize": "Cambiar el ancho de {{column}}"
     },
     "badge": {
       "valid": "Válida",

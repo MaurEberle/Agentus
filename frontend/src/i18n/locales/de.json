@@ -1102,7 +1102,9 @@
       "graph": "Graph",
       "updated": "Geändert",
       "lastUsed": "Zuletzt verwendet",
-      "counts": "{{nodes}} Knoten · {{edges}} Kanten"
+      "counts": "{{nodes}} Knoten · {{edges}} Kanten",
+      "move": "{{column}} verschieben",
+      "resize": "Breite von {{column}} ändern"
     },
     "badge": {
       "valid": "Gültig",

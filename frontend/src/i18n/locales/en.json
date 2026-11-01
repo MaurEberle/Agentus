@@ -1102,7 +1102,9 @@
       "graph": "Graph",
       "updated": "Updated",
       "lastUsed": "Last used",
-      "counts": "{{nodes}} nodes · {{edges}} edges"
+      "counts": "{{nodes}} nodes · {{edges}} edges",
+      "move": "Move {{column}}",
+      "resize": "Resize {{column}}"
     },
     "badge": {
       "valid": "Valid",
