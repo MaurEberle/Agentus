@@ -103,6 +103,7 @@ def get_hub(
     limit: int = 30,
     cursor: str = "",
     caps: str = "",
+    direction: str = "desc",
 ) -> HubSearchResponse:
     return search_hub(
         search=search,
@@ -112,6 +113,7 @@ def get_hub(
         limit=limit,
         cursor=cursor or None,
         capabilities=caps,
+        direction=direction,
     )
 
 

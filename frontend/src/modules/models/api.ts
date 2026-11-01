@@ -17,6 +17,7 @@ export async function searchHub(params: {
   pipeline: string;
   size: string;
   sort: string;
+  direction: 'asc' | 'desc';
   limit: number;
   cursor?: string;
   caps?: string;
@@ -26,6 +27,7 @@ export async function searchHub(params: {
     pipeline: params.pipeline,
     size: params.size,
     sort: params.sort,
+    direction: params.direction,
     limit: String(params.limit),
   });
   if (params.cursor) query.set('cursor', params.cursor);

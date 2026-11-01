@@ -282,6 +282,7 @@ def _search_one(
     sort: str,
     limit: int,
     cursor: str | None,
+    direction: str = "-1",
 ) -> tuple[list[dict[str, Any]], str | None]:
     params: list[tuple[str, str]] = [
         ("filter", "gguf"),
@@ -396,6 +397,7 @@ def _search_capable(
     page: int,
     cursor: str | None,
     wanted: tuple[str, ...],
+    direction: str,
 ) -> HubSearchResponse:
     """Keep reading Hub pages until the page is full of models with the chosen capabilities."""
     states = _unpack_scan(cursor, len(pipes))
@@ -418,6 +420,7 @@ def _search_capable(
                     sort=sort_key,
                     limit=page,
                     cursor=state.get("hf") if isinstance(state.get("hf"), str) else None,
+                    direction=direction,
                 )
                 scanned += 1
                 hits = [hit for row in rows if (hit := _row_hit(row)) and keep_hub_row(row, pipes)]
@@ -453,6 +456,8 @@ def _search_capable(
     except RuntimeApiError as exc:
         return HubSearchResponse(items=[], page_size=page, message_key=exc.error_key)
     collected.sort(key=lambda item: item.downloads, reverse=True)
+    if direction == "1":
+        collected.reverse()
     nxt_token = _pack_scan(states)
     return HubSearchResponse(
         items=collected[:page],
@@ -471,12 +476,14 @@ def search_hub(
     limit: int = _DEFAULT_PAGE_SIZE,
     cursor: str | None = None,
     capabilities: str = "",
+    direction: str = "desc",
 ) -> HubSearchResponse:
     pipes = PIPELINES.get(pipeline, PIPELINES["text"])
     size_query = parameter_query(size)
     sort_key = SORTS.get(sort, "downloads")
     page = page_limit(limit)
     needle = search.strip()[:80]
+    order = "1" if direction == "asc" else "-1"
     wanted = parse_capabilities(capabilities)
     if wanted:
         return _search_capable(
@@ -487,6 +494,7 @@ def search_hub(
             page=page,
             cursor=cursor,
             wanted=wanted,
+            direction=order,
         )
     incoming = unpack_cursors(cursor, len(pipes))
     try:
@@ -505,6 +513,7 @@ def search_hub(
                 sort=sort_key,
                 limit=page,
                 cursor=pipe_cursor,
+                direction=order,
             )
             batches.append(rows)
             following.append(nxt)
@@ -534,6 +543,8 @@ def search_hub(
         if len(items) >= page:
             break
     _attach_flags(items)
+    if order == "1":
+        items.reverse()
     nxt = pack_cursors(following)
     return HubSearchResponse(items=items, page_size=page, has_next=nxt is not None, next_cursor=nxt)
 

@@ -45,7 +45,14 @@ export const useNetworksUi = create<NetworksUiStore>((set, get) => ({
   setSortKey: (sortKey) =>
     set((state) => ({
       sortKey,
-      sortDir: state.sortKey === sortKey ? (state.sortDir === 'asc' ? 'desc' : 'asc') : 'desc',
+      sortDir:
+        state.sortKey === sortKey
+          ? state.sortDir === 'asc'
+            ? 'desc'
+            : 'asc'
+          : sortKey === 'name'
+            ? 'asc'
+            : 'desc',
     })),
   toggleSortDir: () => set((state) => ({ sortDir: state.sortDir === 'asc' ? 'desc' : 'asc' })),
   toggleTag: (tag) =>

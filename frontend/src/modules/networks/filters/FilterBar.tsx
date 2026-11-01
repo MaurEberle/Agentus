@@ -1,4 +1,4 @@
-import { ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownZA } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TagCloud } from '@/components/tags/TagCloud';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
           </Button>
         ))}
         <Button type="button" size="icon" variant="outline" onClick={toggleSortDir} aria-label={t('networks.filter.direction')}>
-          {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
+          {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
         </Button>
       </div>
       <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />

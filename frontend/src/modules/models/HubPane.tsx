@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownZA, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -140,6 +140,7 @@ export function HubPane() {
   const [maxB, setMaxB] = useState('');
   const [bounds, setBounds] = useState({ min: '', max: '' });
   const [sort, setSort] = useState<(typeof SORTS)[number]>('downloads');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(loadPageSize);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [page, setPage] = useState(0);
@@ -165,17 +166,18 @@ export function HubPane() {
   useEffect(() => {
     setPage(0);
     setCursors([null]);
-  }, [debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize, capabilities]);
+  }, [debounced, pipeline, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
   const resources = useHostResourcesQuery({ live: false });
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   const results = useQuery({
-    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize, cursors[page] ?? '', capabilities.join(',')],
+    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort, sortDir, pageSize, cursors[page] ?? '', capabilities.join(',')],
     queryFn: () =>
       searchHub({
         search: debounced,
         pipeline,
         size: sizeQuery(size, bounds.min, bounds.max),
         sort,
+        direction: sortDir,
         limit: pageSize,
         cursor: cursors[page] ?? '',
         caps: capabilities.join(','),
@@ -223,7 +225,7 @@ export function HubPane() {
           onChange={(event) => setSearch(event.target.value)}
           placeholder={t('models.hub.search')}
           aria-label={t('models.hub.search')}
-          className="h-8 max-w-xs"
+          className="h-8 max-w-56"
         />
         <Select value={pipeline} onValueChange={(value) => setPipeline(value as typeof pipeline)}>
           <SelectTrigger className="w-40" aria-label={t('models.hub.type')}><SelectValue /></SelectTrigger>
@@ -231,27 +233,44 @@ export function HubPane() {
             {PIPELINES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.types.${key}`)}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
-          <SelectTrigger className="w-36" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-1">
+          <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
+            <SelectTrigger className="w-36" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="size-8"
+            aria-label={t('networks.filter.direction')}
+            onClick={() => setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'))}
+          >
+            {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
+          </Button>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 w-auto min-w-36 shrink-0 justify-between gap-2 px-3 font-normal"
-              aria-label={t('models.hub.capabilities')}
+              className="h-8 w-auto min-w-36 shrink-0 justify-between gap-2 px-2.5 text-sm font-normal shadow-sm"
+              aria-label={
+                capabilities.length > 0
+                  ? `${t('models.hub.capabilities')}: ${capabilities.length}`
+                  : t('models.hub.capabilities')
+              }
             >
-              <span>
-                {capabilities.length === 0
-                  ? t('models.hub.capabilities')
-                  : capabilities.map((key) => t(`models.badges.${key}`)).join(', ')}
-              </span>
-              <ChevronDown className="size-4 opacity-50" />
+              <span>{t('models.hub.capabilities')}</span>
+              {capabilities.length > 0 ? (
+                <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium leading-none text-primary-foreground">
+                  {capabilities.length}
+                </span>
+              ) : null}
+              <ChevronDown className="size-4 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
@@ -284,8 +303,8 @@ export function HubPane() {
               aria-invalid={minB.trim() !== '' && billions(minB) == null}
               className="h-8 w-16"
             />
-            <span className="text-xs text-muted-foreground">B</span>
-            <span className="text-xs text-muted-foreground" aria-hidden>–</span>
+            <span className="text-sm text-muted-foreground">B</span>
+            <span className="text-sm text-muted-foreground" aria-hidden>–</span>
             <Input
               value={maxB}
               onChange={(event) => setMaxB(event.target.value)}
@@ -295,7 +314,7 @@ export function HubPane() {
               aria-invalid={maxB.trim() !== '' && billions(maxB) == null}
               className="h-8 w-16"
             />
-            <span className="text-xs text-muted-foreground">B</span>
+            <span className="text-sm text-muted-foreground">B</span>
           </div>
         ) : null}
       </div>
