@@ -26,7 +26,7 @@ import { HUB_PAGE_SIZES, rememberHubPageSize, useModelsUi, type HubCapability, t
 
 function clampShare(value: number): number {
   if (!Number.isFinite(value)) return 0.68;
-  return Math.min(0.75, Math.max(0.4, value));
+  return Math.min(0.75, Math.max(0.6, value));
 }
 
 function useWideLayout(): boolean {
@@ -118,9 +118,9 @@ function billions(raw: string): string | null {
 }
 
 function knownPages(current: number, loaded: number): number[] {
-  if (loaded <= 7) return Array.from({ length: loaded }, (_, index) => index);
+  if (loaded < 6) return Array.from({ length: loaded }, (_, index) => index);
   const pages = new Set<number>([0, loaded - 1]);
-  for (let index = Math.max(1, current - 2); index <= Math.min(loaded - 1, current + 2); index += 1) pages.add(index);
+  for (let index = Math.max(1, current - 1); index <= Math.min(loaded - 2, current + 1); index += 1) pages.add(index);
   return [...pages].sort((left, right) => left - right);
 }
 
@@ -167,6 +167,7 @@ export function HubPane() {
   const setQuant = (value: string | null) => patchHub({ quant: value });
   const [queuing, setQueuing] = useState(false);
   const wide = useWideLayout();
+  const listShare = clampShare(share);
   const seenFilter = useRef<string | null>(null);
   const filterKey = JSON.stringify([debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
   useEffect(() => {
@@ -408,7 +409,10 @@ export function HubPane() {
         </Button>
       </div>
       <div data-split-row className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b md:border-b-0">
+        <div
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b md:border-b-0"
+          style={wide ? { width: `${listShare * 100}%`, flex: 'none', minWidth: '60%' } : undefined}
+        >
           {results.data && results.data.items.length > 0 ? (
             <ul className="min-h-0 flex-1 overflow-auto">
               {results.data.items.map((item) => (
@@ -443,8 +447,8 @@ export function HubPane() {
           ) : (
             <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>
           )}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
-            <div className="flex flex-wrap items-center gap-1">
+          <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 border-t px-3 py-2">
+            <div className="flex min-w-0 flex-nowrap items-center gap-1">
               <Button type="button" size="sm" variant="outline" disabled={page === 0 || results.isFetching} onClick={() => setPage(0)}>
                 {t('models.hub.first')}
               </Button>
@@ -504,11 +508,8 @@ export function HubPane() {
             </Select>
           </div>
         </div>
-        <WidthGrip label={t('models.split')} share={share} onChange={(next) => patchHub({ share: clampShare(next) })} />
-        <div
-          className="min-h-0 min-w-0 overflow-auto p-3 max-md:flex-1 md:border-l"
-          style={wide ? { width: `${(1 - share) * 100}%`, flex: 'none' } : undefined}
-        >
+        <WidthGrip label={t('models.split')} share={listShare} onChange={(next) => patchHub({ share: clampShare(next) })} />
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-3 md:border-l">
           {!picked ? <p className="text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
           {picked && files.isFetching && !files.data ? (
             <div className="flex justify-center py-10">
