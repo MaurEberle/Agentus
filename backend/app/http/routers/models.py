@@ -100,8 +100,17 @@ def get_hub(
     pipeline: str = "text",
     size: str = "any",
     sort: str = "downloads",
+    limit: int = 30,
+    cursor: str = "",
 ) -> HubSearchResponse:
-    return search_hub(search=search, pipeline=pipeline, size=size, sort=sort)
+    return search_hub(
+        search=search,
+        pipeline=pipeline,
+        size=size,
+        sort=sort,
+        limit=limit,
+        cursor=cursor or None,
+    )
 
 
 @router.get("/models/hub/files", response_model=HubFilesResponse, response_model_exclude_none=True)

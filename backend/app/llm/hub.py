@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import json
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from pydantic import Field
 
@@ -16,11 +18,13 @@ from app.runtime.errors import RuntimeApiError, is_transport_error, raise_for_st
 from app.runtime.ollama import list_ollama_models, tag_key
 
 HUB = "https://huggingface.co"
-_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+_CACHE: dict[str, tuple[float, tuple[list[dict[str, Any]], str | None]]] = {}
 _CACHE_SEC = 60.0
 _FLAG_CACHE: dict[str, tuple[float, tuple[bool, bool, bool]]] = {}
 _FLAG_SEC = 600.0
-_LIMIT = 30
+_PAGE_SIZES = (10, 20, 30, 50, 100)
+_DEFAULT_PAGE_SIZE = 30
+_NEXT_LINK = re.compile(r'<([^>]+)>;\s*rel="next"')
 _REPO_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}/[A-Za-z0-9][A-Za-z0-9._-]{0,120}$")
 _QUANT = re.compile(
     r"(?i)(?:IQ\d+(?:_[A-Z0-9]+)*|Q\d+(?:_[A-Z0-9]+)*|F16|FP16|BF16|FP8|FP4)"
@@ -90,6 +94,9 @@ class HubHit(ApiModel):
 
 class HubSearchResponse(ApiModel):
     items: list[HubHit] = Field(default_factory=list)
+    page_size: int = Field(default=_DEFAULT_PAGE_SIZE, alias="pageSize")
+    has_next: bool = Field(default=False, alias="hasNext")
+    next_cursor: str | None = Field(default=None, alias="nextCursor")
     message_key: str | None = Field(default=None, alias="messageKey")
 
 
@@ -180,6 +187,59 @@ def template_flags(template: str, tags: list[str]) -> tuple[bool, bool]:
     return tools, thinking
 
 
+def page_limit(value: int) -> int:
+    """Snap to 10, 20, 30, 50, or 100."""
+    if value in _PAGE_SIZES:
+        return value
+    return min(_PAGE_SIZES, key=lambda mark: (abs(mark - value), mark))
+
+
+def cursor_from_link(header: str | None) -> str | None:
+    if not header:
+        return None
+    found = _NEXT_LINK.search(header)
+    if not found:
+        return None
+    values = parse_qs(urlparse(found.group(1)).query).get("cursor") or []
+    cursor = values[0] if values else ""
+    if not cursor or len(cursor) > 4000:
+        return None
+    return cursor
+
+
+def pack_cursors(cursors: list[str | None]) -> str | None:
+    if all(item is None for item in cursors):
+        return None
+    if len(cursors) == 1:
+        return cursors[0]
+    raw = base64.urlsafe_b64encode(json.dumps(cursors).encode()).decode().rstrip("=")
+    return f"v1.{raw}"
+
+
+def unpack_cursors(token: str | None, count: int) -> list[str | None] | None:
+    """None starts every pipeline at the first page. A list skips exhausted ones."""
+    if not token:
+        return None
+    if count == 1 and not token.startswith("v1."):
+        return [token]
+    if not token.startswith("v1."):
+        return None
+    padded = token[3:] + "=" * (-len(token[3:]) % 4)
+    try:
+        loaded = json.loads(base64.urlsafe_b64decode(padded))
+    except (ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(loaded, list) or len(loaded) != count:
+        return None
+    out: list[str | None] = []
+    for item in loaded:
+        if item is None or (isinstance(item, str) and len(item) <= 4000):
+            out.append(item if isinstance(item, str) else None)
+        else:
+            return None
+    return out
+
+
 def quant_token(filename: str) -> str:
     stem = filename.rsplit("/", 1)[-1]
     if stem.lower().endswith(".gguf"):
@@ -214,45 +274,90 @@ def _get_json(url: str) -> Any:
         raise RuntimeApiError("models.hub.failed") from exc
 
 
-def _search_one(pipeline: str, *, search: str, size: str | None, sort: str) -> list[dict[str, Any]]:
+def _search_one(
+    pipeline: str,
+    *,
+    search: str,
+    size: str | None,
+    sort: str,
+    limit: int,
+    cursor: str | None,
+) -> tuple[list[dict[str, Any]], str | None]:
     params: list[tuple[str, str]] = [
         ("filter", "gguf"),
         ("pipeline_tag", pipeline),
         ("sort", sort),
         ("direction", "-1"),
-        ("limit", str(_LIMIT)),
+        ("limit", str(limit)),
     ]
     if search:
         params.append(("search", search))
     if size:
         params.append(("num_parameters", size))
+    if cursor:
+        params.append(("cursor", cursor))
     url = f"{HUB}/api/models?{urlencode(params)}"
-    key = url
-    cached = _CACHE.get(key)
+    cached = _CACHE.get(url)
     now = time.monotonic()
     if cached and now - cached[0] < _CACHE_SEC:
         return cached[1]
-    payload = _get_json(url)
+    try:
+        with client(timeout_sec=20.0) as http:
+            response = http.get(url)
+        raise_for_status(response)
+        payload = response_json(response)
+    except RuntimeApiError:
+        raise
+    except Exception as exc:
+        if is_transport_error(exc):
+            raise_transport(exc)
+        raise RuntimeApiError("models.hub.failed") from exc
     rows = payload if isinstance(payload, list) else []
     clean = [row for row in rows if isinstance(row, dict)]
-    _CACHE[key] = (now, clean)
-    return clean
+    nxt = cursor_from_link(response.headers.get("link"))
+    _CACHE[url] = (now, (clean, nxt))
+    return clean, nxt
 
 
-def search_hub(*, search: str, pipeline: str, size: str, sort: str) -> HubSearchResponse:
+def search_hub(
+    *,
+    search: str,
+    pipeline: str,
+    size: str,
+    sort: str,
+    limit: int = _DEFAULT_PAGE_SIZE,
+    cursor: str | None = None,
+) -> HubSearchResponse:
     pipes = PIPELINES.get(pipeline, PIPELINES["text"])
     size_query = parameter_query(size)
     sort_key = SORTS.get(sort, "downloads")
+    page = page_limit(limit)
     needle = search.strip()[:80]
+    incoming = unpack_cursors(cursor, len(pipes))
     try:
-        rows: list[dict[str, Any]] = []
-        for pipe in pipes:
-            rows.extend(_search_one(pipe, search=needle, size=size_query, sort=sort_key))
+        batches: list[list[dict[str, Any]]] = []
+        following: list[str | None] = []
+        for index, pipe in enumerate(pipes):
+            pipe_cursor = None if incoming is None else incoming[index]
+            if incoming is not None and pipe_cursor is None:
+                batches.append([])
+                following.append(None)
+                continue
+            rows, nxt = _search_one(
+                pipe,
+                search=needle,
+                size=size_query,
+                sort=sort_key,
+                limit=page,
+                cursor=pipe_cursor,
+            )
+            batches.append(rows)
+            following.append(nxt)
     except RuntimeApiError as exc:
-        return HubSearchResponse(items=[], message_key=exc.error_key)
+        return HubSearchResponse(items=[], page_size=page, message_key=exc.error_key)
     seen: set[str] = set()
     items: list[HubHit] = []
-    for row in rows:
+    for row in (row for batch in batches for row in batch):
         if not keep_hub_row(row, pipes):
             continue
         model_id = str(row.get("modelId") or row.get("id"))
@@ -271,10 +376,11 @@ def search_hub(*, search: str, pipeline: str, size: str, sort: str) -> HubSearch
                 url=f"{HUB}/{model_id}",
             )
         )
-        if len(items) >= _LIMIT:
+        if len(items) >= page:
             break
     _attach_flags(items)
-    return HubSearchResponse(items=items)
+    nxt = pack_cursors(following)
+    return HubSearchResponse(items=items, page_size=page, has_next=nxt is not None, next_cursor=nxt)
 
 
 def _attach_flags(items: list[HubHit]) -> None:

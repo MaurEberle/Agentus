@@ -15,8 +15,17 @@ export async function searchHub(params: {
   pipeline: string;
   size: string;
   sort: string;
-}): Promise<{ items: HubHit[]; messageKey?: string }> {
-  const query = new URLSearchParams(params);
+  limit: number;
+  cursor?: string;
+}): Promise<{ items: HubHit[]; messageKey?: string; hasNext: boolean; nextCursor?: string; pageSize: number }> {
+  const query = new URLSearchParams({
+    search: params.search,
+    pipeline: params.pipeline,
+    size: params.size,
+    sort: params.sort,
+    limit: String(params.limit),
+  });
+  if (params.cursor) query.set('cursor', params.cursor);
   return apiFetch(`/models/hub?${query.toString()}`);
 }
 

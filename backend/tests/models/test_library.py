@@ -47,6 +47,22 @@ def test_quant_token_and_pull_name() -> None:
     assert not valid_pull_model("hf.co/bartowski/Llama-GGUF")
 
 
+def test_page_marks_and_cursor_link() -> None:
+    from app.llm.hub import cursor_from_link, pack_cursors, page_limit, unpack_cursors
+
+    assert page_limit(30) == 30
+    assert page_limit(1) == 10
+    assert page_limit(1000) == 100
+    assert page_limit(40) in {30, 50}
+    header = '<https://huggingface.co/api/models?limit=10&cursor=abc%2Bdef>; rel="next"'
+    assert cursor_from_link(header) == "abc+def"
+    assert cursor_from_link(None) is None
+    packed = pack_cursors(["one", None])
+    assert packed is not None and packed.startswith("v1.")
+    assert unpack_cursors(packed, 2) == ["one", None]
+    assert unpack_cursors(None, 2) is None
+
+
 def test_parameter_query_accepts_decimal_billions() -> None:
     assert parameter_query("any") is None
     assert parameter_query("3") == "max:3B"

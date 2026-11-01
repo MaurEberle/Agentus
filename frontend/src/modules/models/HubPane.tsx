@@ -83,6 +83,7 @@ function HubFacts({ data }: { data: HubFiles }) {
 const PIPELINES = ['text', 'embed', 'vision'] as const;
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified'] as const;
+const PAGE_SIZES = [10, 20, 30, 50, 100] as const;
 
 function billions(raw: string): string | null {
   const text = raw.trim().replace(',', '.');
@@ -112,6 +113,9 @@ export function HubPane() {
   const [maxB, setMaxB] = useState('');
   const [bounds, setBounds] = useState({ min: '', max: '' });
   const [sort, setSort] = useState<(typeof SORTS)[number]>('downloads');
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(30);
+  const [page, setPage] = useState(0);
+  const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [picked, setPicked] = useState<string | null>(null);
   const [quant, setQuant] = useState<string | null>(null);
   const [pulling, setPulling] = useState<PullEvent | null>(null);
@@ -123,11 +127,23 @@ export function HubPane() {
     const timer = window.setTimeout(() => setBounds({ min: minB, max: maxB }), 400);
     return () => window.clearTimeout(timer);
   }, [minB, maxB]);
+  useEffect(() => {
+    setPage(0);
+    setCursors([null]);
+  }, [debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize]);
   const resources = useHostResourcesQuery({ live: false });
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   const results = useQuery({
-    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort],
-    queryFn: () => searchHub({ search: debounced, pipeline, size: sizeQuery(size, bounds.min, bounds.max), sort }),
+    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort, pageSize, cursors[page] ?? ''],
+    queryFn: () =>
+      searchHub({
+        search: debounced,
+        pipeline,
+        size: sizeQuery(size, bounds.min, bounds.max),
+        sort,
+        limit: pageSize,
+        cursor: cursors[page] ?? '',
+      }),
   });
   const files = useQuery({
     queryKey: ['models', 'hub', 'files', picked],
@@ -248,6 +264,48 @@ export function HubPane() {
               ))}
             </ul>
           )}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={page === 0 || results.isFetching}
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+              >
+                {t('models.hub.previous')}
+              </Button>
+              <span className="text-xs text-muted-foreground">{t('models.hub.page', { page: page + 1 })}</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!results.data?.hasNext || results.isFetching}
+                onClick={() => {
+                  const token = results.data?.nextCursor;
+                  if (!token) return;
+                  setCursors((current) => {
+                    const copy = current.slice(0, page + 1);
+                    copy.push(token);
+                    return copy;
+                  });
+                  setPage((current) => current + 1);
+                }}
+              >
+                {t('models.hub.next')}
+              </Button>
+            </div>
+            <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value) as (typeof PAGE_SIZES)[number])}>
+              <SelectTrigger className="h-8 w-28" aria-label={t('models.hub.pageSize')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZES.map((count) => (
+                  <SelectItem key={count} value={String(count)}>{t('models.hub.perPage', { count })}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="min-h-0 overflow-auto p-3">
           {!picked ? <p className="text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
