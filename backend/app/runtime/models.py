@@ -18,6 +18,8 @@ class PingResult(ApiModel):
 class OllamaModel(ApiModel):
     name: str
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    digest: str | None = None
+    modified_at: str | None = Field(default=None, alias="modifiedAt")
     moe: bool = False
 
 

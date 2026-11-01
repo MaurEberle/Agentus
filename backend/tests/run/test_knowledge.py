@@ -30,7 +30,7 @@ def test_retrieve_before_complete_adds_context(monkeypatch, api_env) -> None:
         lambda req, should_abort=None, on_progress=None: _complete(req),
     )
     monkeypatch.setattr(
-        "app.run.harness.retrieve",
+        "app.run.agent_turn.retrieve",
         lambda *a, **k: [
             __import__("app.run.knowledge", fromlist=["Snippet"]).Snippet(
                 title="doc", section="s", text="secret snippet", score=1.0

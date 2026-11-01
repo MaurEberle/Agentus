@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { notify } from '@/lib/notifications';
 import { useDashboardQueries } from '@/modules/dashboard/api';
 import { ActiveNetworkCard } from '@/modules/dashboard/sections/ActiveNetworkCard';
@@ -29,7 +28,6 @@ function useErrorToast(active: boolean, titleKey: string) {
 }
 
 export function DashboardModule() {
-  const { t } = useTranslation();
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
   const { networks, ping, models, stores, help, resources, historyOk, recentRuns, weekRuns } =
     useDashboardQueries();
@@ -44,7 +42,6 @@ export function DashboardModule() {
 
   return (
     <div className="flex min-h-full w-full min-w-0 flex-col gap-4 overflow-x-hidden p-4 pb-24 md:p-6 md:pb-24">
-      <h1 className="text-xl font-semibold tracking-tight">{t('dashboard.title')}</h1>
       <StatusCard />
       <ResourcesPanel resources={resources.data ?? null} />
       {pageLoading ? (

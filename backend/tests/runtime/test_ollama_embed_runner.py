@@ -40,9 +40,11 @@ def test_library_dirs_prefer_newer_cuda(tmp_path: Path) -> None:
     dirs = library_dirs_for_llama(exe, vendor="cuda")
     assert dirs[0] == v13
     assert root in dirs
-    env = spawn_env(exe, base={"PATH": "C:\\Windows"}, vendor="cuda")
+    env = spawn_env(exe, base={"PATH": "C:\\Windows", "OLLAMA_LLM_LIBRARY": "vulkan"}, vendor="cuda")
     assert str(v13) in env["OLLAMA_LIBRARY_PATH"]
+    assert str(root) in env["OLLAMA_LIBRARY_PATH"]
     assert env["PATH"].startswith(str(v13))
+    assert "OLLAMA_LLM_LIBRARY" not in env
 
 
 def test_library_dirs_hip_on_amd(tmp_path: Path) -> None:
@@ -57,6 +59,26 @@ def test_library_dirs_hip_on_amd(tmp_path: Path) -> None:
     exe.write_bytes(b"exe")
     assert preferred_gpu_dir(root, vendor="hip") == hip
     assert library_dirs_for_llama(exe, vendor="hip")[0] == hip
+
+
+def test_amd_prefers_vulkan_when_hip_is_also_present(tmp_path: Path) -> None:
+    from app.runtime.ollama_embed_runner import AMD_VENDOR, backend_kind_for_vendor
+
+    root = tmp_path / "ollama"
+    hip = root / "rocm_v7_1"
+    vulkan = root / "vulkan"
+    hip.mkdir(parents=True)
+    vulkan.mkdir()
+    (hip / "ggml-hip.dll").write_bytes(b"hip")
+    (vulkan / "ggml-vulkan.dll").write_bytes(b"vk")
+    assert backend_kind_for_vendor(root, AMD_VENDOR) == "vulkan"
+    assert backend_kind_for_vendor(root, 0x8086) is None
+    assert backend_kind_for_vendor(root, None) is None
+    env = spawn_env(root / "llama-server.exe", base={"PATH": "C:\\Windows", "OLLAMA_VULKAN": "1"}, vendor="vulkan")
+    assert "OLLAMA_LLM_LIBRARY" not in env
+    assert "OLLAMA_VULKAN" not in env
+    assert str(vulkan) in env["OLLAMA_LIBRARY_PATH"]
+    assert str(root) in env["OLLAMA_LIBRARY_PATH"]
 
 
 def test_library_dirs_vulkan_without_cuda(tmp_path: Path) -> None:

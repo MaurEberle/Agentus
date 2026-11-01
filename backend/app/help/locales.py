@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-HELP_DOC_LOCALES = ("de", "en", "es", "fr", "tr", "pt", "zh", "ja", "ar")
+HELP_DOC_LOCALES = ("de", "en", "es")
 
 
 def resolve_help_locale(value: str | None) -> str:

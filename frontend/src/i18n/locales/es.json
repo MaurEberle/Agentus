@@ -19,12 +19,149 @@
     "monitoring": "Supervisión",
     "history": "Historial",
     "prompts": "Prompts",
+    "models": "Modelos",
     "settings": "Ajustes",
     "openMenu": "Abrir navegación",
     "closeMenu": "Cerrar navegación",
     "collapse": "Contraer barra lateral",
     "expand": "Expandir barra lateral",
     "main": "Navegación principal"
+  },
+  "tagCloud": {
+    "and": "Y",
+    "or": "O",
+    "mode": "Combinar etiquetas",
+    "empty": "Sin etiquetas",
+    "clear": "Quitar todas las etiquetas"
+  },
+  "models": {
+    "tabs": { "installed": "Instalados", "hub": "Hugging Face" },
+    "ribbon": { "tags": "Poner etiquetas", "delete": "Borrar" },
+    "list": { "selectAll": "Todos" },
+    "search": "Buscar por nombre, familia, cuantización",
+    "sort": { "name": "Nombre", "size": "Tamaño", "modified": "Modificado" },
+    "kind": { "label": "Tipo", "all": "Todos los tipos", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Imagen" },
+    "badges": { "vision": "Visión", "tools": "Herramientas", "thinking": "Pensamiento", "moe": "MoE" },
+    "filter": { "tags": "Etiquetas" },
+    "empty": "Ningún modelo coincide con este filtro.",
+    "unreachable": "Ollama no está disponible.",
+    "split": "Cambiar el ancho de la lista y los detalles",
+    "detail": {
+      "empty": "Elige un modelo.",
+      "many": "{{count}} modelos seleccionados.",
+      "delete": "Borrar",
+      "hf": "Hugging Face",
+      "loaded": "Cargado",
+      "loadedYes": "Sí",
+      "loadedNo": "No",
+      "family": "Familia",
+      "parameters": "Parámetros",
+      "quant": "Cuantización",
+      "format": "Formato",
+      "architecture": "Arquitectura",
+      "context": "Contexto",
+      "embedding": "Longitud de embedding",
+      "layers": "Capas",
+      "experts": "Expertos",
+      "capabilities": "Capacidades",
+      "license": "Licencia",
+      "template": "Hay plantilla de chat",
+      "size": "Tamaño",
+      "modified": "Modificado",
+      "vramNow": "VRAM en uso"
+    },
+    "delete": {
+      "title": "Borrar modelo",
+      "body": "{{name}} se eliminará de Ollama.",
+      "bodyMany": "Se eliminarán {{count}} modelos de Ollama.",
+      "inUseTitle": "El modelo está en uso",
+      "inUseBody": "{{name}} no se puede borrar mientras se usa.",
+      "inUseBodyMany": "{{count}} modelos no se pueden borrar mientras se usan.",
+      "network": "{{network}} · {{node}}",
+      "helpLlm": "Chat de ayuda",
+      "helpEmbed": "Embedding de ayuda",
+      "helpFallback": "Modelo de reserva de ayuda",
+      "run": "Una ejecución en curso tiene el modelo cargado.",
+      "loaded": "El modelo está cargado. Se descargará antes."
+    },
+    "dialog": { "close": "Cerrar", "cancel": "Cancelar", "save": "Guardar" },
+    "hub": {
+      "search": "Buscar por nombre",
+      "type": "Tipo",
+      "size": "Tamaño",
+      "sort": "Orden",
+      "types": { "text": "Texto", "embed": "Embedding", "vision": "Visión", "moe": "MoE" },
+      "sizes": { "any": "Todo", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "custom": "Rango", "from": "desde", "to": "hasta" },
+      "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado", "name": "Nombre" },
+      "capabilities": "Capacidades",
+      "reset": "Restablecer filtros",
+      "empty": "Ningún modelo coincide.",
+      "failed": "La búsqueda falló.",
+      "downloads": "{{count}} descargas",
+      "likes": "{{count}} me gusta",
+      "pick": "Elige un modelo.",
+      "first": "Inicio",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página {{page}}",
+      "pageSize": "Resultados por página",
+      "perPage": "{{count}} por página",
+      "quants": "Cuantización",
+      "install": "Instalar",
+      "installed": "Instalado",
+      "gated": "Este modelo necesita aprobación en Hugging Face.",
+      "noGguf": "No hay un GGUF instalable.",
+      "vramHint": "El archivo es mayor que la memoria gráfica.",
+      "progress": "Descargando el modelo",
+      "cancel": "Cancelar",
+      "open": "Abrir en Hugging Face",
+      "detail": {
+        "author": "Autor",
+        "updated": "Modificado",
+        "downloads": "Descargas",
+        "likes": "Me gusta",
+        "pipeline": "Tarea",
+        "license": "Licencia",
+        "base": "Modelo base",
+        "languages": "Idiomas",
+        "architecture": "Arquitectura",
+        "parameters": "Parámetros",
+        "context": "Contexto",
+        "repo": "Repositorio",
+        "template": "Plantilla de chat",
+        "tools": "Herramientas",
+        "thinking": "Pensamiento",
+        "vision": "Visión",
+        "moe": "MoE"
+      }
+    },
+    "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." },
+    "downloads": {
+      "title": "Descargas",
+      "pauseAll": "Pausar descargas",
+      "resumeAll": "Reanudar descargas",
+      "lead": "Una descarga a la vez. El resto espera.",
+      "empty": "No hay descargas.",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "stop": "Detener",
+      "remove": "Quitar",
+      "removeMany": "Quitar {{count}}",
+      "confirmTitle": "Quitar descarga",
+      "confirmBody": "Se quitará {{name}}. Se borrarán los archivos descargados.",
+      "confirmBodyDone": "Se quitará {{name}} de la lista. Los archivos del modelo se conservan.",
+      "confirmBodyMany": "Se quitarán {{count}} descargas. Se borrarán los archivos descargados.",
+      "confirmBodyManyDone": "Se quitarán {{count}} descargas terminadas de la lista. Los archivos del modelo se conservan.",
+      "confirmBodyManyMixed": "Se quitarán {{count}} descargas. Se borrarán los archivos de las descargas no terminadas. Los modelos terminados se conservan.",
+      "status": {
+        "queued": "En espera",
+        "running": "Descargando",
+        "paused": "Pausada",
+        "stopped": "Detenida",
+        "done": "Lista",
+        "error": "Fallida"
+      }
+    }
   },
   "shell": {
     "start": "Iniciar",
@@ -43,24 +180,10 @@
     "languageDe": "Deutsch",
     "languageEn": "English",
     "languageEs": "Español",
-    "languageFr": "Français",
-    "languageTr": "Türkçe",
-    "languagePt": "Português",
-    "languageZh": "中文",
-    "languageJa": "日本語",
-    "languageAr": "العربية",
-    "languageRu": "Русский",
     "languageNames": {
       "de": "Alemán",
       "en": "Inglés",
-      "es": "Español",
-      "fr": "Francés",
-      "tr": "Turco",
-      "pt": "Portugués",
-      "zh": "Chino",
-      "ja": "Japonés",
-      "ar": "Árabe",
-      "ru": "Ruso"
+      "es": "Español"
     },
     "window": {
       "minimize": "Minimizar",
@@ -157,9 +280,6 @@
   },
   "footer": {
     "copyright": "© {{year}} Agentus Network"
-  },
-  "stub": {
-    "body": "Este módulo se implementará en el siguiente paso."
   },
   "notFound": {
     "title": "Página no encontrada",
@@ -297,6 +417,7 @@
       "modelsMoe": "Modelos MoE",
       "modelsGroupEmpty": "Ninguno",
       "modelsEmpty": "No hay modelos o el runtime no está disponible.",
+      "openModels": "Abrir la biblioteca de modelos",
       "modelName": "Modelo",
       "modelSize": "Tamaño",
       "status": {
@@ -791,12 +912,14 @@
         "title": "Cargar prompt",
         "body": "Elige un prompt guardado. Sustituye el prompt de sistema de este nodo.",
         "search": "Buscar",
+        "sort": "Orden",
         "sortUpdated": "Modificado",
         "sortName": "Nombre",
         "apply": "Aplicar",
         "empty": "Aún no hay prompts.",
         "filter": "Ningún prompt coincide con este filtro.",
         "library": "Ir a los prompts",
+        "split": "Cambiar el ancho de la lista y las etiquetas",
         "failed": "No se pudo cargar el prompt."
       },
       "tool": {
@@ -842,7 +965,12 @@
         "dateHint": "Muestra la hora actual en una zona IANA; por defecto UTC. Un instante se puede desplazar días, horas y minutos, también hacia atrás. La diferencia entre dos instantes sale en segundos, horas y días. Las partes son fecha, hora y día de la semana; el lunes es 1. El mismo instante se puede ver en otra zona.",
         "calculatorHint": "Calcula una expresión con + - * / // % ** y paréntesis. El exponente de ** puede ser como máximo 20. Constantes: pi y e. Funciones: sqrt, cbrt, abs, round, floor, ceil, min, max, log, ln, log10, exp, sin, cos, tan, factorial. log y ln son el logaritmo natural; log puede llevar base. sin, cos y tan usan radianes. factorial solo admite enteros de 0 a 20.",
         "searchProvider": "Proveedor",
-        "searchProviderName": { "brave": "Brave", "tavily": "Tavily", "exa": "Exa", "searxng": "SearXNG" },
+        "searchProviderName": {
+          "brave": "Brave",
+          "tavily": "Tavily",
+          "exa": "Exa",
+          "searxng": "SearXNG"
+        },
         "searchBaseUrl": "Dirección base",
         "maxResults": "Resultados",
         "searchHint": {
@@ -1029,8 +1157,6 @@
       },
       "direction": "Orden",
       "tags": "Etiquetas",
-      "tagsHint": "Varias etiquetas: O",
-      "noTags": "Sin etiquetas",
       "onlyValid": "Solo válidas",
       "onlyActive": "Solo activas"
     },
@@ -1042,7 +1168,9 @@
       "graph": "Grafo",
       "updated": "Modificada",
       "lastUsed": "Último uso",
-      "counts": "{{nodes}} nodos · {{edges}} aristas"
+      "counts": "{{nodes}} nodos · {{edges}} aristas",
+      "move": "Mover {{column}}",
+      "resize": "Cambiar el ancho de {{column}}"
     },
     "badge": {
       "valid": "Válida",
@@ -1707,9 +1835,21 @@
     }
   },
   "prompts": {
-    "search": "Buscar",
-    "sort": { "name": "Nombre", "updated": "Modificado" },
-    "empty": { "library": "Aún no hay prompts.", "filter": "Ningún prompt coincide con este filtro." },
+    "search": "Buscar por nombre, descripción, etiquetas",
+    "filter": {
+      "tags": "Etiquetas"
+    },
+    "list": {
+      "selectAll": "Todos"
+    },
+    "sort": {
+      "name": "Nombre",
+      "updated": "Modificado"
+    },
+    "empty": {
+      "library": "Aún no hay prompts.",
+      "filter": "Ningún prompt coincide con este filtro."
+    },
     "ribbon": {
       "new": "Nuevo",
       "edit": "Editar",
@@ -1717,8 +1857,7 @@
       "tags": "Añadir etiquetas",
       "delete": "Eliminar",
       "import": "Importar",
-      "export": "Exportar",
-      "refresh": "Actualizar"
+      "export": "Exportar"
     },
     "detail": {
       "none": "Ningún prompt seleccionado.",
@@ -1738,6 +1877,12 @@
       "bodyRequired": "El prompt no puede estar vacío.",
       "save": "Guardar"
     },
+    "unsaved": {
+      "title": "Cambios sin guardar",
+      "body": "El prompt todavía no está guardado. ¿Descartarlo y continuar?",
+      "stay": "Quedarse",
+      "leave": "Descartar"
+    },
     "import": {
       "title": "Importar prompts",
       "pick": "Elegir archivos",
@@ -1745,10 +1890,22 @@
       "unreadable": "No se pudo leer {{name}}.",
       "save": "Aplicar {{count}}"
     },
-    "delete": { "title": "¿Eliminar {{count}} prompts?" },
-    "dialog": { "close": "Cerrar", "cancel": "Cancelar" },
-    "error": { "title": "No se pudieron cargar los prompts", "body": "La biblioteca no está disponible ahora." },
-    "resize": { "listHeight": "Cambiar la altura de la colección", "detailHeight": "Cambiar la altura del detalle", "width": "Cambiar el ancho" },
+    "delete": {
+      "title": "¿Eliminar {{count}} prompts?"
+    },
+    "dialog": {
+      "close": "Cerrar",
+      "cancel": "Cancelar"
+    },
+    "error": {
+      "title": "No se pudieron cargar los prompts",
+      "body": "La biblioteca no está disponible ahora."
+    },
+    "resize": {
+      "listHeight": "Cambiar la altura de la colección",
+      "detailHeight": "Cambiar la altura del detalle",
+      "width": "Cambiar el ancho"
+    },
     "notify": {
       "created": "Prompt creado",
       "saved": "Prompt guardado",

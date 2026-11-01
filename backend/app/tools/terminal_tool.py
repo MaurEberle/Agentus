@@ -6,8 +6,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from app.tools.file_access_tool import is_forbidden_root
 from app.tools.models import ExecuteResult
+from app.tools.sandbox import configured_root, tool_fail
 
 DEFAULT_PROGRAMS = ("git", "python", "py", "dotnet")
 TIMEOUT_SECONDS = 30
@@ -19,7 +19,7 @@ _SHELL_BREAKS = set("|<>&;\n\r")
 def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteResult:
     cfg = config or {}
     raw_args = args or {}
-    root, root_error = _root(cfg)
+    root, root_error = configured_root(cfg, error_prefix="tools.terminal")
     if root_error or root is None:
         return _fail(root_error or "tools.terminal.missingRoot")
 
@@ -36,22 +36,6 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
     if not programs:
         return _fail("tools.terminal.notGranted")
     return _run_program(root, command, programs)
-
-
-def _root(cfg: dict[str, Any]) -> tuple[Path | None, str | None]:
-    root_raw = str(cfg.get("rootPath") or cfg.get("root") or "").strip()
-    if not root_raw:
-        return None, "tools.terminal.missingRoot"
-    root_in = Path(root_raw).expanduser()
-    if not root_in.is_absolute():
-        return None, "tools.terminal.rootNotDir"
-    try:
-        root = root_in.resolve()
-    except OSError:
-        return None, "tools.terminal.rootNotDir"
-    if not root.is_dir() or is_forbidden_root(root):
-        return None, "tools.terminal.rootNotDir"
-    return root, None
 
 
 def _programs(cfg: dict[str, Any]) -> set[str]:
@@ -198,5 +182,4 @@ def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
     proc.kill()
 
 
-def _fail(key: str, result: object | None = None) -> ExecuteResult:
-    return ExecuteResult(ok=False, error_key=key, result=result)
+_fail = tool_fail

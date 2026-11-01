@@ -67,6 +67,7 @@ export function NetworksModule() {
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
   const filterQuery = useNetworksUi((state) => state.query);
   const tagFilter = useNetworksUi((state) => state.tagFilter);
+  const tagMode = useNetworksUi((state) => state.tagMode);
   const onlyValid = useNetworksUi((state) => state.onlyValid);
   const onlyActive = useNetworksUi((state) => state.onlyActive);
   const sortKey = useNetworksUi((state) => state.sortKey);
@@ -77,8 +78,8 @@ export function NetworksModule() {
   const pruneSelection = useNetworksUi((state) => state.pruneSelection);
   const setQuery = useNetworksUi((state) => state.setQuery);
   const filtered = useMemo(
-    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, onlyValid, onlyActive, sortKey, sortDir }),
-    [filterQuery, items, onlyActive, onlyValid, sortDir, sortKey, tagFilter],
+    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, tagMode, onlyValid, onlyActive, sortKey, sortDir }),
+    [filterQuery, items, onlyActive, onlyValid, sortDir, sortKey, tagFilter, tagMode],
   );
   const selected = useMemo(
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is NetworkListItem => Boolean(item)),
@@ -87,6 +88,11 @@ export function NetworksModule() {
   const tags = useMemo(() => uniqueTags(items), [items]);
   const seedTags = useMemo(() => sharedTags(selected), [selected]);
   const filtersOn = Boolean(filterQuery.trim() || tagFilter.length || onlyValid || onlyActive);
+  const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
+  useEffect(() => {
+    if (query.isLoading) return;
+    pruneSelection(filtered.map((item) => item.id));
+  }, [tagSelectionKey]);
 
   const [busy, setBusy] = useState(false);
   const [renameItem, setRenameItem] = useState<NetworkListItem | null>(null);
@@ -225,10 +231,9 @@ export function NetworksModule() {
           onDelete: () => setDeleteItems(selected),
           onImport: () => setImportOpen(true),
           onExport: () => setExportOpen(true),
-          onRefresh: () => void query.refetch(),
         }}
       />
-      <FilterBar tags={tags} />
+      <FilterBar tags={tags} tagSets={items.map((item) => item.tags ?? [])} />
       {query.isError ? (
         <Alert variant="destructive" className="m-3">
           <AlertTitle>{t('networks.error.title')}</AlertTitle>
@@ -263,7 +268,7 @@ export function NetworksModule() {
               variant="outline"
               onClick={() => {
                 setQuery('');
-                useNetworksUi.setState({ tagFilter: [], onlyValid: false, onlyActive: false });
+                useNetworksUi.setState({ tagFilter: [], tagMode: 'or', onlyValid: false, onlyActive: false });
               }}
             >
               {t('networks.empty.clearFilters')}
@@ -271,8 +276,8 @@ export function NetworksModule() {
           ) : null}
         </div>
       ) : (
-        <div ref={libraryRowRef} className="flex min-h-0 flex-1">
-          <div className="min-h-0 min-w-0 flex-1">
+        <div ref={libraryRowRef} className="flex min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <NetworkList items={filtered} loading={false} onOpen={openEditor} />
           </div>
           {isDesktop ? (

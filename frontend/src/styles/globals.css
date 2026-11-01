@@ -96,6 +96,57 @@
   }
 }
 
+/* App scrollbars: the same primary green as buttons and badges, a bit wider than the thin default. */
+* {
+  scrollbar-color: hsl(var(--primary)) hsl(var(--accent));
+}
+
+*::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+*::-webkit-scrollbar-track {
+  background: hsl(var(--accent));
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border: 2px solid hsl(var(--accent));
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-corner {
+  background: hsl(var(--accent));
+}
+
+/* Radix draws its own bar. Keep the native one inside the viewport hidden. */
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: none;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+[data-radix-scroll-area-scrollbar] {
+  background: hsl(var(--accent));
+}
+
+[data-radix-scroll-area-scrollbar][data-orientation='vertical'] {
+  width: 14px;
+}
+
+[data-radix-scroll-area-scrollbar][data-orientation='horizontal'] {
+  height: 14px;
+}
+
+[data-radix-scroll-area-thumb] {
+  background: hsl(var(--primary));
+}
+
 /* Unlayered so it wins over @xyflow/react/dist/style.css (also unlayered). */
 .network-flow .react-flow__pane,
 .network-flow .react-flow__pane.draggable,

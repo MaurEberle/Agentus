@@ -1,4 +1,4 @@
-export const APP_LANGUAGES = ['de', 'en', 'es', 'fr', 'tr', 'pt', 'ru', 'zh', 'ja', 'ar'] as const;
+export const APP_LANGUAGES = ['de', 'en', 'es'] as const;
 
 export type AppLanguage = (typeof APP_LANGUAGES)[number];
 
@@ -6,26 +6,12 @@ export const LANGUAGE_LABEL_KEYS: Record<AppLanguage, `shell.language${Capitaliz
   de: 'shell.languageDe',
   en: 'shell.languageEn',
   es: 'shell.languageEs',
-  fr: 'shell.languageFr',
-  tr: 'shell.languageTr',
-  pt: 'shell.languagePt',
-  ru: 'shell.languageRu',
-  zh: 'shell.languageZh',
-  ja: 'shell.languageJa',
-  ar: 'shell.languageAr',
 };
 
 export const LANGUAGE_NAME_KEYS: Record<AppLanguage, `shell.languageNames.${AppLanguage}`> = {
   de: 'shell.languageNames.de',
   en: 'shell.languageNames.en',
   es: 'shell.languageNames.es',
-  fr: 'shell.languageNames.fr',
-  tr: 'shell.languageNames.tr',
-  pt: 'shell.languageNames.pt',
-  ru: 'shell.languageNames.ru',
-  zh: 'shell.languageNames.zh',
-  ja: 'shell.languageNames.ja',
-  ar: 'shell.languageNames.ar',
 };
 
 export function formatLanguageOptionLabel(native: string, translated: string): string {
@@ -35,14 +21,12 @@ export function formatLanguageOptionLabel(native: string, translated: string): s
   return `${own} (${local})`;
 }
 
-const RTL_LANGUAGES: ReadonlySet<AppLanguage> = new Set(['ar']);
-
 export function isAppLanguage(value: string | undefined): value is AppLanguage {
   return Boolean(value) && (APP_LANGUAGES as readonly string[]).includes(value as string);
 }
 
-export function languageDirection(value: AppLanguage): 'ltr' | 'rtl' {
-  return RTL_LANGUAGES.has(value) ? 'rtl' : 'ltr';
+export function languageDirection(_value: AppLanguage): 'ltr' | 'rtl' {
+  return 'ltr';
 }
 
 export function resolveAppLanguage(value: string | undefined): AppLanguage {

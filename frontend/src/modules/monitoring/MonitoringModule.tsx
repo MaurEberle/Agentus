@@ -70,7 +70,6 @@ export function MonitoringModule() {
 
   return (
     <div className="flex min-h-full w-full min-w-0 flex-col gap-4 p-4 pb-24 [overflow-anchor:none] md:p-6 md:pb-24">
-      <h1 className="text-xl font-semibold tracking-tight">{t('monitoring.title')}</h1>
       {import.meta.env.DEV ? <DevBar /> : null}
       <StatusBanner
         status={serviceStatus}

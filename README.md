@@ -22,7 +22,7 @@ Ein Netz ist entweder eine **Kette** (Chat → Agent → Ende, optional Router, 
 
 Wissen darf auf einen beliebigen Ordner zeigen, außer auf eine Laufwerk- oder Systemwurzel und auf den Hilfe-Korpus. Hängt Wissen an einem Agenten, bleibt der Start in „startet“, bis der Index fertig oder als aktuell erkannt ist. Monitoring, Kopfzeile und Dashboard nennen den Knoten.
 
-Sprachen der Oberfläche und der Hilfe: Deutsch (Default), English, Español, Français, Türkçe, Português, Русский, 中文, 日本語, العربية.
+Sprachen der Oberfläche und der Hilfe: Deutsch (Default), English, Español.
 
 ## Voraussetzungen
 
@@ -83,7 +83,7 @@ Apps & Features → **Agentus Network**. Programmdateien, Shortcuts und Uninstal
 | `%LOCALAPPDATA%\Agentus-Network\data\` | vier SQLite-Stores + Hilfe-Korpus `agentus_network_rag_documents/` |
 | Windows-Anmeldeinformationsverwaltung | Secrets, Target `Agentus-Network` / `credential/{id}` |
 
-Portable: Config und `data\` neben der EXE. Hilfe-Markdown liegt als Quelle unter `resources/help_docs/` (neun Sprachen). Beim App-Start kopiert der Seed **fehlende** Dateien nach `agentus_network_rag_documents/`. Vorhandene Dateien werden nicht überschrieben. Das Setup kopiert den Korpus nicht. Der Hilfe-Chat liest den Index, nicht die Markdown-Dateien direkt: neue Texte gelten erst nach **Index neu aufbauen** unter Einstellungen → Hilfe-Chatbot.
+Portable: Config und `data\` neben der EXE. Hilfe-Markdown liegt als Quelle unter `resources/help_docs/` (Deutsch, English, Español). Beim App-Start kopiert der Seed **fehlende** Dateien nach `agentus_network_rag_documents/`. Vorhandene Dateien werden nicht überschrieben. Das Setup kopiert den Korpus nicht. Der Hilfe-Chat liest den Index, nicht die Markdown-Dateien direkt: neue Texte gelten erst nach **Index neu aufbauen** unter Einstellungen → Hilfe-Chatbot.
 
 ## Entwicklung
 

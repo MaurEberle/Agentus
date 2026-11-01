@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import base64
 import fnmatch
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from app.tools.models import ExecuteResult
+from app.tools.sandbox import configured_root, is_forbidden_root, tool_fail
 
 FILE_ACTION_ORDER = (
     "list",
@@ -35,30 +35,12 @@ MAX_TREE_DEPTH = 4
 MAX_READ_MANY = 8
 
 
-def is_forbidden_root(path: Path) -> bool:
-    try:
-        real = path.expanduser().resolve()
-    except OSError:
-        return True
-    drive, tail = os.path.splitdrive(str(real))
-    return len(tail.strip("\\/")) == 0
-
-
 def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteResult:
     cfg = config or {}
     raw_args = args or {}
-    root_raw = str(cfg.get("rootPath") or cfg.get("root") or "").strip()
-    if not root_raw:
-        return _fail("tools.fileAccess.missingRoot")
-    root_in = Path(root_raw).expanduser()
-    if not root_in.is_absolute():
-        return _fail("tools.fileAccess.rootNotDir")
-    try:
-        root = root_in.resolve()
-    except OSError:
-        return _fail("tools.fileAccess.rootNotDir")
-    if not root.is_dir() or is_forbidden_root(root):
-        return _fail("tools.fileAccess.rootNotDir")
+    root, root_error = configured_root(cfg, error_prefix="tools.fileAccess")
+    if root is None:
+        return _fail(root_error or "tools.fileAccess.missingRoot")
 
     action = str(raw_args.get("action") or "").strip().lower()
     if action not in ACTIONS:
@@ -123,8 +105,7 @@ def _chosen_actions(cfg: dict[str, Any]) -> set[str] | None:
     return {str(item) for item in raw if str(item) in ACTIONS}
 
 
-def _fail(key: str, result: object | None = None) -> ExecuteResult:
-    return ExecuteResult(ok=False, error_key=key, result=result)
+_fail = tool_fail
 
 
 def _rel(path: Path, root: Path) -> str:

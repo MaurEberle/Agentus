@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownZA, Copy, Download, Pencil, Plus, Tags, Trash2, Upload } from 'lucide-react';
+import { useBlocker } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -7,12 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { TagCloud } from '@/components/tags/TagCloud';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,7 +32,7 @@ import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
 import { ExportCancelled, saveExportFile } from '@/lib/saveFile';
-import { parseTagTokens } from '@/lib/tags';
+import { matchesTags, parseTagTokens, sharedTagList } from '@/lib/tags';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { formatDateTime } from '@/modules/history/model/format';
 import {
@@ -38,6 +48,7 @@ import {
 } from '@/modules/prompts/api';
 import type { PromptDetail, PromptDraft, PromptFile, PromptListItem } from '@/modules/prompts/model';
 import { parsePromptFile } from '@/modules/prompts/model';
+import { usePromptFilters, type PromptFilters, type PromptSortKey } from '@/modules/prompts/filters';
 import { unzipTextFiles } from '@/modules/prompts/unzip';
 import { TagsDialog } from '@/modules/networks/dialogs/TagsDialog';
 import { zipStore } from '@/modules/networks/model/zip';
@@ -85,12 +96,67 @@ export function PromptsModule() {
     }
     return [...tags].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [items]);
-  const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<'name' | 'updated'>('updated');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [promptFilters, updatePromptFilters] = usePromptFilters();
+  const { search, tagFilter, tagMode, sortKey, sortDir } = promptFilters;
+  const setSearch = (value: string) => updatePromptFilters({ search: value });
+  const chooseSort = (key: PromptSortKey) =>
+    updatePromptFilters((current) =>
+      current.sortKey === key
+        ? { sortDir: current.sortDir === 'asc' ? 'desc' : 'asc' }
+        : { sortKey: key, sortDir: key === 'name' ? 'asc' : 'desc' },
+    );
+  const toggleSortDir = () => updatePromptFilters((current) => ({ sortDir: current.sortDir === 'asc' ? 'desc' : 'asc' }));
+  const toggleTag = (tag: string) =>
+    updatePromptFilters((current) => ({
+      tagFilter: current.tagFilter.includes(tag) ? current.tagFilter.filter((item) => item !== tag) : [...current.tagFilter, tag],
+    }));
+  const clearTags = () => updatePromptFilters({ tagFilter: [] });
+  const setTagMode = (tagMode: PromptFilters['tagMode']) => updatePromptFilters({ tagMode });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [editor, setEditor] = useState<PromptDetail | 'new' | null>(null);
+  const [createNonce, setCreateNonce] = useState(0);
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const dirtyRef = useRef(false);
+  const allowLeaveRef = useRef(false);
+  const pendingRef = useRef<(() => void) | null>(null);
+  dirtyRef.current = editorDirty;
+  const markDirty = useCallback((value: boolean) => {
+    dirtyRef.current = value;
+    setEditorDirty(value);
+  }, []);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !allowLeaveRef.current && dirtyRef.current && currentLocation.pathname !== nextLocation.pathname,
+  );
+  function stayWithDraft() {
+    pendingRef.current = null;
+    setConfirmOpen(false);
+    if (blocker.state === 'blocked') blocker.reset?.();
+  }
+  function discardDraft() {
+    const action = pendingRef.current;
+    pendingRef.current = null;
+    setConfirmOpen(false);
+    dirtyRef.current = false;
+    setEditorDirty(false);
+    allowLeaveRef.current = true;
+    if (blocker.state === 'blocked') blocker.proceed?.();
+    setEditor(null);
+    action?.();
+    queueMicrotask(() => {
+      allowLeaveRef.current = false;
+    });
+  }
+  function guard(action: () => void) {
+    if (!dirtyRef.current) {
+      action();
+      return;
+    }
+    pendingRef.current = action;
+    setConfirmOpen(true);
+  }
   const [tagsOpen, setTagsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -99,6 +165,7 @@ export function PromptsModule() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     const next = items.filter((item) => {
+      if (!matchesTags(item.tags, tagFilter, tagMode)) return false;
       if (!needle) return true;
       return `${item.name} ${item.description} ${item.tags.join(' ')}`.toLowerCase().includes(needle);
     });
@@ -114,12 +181,13 @@ export function PromptsModule() {
       return (av - bv) * dir;
     });
     return next;
-  }, [items, search, sortDir, sortKey]);
+  }, [items, search, sortDir, sortKey, tagFilter, tagMode]);
 
   const selected = useMemo(
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is PromptListItem => Boolean(item)),
     [items, selectedIds],
   );
+  const seedTags = useMemo(() => sharedTagList(selected), [selected]);
   const activeId = selected.length === 1 ? selected[0].id : undefined;
   const detailQuery = useQuery({
     queryKey: ['prompts', activeId],
@@ -148,17 +216,37 @@ export function PromptsModule() {
     }
   }, []);
 
-  function chooseSort(key: 'name' | 'updated') {
-    setSortDir((dir) => (sortKey === key ? (dir === 'asc' ? 'desc' : 'asc') : 'desc'));
-    setSortKey(key);
-  }
-
   function toggle(id: string) {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
-  async function openEditor(id: string) {
+  const visibleIds = filtered.map((item) => item.id);
+  const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
+  useEffect(() => {
+    if (query.isLoading) return;
+    const visible = new Set(visibleIds);
+    setSelectedIds((current) => {
+      const next = current.filter((id) => visible.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [tagSelectionKey]);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+
+  function toggleAll() {
+    if (allVisibleSelected) {
+      const visible = new Set(visibleIds);
+      setSelectedIds((current) => current.filter((id) => !visible.has(id)));
+      return;
+    }
+    setSelectedIds((current) => [...new Set([...current, ...visibleIds])]);
+  }
+
+  function openEditor(id: string) {
     if (busy) return;
+    guard(() => void loadEditor(id));
+  }
+
+  async function loadEditor(id: string) {
     setSelectedIds([id]);
     try {
       const detail = detailQuery.data?.id === id ? detailQuery.data : await getPrompt(id);
@@ -188,49 +276,76 @@ export function PromptsModule() {
     }, 'prompts.notify.exported');
   }
 
+  const filters = (
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} aria-label={t('prompts.search')} className="max-w-xs" />
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={sortKey === 'name' ? 'secondary' : 'outline'}
+          onClick={() => chooseSort('name')}
+        >
+          {t('prompts.sort.name')}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={sortKey === 'updated' ? 'secondary' : 'outline'}
+          onClick={() => chooseSort('updated')}
+        >
+          {t('prompts.sort.updated')}
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          onClick={toggleSortDir}
+          aria-label={t('networks.filter.direction')}
+        >
+          {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
+        </Button>
+      </div>
+      <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
+      <TagCloud
+        tags={tagSuggestions}
+        tagSets={items.map((item) => item.tags)}
+        selected={tagFilter}
+        mode={tagMode}
+        onToggle={toggleTag}
+        onClear={clearTags}
+        onModeChange={setTagMode}
+        label={t('prompts.filter.tags')}
+      />
+    </div>
+  );
+
   const listPane = (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap gap-2 border-b p-3">
-        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={sortKey === 'name' ? 'secondary' : 'outline'}
-            onClick={() => chooseSort('name')}
-          >
-            {t('prompts.sort.name')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={sortKey === 'updated' ? 'secondary' : 'outline'}
-            onClick={() => chooseSort('updated')}
-          >
-            {t('prompts.sort.updated')}
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))}
-            aria-label={t('networks.filter.direction')}
-          >
-            {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
-          </Button>
+      <div className="flex items-center border-b py-2">
+        <div className="px-3">
+          <Checkbox
+            checked={allVisibleSelected}
+            onCheckedChange={toggleAll}
+            disabled={filtered.length === 0}
+            aria-label={t('prompts.list.selectAll')}
+          />
         </div>
+        <span className="px-3 text-sm text-muted-foreground">{t('prompts.list.selectAll')}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {filtered.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">{t(items.length ? 'prompts.empty.filter' : 'prompts.empty.library')}</p>
         ) : (
-          <ul>
+          <ul className="text-sm">
             {filtered.map((item) => (
-              <li key={item.id} className={cn('flex items-center gap-2 border-b px-3 py-2', activeId === item.id && 'bg-accent/60')}>
-                <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggle(item.id)} aria-label={item.name} className="p-0" />
+              <li key={item.id} className={cn('flex items-center border-b py-2', activeId === item.id && 'bg-accent/60')}>
+                <div className="px-3">
+                  <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggle(item.id)} aria-label={item.name} />
+                </div>
                 <button
                   type="button"
-                  className="min-w-0 flex-1 text-left"
+                  className="min-w-0 flex-1 px-3 text-left"
                   onClick={() => setSelectedIds([item.id])}
                   onDoubleClick={() => void openEditor(item.id)}
                 >
@@ -245,7 +360,21 @@ export function PromptsModule() {
     </div>
   );
 
-  const detail = (
+  const detail = editor ? (
+    <PromptEditor
+      key={editor === 'new' ? `new-${createNonce}` : editor.id}
+      initial={editor === 'new' ? null : editor}
+      busy={busy}
+      suggestions={tagSuggestions}
+      onClose={() => guard(() => setEditor(null))}
+      onDirtyChange={markDirty}
+      onSave={(draft) => void run(async () => {
+        if (editor !== 'new') await updatePrompt(editor.id, draft);
+        else await createPrompt(draft);
+        setEditor(null);
+      }, editor === 'new' ? 'prompts.notify.created' : 'prompts.notify.saved')}
+    />
+  ) : (
     <div className="flex h-full min-h-0 flex-col">
       {selected.length === 0 ? (
         <p className="flex flex-1 items-center justify-center p-4 text-center text-sm text-muted-foreground">{t('prompts.detail.none')}</p>
@@ -279,28 +408,37 @@ export function PromptsModule() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex flex-wrap gap-2 border-b px-3 py-2">
-        <Button type="button" size="sm" onClick={() => setEditor('new')} disabled={busy}>{t('prompts.ribbon.new')}</Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => detailQuery.data && setEditor(detailQuery.data)}>
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+        <Button type="button" size="sm" onClick={() => guard(() => { setCreateNonce((value) => value + 1); setEditor('new'); })} disabled={busy}>
+          <Plus />
+          {t('prompts.ribbon.new')}
+        </Button>
+        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => detailQuery.data && guard(() => setEditor(detailQuery.data!))}>
+          <Pencil />
           {t('prompts.ribbon.edit')}
         </Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => void run(async () => { await duplicatePrompt(selected[0].id); }, 'prompts.notify.duplicated')}>
+          <Copy />
           {t('prompts.ribbon.duplicate')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => setTagsOpen(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => guard(() => setTagsOpen(true))}>
+          <Tags />
           {t('prompts.ribbon.tags')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => setDeleteOpen(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => guard(() => setDeleteOpen(true))}>
+          <Trash2 />
           {t('prompts.ribbon.delete')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setImportOpen(true)}>{t('prompts.ribbon.import')}</Button>
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => guard(() => setImportOpen(true))}>
+          <Upload />
+          {t('prompts.ribbon.import')}
+        </Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => void onExport()}>
+          <Download />
           {t('prompts.ribbon.export')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>
-          {t('prompts.ribbon.refresh')}
-        </Button>
       </div>
+      {filters}
       {query.isError ? (
         <Alert variant="destructive" className="m-3">
           <AlertTitle>{t('prompts.error.title')}</AlertTitle>
@@ -308,7 +446,7 @@ export function PromptsModule() {
         </Alert>
       ) : null}
       {query.isLoading ? <ModuleLoading /> : (
-        <div data-split-row className="flex min-h-0 w-full flex-1">
+        <div data-split-row className={cn('flex min-h-0 w-full flex-1', !isDesktop && 'flex-col')}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="min-h-0 w-full flex-1 overflow-hidden">{listPane}</div>
           </div>
@@ -319,38 +457,25 @@ export function PromptsModule() {
               onChange={(listShare) => setPanes((current) => ({ ...current, listShare: clampListShare(listShare) }))}
             />
           ) : null}
-          {isDesktop ? (
+          {isDesktop || editor ? (
             <div
-              className="flex h-full min-h-0 min-w-0 shrink-0 flex-col"
-              style={{ width: `${(1 - panes.listShare) * 100}%` }}
+              className={cn('flex min-h-0 min-w-0 flex-col', isDesktop ? 'h-full shrink-0' : 'min-h-72 flex-1 border-t')}
+              style={isDesktop ? { width: `${(1 - panes.listShare) * 100}%` } : undefined}
             >
               <div className="min-h-0 w-full min-w-0 flex-1 overflow-hidden">{detail}</div>
             </div>
           ) : null}
         </div>
       )}
-      <PromptEditor
-        open={editor !== null}
-        initial={editor && editor !== 'new' ? editor : null}
-        busy={busy}
-        suggestions={tagSuggestions}
-        onClose={() => setEditor(null)}
-        onSave={(draft) => void run(async () => {
-          if (editor && editor !== 'new') await updatePrompt(editor.id, draft);
-          else await createPrompt(draft);
-          setEditor(null);
-        }, editor && editor !== 'new' ? 'prompts.notify.saved' : 'prompts.notify.created')}
-      />
       <TagsDialog
         open={tagsOpen}
         count={selected.length}
         busy={busy}
-        initialTags={parseTagTokens(selected.flatMap((item) => item.tags).join(','))}
+        initialTags={seedTags}
         suggestions={parseTagTokens(items.flatMap((item) => item.tags).join(','))}
         onClose={() => setTagsOpen(false)}
         onSave={(next) => void run(async () => {
-          const seed = selected[0]?.tags ?? [];
-          await savePromptTags(selected, seed, next);
+          await savePromptTags(selected, seedTags, next);
           setTagsOpen(false);
         }, 'prompts.notify.tagged')}
       />
@@ -371,6 +496,23 @@ export function PromptsModule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog
+        open={confirmOpen || blocker.state === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open) stayWithDraft();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('prompts.unsaved.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('prompts.unsaved.body')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={stayWithDraft}>{t('prompts.unsaved.stay')}</Button>
+            <Button type="button" onClick={discardDraft}>{t('prompts.unsaved.leave')}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ImportPromptsDialog
         open={importOpen}
         busy={busy}
@@ -385,38 +527,43 @@ export function PromptsModule() {
 }
 
 function PromptEditor({
-  open,
   initial,
   busy,
   suggestions,
   onClose,
   onSave,
+  onDirtyChange,
 }: {
-  open: boolean;
   initial: PromptDetail | null;
   busy: boolean;
   suggestions: string[];
   onClose: () => void;
   onSave: (draft: PromptDraft) => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const tagRef = useRef<TagInputHandle>(null);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [body, setBody] = useState('');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [body, setBody] = useState(initial?.body ?? '');
+  const [tagDraft, setTagDraft] = useState('');
   const [showErrors, setShowErrors] = useState(false);
   const nameMissing = !name.trim();
   const bodyMissing = !body.trim();
+  const initialTags = initial?.tags ?? [];
+  const dirty =
+    name.trim() !== (initial?.name ?? '').trim() ||
+    description.trim() !== (initial?.description ?? '').trim() ||
+    body.trim() !== (initial?.body ?? '').trim() ||
+    tagDraft.trim() !== '' ||
+    tags.length !== initialTags.length ||
+    tags.some((tag, index) => tag !== initialTags[index]);
 
   useEffect(() => {
-    if (!open) return;
-    setName(initial?.name ?? '');
-    setDescription(initial?.description ?? '');
-    setTags(initial?.tags ?? []);
-    setBody(initial?.body ?? '');
-    setShowErrors(false);
-  }, [initial, open]);
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+  useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
   function save() {
     if (nameMissing || bodyMissing) {
@@ -432,65 +579,74 @@ function PromptEditor({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent closeLabel={t('prompts.dialog.close')} className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{initial ? t('prompts.editor.edit') : t('prompts.editor.create')}</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-name">{t('prompts.editor.name')}</Label>
-            <Input
-              id="prompt-name"
-              value={name}
-              aria-invalid={showErrors && nameMissing}
-              className={showErrors && nameMissing ? 'border-destructive' : undefined}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {showErrors && nameMissing ? <p className="text-xs text-destructive">{t('prompts.editor.nameRequired')}</p> : null}
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-description">{t('prompts.editor.description')}</Label>
-            <Input id="prompt-description" value={description} onChange={(event) => setDescription(event.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-tags">{t('prompts.editor.tags')}</Label>
-            <TagInput
-              ref={tagRef}
-              id="prompt-tags"
-              value={tags}
-              onChange={setTags}
-              disabled={busy}
-              placeholder={t('networks.tags.placeholder')}
-              addLabel={t('networks.tags.add')}
-              removeLabel={(tag) => t('networks.tags.remove', { tag })}
-              suggestions={suggestions}
-              describedBy="prompt-tags-hint"
-            />
-            <p id="prompt-tags-hint" className="text-xs text-muted-foreground">
-              {t('networks.tags.hint')}
-            </p>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-body">{t('prompts.editor.body')}</Label>
-            <Textarea
-              id="prompt-body"
-              value={body}
-              aria-invalid={showErrors && bodyMissing}
-              onChange={(event) => setBody(event.target.value)}
-              className={cn('min-h-48 font-mono text-sm', showErrors && bodyMissing && 'border-destructive')}
-            />
-            {showErrors && bodyMissing ? <p className="text-xs text-destructive">{t('prompts.editor.bodyRequired')}</p> : null}
-          </div>
+    <form
+      className="flex h-full min-h-0 min-w-0 flex-col"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save();
+      }}
+    >
+      <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-2">
+        <h2 className="min-w-0 truncate text-sm font-semibold">{initial ? t('prompts.editor.edit') : t('prompts.editor.create')}</h2>
+        <div className="flex shrink-0 gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={onClose}>{t('prompts.dialog.cancel')}</Button>
+          <Button type="submit" size="sm" disabled={busy || nameMissing || bodyMissing}>{t('prompts.editor.save')}</Button>
         </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>{t('prompts.dialog.cancel')}</Button>
-          <Button type="button" disabled={busy || nameMissing || bodyMissing} onClick={save}>
-            {t('prompts.editor.save')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+      <div className="grid min-h-0 min-w-0 flex-1 content-start gap-3 overflow-auto p-4">
+        <div className="grid min-w-0 gap-1.5">
+          <Label htmlFor="prompt-name">{t('prompts.editor.name')}</Label>
+          <Input
+            id="prompt-name"
+            value={name}
+            aria-invalid={showErrors && nameMissing}
+            className={cn('w-full min-w-0', showErrors && nameMissing && 'border-destructive')}
+            onChange={(event) => setName(event.target.value)}
+          />
+          {showErrors && nameMissing ? <p className="text-xs text-destructive">{t('prompts.editor.nameRequired')}</p> : null}
+        </div>
+        <div className="grid min-w-0 gap-1.5">
+          <Label htmlFor="prompt-description">{t('prompts.editor.description')}</Label>
+          <Textarea
+            id="prompt-description"
+            value={description}
+            rows={2}
+            onChange={(event) => setDescription(event.target.value)}
+            className="min-h-14 w-full min-w-0 resize-y"
+          />
+        </div>
+        <div className="grid min-w-0 gap-1.5">
+          <Label htmlFor="prompt-tags">{t('prompts.editor.tags')}</Label>
+          <TagInput
+            ref={tagRef}
+            id="prompt-tags"
+            value={tags}
+            onChange={setTags}
+            disabled={busy}
+            placeholder={t('networks.tags.placeholder')}
+            addLabel={t('networks.tags.add')}
+            removeLabel={(tag) => t('networks.tags.remove', { tag })}
+            suggestions={suggestions}
+            describedBy="prompt-tags-hint"
+            onDraftChange={setTagDraft}
+          />
+          <p id="prompt-tags-hint" className="text-xs text-muted-foreground">
+            {t('networks.tags.hint')}
+          </p>
+        </div>
+        <div className="grid min-h-48 min-w-0 flex-1 gap-1.5">
+          <Label htmlFor="prompt-body">{t('prompts.editor.body')}</Label>
+          <Textarea
+            id="prompt-body"
+            value={body}
+            aria-invalid={showErrors && bodyMissing}
+            onChange={(event) => setBody(event.target.value)}
+            className={cn('h-full min-h-48 w-full min-w-0 resize-y font-mono text-sm', showErrors && bodyMissing && 'border-destructive')}
+          />
+          {showErrors && bodyMissing ? <p className="text-xs text-destructive">{t('prompts.editor.bodyRequired')}</p> : null}
+        </div>
+      </div>
+    </form>
   );
 }
 

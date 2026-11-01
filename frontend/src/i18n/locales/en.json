@@ -19,12 +19,149 @@
     "monitoring": "Monitoring",
     "history": "History",
     "prompts": "Prompts",
+    "models": "Models",
     "settings": "Settings",
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "main": "Main navigation"
+  },
+  "tagCloud": {
+    "and": "And",
+    "or": "Or",
+    "mode": "Combine tags",
+    "empty": "No tags",
+    "clear": "Clear all tags"
+  },
+  "models": {
+    "tabs": { "installed": "Installed", "hub": "Hugging Face" },
+    "ribbon": { "tags": "Set tags", "delete": "Delete" },
+    "list": { "selectAll": "All" },
+    "search": "Search name, family, quantization",
+    "sort": { "name": "Name", "size": "Size", "modified": "Updated" },
+    "kind": { "label": "Kind", "all": "All kinds", "embedding": "Embedding", "normal": "Normal", "moe": "MoE", "image": "Image" },
+    "badges": { "vision": "Vision", "tools": "Tools", "thinking": "Thinking", "moe": "MoE" },
+    "filter": { "tags": "Tags" },
+    "empty": "No models match this filter.",
+    "unreachable": "Ollama is unreachable.",
+    "split": "Resize the list and the details",
+    "detail": {
+      "empty": "Select a model.",
+      "many": "{{count}} models selected.",
+      "delete": "Delete",
+      "hf": "Hugging Face",
+      "loaded": "Loaded",
+      "loadedYes": "Yes",
+      "loadedNo": "No",
+      "family": "Family",
+      "parameters": "Parameters",
+      "quant": "Quantization",
+      "format": "Format",
+      "architecture": "Architecture",
+      "context": "Context",
+      "embedding": "Embedding length",
+      "layers": "Layers",
+      "experts": "Experts",
+      "capabilities": "Capabilities",
+      "license": "License",
+      "template": "Chat template present",
+      "size": "Size",
+      "modified": "Updated",
+      "vramNow": "VRAM in use"
+    },
+    "delete": {
+      "title": "Delete model",
+      "body": "{{name}} will be removed from Ollama.",
+      "bodyMany": "{{count}} models will be removed from Ollama.",
+      "inUseTitle": "Model is in use",
+      "inUseBody": "{{name}} cannot be deleted while it is in use.",
+      "inUseBodyMany": "{{count}} models cannot be deleted while they are in use.",
+      "network": "{{network}} · {{node}}",
+      "helpLlm": "Help chat",
+      "helpEmbed": "Help embedding",
+      "helpFallback": "Help fallback model",
+      "run": "A running run has this model loaded.",
+      "loaded": "The model is loaded. It will be unloaded first."
+    },
+    "dialog": { "close": "Close", "cancel": "Cancel", "save": "Save" },
+    "hub": {
+      "search": "Search by name",
+      "type": "Type",
+      "size": "Size",
+      "sort": "Sort",
+      "types": { "text": "Text", "embed": "Embedding", "vision": "Vision", "moe": "MoE" },
+      "sizes": { "any": "All", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "custom": "Range", "from": "from", "to": "to" },
+      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated", "name": "Name" },
+      "capabilities": "Capabilities",
+      "reset": "Reset filters",
+      "empty": "No matching models.",
+      "failed": "The search failed.",
+      "downloads": "{{count}} downloads",
+      "likes": "{{count}} likes",
+      "pick": "Select a model.",
+      "first": "First",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}",
+      "pageSize": "Results per page",
+      "perPage": "{{count}} per page",
+      "quants": "Quantization",
+      "install": "Install",
+      "installed": "Installed",
+      "gated": "This model needs approval on Hugging Face.",
+      "noGguf": "No installable GGUF file.",
+      "vramHint": "The file is larger than the graphics memory.",
+      "progress": "Downloading model",
+      "cancel": "Cancel",
+      "open": "Open on Hugging Face",
+      "detail": {
+        "author": "Author",
+        "updated": "Updated",
+        "downloads": "Downloads",
+        "likes": "Likes",
+        "pipeline": "Task",
+        "license": "License",
+        "base": "Base model",
+        "languages": "Languages",
+        "architecture": "Architecture",
+        "parameters": "Parameters",
+        "context": "Context",
+        "repo": "Repository",
+        "template": "Chat template",
+        "tools": "Tools",
+        "thinking": "Thinking",
+        "vision": "Vision",
+        "moe": "MoE"
+      }
+    },
+    "pull": { "failed": "The download failed.", "invalid": "This model name cannot be downloaded." },
+    "downloads": {
+      "title": "Downloads",
+      "pauseAll": "Pause downloads",
+      "resumeAll": "Resume downloads",
+      "lead": "One download runs at a time. The rest wait.",
+      "empty": "No downloads.",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "remove": "Remove",
+      "removeMany": "Remove {{count}}",
+      "confirmTitle": "Remove download",
+      "confirmBody": "{{name}} will be removed. The files downloaded for it will be deleted.",
+      "confirmBodyDone": "{{name}} will be removed from the list. The model files stay.",
+      "confirmBodyMany": "{{count}} downloads will be removed. The files downloaded for them will be deleted.",
+      "confirmBodyManyDone": "{{count}} finished downloads will be removed from the list. The model files stay.",
+      "confirmBodyManyMixed": "{{count}} downloads will be removed. Files of unfinished downloads will be deleted. Finished models stay.",
+      "status": {
+        "queued": "Waiting",
+        "running": "Downloading",
+        "paused": "Paused",
+        "stopped": "Stopped",
+        "done": "Done",
+        "error": "Failed"
+      }
+    }
   },
   "shell": {
     "start": "Start",
@@ -43,24 +180,10 @@
     "languageDe": "Deutsch",
     "languageEn": "English",
     "languageEs": "Español",
-    "languageFr": "Français",
-    "languageTr": "Türkçe",
-    "languagePt": "Português",
-    "languageZh": "中文",
-    "languageJa": "日本語",
-    "languageAr": "العربية",
-    "languageRu": "Русский",
     "languageNames": {
       "de": "German",
       "en": "English",
-      "es": "Spanish",
-      "fr": "French",
-      "tr": "Turkish",
-      "pt": "Portuguese",
-      "zh": "Chinese",
-      "ja": "Japanese",
-      "ar": "Arabic",
-      "ru": "Russian"
+      "es": "Spanish"
     },
     "window": {
       "minimize": "Minimize",
@@ -157,9 +280,6 @@
   },
   "footer": {
     "copyright": "© {{year}} Agentus Network"
-  },
-  "stub": {
-    "body": "This module will be implemented in the next step."
   },
   "notFound": {
     "title": "Page not found",
@@ -297,6 +417,7 @@
       "modelsMoe": "MoE models",
       "modelsGroupEmpty": "None",
       "modelsEmpty": "No models, or the runtime is unavailable.",
+      "openModels": "Open model library",
       "modelName": "Model",
       "modelSize": "Size",
       "status": {
@@ -858,12 +979,14 @@
         "title": "Load prompt",
         "body": "Choose a saved prompt. It replaces this node's system prompt.",
         "search": "Search",
+        "sort": "Sort",
         "sortUpdated": "Updated",
         "sortName": "Name",
         "apply": "Apply",
         "empty": "No prompts saved yet.",
         "filter": "No prompts match this filter.",
         "library": "Go to prompts",
+        "split": "Resize the list and the tags",
         "failed": "The prompt could not be loaded."
       },
       "tool": {
@@ -1101,8 +1224,6 @@
       },
       "direction": "Sort direction",
       "tags": "Tags",
-      "tagsHint": "Multiple tags: OR",
-      "noTags": "No tags",
       "onlyValid": "Valid only",
       "onlyActive": "Active only"
     },
@@ -1114,7 +1235,9 @@
       "graph": "Graph",
       "updated": "Updated",
       "lastUsed": "Last used",
-      "counts": "{{nodes}} nodes · {{edges}} edges"
+      "counts": "{{nodes}} nodes · {{edges}} edges",
+      "move": "Move {{column}}",
+      "resize": "Resize {{column}}"
     },
     "badge": {
       "valid": "Valid",
@@ -1712,9 +1835,21 @@
     "unauthorized": "The embedding credential was rejected."
   },
   "prompts": {
-    "search": "Search",
-    "sort": { "name": "Name", "updated": "Updated" },
-    "empty": { "library": "No prompts yet.", "filter": "No prompts match this filter." },
+    "search": "Search name, description, tags",
+    "filter": {
+      "tags": "Tags"
+    },
+    "list": {
+      "selectAll": "All"
+    },
+    "sort": {
+      "name": "Name",
+      "updated": "Updated"
+    },
+    "empty": {
+      "library": "No prompts yet.",
+      "filter": "No prompts match this filter."
+    },
     "ribbon": {
       "new": "New",
       "edit": "Edit",
@@ -1722,8 +1857,7 @@
       "tags": "Set tags",
       "delete": "Delete",
       "import": "Import",
-      "export": "Export",
-      "refresh": "Refresh"
+      "export": "Export"
     },
     "detail": {
       "none": "No prompt selected.",
@@ -1743,6 +1877,12 @@
       "bodyRequired": "The prompt cannot be empty.",
       "save": "Save"
     },
+    "unsaved": {
+      "title": "Unsaved changes",
+      "body": "This prompt is not saved yet. Discard it and continue?",
+      "stay": "Stay",
+      "leave": "Discard"
+    },
     "import": {
       "title": "Import prompts",
       "pick": "Choose files",
@@ -1750,10 +1890,22 @@
       "unreadable": "{{name}} could not be read.",
       "save": "Import {{count}}"
     },
-    "delete": { "title": "Delete {{count}} prompts?" },
-    "dialog": { "close": "Close", "cancel": "Cancel" },
-    "error": { "title": "Prompts not loaded", "body": "The library is not reachable." },
-    "resize": { "listHeight": "Resize collection height", "detailHeight": "Resize detail height", "width": "Resize width" },
+    "delete": {
+      "title": "Delete {{count}} prompts?"
+    },
+    "dialog": {
+      "close": "Close",
+      "cancel": "Cancel"
+    },
+    "error": {
+      "title": "Prompts not loaded",
+      "body": "The library is not reachable."
+    },
+    "resize": {
+      "listHeight": "Resize collection height",
+      "detailHeight": "Resize detail height",
+      "width": "Resize width"
+    },
     "notify": {
       "created": "Prompt created",
       "saved": "Prompt saved",

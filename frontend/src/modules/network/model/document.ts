@@ -73,7 +73,9 @@ export type LlmNodeData = {
   kvCacheType?: 'f16' | 'q8_0';
   numGpuPercent?: number;
   numGpuLayers?: number;
-  /** MoE only. "auto" omits num_gpu. "layers" sends a whole-layer offload. */
+  /** MoE auto fit: expert layers whose tensors stay in RAM. 0 means all experts on the GPU. */
+  numCpuMoe?: number;
+  /** MoE. "auto" stores the calculated fit. "layers" sends a whole-layer offload. */
   gpuPlacement?: 'auto' | 'layers';
 };
 

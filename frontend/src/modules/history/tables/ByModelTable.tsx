@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ModelName } from '@/components/ModelName';
+import { modelLabel } from '@/lib/modelName';
 import { COL_FIT, COL_TEXT, HistoryGrid, HistoryRow, historyCellClass, historyHeadClass } from '@/modules/history/HistoryGrid';
 import { formatDuration, formatInt, formatPercent } from '@/modules/history/model/format';
 import type { ModelAggRow } from '@/modules/history/model/types';
@@ -56,7 +58,9 @@ export function ByModelTable({ rows }: { rows: ModelAggRow[] }) {
       </HistoryRow>
       {sorted.map((row) => (
         <HistoryRow key={`${row.provider}:${row.model}`}>
-          <div className={cnCell('font-mono text-xs')} title={row.model}>{row.model}</div>
+          <div className={cnCell('font-mono text-xs')}>
+            <ModelName value={row.model} />
+          </div>
           <div className={historyCellClass}>{t(`history.provider.${row.provider}`)}</div>
           <div className={cnCell('tabular-nums')}>{formatInt(row.calls, locale)}</div>
           <div className={cnCell('tabular-nums')}>{formatInt(row.ok, locale)}</div>
@@ -76,7 +80,7 @@ function cnCell(extra: string) {
 }
 
 function sortValue(row: ModelAggRow, key: SortKey): string | number | null {
-  if (key === 'model') return row.model;
+  if (key === 'model') return modelLabel(row.model).name;
   return row[key];
 }
 

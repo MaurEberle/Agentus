@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { ModelName } from '@/components/ModelName';
 import { DetailOverlay } from '@/modules/monitoring/overlay/DetailOverlay';
 import { clipPreview } from '@/modules/monitoring/model/format';
 import { nodeDisplayName } from '@/modules/monitoring/model/graph';
@@ -57,7 +58,7 @@ export function NodeDetail({ run }: { run: RunSnapshot }) {
             <>
               <div>
                 <dt className="text-xs text-muted-foreground">{t('monitoring.graph.model')}</dt>
-                <dd className="font-mono">{runtime.llm.model}</dd>
+                <dd className="font-mono"><ModelName value={runtime.llm.model} /></dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t('monitoring.graph.provider')}</dt>

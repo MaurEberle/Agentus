@@ -10,7 +10,7 @@ from app.db.engine import get_bootstrap
 from app.db.help_rag import HelpRagChunk, list_all_chunks, replace_all_chunks, wipe_chunks
 from app.db.paths import RAG_DIR_NAME
 from app.help.chunk import chunk_markdown, file_sha256
-from app.help.locales import locale_from_corpus_path
+from app.help.locales import HELP_DOC_LOCALES, locale_from_corpus_path
 from app.help.status import get_settings_merged
 from app.runtime.errors import RuntimeApiError
 from app.runtime.models import EmbedRequest
@@ -41,6 +41,10 @@ def _iter_corpus_files(root: Path) -> list[Path]:
             resolved.relative_to(root)
         except (OSError, ValueError):
             continue
+        if len(resolved.relative_to(root).parts) > 1:
+            folder = resolved.relative_to(root).parts[0]
+            if (root / folder).is_dir() and folder not in HELP_DOC_LOCALES:
+                continue
         if is_indexable(path):
             out.append(path)
     return out

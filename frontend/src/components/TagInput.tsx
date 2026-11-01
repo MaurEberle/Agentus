@@ -20,9 +20,10 @@ export const TagInput = forwardRef<
     removeLabel: (tag: string) => string;
     suggestions?: string[];
     describedBy?: string;
+    onDraftChange?: (draft: string) => void;
   }
 >(function TagInput(
-  { id, value, onChange, disabled, placeholder, addLabel, removeLabel, suggestions = [], describedBy },
+  { id, value, onChange, disabled, placeholder, addLabel, removeLabel, suggestions = [], describedBy, onDraftChange },
   ref,
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +48,7 @@ export const TagInput = forwardRef<
   function commit(raw: string): string[] {
     const next = mergeTags(value, parseTagTokens(raw));
     setDraft('');
+    onDraftChange?.('');
     setOpen(false);
     setHighlight(-1);
     return apply(next);
@@ -59,15 +61,17 @@ export const TagInput = forwardRef<
   function addSuggestion(tag: string) {
     const next = mergeTags(value, [tag]);
     setDraft('');
+    onDraftChange?.('');
     setOpen(false);
     setHighlight(-1);
     apply(next);
     inputRef.current?.focus();
   }
 
-  function onDraftChange(raw: string) {
+  function changeDraft(raw: string) {
     if (!/[,;]/.test(raw)) {
       setDraft(raw);
+      onDraftChange?.(raw);
       setOpen(true);
       setHighlight(-1);
       return;
@@ -75,7 +79,9 @@ export const TagInput = forwardRef<
     const bits = raw.split(/[,;]/);
     const complete = bits.slice(0, -1).map(normalizeTag).filter(Boolean);
     apply(mergeTags(value, complete));
-    setDraft(bits.at(-1) ?? '');
+    const rest = bits.at(-1) ?? '';
+    setDraft(rest);
+    onDraftChange?.(rest);
     setOpen(true);
     setHighlight(-1);
   }
@@ -167,7 +173,7 @@ export const TagInput = forwardRef<
               showList && highlight >= 0 && filtered[highlight] ? `${listId}-${highlight}` : undefined
             }
             className="h-6 min-w-[5rem] flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-            onChange={(event) => onDraftChange(event.target.value)}
+            onChange={(event) => changeDraft(event.target.value)}
             onKeyDown={onKeyDown}
             onFocus={() => setOpen(true)}
             onBlur={() => {

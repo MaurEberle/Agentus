@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
+import { modelHover, modelLabel } from '@/lib/modelName';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -403,10 +404,10 @@ function RunCell({
             <Badge
               key={`${model.provider}:${model.model}`}
               variant="outline"
-              title={model.model}
+              title={modelHover(modelLabel(model.model))}
               className="block max-w-full truncate font-mono text-[10px]"
             >
-              {model.model}
+              {modelLabel(model.model).name}
             </Badge>
           ))}
         </div>

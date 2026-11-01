@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ModelName } from '@/components/ModelName';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,21 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatBytes } from '@/lib/format';
 import { notify } from '@/lib/notifications';
 import { patchSettings, pingRuntime, useRuntimeModelsQuery, useSettingsQuery } from '@/modules/settings/api';
 import { isEmbeddingModelName, type RuntimeModel } from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useSettingsDraft } from '@/modules/settings/store';
 
-function formatBytes(bytes?: number): string {
-  if (!bytes) return '—';
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
 function ModelGroup({ title, items }: { title: string; items: RuntimeModel[] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <div>
       <h3 className="mb-2 text-sm font-medium">{title}</h3>
@@ -43,8 +39,10 @@ function ModelGroup({ title, items }: { title: string; items: RuntimeModel[] }) 
           <TableBody>
             {items.map((model) => (
               <TableRow key={model.name}>
-                <TableCell className="font-mono text-xs">{model.name}</TableCell>
-                <TableCell className="whitespace-nowrap text-right tabular-nums">{formatBytes(model.sizeBytes)}</TableCell>
+                <TableCell className="font-mono text-xs"><ModelName value={model.name} /></TableCell>
+                <TableCell className="whitespace-nowrap text-right tabular-nums">
+                  {model.sizeBytes ? formatBytes(model.sizeBytes, i18n.language) : '—'}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -125,6 +123,9 @@ export function RuntimeSection() {
         </div>
       </div>
       <div className="space-y-4">
+        <Button asChild variant="outline" size="sm">
+          <Link to="/models">{t('settings.runtime.openModels')}</Link>
+        </Button>
         {(models?.items.length ?? 0) === 0 ? (
           <p className="text-sm text-muted-foreground">{t('settings.runtime.modelsEmpty')}</p>
         ) : (

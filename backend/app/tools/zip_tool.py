@@ -5,8 +5,9 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from app.tools.file_access_tool import _resolve, is_forbidden_root
+from app.tools.file_access_tool import _resolve
 from app.tools.models import ExecuteResult
+from app.tools.sandbox import configured_root, tool_fail
 
 ACTIONS = frozenset({"list", "extract"})
 MAX_ENTRIES = 500
@@ -17,7 +18,7 @@ MAX_FILE_BYTES = 8 * 1024 * 1024
 def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteResult:
     cfg = config or {}
     raw = args or {}
-    root, root_error = _root(cfg)
+    root, root_error = configured_root(cfg, error_prefix="tools.zip")
     if root_error or root is None:
         return _fail(root_error or "tools.zip.missingRoot")
     action = str(raw.get("action") or "").strip().lower()
@@ -43,22 +44,6 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
                 result={"entries": shown, "count": len(entries), "truncated": len(entries) > len(shown)},
             )
         return _extract(root, archive, zf, entries, str(raw.get("destination") or ""))
-
-
-def _root(cfg: dict[str, Any]) -> tuple[Path | None, str | None]:
-    root_raw = str(cfg.get("rootPath") or cfg.get("root") or "").strip()
-    if not root_raw:
-        return None, "tools.zip.missingRoot"
-    root_in = Path(root_raw).expanduser()
-    if not root_in.is_absolute():
-        return None, "tools.zip.rootNotDir"
-    try:
-        root = root_in.resolve()
-    except OSError:
-        return None, "tools.zip.rootNotDir"
-    if not root.is_dir() or is_forbidden_root(root):
-        return None, "tools.zip.rootNotDir"
-    return root, None
 
 
 def _entries(zf: zipfile.ZipFile) -> tuple[list[dict[str, object]], str | None]:
@@ -148,5 +133,4 @@ def _is_symlink(info: zipfile.ZipInfo) -> bool:
     return stat.S_ISLNK(mode)
 
 
-def _fail(key: str, result: object | None = None) -> ExecuteResult:
-    return ExecuteResult(ok=False, error_key=key, result=result)
+_fail = tool_fail

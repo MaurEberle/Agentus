@@ -57,6 +57,17 @@ def test_compile_gpu_placement() -> None:
         AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
     )
     assert compiled.agents["ag"].llm.gpu_placement == "auto"
+    assert compiled.agents["ag"].llm.num_cpu_moe is None
+
+    for node in raw["nodes"]:
+        if node["id"] == "llm":
+            node["data"]["numGpuLayers"] = 12
+            node["data"]["numCpuMoe"] = 0
+    compiled = compile_document(
+        AgentNetworkDocument.model_validate(raw), network_id="n1", network_name="mini"
+    )
+    assert compiled.agents["ag"].llm.num_gpu == 12
+    assert compiled.agents["ag"].llm.num_cpu_moe == 0
 
     for node in raw["nodes"]:
         if node["id"] == "llm":

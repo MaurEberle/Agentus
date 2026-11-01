@@ -12,6 +12,7 @@ import {
 import { toDateInput } from '@/modules/history/model/format';
 import type { HistoryFilter, RangeKey } from '@/modules/history/model/types';
 import { RUN_OUTCOMES } from '@/modules/history/model/types';
+import { modelHover, modelLabel } from '@/lib/modelName';
 import { cn } from '@/lib/utils';
 
 export function FilterBar({
@@ -103,14 +104,14 @@ export function FilterBar({
           value={filter.model || 'all'}
           onValueChange={(value) => onChange({ model: value === 'all' ? '' : value, page: 1 })}
         >
-          <SelectTrigger>
+          <SelectTrigger title={filter.model ? modelHover(modelLabel(filter.model)) : undefined}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('history.filter.allModels')}</SelectItem>
             {models.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item}
+              <SelectItem key={item} value={item} title={modelHover(modelLabel(item))}>
+                {modelLabel(item).name}
               </SelectItem>
             ))}
           </SelectContent>

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { NotificationBell } from '@/components/layout/NotificationBell';
+import { DownloadsHeader } from '@/modules/downloads';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { WindowControls } from '@/components/layout/WindowControls';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,7 @@ export function Header() {
       </Link>
       <div className="app-drag relative z-10 min-w-2 flex-1 self-stretch" />
       <div className="app-no-drag relative z-10 hidden items-center gap-1 md:flex">
+        <DownloadsHeader />
         <Button variant="ghost" size="sm" asChild>
           <Link to="/settings#appearance">
             <Settings className="size-4" />
