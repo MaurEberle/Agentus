@@ -1724,8 +1724,7 @@
       "tags": "Añadir etiquetas",
       "delete": "Eliminar",
       "import": "Importar",
-      "export": "Exportar",
-      "refresh": "Actualizar"
+      "export": "Exportar"
     },
     "detail": {
       "none": "Ningún prompt seleccionado.",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
+import { ArrowDownAZ, ArrowUpAZ, Copy, Download, Pencil, Plus, Tags, Trash2, Upload } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -321,25 +321,33 @@ export function PromptsModule() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Button type="button" size="sm" onClick={() => setEditor('new')} disabled={busy}>{t('prompts.ribbon.new')}</Button>
+        <Button type="button" size="sm" onClick={() => setEditor('new')} disabled={busy}>
+          <Plus />
+          {t('prompts.ribbon.new')}
+        </Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => detailQuery.data && setEditor(detailQuery.data)}>
+          <Pencil />
           {t('prompts.ribbon.edit')}
         </Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => void run(async () => { await duplicatePrompt(selected[0].id); }, 'prompts.notify.duplicated')}>
+          <Copy />
           {t('prompts.ribbon.duplicate')}
         </Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => setTagsOpen(true)}>
+          <Tags />
           {t('prompts.ribbon.tags')}
         </Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => setDeleteOpen(true)}>
+          <Trash2 />
           {t('prompts.ribbon.delete')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setImportOpen(true)}>{t('prompts.ribbon.import')}</Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => void onExport()}>
-          {t('prompts.ribbon.export')}
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setImportOpen(true)}>
+          <Upload />
+          {t('prompts.ribbon.import')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>
-          {t('prompts.ribbon.refresh')}
+        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => void onExport()}>
+          <Download />
+          {t('prompts.ribbon.export')}
         </Button>
       </div>
       {query.isError ? (

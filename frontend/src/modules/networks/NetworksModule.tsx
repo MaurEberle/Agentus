@@ -226,7 +226,6 @@ export function NetworksModule() {
           onDelete: () => setDeleteItems(selected),
           onImport: () => setImportOpen(true),
           onExport: () => setExportOpen(true),
-          onRefresh: () => void query.refetch(),
         }}
       />
       <FilterBar tags={tags} tagSets={items.map((item) => item.tags ?? [])} />

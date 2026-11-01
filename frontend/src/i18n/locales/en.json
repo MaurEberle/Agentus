@@ -1724,8 +1724,7 @@
       "tags": "Set tags",
       "delete": "Delete",
       "import": "Import",
-      "export": "Export",
-      "refresh": "Refresh"
+      "export": "Export"
     },
     "detail": {
       "none": "No prompt selected.",

@@ -1,4 +1,16 @@
-import { MoreHorizontal } from 'lucide-react';
+import {
+  BadgeCheck,
+  Copy,
+  Download,
+  FolderOpen,
+  MoreHorizontal,
+  PencilLine,
+  Plus,
+  Tags,
+  Trash2,
+  Upload,
+  type LucideIcon,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +33,6 @@ export type LibraryRibbonHandlers = {
   onDelete: () => void;
   onImport: () => void;
   onExport: () => void;
-  onRefresh: () => void;
 };
 
 export function LibraryRibbon({
@@ -45,14 +56,22 @@ export function LibraryRibbon({
   const canDelete = n >= 1 && selected.some((item) => !item.isRunning);
   const canExport = n >= 1;
 
-  const actions = [
-    { key: 'new', label: t('networks.ribbon.new'), enabled: true, onClick: handlers.onNew },
+  const actions: {
+    key: string;
+    label: string;
+    enabled: boolean;
+    hint?: string;
+    onClick: () => void;
+    icon: LucideIcon;
+  }[] = [
+    { key: 'new', label: t('networks.ribbon.new'), enabled: true, onClick: handlers.onNew, icon: Plus },
     {
       key: 'open',
       label: t('networks.ribbon.open'),
       enabled: canOpen && !busy,
       hint: canOpen ? undefined : t('networks.ribbon.needOne'),
       onClick: handlers.onOpen,
+      icon: FolderOpen,
     },
     {
       key: 'duplicate',
@@ -60,6 +79,7 @@ export function LibraryRibbon({
       enabled: canDuplicate && !busy,
       hint: canDuplicate ? undefined : t('networks.ribbon.needOne'),
       onClick: handlers.onDuplicate,
+      icon: Copy,
     },
     {
       key: 'rename',
@@ -67,6 +87,7 @@ export function LibraryRibbon({
       enabled: canRename && !busy,
       hint: canRename ? undefined : t('networks.ribbon.needOne'),
       onClick: handlers.onRename,
+      icon: PencilLine,
     },
     {
       key: 'tags',
@@ -74,6 +95,7 @@ export function LibraryRibbon({
       enabled: canTags && !busy,
       hint: canTags ? undefined : t('networks.ribbon.needSome'),
       onClick: handlers.onTags,
+      icon: Tags,
     },
     {
       key: 'activate',
@@ -87,6 +109,7 @@ export function LibraryRibbon({
             ? t('networks.ribbon.needValid')
             : undefined,
       onClick: handlers.onActivate,
+      icon: BadgeCheck,
     },
     {
       key: 'delete',
@@ -94,19 +117,20 @@ export function LibraryRibbon({
       enabled: canDelete && !busy,
       hint: n === 0 ? t('networks.ribbon.needSome') : canDelete ? undefined : t('networks.ribbon.runningBlocked'),
       onClick: handlers.onDelete,
+      icon: Trash2,
     },
-    { key: 'import', label: t('networks.ribbon.import'), enabled: !busy, onClick: handlers.onImport },
+    { key: 'import', label: t('networks.ribbon.import'), enabled: !busy, onClick: handlers.onImport, icon: Upload },
     {
       key: 'export',
       label: t('networks.ribbon.export'),
       enabled: canExport && !busy,
       hint: canExport ? undefined : t('networks.ribbon.needSome'),
       onClick: handlers.onExport,
+      icon: Download,
     },
-    { key: 'refresh', label: t('networks.ribbon.refresh'), enabled: !busy, onClick: handlers.onRefresh },
-  ] as const;
+  ];
 
-  const compactKeys = new Set(['new', 'import', 'refresh']);
+  const compactKeys = new Set(['new', 'import']);
   const primary = actions.filter((action) => compactKeys.has(action.key));
   const rest = actions.filter((action) => !compactKeys.has(action.key));
 
@@ -131,6 +155,7 @@ export function LibraryRibbon({
                   if (action.enabled) action.onClick();
                 }}
               >
+                <action.icon />
                 {action.label}
               </DropdownMenuItem>
             ))}
@@ -146,16 +171,19 @@ function RibbonAction({
   enabled,
   hint,
   onClick,
+  icon: Icon,
   primary = false,
 }: {
   label: string;
   enabled: boolean;
   hint?: string;
   onClick: () => void;
+  icon: LucideIcon;
   primary?: boolean;
 }) {
   const button = (
     <Button type="button" size="sm" variant={primary ? 'default' : 'outline'} disabled={!enabled} onClick={onClick}>
+      <Icon />
       {label}
     </Button>
   );

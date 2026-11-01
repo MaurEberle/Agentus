@@ -1724,8 +1724,7 @@
       "tags": "Tags setzen",
       "delete": "Löschen",
       "import": "Importieren",
-      "export": "Exportieren",
-      "refresh": "Aktualisieren"
+      "export": "Exportieren"
     },
     "detail": {
       "none": "Kein Prompt ausgewählt.",
