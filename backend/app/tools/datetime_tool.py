@@ -5,6 +5,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.tools.models import ExecuteResult
+from app.tools.sandbox import tool_fail
 
 DATE_ACTION_ORDER = ("now", "add", "diff", "parts", "convert")
 ACTIONS = frozenset(DATE_ACTION_ORDER)
@@ -12,8 +13,7 @@ _WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 _MAX_SHIFT = 1_000_000
 
 
-def _fail(key: str) -> ExecuteResult:
-    return ExecuteResult(ok=False, error_key=key)
+_fail = tool_fail
 
 
 def _zone(name: str):

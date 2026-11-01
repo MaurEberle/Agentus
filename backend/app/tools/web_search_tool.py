@@ -8,6 +8,7 @@ import httpx
 from app.common.http import client
 from app.common.secrets import mask_obj
 from app.tools.models import ExecuteResult
+from app.tools.sandbox import tool_fail
 
 SEARCH_PROVIDERS = ("brave", "tavily", "exa", "searxng")
 _BRAVE = "https://api.search.brave.com/res/v1/web/search"
@@ -15,8 +16,7 @@ _TAVILY = "https://api.tavily.com/search"
 _EXA = "https://api.exa.ai/search"
 
 
-def _fail(key: str) -> ExecuteResult:
-    return ExecuteResult(ok=False, error_key=key)
+_fail = tool_fail
 
 
 def _clamp_results(value: object) -> int:
