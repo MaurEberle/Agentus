@@ -26,6 +26,12 @@
     "expand": "Seitenleiste ausklappen",
     "main": "Hauptnavigation"
   },
+  "tagCloud": {
+    "and": "Und",
+    "or": "Oder",
+    "mode": "Tags verknüpfen",
+    "empty": "Keine Tags"
+  },
   "shell": {
     "start": "Start",
     "indexing": "Wissen wird indiziert: {{name}}",
@@ -1084,8 +1090,6 @@
       },
       "direction": "Sortierreihenfolge",
       "tags": "Tags",
-      "tagsHint": "Mehrere Tags: ODER",
-      "noTags": "Keine Tags",
       "onlyValid": "Nur gültige",
       "onlyActive": "Nur aktive"
     },
@@ -1697,9 +1701,7 @@
   "prompts": {
     "search": "Suche",
     "filter": {
-      "tags": "Tags",
-      "tagsHint": "Mehrere Tags: ODER",
-      "noTags": "Keine Tags"
+      "tags": "Tags"
     },
     "list": {
       "selectAll": "Alle"

@@ -26,6 +26,12 @@
     "expand": "Expandir barra lateral",
     "main": "Navegación principal"
   },
+  "tagCloud": {
+    "and": "Y",
+    "or": "O",
+    "mode": "Combinar etiquetas",
+    "empty": "Sin etiquetas"
+  },
   "shell": {
     "start": "Iniciar",
     "indexing": "Indexando conocimiento: {{name}}",
@@ -1017,8 +1023,6 @@
       },
       "direction": "Orden",
       "tags": "Etiquetas",
-      "tagsHint": "Varias etiquetas: O",
-      "noTags": "Sin etiquetas",
       "onlyValid": "Solo válidas",
       "onlyActive": "Solo activas"
     },
@@ -1697,9 +1701,7 @@
   "prompts": {
     "search": "Buscar",
     "filter": {
-      "tags": "Etiquetas",
-      "tagsHint": "Varias etiquetas: O",
-      "noTags": "Sin etiquetas"
+      "tags": "Etiquetas"
     },
     "list": {
       "selectAll": "Todos"

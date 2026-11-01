@@ -1,5 +1,19 @@
 const MAX_TAG_LENGTH = 48;
 
+export type TagMatch = 'and' | 'or';
+
+/** Empty selection matches everything. AND needs every tag, OR any one of them. */
+export function matchesTags(
+  itemTags: readonly string[] | undefined,
+  selected: readonly string[],
+  mode: TagMatch,
+): boolean {
+  if (selected.length === 0) return true;
+  const tags = itemTags ?? [];
+  if (mode === 'and') return selected.every((tag) => tags.includes(tag));
+  return selected.some((tag) => tags.includes(tag));
+}
+
 export function normalizeTag(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
 }

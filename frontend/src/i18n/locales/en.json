@@ -26,6 +26,12 @@
     "expand": "Expand sidebar",
     "main": "Main navigation"
   },
+  "tagCloud": {
+    "and": "And",
+    "or": "Or",
+    "mode": "Combine tags",
+    "empty": "No tags"
+  },
   "shell": {
     "start": "Start",
     "indexing": "Indexing knowledge: {{name}}",
@@ -1084,8 +1090,6 @@
       },
       "direction": "Sort direction",
       "tags": "Tags",
-      "tagsHint": "Multiple tags: OR",
-      "noTags": "No tags",
       "onlyValid": "Valid only",
       "onlyActive": "Active only"
     },
@@ -1697,9 +1701,7 @@
   "prompts": {
     "search": "Search",
     "filter": {
-      "tags": "Tags",
-      "tagsHint": "Multiple tags: OR",
-      "noTags": "No tags"
+      "tags": "Tags"
     },
     "list": {
       "selectAll": "All"

@@ -1,4 +1,5 @@
 import type { NetworkListItem } from '@/modules/dashboard/model';
+import { matchesTags, type TagMatch } from '@/lib/tags';
 import type { NetworksSortDir, NetworksSortKey } from '@/modules/networks/store';
 
 export function uniqueTags(items: NetworkListItem[]): string[] {
@@ -20,6 +21,7 @@ export function applyNetworkFilters(
   filters: {
     query: string;
     tagFilter: string[];
+    tagMode: TagMatch;
     onlyValid: boolean;
     onlyActive: boolean;
     sortKey: NetworksSortKey;
@@ -30,10 +32,7 @@ export function applyNetworkFilters(
   let list = items.filter((item) => {
     if (filters.onlyValid && item.validationStatus !== 'valid') return false;
     if (filters.onlyActive && !item.isActive) return false;
-    if (filters.tagFilter.length > 0) {
-      const tags = item.tags ?? [];
-      if (!filters.tagFilter.some((tag) => tags.includes(tag))) return false;
-    }
+    if (!matchesTags(item.tags, filters.tagFilter, filters.tagMode)) return false;
     if (!query) return true;
     const haystack = `${item.name} ${item.description ?? ''} ${(item.tags ?? []).join(' ')}`.toLowerCase();
     return haystack.includes(query);

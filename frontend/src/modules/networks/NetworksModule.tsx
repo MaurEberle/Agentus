@@ -67,6 +67,7 @@ export function NetworksModule() {
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
   const filterQuery = useNetworksUi((state) => state.query);
   const tagFilter = useNetworksUi((state) => state.tagFilter);
+  const tagMode = useNetworksUi((state) => state.tagMode);
   const onlyValid = useNetworksUi((state) => state.onlyValid);
   const onlyActive = useNetworksUi((state) => state.onlyActive);
   const sortKey = useNetworksUi((state) => state.sortKey);
@@ -77,8 +78,8 @@ export function NetworksModule() {
   const pruneSelection = useNetworksUi((state) => state.pruneSelection);
   const setQuery = useNetworksUi((state) => state.setQuery);
   const filtered = useMemo(
-    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, onlyValid, onlyActive, sortKey, sortDir }),
-    [filterQuery, items, onlyActive, onlyValid, sortDir, sortKey, tagFilter],
+    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, tagMode, onlyValid, onlyActive, sortKey, sortDir }),
+    [filterQuery, items, onlyActive, onlyValid, sortDir, sortKey, tagFilter, tagMode],
   );
   const selected = useMemo(
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is NetworkListItem => Boolean(item)),
@@ -263,7 +264,7 @@ export function NetworksModule() {
               variant="outline"
               onClick={() => {
                 setQuery('');
-                useNetworksUi.setState({ tagFilter: [], onlyValid: false, onlyActive: false });
+                useNetworksUi.setState({ tagFilter: [], tagMode: 'or', onlyValid: false, onlyActive: false });
               }}
             >
               {t('networks.empty.clearFilters')}

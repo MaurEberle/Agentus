@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { TagMatch } from '@/lib/tags';
 
 export type NetworksSortKey = 'name' | 'updatedAt' | 'lastUsedAt';
 export type NetworksSortDir = 'asc' | 'desc';
@@ -10,12 +11,14 @@ type NetworksUiStore = {
   sortKey: NetworksSortKey;
   sortDir: NetworksSortDir;
   tagFilter: string[];
+  tagMode: TagMatch;
   onlyValid: boolean;
   onlyActive: boolean;
   setQuery: (query: string) => void;
   setSortKey: (key: NetworksSortKey) => void;
   toggleSortDir: () => void;
   toggleTag: (tag: string) => void;
+  setTagMode: (mode: TagMatch) => void;
   setOnlyValid: (value: boolean) => void;
   setOnlyActive: (value: boolean) => void;
   select: (ids: string[], anchorId?: string | null) => void;
@@ -34,6 +37,7 @@ export const useNetworksUi = create<NetworksUiStore>((set, get) => ({
   sortKey: 'updatedAt',
   sortDir: 'desc',
   tagFilter: [],
+  tagMode: 'or',
   onlyValid: false,
   onlyActive: false,
   setQuery: (query) => set({ query }),
@@ -49,6 +53,7 @@ export const useNetworksUi = create<NetworksUiStore>((set, get) => ({
         ? state.tagFilter.filter((item) => item !== tag)
         : [...state.tagFilter, tag],
     })),
+  setTagMode: (tagMode) => set({ tagMode }),
   setOnlyValid: (onlyValid) => set({ onlyValid }),
   setOnlyActive: (onlyActive) => set({ onlyActive }),
   select: (selectedIds, anchorId) => {
