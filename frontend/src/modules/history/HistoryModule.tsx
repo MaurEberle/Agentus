@@ -17,6 +17,7 @@ import { RunsChart } from '@/modules/history/chart/RunsChart';
 import { RunDetailPanel } from '@/modules/history/detail/RunDetailPanel';
 import { ErrorTop } from '@/modules/history/errors/ErrorTop';
 import { FilterBar } from '@/modules/history/filters/FilterBar';
+import { useHistoryFilters } from '@/modules/history/filters/storage';
 import { KpiRow } from '@/modules/history/kpi/KpiRow';
 import { RunList } from '@/modules/history/list/RunList';
 import { endOfLocalDay, fileStamp, modelKey, safeFilePart, shortId, startOfLocalDay } from '@/modules/history/model/format';
@@ -51,7 +52,18 @@ export function HistoryModule() {
   const queryClient = useQueryClient();
   const stores = useStoresQuery();
   const historyOk = isHistoryStoreOk(stores.data);
-  const filter = useMemo(() => parseHistorySearch(params), [params]);
+  const [listFilter, setListFilter] = useHistoryFilters();
+  const filter = useMemo(() => {
+    if (params.toString() !== '') return parseHistorySearch(params);
+    return {
+      ...defaultHistoryFilter(),
+      range: listFilter.range,
+      networkId: listFilter.networkId,
+      model: listFilter.model,
+      q: listFilter.q,
+      ...(listFilter.range === 'custom' ? { from: listFilter.from, to: listFilter.to } : {}),
+    };
+  }, [listFilter, params]);
   const [tab, setTab] = useState<HistoryTab>(filter.tab);
   const rangeKey = filter.range === 'custom' ? `custom:${filter.from}:${filter.to}` : filter.range;
   const outcomeKey = filter.outcomes.join(',');
@@ -172,12 +184,36 @@ export function HistoryModule() {
   }, [clearSelection, deleteOpen, purgeOpen]);
 
   function applyFilter(next: HistoryFilter) {
+    setListFilter({
+      range: next.range,
+      from: next.range === 'custom' ? next.from : '',
+      to: next.range === 'custom' ? next.to : '',
+      networkId: next.networkId,
+      model: next.model,
+      q: next.q,
+    });
     const paramsNext = historySearchFrom(next);
     if (sameFilter(parseHistorySearch(paramsNext), parseHistorySearch(params)) && params.toString() === paramsNext.toString()) {
       return;
     }
     setParams(paramsNext, { replace: true, preventScrollReset: true });
   }
+
+  useEffect(() => {
+    if (params.toString() === '') {
+      const next = historySearchFrom(filter);
+      if (next.toString() !== '') setParams(next, { replace: true, preventScrollReset: true });
+      return;
+    }
+    setListFilter({
+      range: filter.range,
+      from: filter.range === 'custom' ? filter.from : '',
+      to: filter.range === 'custom' ? filter.to : '',
+      networkId: filter.networkId,
+      model: filter.model,
+      q: filter.q,
+    });
+  }, [filter, params, setListFilter, setParams]);
 
   function selectTab(next: HistoryTab) {
     if (next === tab) return;

@@ -23,7 +23,7 @@ import { ModuleLoading } from '@/components/layout/ModuleLoading';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
 import { ExportCancelled, saveExportFile } from '@/lib/saveFile';
-import { matchesTags, parseTagTokens, sharedTagList, type TagMatch } from '@/lib/tags';
+import { matchesTags, parseTagTokens, sharedTagList } from '@/lib/tags';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { formatDateTime } from '@/modules/history/model/format';
 import {
@@ -39,6 +39,7 @@ import {
 } from '@/modules/prompts/api';
 import type { PromptDetail, PromptDraft, PromptFile, PromptListItem } from '@/modules/prompts/model';
 import { parsePromptFile } from '@/modules/prompts/model';
+import { usePromptFilters, type PromptFilters, type PromptSortKey } from '@/modules/prompts/filters';
 import { unzipTextFiles } from '@/modules/prompts/unzip';
 import { TagsDialog } from '@/modules/networks/dialogs/TagsDialog';
 import { zipStore } from '@/modules/networks/model/zip';
@@ -86,11 +87,22 @@ export function PromptsModule() {
     }
     return [...tags].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [items]);
-  const [search, setSearch] = useState('');
-  const [tagFilter, setTagFilter] = useState<string[]>([]);
-  const [tagMode, setTagMode] = useState<TagMatch>('or');
-  const [sortKey, setSortKey] = useState<'name' | 'updated'>('updated');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [promptFilters, updatePromptFilters] = usePromptFilters();
+  const { search, tagFilter, tagMode, sortKey, sortDir } = promptFilters;
+  const setSearch = (value: string) => updatePromptFilters({ search: value });
+  const chooseSort = (key: PromptSortKey) =>
+    updatePromptFilters((current) =>
+      current.sortKey === key
+        ? { sortDir: current.sortDir === 'asc' ? 'desc' : 'asc' }
+        : { sortKey: key, sortDir: key === 'name' ? 'asc' : 'desc' },
+    );
+  const toggleSortDir = () => updatePromptFilters((current) => ({ sortDir: current.sortDir === 'asc' ? 'desc' : 'asc' }));
+  const toggleTag = (tag: string) =>
+    updatePromptFilters((current) => ({
+      tagFilter: current.tagFilter.includes(tag) ? current.tagFilter.filter((item) => item !== tag) : [...current.tagFilter, tag],
+    }));
+  const clearTags = () => updatePromptFilters({ tagFilter: [] });
+  const setTagMode = (tagMode: PromptFilters['tagMode']) => updatePromptFilters({ tagMode });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [editor, setEditor] = useState<PromptDetail | 'new' | null>(null);
@@ -153,15 +165,6 @@ export function PromptsModule() {
     }
   }, []);
 
-  function chooseSort(key: 'name' | 'updated') {
-    if (sortKey === key) {
-      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-    setSortKey(key);
-    setSortDir(key === 'name' ? 'asc' : 'desc');
-  }
-
   function toggle(id: string) {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
@@ -176,10 +179,6 @@ export function PromptsModule() {
       return;
     }
     setSelectedIds((current) => [...new Set([...current, ...visibleIds])]);
-  }
-
-  function toggleTag(tag: string) {
-    setTagFilter((current) => (current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]));
   }
 
   async function openEditor(id: string) {
@@ -237,7 +236,7 @@ export function PromptsModule() {
           type="button"
           size="icon"
           variant="outline"
-          onClick={() => setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))}
+          onClick={toggleSortDir}
           aria-label={t('networks.filter.direction')}
         >
           {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
@@ -250,7 +249,7 @@ export function PromptsModule() {
         selected={tagFilter}
         mode={tagMode}
         onToggle={toggleTag}
-        onClear={() => setTagFilter([])}
+        onClear={clearTags}
         onModeChange={setTagMode}
         label={t('prompts.filter.tags')}
       />
