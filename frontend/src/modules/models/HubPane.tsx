@@ -89,6 +89,7 @@ function HubFacts({ data }: { data: HubFiles }) {
 }
 
 const PIPELINES = ['text', 'embed', 'vision'] as const;
+type Pipeline = (typeof PIPELINES)[number];
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified', 'name'] as const;
 const PAGE_SIZES = [10, 20, 30, 50, 100] as const;
@@ -135,7 +136,7 @@ export function HubPane() {
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const abortRef = useRef<AbortController | null>(null);
-  const [pipeline, setPipeline] = useState<(typeof PIPELINES)[number]>('text');
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [size, setSize] = useState<(typeof SIZES)[number]>('any');
   const [minB, setMinB] = useState('');
   const [maxB, setMaxB] = useState('');
@@ -167,15 +168,15 @@ export function HubPane() {
   useEffect(() => {
     setPage(0);
     setCursors([null]);
-  }, [debounced, pipeline, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
+  }, [debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
   const resources = useHostResourcesQuery({ live: false });
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   const results = useQuery({
-    queryKey: ['models', 'hub', debounced, pipeline, size, bounds.min, bounds.max, sort, sortDir, pageSize, cursors[page] ?? '', capabilities.join(',')],
+    queryKey: ['models', 'hub', debounced, pipelines.join(','), size, bounds.min, bounds.max, sort, sortDir, pageSize, cursors[page] ?? '', capabilities.join(',')],
     queryFn: () =>
       searchHub({
         search: debounced,
-        pipeline,
+        pipeline: pipelines.length ? pipelines.join(',') : 'all',
         size: sizeQuery(size, bounds.min, bounds.max),
         sort,
         direction: sortDir,
@@ -199,6 +200,9 @@ export function HubPane() {
   const chosen = (files.data?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
   function toggleCapability(key: Capability) {
     setCapabilities((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
+  }
+  function togglePipeline(key: Pipeline) {
+    setPipelines((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
   }
 
   async function install(file: QuantFile) {
@@ -253,6 +257,41 @@ export function HubPane() {
               type="button"
               variant="outline"
               size="sm"
+              className="h-8 w-auto shrink-0 gap-1.5 px-2.5 text-sm font-normal shadow-sm"
+              aria-label={
+                pipelines.length > 0
+                  ? `${t('models.hub.type')}: ${pipelines.length}`
+                  : t('models.hub.type')
+              }
+            >
+              <span>{t('models.hub.type')}</span>
+              {pipelines.length > 0 ? (
+                <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium leading-none text-primary-foreground">
+                  {pipelines.length}
+                </span>
+              ) : null}
+              <ChevronDown className="size-4 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {PIPELINES.map((key) => (
+              <DropdownMenuCheckboxItem
+                key={key}
+                checked={pipelines.includes(key)}
+                onCheckedChange={() => togglePipeline(key)}
+                onSelect={(event) => event.preventDefault()}
+              >
+                {t(`models.hub.types.${key}`)}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               className="h-8 w-auto min-w-36 shrink-0 justify-between gap-2 px-2.5 text-sm font-normal shadow-sm"
               aria-label={
                 capabilities.length > 0
@@ -282,14 +321,10 @@ export function HubPane() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Select value={pipeline} onValueChange={(value) => setPipeline(value as typeof pipeline)}>
-          <SelectTrigger className="w-40" aria-label={t('models.hub.type')}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {PIPELINES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.types.${key}`)}</SelectItem>)}
-          </SelectContent>
-        </Select>
         <Select value={size} onValueChange={(value) => setSize(value as typeof size)}>
-          <SelectTrigger className="w-36" aria-label={t('models.hub.size')}><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-36" aria-label={t('models.hub.size')}>
+            <SelectValue>{size === 'any' ? t('models.hub.size') : t(`models.hub.sizes.${size}`)}</SelectValue>
+          </SelectTrigger>
           <SelectContent>
             {SIZES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sizes.${key}`)}</SelectItem>)}
           </SelectContent>

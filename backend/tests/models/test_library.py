@@ -12,6 +12,7 @@ from app.llm.hub import (
     keep_weight_file,
     order_hits,
     parameter_query,
+    pipeline_tags,
     quant_token,
     template_flags,
     valid_pull_model,
@@ -58,6 +59,18 @@ def test_name_sort_orders_the_page() -> None:
         "hf.co/aaa/beta",
         "nomic-embed-text:latest",
     ]
+
+
+def test_pipeline_tags_cover_every_type_when_unset() -> None:
+    assert pipeline_tags("") == (
+        "text-generation",
+        "feature-extraction",
+        "sentence-similarity",
+        "image-text-to-text",
+    )
+    assert pipeline_tags("all") == pipeline_tags("")
+    assert pipeline_tags("text,vision") == ("text-generation", "image-text-to-text")
+    assert pipeline_tags("embed") == ("feature-extraction", "sentence-similarity")
 
 
 def test_huggingface_url_strips_the_quant() -> None:

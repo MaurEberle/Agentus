@@ -38,6 +38,21 @@ PIPELINES = {
     "embed": ("feature-extraction", "sentence-similarity"),
     "vision": ("image-text-to-text",),
 }
+
+
+def pipeline_tags(pipeline: str) -> tuple[str, ...]:
+    """UI keys, comma-separated. Empty or ``all`` means every type."""
+    keys = [part.strip() for part in pipeline.split(",") if part.strip() and part.strip() != "all"]
+    if not keys:
+        keys = ["text", "embed", "vision"]
+    tags: list[str] = []
+    seen: set[str] = set()
+    for key in keys:
+        for tag in PIPELINES.get(key, ()):
+            if tag not in seen:
+                seen.add(tag)
+                tags.append(tag)
+    return tuple(tags) if tags else PIPELINES["text"]
 SIZES = {
     "any": None,
     "3": "max:3B",
@@ -511,7 +526,7 @@ def search_hub(
     capabilities: str = "",
     direction: str = "desc",
 ) -> HubSearchResponse:
-    pipes = PIPELINES.get(pipeline, PIPELINES["text"])
+    pipes = pipeline_tags(pipeline)
     size_query = parameter_query(size)
     sort_key = "downloads" if sort == "name" else SORTS.get(sort, "downloads")
     page = page_limit(limit)
