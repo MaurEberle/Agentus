@@ -1696,6 +1696,14 @@
   },
   "prompts": {
     "search": "Search",
+    "filter": {
+      "tags": "Tags",
+      "tagsHint": "Multiple tags: OR",
+      "noTags": "No tags"
+    },
+    "list": {
+      "selectAll": "All"
+    },
     "sort": {
       "name": "Name",
       "updated": "Updated"

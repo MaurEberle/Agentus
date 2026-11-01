@@ -1696,6 +1696,14 @@
   },
   "prompts": {
     "search": "Buscar",
+    "filter": {
+      "tags": "Etiquetas",
+      "tagsHint": "Varias etiquetas: O",
+      "noTags": "Sin etiquetas"
+    },
+    "list": {
+      "selectAll": "Todos"
+    },
     "sort": {
       "name": "Nombre",
       "updated": "Modificado"

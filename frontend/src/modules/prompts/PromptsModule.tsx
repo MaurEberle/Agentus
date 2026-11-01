@@ -86,6 +86,7 @@ export function PromptsModule() {
     return [...tags].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [items]);
   const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<'name' | 'updated'>('updated');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -99,6 +100,7 @@ export function PromptsModule() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     const next = items.filter((item) => {
+      if (tagFilter.length > 0 && !tagFilter.some((tag) => item.tags.includes(tag))) return false;
       if (!needle) return true;
       return `${item.name} ${item.description} ${item.tags.join(' ')}`.toLowerCase().includes(needle);
     });
@@ -114,7 +116,7 @@ export function PromptsModule() {
       return (av - bv) * dir;
     });
     return next;
-  }, [items, search, sortDir, sortKey]);
+  }, [items, search, sortDir, sortKey, tagFilter]);
 
   const selected = useMemo(
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is PromptListItem => Boolean(item)),
@@ -157,6 +159,22 @@ export function PromptsModule() {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
+  const visibleIds = filtered.map((item) => item.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+
+  function toggleAll() {
+    if (allVisibleSelected) {
+      const visible = new Set(visibleIds);
+      setSelectedIds((current) => current.filter((id) => !visible.has(id)));
+      return;
+    }
+    setSelectedIds((current) => [...new Set([...current, ...visibleIds])]);
+  }
+
+  function toggleTag(tag: string) {
+    setTagFilter((current) => (current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]));
+  }
+
   async function openEditor(id: string) {
     if (busy) return;
     setSelectedIds([id]);
@@ -190,7 +208,7 @@ export function PromptsModule() {
 
   const listPane = (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap gap-2 border-b p-3">
+      <div className="flex flex-wrap items-center gap-2 border-b p-3">
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('prompts.search')} className="max-w-xs" />
         <div className="flex items-center gap-1">
           <Button
@@ -219,6 +237,43 @@ export function PromptsModule() {
             {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
           </Button>
         </div>
+      </div>
+      <div className="border-b px-3 py-2">
+        <p className="text-center text-xs text-muted-foreground">{t('prompts.filter.tagsHint')}</p>
+        {tagSuggestions.length === 0 ? (
+          <p className="mt-2 text-center text-sm text-muted-foreground">{t('prompts.filter.noTags')}</p>
+        ) : (
+          <div className="mt-2 flex flex-wrap justify-center gap-1.5" role="group" aria-label={t('prompts.filter.tags')}>
+            {tagSuggestions.map((tag) => {
+              const on = tagFilter.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggleTag(tag)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                    on
+                      ? 'border-transparent bg-primary text-primary-foreground'
+                      : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  )}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 border-b px-3 py-2">
+        <Checkbox
+          checked={allVisibleSelected}
+          onCheckedChange={toggleAll}
+          disabled={filtered.length === 0}
+          aria-label={t('prompts.list.selectAll')}
+        />
+        <span className="text-sm text-muted-foreground">{t('prompts.list.selectAll')}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {filtered.length === 0 ? (
