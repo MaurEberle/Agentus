@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownAZ, ArrowDownZA, Copy, Download, Pencil, Plus, Tags, Trash2, Upload } from 'lucide-react';
+import { useBlocker } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -106,6 +115,48 @@ export function PromptsModule() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [editor, setEditor] = useState<PromptDetail | 'new' | null>(null);
+  const [createNonce, setCreateNonce] = useState(0);
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const dirtyRef = useRef(false);
+  const allowLeaveRef = useRef(false);
+  const pendingRef = useRef<(() => void) | null>(null);
+  dirtyRef.current = editorDirty;
+  const markDirty = useCallback((value: boolean) => {
+    dirtyRef.current = value;
+    setEditorDirty(value);
+  }, []);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !allowLeaveRef.current && dirtyRef.current && currentLocation.pathname !== nextLocation.pathname,
+  );
+  function stayWithDraft() {
+    pendingRef.current = null;
+    setConfirmOpen(false);
+    if (blocker.state === 'blocked') blocker.reset?.();
+  }
+  function discardDraft() {
+    const action = pendingRef.current;
+    pendingRef.current = null;
+    setConfirmOpen(false);
+    dirtyRef.current = false;
+    setEditorDirty(false);
+    allowLeaveRef.current = true;
+    if (blocker.state === 'blocked') blocker.proceed?.();
+    setEditor(null);
+    action?.();
+    queueMicrotask(() => {
+      allowLeaveRef.current = false;
+    });
+  }
+  function guard(action: () => void) {
+    if (!dirtyRef.current) {
+      action();
+      return;
+    }
+    pendingRef.current = action;
+    setConfirmOpen(true);
+  }
   const [tagsOpen, setTagsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -190,8 +241,12 @@ export function PromptsModule() {
     setSelectedIds((current) => [...new Set([...current, ...visibleIds])]);
   }
 
-  async function openEditor(id: string) {
+  function openEditor(id: string) {
     if (busy) return;
+    guard(() => void loadEditor(id));
+  }
+
+  async function loadEditor(id: string) {
     setSelectedIds([id]);
     try {
       const detail = detailQuery.data?.id === id ? detailQuery.data : await getPrompt(id);
@@ -305,7 +360,21 @@ export function PromptsModule() {
     </div>
   );
 
-  const detail = (
+  const detail = editor ? (
+    <PromptEditor
+      key={editor === 'new' ? `new-${createNonce}` : editor.id}
+      initial={editor === 'new' ? null : editor}
+      busy={busy}
+      suggestions={tagSuggestions}
+      onClose={() => guard(() => setEditor(null))}
+      onDirtyChange={markDirty}
+      onSave={(draft) => void run(async () => {
+        if (editor !== 'new') await updatePrompt(editor.id, draft);
+        else await createPrompt(draft);
+        setEditor(null);
+      }, editor === 'new' ? 'prompts.notify.created' : 'prompts.notify.saved')}
+    />
+  ) : (
     <div className="flex h-full min-h-0 flex-col">
       {selected.length === 0 ? (
         <p className="flex flex-1 items-center justify-center p-4 text-center text-sm text-muted-foreground">{t('prompts.detail.none')}</p>
@@ -340,11 +409,11 @@ export function PromptsModule() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Button type="button" size="sm" onClick={() => setEditor('new')} disabled={busy}>
+        <Button type="button" size="sm" onClick={() => guard(() => { setCreateNonce((value) => value + 1); setEditor('new'); })} disabled={busy}>
           <Plus />
           {t('prompts.ribbon.new')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => detailQuery.data && setEditor(detailQuery.data)}>
+        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => detailQuery.data && guard(() => setEditor(detailQuery.data!))}>
           <Pencil />
           {t('prompts.ribbon.edit')}
         </Button>
@@ -352,15 +421,15 @@ export function PromptsModule() {
           <Copy />
           {t('prompts.ribbon.duplicate')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => setTagsOpen(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => guard(() => setTagsOpen(true))}>
           <Tags />
           {t('prompts.ribbon.tags')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => setDeleteOpen(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={busy || selected.length === 0} onClick={() => guard(() => setDeleteOpen(true))}>
           <Trash2 />
           {t('prompts.ribbon.delete')}
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setImportOpen(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => guard(() => setImportOpen(true))}>
           <Upload />
           {t('prompts.ribbon.import')}
         </Button>
@@ -377,7 +446,7 @@ export function PromptsModule() {
         </Alert>
       ) : null}
       {query.isLoading ? <ModuleLoading /> : (
-        <div data-split-row className="flex min-h-0 w-full flex-1">
+        <div data-split-row className={cn('flex min-h-0 w-full flex-1', !isDesktop && 'flex-col')}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="min-h-0 w-full flex-1 overflow-hidden">{listPane}</div>
           </div>
@@ -388,28 +457,16 @@ export function PromptsModule() {
               onChange={(listShare) => setPanes((current) => ({ ...current, listShare: clampListShare(listShare) }))}
             />
           ) : null}
-          {isDesktop ? (
+          {isDesktop || editor ? (
             <div
-              className="flex h-full min-h-0 min-w-0 shrink-0 flex-col"
-              style={{ width: `${(1 - panes.listShare) * 100}%` }}
+              className={cn('flex min-h-0 min-w-0 flex-col', isDesktop ? 'h-full shrink-0' : 'min-h-72 flex-1 border-t')}
+              style={isDesktop ? { width: `${(1 - panes.listShare) * 100}%` } : undefined}
             >
               <div className="min-h-0 w-full min-w-0 flex-1 overflow-hidden">{detail}</div>
             </div>
           ) : null}
         </div>
       )}
-      <PromptEditor
-        open={editor !== null}
-        initial={editor && editor !== 'new' ? editor : null}
-        busy={busy}
-        suggestions={tagSuggestions}
-        onClose={() => setEditor(null)}
-        onSave={(draft) => void run(async () => {
-          if (editor && editor !== 'new') await updatePrompt(editor.id, draft);
-          else await createPrompt(draft);
-          setEditor(null);
-        }, editor && editor !== 'new' ? 'prompts.notify.saved' : 'prompts.notify.created')}
-      />
       <TagsDialog
         open={tagsOpen}
         count={selected.length}
@@ -439,6 +496,23 @@ export function PromptsModule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog
+        open={confirmOpen || blocker.state === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open) stayWithDraft();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('prompts.unsaved.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('prompts.unsaved.body')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={stayWithDraft}>{t('prompts.unsaved.stay')}</Button>
+            <Button type="button" onClick={discardDraft}>{t('prompts.unsaved.leave')}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ImportPromptsDialog
         open={importOpen}
         busy={busy}
@@ -453,38 +527,43 @@ export function PromptsModule() {
 }
 
 function PromptEditor({
-  open,
   initial,
   busy,
   suggestions,
   onClose,
   onSave,
+  onDirtyChange,
 }: {
-  open: boolean;
   initial: PromptDetail | null;
   busy: boolean;
   suggestions: string[];
   onClose: () => void;
   onSave: (draft: PromptDraft) => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const tagRef = useRef<TagInputHandle>(null);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [body, setBody] = useState('');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [body, setBody] = useState(initial?.body ?? '');
+  const [tagDraft, setTagDraft] = useState('');
   const [showErrors, setShowErrors] = useState(false);
   const nameMissing = !name.trim();
   const bodyMissing = !body.trim();
+  const initialTags = initial?.tags ?? [];
+  const dirty =
+    name.trim() !== (initial?.name ?? '').trim() ||
+    description.trim() !== (initial?.description ?? '').trim() ||
+    body.trim() !== (initial?.body ?? '').trim() ||
+    tagDraft.trim() !== '' ||
+    tags.length !== initialTags.length ||
+    tags.some((tag, index) => tag !== initialTags[index]);
 
   useEffect(() => {
-    if (!open) return;
-    setName(initial?.name ?? '');
-    setDescription(initial?.description ?? '');
-    setTags(initial?.tags ?? []);
-    setBody(initial?.body ?? '');
-    setShowErrors(false);
-  }, [initial, open]);
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+  useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
   function save() {
     if (nameMissing || bodyMissing) {
@@ -500,71 +579,74 @@ function PromptEditor({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent closeLabel={t('prompts.dialog.close')} className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{initial ? t('prompts.editor.edit') : t('prompts.editor.create')}</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-name">{t('prompts.editor.name')}</Label>
-            <Input
-              id="prompt-name"
-              value={name}
-              aria-invalid={showErrors && nameMissing}
-              className={showErrors && nameMissing ? 'border-destructive' : undefined}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {showErrors && nameMissing ? <p className="text-xs text-destructive">{t('prompts.editor.nameRequired')}</p> : null}
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-description">{t('prompts.editor.description')}</Label>
-            <Textarea
-              id="prompt-description"
-              value={description}
-              rows={2}
-              onChange={(event) => setDescription(event.target.value)}
-              className="min-h-14 resize-y"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-tags">{t('prompts.editor.tags')}</Label>
-            <TagInput
-              ref={tagRef}
-              id="prompt-tags"
-              value={tags}
-              onChange={setTags}
-              disabled={busy}
-              placeholder={t('networks.tags.placeholder')}
-              addLabel={t('networks.tags.add')}
-              removeLabel={(tag) => t('networks.tags.remove', { tag })}
-              suggestions={suggestions}
-              describedBy="prompt-tags-hint"
-            />
-            <p id="prompt-tags-hint" className="text-xs text-muted-foreground">
-              {t('networks.tags.hint')}
-            </p>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="prompt-body">{t('prompts.editor.body')}</Label>
-            <Textarea
-              id="prompt-body"
-              value={body}
-              aria-invalid={showErrors && bodyMissing}
-              onChange={(event) => setBody(event.target.value)}
-              className={cn('min-h-48 font-mono text-sm', showErrors && bodyMissing && 'border-destructive')}
-            />
-            {showErrors && bodyMissing ? <p className="text-xs text-destructive">{t('prompts.editor.bodyRequired')}</p> : null}
-          </div>
+    <form
+      className="flex h-full min-h-0 min-w-0 flex-col"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save();
+      }}
+    >
+      <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-2">
+        <h2 className="min-w-0 truncate text-sm font-semibold">{initial ? t('prompts.editor.edit') : t('prompts.editor.create')}</h2>
+        <div className="flex shrink-0 gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={onClose}>{t('prompts.dialog.cancel')}</Button>
+          <Button type="submit" size="sm" disabled={busy || nameMissing || bodyMissing}>{t('prompts.editor.save')}</Button>
         </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>{t('prompts.dialog.cancel')}</Button>
-          <Button type="button" disabled={busy || nameMissing || bodyMissing} onClick={save}>
-            {t('prompts.editor.save')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+      <div className="grid min-h-0 min-w-0 flex-1 content-start gap-3 overflow-auto p-4">
+        <div className="grid min-w-0 gap-1.5">
+          <Label htmlFor="prompt-name">{t('prompts.editor.name')}</Label>
+          <Input
+            id="prompt-name"
+            value={name}
+            aria-invalid={showErrors && nameMissing}
+            className={cn('w-full min-w-0', showErrors && nameMissing && 'border-destructive')}
+            onChange={(event) => setName(event.target.value)}
+          />
+          {showErrors && nameMissing ? <p className="text-xs text-destructive">{t('prompts.editor.nameRequired')}</p> : null}
+        </div>
+        <div className="grid min-w-0 gap-1.5">
+          <Label htmlFor="prompt-description">{t('prompts.editor.description')}</Label>
+          <Textarea
+            id="prompt-description"
+            value={description}
+            rows={2}
+            onChange={(event) => setDescription(event.target.value)}
+            className="min-h-14 w-full min-w-0 resize-y"
+          />
+        </div>
+        <div className="grid min-w-0 gap-1.5">
+          <Label htmlFor="prompt-tags">{t('prompts.editor.tags')}</Label>
+          <TagInput
+            ref={tagRef}
+            id="prompt-tags"
+            value={tags}
+            onChange={setTags}
+            disabled={busy}
+            placeholder={t('networks.tags.placeholder')}
+            addLabel={t('networks.tags.add')}
+            removeLabel={(tag) => t('networks.tags.remove', { tag })}
+            suggestions={suggestions}
+            describedBy="prompt-tags-hint"
+            onDraftChange={setTagDraft}
+          />
+          <p id="prompt-tags-hint" className="text-xs text-muted-foreground">
+            {t('networks.tags.hint')}
+          </p>
+        </div>
+        <div className="grid min-h-48 min-w-0 flex-1 gap-1.5">
+          <Label htmlFor="prompt-body">{t('prompts.editor.body')}</Label>
+          <Textarea
+            id="prompt-body"
+            value={body}
+            aria-invalid={showErrors && bodyMissing}
+            onChange={(event) => setBody(event.target.value)}
+            className={cn('h-full min-h-48 w-full min-w-0 resize-y font-mono text-sm', showErrors && bodyMissing && 'border-destructive')}
+          />
+          {showErrors && bodyMissing ? <p className="text-xs text-destructive">{t('prompts.editor.bodyRequired')}</p> : null}
+        </div>
+      </div>
+    </form>
   );
 }
 

@@ -1877,6 +1877,12 @@
       "bodyRequired": "El prompt no puede estar vacío.",
       "save": "Guardar"
     },
+    "unsaved": {
+      "title": "Cambios sin guardar",
+      "body": "El prompt todavía no está guardado. ¿Descartarlo y continuar?",
+      "stay": "Quedarse",
+      "leave": "Descartar"
+    },
     "import": {
       "title": "Importar prompts",
       "pick": "Elegir archivos",

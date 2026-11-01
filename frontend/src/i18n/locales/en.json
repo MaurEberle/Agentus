@@ -1877,6 +1877,12 @@
       "bodyRequired": "The prompt cannot be empty.",
       "save": "Save"
     },
+    "unsaved": {
+      "title": "Unsaved changes",
+      "body": "This prompt is not saved yet. Discard it and continue?",
+      "stay": "Stay",
+      "leave": "Discard"
+    },
     "import": {
       "title": "Import prompts",
       "pick": "Choose files",

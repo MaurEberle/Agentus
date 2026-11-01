@@ -1877,6 +1877,12 @@
       "bodyRequired": "Der Prompt darf nicht leer sein.",
       "save": "Speichern"
     },
+    "unsaved": {
+      "title": "Ungespeicherte Änderungen",
+      "body": "Der Prompt ist noch nicht gespeichert. Verwerfen und fortfahren?",
+      "stay": "Bleiben",
+      "leave": "Verwerfen"
+    },
     "import": {
       "title": "Prompts importieren",
       "pick": "Dateien wählen",
