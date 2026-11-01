@@ -362,7 +362,6 @@ export function HistoryModule() {
 
   return (
     <div className="flex w-full min-w-0 max-w-full flex-col gap-4 overflow-x-hidden p-4 pb-24 [overflow-anchor:none] md:p-6 md:pb-24">
-      <h1 className="text-xl font-semibold tracking-tight">{t('history.title')}</h1>
       <FilterBar
         filter={filter}
         networks={networkOptions}

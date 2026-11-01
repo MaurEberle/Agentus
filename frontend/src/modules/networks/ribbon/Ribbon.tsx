@@ -112,7 +112,6 @@ export function LibraryRibbon({
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-b bg-card px-2 py-1.5">
-      <p className="mr-2 text-sm font-medium">{t('networks.title')}</p>
       {(isDesktop ? actions : primary).map(({ key, ...action }) => (
         <RibbonAction key={key} {...action} />
       ))}

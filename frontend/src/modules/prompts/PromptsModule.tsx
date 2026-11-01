@@ -320,7 +320,7 @@ export function PromptsModule() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex flex-wrap gap-2 border-b px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <Button type="button" size="sm" onClick={() => setEditor('new')} disabled={busy}>{t('prompts.ribbon.new')}</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || selected.length !== 1} onClick={() => detailQuery.data && setEditor(detailQuery.data)}>
           {t('prompts.ribbon.edit')}
