@@ -89,7 +89,7 @@ function HubFacts({ data }: { data: HubFiles }) {
 
 const PIPELINES = ['text', 'embed', 'vision'] as const;
 const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
-const SORTS = ['downloads', 'likes', 'trending', 'modified'] as const;
+const SORTS = ['downloads', 'likes', 'trending', 'modified', 'name'] as const;
 const PAGE_SIZES = [10, 20, 30, 50, 100] as const;
 const CAPABILITIES = ['tools', 'thinking', 'vision'] as const;
 type Capability = (typeof CAPABILITIES)[number];
@@ -227,12 +227,6 @@ export function HubPane() {
           aria-label={t('models.hub.search')}
           className="h-8 max-w-56"
         />
-        <Select value={pipeline} onValueChange={(value) => setPipeline(value as typeof pipeline)}>
-          <SelectTrigger className="w-40" aria-label={t('models.hub.type')}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {PIPELINES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.types.${key}`)}</SelectItem>)}
-          </SelectContent>
-        </Select>
         <div className="flex items-center gap-1">
           <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
             <SelectTrigger className="w-36" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
@@ -251,6 +245,7 @@ export function HubPane() {
             {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
           </Button>
         </div>
+        <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -286,6 +281,12 @@ export function HubPane() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        <Select value={pipeline} onValueChange={(value) => setPipeline(value as typeof pipeline)}>
+          <SelectTrigger className="w-40" aria-label={t('models.hub.type')}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {PIPELINES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.types.${key}`)}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={size} onValueChange={(value) => setSize(value as typeof size)}>
           <SelectTrigger className="w-36" aria-label={t('models.hub.size')}><SelectValue /></SelectTrigger>
           <SelectContent>

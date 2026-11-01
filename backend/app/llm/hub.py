@@ -81,6 +81,17 @@ SORTS = {
 }
 
 
+def order_hits(items: list[HubHit], sort: str, *, ascending: bool) -> None:
+    """Name is ordered here. The Hub only sorts downloads, likes, trend, and date, and only descending."""
+    if sort == "name":
+        items.sort(key=lambda item: item.id.casefold())
+        if not ascending:
+            items.reverse()
+        return
+    if ascending:
+        items.reverse()
+
+
 class HubHit(ApiModel):
     id: str
     pipeline: str | None = None
@@ -398,6 +409,7 @@ def _search_capable(
     cursor: str | None,
     wanted: tuple[str, ...],
     direction: str,
+    sort: str,
 ) -> HubSearchResponse:
     """Keep reading Hub pages until the page is full of models with the chosen capabilities."""
     states = _unpack_scan(cursor, len(pipes))
@@ -455,9 +467,9 @@ def _search_capable(
                 break
     except RuntimeApiError as exc:
         return HubSearchResponse(items=[], page_size=page, message_key=exc.error_key)
-    collected.sort(key=lambda item: item.downloads, reverse=True)
-    if direction == "1":
-        collected.reverse()
+    if sort != "name":
+        collected.sort(key=lambda item: item.downloads, reverse=True)
+    order_hits(collected, sort, ascending=direction == "1")
     nxt_token = _pack_scan(states)
     return HubSearchResponse(
         items=collected[:page],
@@ -480,7 +492,7 @@ def search_hub(
 ) -> HubSearchResponse:
     pipes = PIPELINES.get(pipeline, PIPELINES["text"])
     size_query = parameter_query(size)
-    sort_key = SORTS.get(sort, "downloads")
+    sort_key = "downloads" if sort == "name" else SORTS.get(sort, "downloads")
     page = page_limit(limit)
     needle = search.strip()[:80]
     order = "1" if direction == "asc" else "-1"
@@ -495,6 +507,7 @@ def search_hub(
             cursor=cursor,
             wanted=wanted,
             direction=order,
+            sort=sort,
         )
     incoming = unpack_cursors(cursor, len(pipes))
     try:
@@ -543,8 +556,7 @@ def search_hub(
         if len(items) >= page:
             break
     _attach_flags(items)
-    if order == "1":
-        items.reverse()
+    order_hits(items, sort, ascending=order == "1")
     nxt = pack_cursors(following)
     return HubSearchResponse(items=items, page_size=page, has_next=nxt is not None, next_cursor=nxt)
 

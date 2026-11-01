@@ -7,8 +7,10 @@ from app.db.networks import NetworkRow, upsert_network
 from app.db.settings import put_settings
 from app.llm.catalog import huggingface_url, model_kind
 from app.llm.hub import (
+    HubHit,
     keep_hub_row,
     keep_weight_file,
+    order_hits,
     parameter_query,
     quant_token,
     template_flags,
@@ -30,6 +32,20 @@ def test_kind_uses_name_and_ollama_metadata() -> None:
     assert model_kind("painter", ["image"], moe=False) == "image"
     assert model_kind("embed-painter", ["image"], moe=False) == "image"
     assert model_kind("nomic-embed-text", [], moe=False) == "embedding"
+
+
+def test_name_sort_orders_the_page() -> None:
+    hits = [
+        HubHit(id="zebra/model", url="https://huggingface.co/zebra/model"),
+        HubHit(id="alpha/model", url="https://huggingface.co/alpha/model"),
+        HubHit(id="Middle/model", url="https://huggingface.co/Middle/model"),
+    ]
+    order_hits(hits, "name", ascending=True)
+    assert [item.id for item in hits] == ["alpha/model", "Middle/model", "zebra/model"]
+    order_hits(hits, "name", ascending=False)
+    assert [item.id for item in hits] == ["zebra/model", "Middle/model", "alpha/model"]
+    order_hits(hits, "downloads", ascending=True)
+    assert [item.id for item in hits] == ["alpha/model", "Middle/model", "zebra/model"]
 
 
 def test_huggingface_url_strips_the_quant() -> None:
