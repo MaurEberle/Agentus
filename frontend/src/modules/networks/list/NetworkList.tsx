@@ -33,7 +33,7 @@ export function NetworkList({
   const isDesktop = useMediaQuery('(min-width: 768px)');
   if (loading) {
     return (
-      <div className="space-y-2 p-3">
+      <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
@@ -108,7 +108,11 @@ function DesktopTable({ items, onOpen }: { items: NetworkListItem[]; onOpen: (id
   }
 
   return (
-    <div tabIndex={0} onKeyDown={onKey} className="min-h-0 flex-1 overflow-auto outline-none">
+    <div
+      tabIndex={0}
+      onKeyDown={onKey}
+      className="min-h-0 min-w-0 flex-1 overflow-auto outline-none [&>div]:overflow-visible"
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -176,7 +180,7 @@ function MobileCards({ items, onOpen }: { items: NetworkListItem[]; onOpen: (id:
   const select = useNetworksUi((state) => state.select);
 
   return (
-    <ul className="space-y-2 overflow-auto p-3">
+    <ul className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
       {items.map((item) => (
         <li key={item.id}>
           <div

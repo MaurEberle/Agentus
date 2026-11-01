@@ -271,8 +271,8 @@ export function NetworksModule() {
           ) : null}
         </div>
       ) : (
-        <div ref={libraryRowRef} className="flex min-h-0 flex-1">
-          <div className="min-h-0 min-w-0 flex-1">
+        <div ref={libraryRowRef} className="flex min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <NetworkList items={filtered} loading={false} onOpen={openEditor} />
           </div>
           {isDesktop ? (
