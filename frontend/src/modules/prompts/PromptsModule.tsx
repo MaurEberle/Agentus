@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownAZ, ArrowUpAZ, Copy, Download, Pencil, Plus, Tags, Trash2, Upload } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownZA, Copy, Download, Pencil, Plus, Tags, Trash2, Upload } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -154,8 +154,12 @@ export function PromptsModule() {
   }, []);
 
   function chooseSort(key: 'name' | 'updated') {
-    setSortDir((dir) => (sortKey === key ? (dir === 'asc' ? 'desc' : 'asc') : 'desc'));
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
     setSortKey(key);
+    setSortDir(key === 'name' ? 'asc' : 'desc');
   }
 
   function toggle(id: string) {
@@ -236,7 +240,7 @@ export function PromptsModule() {
           onClick={() => setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))}
           aria-label={t('networks.filter.direction')}
         >
-          {sortDir === 'asc' ? <ArrowUpAZ className="size-4" /> : <ArrowDownAZ className="size-4" />}
+          {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
         </Button>
       </div>
       <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
