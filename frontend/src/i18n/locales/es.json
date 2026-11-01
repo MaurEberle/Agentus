@@ -147,6 +147,9 @@
       "stop": "Detener",
       "remove": "Quitar",
       "removeMany": "Quitar {{count}}",
+      "confirmTitle": "Quitar descarga",
+      "confirmBody": "Se quitará {{name}}. Se borrarán los archivos descargados.",
+      "confirmBodyMany": "Se quitarán {{count}} descargas. Se borrarán los archivos descargados.",
       "status": {
         "queued": "En espera",
         "running": "Descargando",

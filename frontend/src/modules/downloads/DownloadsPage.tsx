@@ -4,6 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { formatBytes } from '@/lib/format';
 import {
   listDownloads,
@@ -19,6 +27,8 @@ import type { DownloadJob } from '@/modules/models/model';
 export function DownloadsPage() {
   const { t, i18n } = useTranslation();
   const [selected, setSelected] = useState<string[]>([]);
+  const [pending, setPending] = useState<string[]>([]);
+  const [removing, setRemoving] = useState(false);
   const downloads = useQuery({
     queryKey: ['models', 'downloads'],
     queryFn: listDownloads,
@@ -39,6 +49,24 @@ export function DownloadsPage() {
     setSelected(allSelected ? [] : selectable);
   }
 
+  function askRemove(ids: string[]) {
+    if (ids.length === 0 || removing) return;
+    setPending(ids);
+  }
+
+  async function confirmRemove() {
+    const ids = pending;
+    if (ids.length === 0) return;
+    setRemoving(true);
+    try {
+      await removeDownloads(ids);
+      setSelected((current) => current.filter((id) => !ids.includes(id)));
+      setPending([]);
+    } finally {
+      setRemoving(false);
+    }
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
@@ -56,9 +84,7 @@ export function DownloadsPage() {
           size="sm"
           variant="outline"
           disabled={selected.length === 0}
-          onClick={() => {
-            void removeDownloads(selected).then(() => setSelected([]));
-          }}
+          onClick={() => askRemove(selected)}
         >
           {selected.length > 0 ? t('models.downloads.removeMany', { count: selected.length }) : t('models.downloads.remove')}
         </Button>
@@ -83,10 +109,33 @@ export function DownloadsPage() {
               locale={i18n.language}
               selected={selected.includes(item.id)}
               onToggle={() => toggle(item.id)}
+              onRemove={() => askRemove([item.id])}
             />
           ))}
         </ul>
       )}
+      <Dialog open={pending.length > 0} onOpenChange={(next) => !next && !removing && setPending([])}>
+        <DialogContent closeLabel={t('models.dialog.close')}>
+          <DialogHeader>
+            <DialogTitle>{t('models.downloads.confirmTitle')}</DialogTitle>
+            <DialogDescription>
+              {pending.length === 1
+                ? t('models.downloads.confirmBody', {
+                    name: items.find((item) => item.id === pending[0])?.label ?? '',
+                  })
+                : t('models.downloads.confirmBodyMany', { count: pending.length })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={removing} onClick={() => setPending([])}>
+              {t('models.dialog.cancel')}
+            </Button>
+            <Button type="button" variant="destructive" disabled={removing} loading={removing} onClick={() => void confirmRemove()}>
+              {t('models.downloads.remove')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -96,11 +145,13 @@ function DownloadRow({
   locale,
   selected,
   onToggle,
+  onRemove,
 }: {
   item: DownloadJob;
   locale: string;
   selected: boolean;
   onToggle: () => void;
+  onRemove: () => void;
 }) {
   const { t } = useTranslation();
   const percent = item.total ? Math.min(100, Math.round(((item.completed ?? 0) / item.total) * 100)) : null;
@@ -137,7 +188,7 @@ function DownloadRow({
           <Button type="button" size="sm" variant="outline" onClick={() => void stopDownload(item.id)}>{t('models.downloads.stop')}</Button>
         ) : null}
         {item.status !== 'running' ? (
-          <Button type="button" size="sm" variant="outline" onClick={() => void removeDownloads([item.id])}>{t('models.downloads.remove')}</Button>
+          <Button type="button" size="sm" variant="outline" onClick={onRemove}>{t('models.downloads.remove')}</Button>
         ) : null}
       </div>
     </li>

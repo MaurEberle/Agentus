@@ -147,6 +147,9 @@
       "stop": "Stoppen",
       "remove": "Entfernen",
       "removeMany": "{{count}} entfernen",
+      "confirmTitle": "Download entfernen",
+      "confirmBody": "{{name}} wird entfernt. Die dazu geladenen Dateien werden gelöscht.",
+      "confirmBodyMany": "{{count}} Downloads werden entfernt. Die dazu geladenen Dateien werden gelöscht.",
       "status": {
         "queued": "Wartet",
         "running": "Lädt",
