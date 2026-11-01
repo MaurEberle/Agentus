@@ -91,6 +91,13 @@ function billions(raw: string): string | null {
   return text;
 }
 
+function knownPages(current: number, loaded: number): number[] {
+  if (loaded <= 7) return Array.from({ length: loaded }, (_, index) => index);
+  const pages = new Set<number>([0, loaded - 1]);
+  for (let index = Math.max(1, current - 2); index <= Math.min(loaded - 1, current + 2); index += 1) pages.add(index);
+  return [...pages].sort((left, right) => left - right);
+}
+
 function sizeQuery(size: string, minRaw: string, maxRaw: string): string {
   if (size !== 'custom') return size;
   let minimum = billions(minRaw);
@@ -265,7 +272,10 @@ export function HubPane() {
             </ul>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1">
+              <Button type="button" size="sm" variant="outline" disabled={page === 0 || results.isFetching} onClick={() => setPage(0)}>
+                {t('models.hub.first')}
+              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -275,7 +285,22 @@ export function HubPane() {
               >
                 {t('models.hub.previous')}
               </Button>
-              <span className="text-xs text-muted-foreground">{t('models.hub.page', { page: page + 1 })}</span>
+              {knownPages(page, cursors.length).map((index, position, all) => (
+                <span key={index} className="flex items-center gap-1">
+                  {position > 0 && all[position - 1] !== index - 1 ? <span className="px-1 text-xs text-muted-foreground">…</span> : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={index === page ? 'secondary' : 'outline'}
+                    className="min-w-8 px-2"
+                    disabled={results.isFetching}
+                    aria-current={index === page ? 'page' : undefined}
+                    onClick={() => setPage(index)}
+                  >
+                    {index + 1}
+                  </Button>
+                </span>
+              ))}
               <Button
                 type="button"
                 size="sm"
@@ -296,7 +321,7 @@ export function HubPane() {
               </Button>
             </div>
             <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value) as (typeof PAGE_SIZES)[number])}>
-              <SelectTrigger className="h-8 w-28" aria-label={t('models.hub.pageSize')}>
+              <SelectTrigger className="h-8 w-44 shrink-0" aria-label={t('models.hub.pageSize')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

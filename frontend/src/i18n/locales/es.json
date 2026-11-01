@@ -97,6 +97,7 @@
       "failed": "La búsqueda falló.",
       "downloads": "{{count}} descargas",
       "pick": "Elige un modelo.",
+      "first": "Inicio",
       "previous": "Anterior",
       "next": "Siguiente",
       "page": "Página {{page}}",

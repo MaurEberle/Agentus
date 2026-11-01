@@ -97,6 +97,7 @@
       "failed": "The search failed.",
       "downloads": "{{count}} downloads",
       "pick": "Select a model.",
+      "first": "First",
       "previous": "Previous",
       "next": "Next",
       "page": "Page {{page}}",
