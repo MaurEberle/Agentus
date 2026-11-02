@@ -80,7 +80,7 @@ class RunMemory:
         self.records: list[AgentRecord] = []
         self.own_tools: list[ToolEvent] = []
         self.own_files: list[FileFact] = []
-        self.allow_own_tools = True
+        self.allow_own_tools = False
         self.finish_warned = False
         self.rejected: list[Rejected] = []
         self.windows: list[dict[str, object]] = []

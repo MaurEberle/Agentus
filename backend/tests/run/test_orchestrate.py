@@ -176,7 +176,7 @@ def test_instructions_mention_connected_tools() -> None:
     text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"])
     assert "You have tools: file_access." in text
     assert "not the tool result" in text
-    assert "instead of calling an agent" in text
+    assert "only to recover from that failure" in text
     assert "You may call tools as often as you need" in text
     assert "Five failed tool calls in a row start a think round" in text
     assert "Two failed think rounds in a row stop the run" in text

@@ -85,7 +85,7 @@ def _orchestrator_call(
         emit_log("info", "run.memory.source", node_id=agent_id)
     name = dict(names).get(agent_id, agent_id)
     record = memory.begin_call(agent_id, name, task, has_tools)
-    memory.allow_own_tools = True
+    memory.allow_own_tools = False
 
     def _ran() -> str:
         _count_file_attempt(compiled, memory, agent, record)
@@ -112,12 +112,15 @@ def _orchestrator_call(
         if text is None:
             return "cancelled" if ctrl.stop_event.is_set() else "ran"
         if record.error == "prompt does not fit":
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error == "too many tool failures":
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error in {"too many thinks", "think loop", "empty stops"}:
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error:
@@ -135,6 +138,7 @@ def _orchestrator_call(
                 attempt += 1
                 record.error = ""
                 continue
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         visible = visible_text(text or "")
@@ -143,16 +147,19 @@ def _orchestrator_call(
         wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
         if not visible and not record.tool_ok:
             record.error = "empty result"
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         record.text = visible
         if has_tools and not record.tool_ok:
             record.error = "no tool used"
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if not visible and not wrote:
             record.error = "empty result"
             emit_log("warn", "run.agent.empty", node_id=agent_id)
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         record.finished = True

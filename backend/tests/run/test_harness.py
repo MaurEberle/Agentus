@@ -701,16 +701,32 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
 
     monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
+    armed = {"ok": False}
+
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
         blob = "\n".join(message.content or "" for message in req.messages)
         if "You orchestrate" not in system:
             prompts.append(blob)
-            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+            text = "kurz" if armed["ok"] else ""
+            return CompletionResult(content=text, model=req.model, finish_reason="stop")
         prompts.append(blob)
         seen_tools.append(req.tools)
-        orch_n = sum(1 for item in prompts if "You orchestrate" in item)
-        if orch_n == 1:
+        if req.tools:
+            armed["ok"] = True
+        if "kurz" in blob:
+            return CompletionResult(
+                content='{"action":"finish","text":"Fertig."}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if not req.tools:
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if raw_listing not in blob:
             return CompletionResult(
                 content=None,
                 tool_calls=[
@@ -719,14 +735,8 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
                 model=req.model,
                 finish_reason="tool_calls",
             )
-        if orch_n == 2:
-            return CompletionResult(
-                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
-                model=req.model,
-                finish_reason="stop",
-            )
         return CompletionResult(
-            content='{"action":"finish","text":"Fertig."}',
+            content='{"action":"call","agent":"Schreiber","task":"schreib"}',
             model=req.model,
             finish_reason="stop",
         )
@@ -750,17 +760,17 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
         }
     )
     stored = _drive(monkeypatch, _complete, doc=doc)
-    assert stored["outcome"] == "succeeded"
-    assert seen_tools[0] and any(
-        (item.get("function") or {}).get("name") == "file_access" for item in seen_tools[0]
+    assert stored["outcome"] == "succeeded", stored.get("error_message")
+    assert not seen_tools[0]
+    assert any(
+        tools and any((item.get("function") or {}).get("name") == "file_access" for item in tools)
+        for tools in seen_tools
     )
-    assert len(prompts) == 4
-    assert raw_listing in prompts[1]
-    assert raw_listing not in prompts[2]
-    assert "Your tools:" not in prompts[2]
-    assert raw_listing not in prompts[3]
-    assert ". list ok" in prompts[3]
-    assert "Your tools:" in prompts[3]
+    assert any(raw_listing in item for item in prompts)
+    finish_prompt = prompts[-1]
+    assert raw_listing not in finish_prompt
+    assert ". list ok" in finish_prompt
+    assert "Your tools:" in finish_prompt
     texts = [item["content"] for item in (stored["chat"] or [])]
     assert raw_listing not in "\n".join(texts)
     assert "Fertig." in texts
@@ -807,14 +817,21 @@ def test_orchestrator_keeps_tool_rounds_then_calls_an_agent(monkeypatch, api_env
         system = req.messages[0].content or ""
         blob = "\n".join(message.content or "" for message in req.messages)
         if "You orchestrate" not in system:
-            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
-        if "Result from Schreiber" in blob or "characters:" in blob:
+            text = "kurz" if executed["n"] else ""
+            return CompletionResult(content=text, model=req.model, finish_reason="stop")
+        if "kurz" in blob:
             return CompletionResult(
                 content='{"action":"finish","text":"Fertig."}',
                 model=req.model,
                 finish_reason="stop",
             )
-        if req.tools and executed["n"] < 3:
+        if not req.tools:
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
+        if executed["n"] < 3:
             return CompletionResult(
                 content=None,
                 tool_calls=[
@@ -830,7 +847,7 @@ def test_orchestrator_keeps_tool_rounds_then_calls_an_agent(monkeypatch, api_env
         )
 
     stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
-    assert stored["outcome"] == "succeeded"
+    assert stored["outcome"] == "succeeded", stored.get("error_message")
     assert executed["n"] == 3
     texts = [item["content"] for item in (stored["chat"] or [])]
     assert "Schreiber is done." in texts
@@ -853,7 +870,13 @@ def test_orchestrator_runs_a_third_xml_tool_instead_of_chatting(monkeypatch, api
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
         if "You orchestrate" not in system:
-            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+            return CompletionResult(content="", model=req.model, finish_reason="stop")
+        if not req.tools:
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
         orch_n["n"] += 1
         if orch_n["n"] == 1:
             from app.runtime.models import ToolCall
@@ -926,7 +949,13 @@ def test_orchestrator_starts_a_think_round_after_five_failed_tools(monkeypatch, 
         system = req.messages[0].content or ""
         blob = "\n".join(message.content or "" for message in req.messages)
         if "You orchestrate" not in system:
-            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+            return CompletionResult(content="", model=req.model, finish_reason="stop")
+        if not req.tools:
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
         if "Five tool calls failed" in blob:
             return CompletionResult(
                 content='{"action":"finish","text":"Fertig."}',
@@ -973,7 +1002,13 @@ def test_orchestrator_stops_after_two_failed_think_rounds(monkeypatch, api_env) 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
         if "You orchestrate" not in system:
-            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+            return CompletionResult(content="", model=req.model, finish_reason="stop")
+        if not req.tools:
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
         return CompletionResult(
             content=None,
             tool_calls=[
@@ -1016,7 +1051,13 @@ def test_orchestrator_failed_tool_streak_resets_after_a_success(monkeypatch, api
         system = req.messages[0].content or ""
         blob = "\n".join(message.content or "" for message in req.messages)
         if "You orchestrate" not in system:
-            return CompletionResult(content="kurz", model=req.model, finish_reason="stop")
+            return CompletionResult(content="", model=req.model, finish_reason="stop")
+        if not req.tools:
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}',
+                model=req.model,
+                finish_reason="stop",
+            )
         if executed["n"] >= 9:
             return CompletionResult(
                 content='{"action":"finish","text":"Fertig."}',

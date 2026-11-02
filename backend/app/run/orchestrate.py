@@ -44,11 +44,11 @@ def orchestrator_instructions(
         )
     elif names:
         tool_block = (
-            "You have tools: "
+            "An agent failed. You have tools: "
             + ", ".join(names)
             + ".\n"
+            "Use them only to recover from that failure. Do not start new implementation with these tools.\n"
             "Call a tool with a tool call. Do not put a tool call in the JSON object and do not describe it in a sentence.\n"
-            "Use tools to check files after an agent. Do not use tools instead of calling an agent.\n"
             "You may call tools as often as you need, then one JSON object.\n"
             "Five failed tool calls in a row start a think round. Two failed think rounds in a row stop the run. A successful tool call resets that count.\n"
             "After the tool result, decide again with one JSON object.\n"
