@@ -1756,7 +1756,8 @@
         "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
         "emptyStop": "Discarded an empty reply ({{attempt}}/{{max}}). The task continues.",
         "emptyStops": "Task incomplete: five empty replies in a row.",
-        "truncated": "Reply was cut off; not a result."
+        "truncated": "Reply was cut off; not a result.",
+        "compact": "Context compacted so the answer fits the window."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {

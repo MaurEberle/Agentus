@@ -1689,7 +1689,8 @@
         "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
         "emptyStop": "Respuesta vacía descartada ({{attempt}}/{{max}}). La tarea continúa.",
         "emptyStops": "Tarea incompleta: cinco respuestas vacías seguidas.",
-        "truncated": "Respuesta cortada; no es un resultado."
+        "truncated": "Respuesta cortada; no es un resultado.",
+        "compact": "Contexto compactado para que la respuesta quepa en la ventana."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
       "knowledgeIndex": {

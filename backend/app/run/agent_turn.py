@@ -11,6 +11,14 @@ from app.db.runs import insert_call
 from app.db.vault import get as vault_get
 from app.run import turn_runtime
 from app.run import window as run_window
+from app.run.compact import (
+    TRUNCATED_NOTE,
+    compact_transcript,
+    held_window,
+    rewrite_with_state,
+    state_transcript,
+    window_pressure,
+)
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.knowledge import retrieve
@@ -214,15 +222,28 @@ def _agent_turn(
             elif fact.action in _FILE_PREP_ACTIONS:
                 file_prep = True
     llm_node_id = agent.llm.node_id or agent_id
+    last_prompt_tokens: int | None = None
+    last_context_max: int | None = None
+    overflows = 0
     try:
         while not ctrl.stop_event.is_set():
             window_mem = memory if memory is not None else RunMemory()
+            if not _make_room(
+                ctrl,
+                compiled,
+                agent_id,
+                agent.llm,
+                messages,
+                window_mem,
+                last_prompt_tokens=last_prompt_tokens,
+                last_context_max=last_context_max,
+            ):
+                return ""
+            last_prompt_tokens = None
+            last_context_max = None
             choice = turn_runtime._bind_window(agent.llm, messages, window_mem)
             if not choice.fits:
-                if record is not None:
-                    record.error = "prompt does not fit"
-                turn_runtime._set_node(ctrl, agent_id, "done")
-                emit_log("warn", "run.agent.window", node_id=agent_id)
+                _mark_window(ctrl, agent_id, record)
                 return ""
             options = turn_runtime._ollama_options(agent.llm, choice)
             context_max = choice.context_max if choice.context_max is not None else turn_runtime._static_context_max(agent.llm.num_ctx)
@@ -423,8 +444,12 @@ def _agent_turn(
                 ),
             )
             turn_runtime._log_vram_compare(agent.llm, options, choice, llm_node_id)
+            if usage is not None and usage.prompt_tokens:
+                last_prompt_tokens = usage.prompt_tokens
+                last_context_max = context_max
             result = turn_runtime._with_salvaged_tools(result, offered)
             if result.tool_calls:
+                overflows = 0
                 thinks = 0
                 short_thinks = 0
                 empty_stops = 0
@@ -497,6 +522,20 @@ def _agent_turn(
                     node_id=agent_id,
                     payload=turn_runtime._completion_log_payload(result),
                 )
+                fragment = think_body or (result.content or "").strip() or (result.reasoning or "").strip() or "…"
+                emit_log(
+                    "info",
+                    "run.agent.think",
+                    node_id=agent_id,
+                    payload={"text": fragment},
+                )
+                overflows += 1
+                if overflows >= 2:
+                    _mark_window(ctrl, agent_id, record)
+                    return ""
+                _store_think(messages, TRUNCATED_NOTE)
+                turn_runtime._set_node(ctrl, agent_id, "running", wait="thinking")
+                continue
             if think_body is not None:
                 tokens = _think_out_tokens(result, out_final)
                 result_body = "" if truncated else think_body
@@ -606,6 +645,93 @@ def _agent_turn(
         return content
     finally:
         turn_runtime._set_llm(ctrl, compiled, llm_node_id, busy=False)
+
+def _mark_window(ctrl: RunController, agent_id: str, record: AgentRecord | None) -> None:
+    if record is not None:
+        record.error = "prompt does not fit"
+    turn_runtime._set_node(ctrl, agent_id, "done")
+    emit_log("warn", "run.agent.window", node_id=agent_id)
+
+
+def _make_room(
+    ctrl: RunController,
+    compiled: CompiledGraph,
+    agent_id: str,
+    llm,
+    messages: list[LlmMessage],
+    memory: RunMemory,
+    *,
+    last_prompt_tokens: int | None,
+    last_context_max: int | None,
+) -> bool:
+    """Compact before the window is allowed to grow around a replayed overflow."""
+    if not window_pressure(
+        messages,
+        llm,
+        memory,
+        last_prompt_tokens=last_prompt_tokens,
+        last_context_max=last_context_max,
+    ):
+        return True
+    budget = held_window(llm, memory) or run_window._LADDER[-1]
+    before = len(messages)
+    changed = compact_transcript(messages, budget=budget)
+    # The previous call's token count is stale once the transcript changed.
+    if not window_pressure(messages, llm, memory):
+        if changed:
+            emit_log("info", "run.agent.compact", node_id=agent_id, payload={"messages": before})
+        return True
+    state = _compact_state(ctrl, compiled, llm, messages)
+    if state:
+        messages[:] = rewrite_with_state(messages, state)
+        compact_transcript(messages, budget=budget)
+        emit_log(
+            "info",
+            "run.agent.compact",
+            node_id=agent_id,
+            payload={"messages": before, "state": True},
+        )
+    return True
+
+
+def _compact_state(ctrl: RunController, compiled: CompiledGraph, llm, messages: list[LlmMessage]) -> str:
+    from app.runtime import completions as runtime_completions
+
+    secret = None
+    if llm.provider != "ollama" and llm.credential_id:
+        secret = vault_get(llm.credential_id)
+    transcript = state_transcript(messages)
+    request = CompletionRequest(
+        provider=llm.provider,  # type: ignore[arg-type]
+        model=llm.model,
+        messages=[
+            LlmMessage(
+                role="system",
+                content=(
+                    "Summarize this agent transcript as state the agent can continue from. "
+                    "Include the task, files written, open errors, and decisions already made. "
+                    "Omit raw table cells and repeated drafts. At most 600 words."
+                ),
+            ),
+            LlmMessage(role="user", content=transcript[:48_000]),
+        ],
+        base_url=llm.base_url,
+        credential_id=llm.credential_id,
+        secret=secret,
+        temperature=0,
+        max_tokens=800,
+        timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
+    )
+    try:
+        result = runtime_completions.complete_live(
+            request,
+            should_abort=ctrl.stop_event.is_set,
+        )
+    except Exception:
+        return ""
+    del compiled
+    return (result.content or "").strip()
+
 
 def _think_out_tokens(result: CompletionResult, out_final: int | None) -> int:
     if out_final is not None:

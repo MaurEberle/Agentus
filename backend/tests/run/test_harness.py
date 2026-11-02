@@ -3048,6 +3048,8 @@ def test_linear_truncated_completion_is_not_a_result(monkeypatch, api_env) -> No
                 finish_reason="length",
             )
         if n["n"] == 3:
+            blob = "\n".join(message.content or "" for message in req.messages)
+            assert fragment not in blob
             return CompletionResult(
                 content=None,
                 tool_calls=[
@@ -3081,6 +3083,24 @@ def test_linear_truncated_completion_is_not_a_result(monkeypatch, api_env) -> No
     assert (thinks[0].get("payload") or {}).get("text") == fragment
     dones = [row for row in rows if row["message"] == "run.llm.done"]
     assert any((row.get("payload") or {}).get("content") == fragment for row in dones)
+
+
+def test_two_length_cuts_stop_without_replaying_the_draft(monkeypatch, api_env) -> None:
+    from app.db.runs import list_logs
+
+    calls = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        calls["n"] += 1
+        blob = "\n".join(message.content or "" for message in req.messages)
+        assert "RAMBLE" not in blob
+        return CompletionResult(content="RAMBLE " * 30, model=req.model, finish_reason="length")
+
+    stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
+    assert calls["n"] == 2
+    messages = [row["message"] for row in list_logs(stored["id"])]
+    assert messages.count("run.agent.truncated") == 2
+    assert "run.agent.window" in messages
 
 
 def test_agent_think_log_keeps_full_text(monkeypatch, api_env) -> None:
