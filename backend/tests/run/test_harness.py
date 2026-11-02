@@ -1550,7 +1550,7 @@ def test_tool_agent_prose_is_nudged_then_calls(monkeypatch, api_env) -> None:
     assert any("Schreiber is done." in (item or "") or "Files:" in (item or "") for item in texts)
 
 
-def test_tool_agent_without_a_call_is_an_anomaly(monkeypatch, api_env) -> None:
+def test_tool_agent_text_without_a_call_is_finished(monkeypatch, api_env) -> None:
     agent_n = {"n": 0}
     prompts: list[str] = []
 
@@ -1559,7 +1559,7 @@ def test_tool_agent_without_a_call_is_an_anomaly(monkeypatch, api_env) -> None:
         blob = "\n".join(message.content or "" for message in req.messages)
         if "You orchestrate" in system:
             prompts.append(blob)
-            if "no tool used" in blob or "Check with a tool" in blob:
+            if "characters:" in blob:
                 return CompletionResult(
                     content='{"action":"finish","text":"Fertig."}',
                     model=req.model,
@@ -1576,11 +1576,11 @@ def test_tool_agent_without_a_call_is_an_anomaly(monkeypatch, api_env) -> None:
     stored = _drive(monkeypatch, _complete, doc=_tool_agent_doc())
     assert stored["outcome"] == "succeeded"
     assert agent_n["n"] == 2
-    assert any("no tool used" in item for item in prompts)
+    assert not any("no tool used" in item for item in prompts)
     texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
-    assert "Schreiber is done." not in texts
+    assert "Schreiber is done." in texts
     assert "Fertig." in texts
-    assert stored["memory"]["calls"][0]["error"] == "no tool used"
+    assert stored["memory"]["calls"][0]["error"] == ""
 
 
 def test_mcp_answer_after_success_is_published(monkeypatch, api_env) -> None:
@@ -3540,7 +3540,7 @@ def test_file_miss_limit_hands_the_task_to_the_orchestrator(monkeypatch, api_env
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
         if "You orchestrate" not in system:
-            return CompletionResult(content="Ich habe gespeichert.", model=req.model, finish_reason="stop")
+            return CompletionResult(content="", model=req.model, finish_reason="stop")
         if any(message.role == "tool" for message in req.messages):
             return CompletionResult(
                 content='{"action":"finish","text":"Fertig."}',
@@ -3583,7 +3583,7 @@ def test_takeover_without_a_write_fails_the_run(monkeypatch, api_env) -> None:
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
         if "You orchestrate" not in system:
-            return CompletionResult(content="Ich habe gespeichert.", model=req.model, finish_reason="stop")
+            return CompletionResult(content="", model=req.model, finish_reason="stop")
         blob = "\n".join(message.content or "" for message in req.messages)
         if "Takeover for" in blob:
             return CompletionResult(

@@ -60,7 +60,7 @@ def folder_listing_text(root: str | Path) -> str:
     lines = "\n".join(str(path) for path in files)
     return (
         "That path is a folder, not a workbook. "
-        "Call this tool again with fileAbsolutePath set to one of these files:\n"
+        "Set fileAbsolutePath to one of these workbook files:\n"
         + lines
     )
 

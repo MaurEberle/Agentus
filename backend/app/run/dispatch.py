@@ -38,6 +38,9 @@ def _count_file_attempt(
     if "file_access" not in (agent.tool_kinds or []):
         return
     wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
+    # A finished text answer that never touched a file is the result, not a missed write.
+    if record.finished and record.text and not record.files:
+        return
     opened = memory.note_file_attempt(
         agent_id=agent.node_id,
         name=record.name,
@@ -151,11 +154,6 @@ def _orchestrator_call(
             memory.set_anomaly(record)
             return _ran()
         record.text = visible
-        if has_tools and not record.tool_ok:
-            record.error = "no tool used"
-            memory.allow_own_tools = True
-            memory.set_anomaly(record)
-            return _ran()
         if not visible and not wrote:
             record.error = "empty result"
             emit_log("warn", "run.agent.empty", node_id=agent_id)

@@ -33,7 +33,10 @@ _REPAIR_NOTE = (
     "A call needs agent and a short task. Do not paste an agent result. Do not add tool-call tags."
 )
 
-_TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
+_TOOL_DECIDE_NOTE = (
+    "This turn needs one JSON decision. A tool call is not that decision. "
+    "Reply with one JSON object."
+)
 
 _TOOL_THINK_NOTE = (
     "Five tool calls failed in a row. Think, then decide with one JSON object or a working tool call. "

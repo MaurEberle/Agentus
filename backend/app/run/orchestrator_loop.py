@@ -357,7 +357,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 if memory.takeover_rejects >= 2:
                     _store_memory(ctrl, memory)
                     return _fail_takeover(ctrl, orch.node_id, memory)
-                memory.add_note("That agent is closed for this task. Use your tools. Do not call it.")
+                memory.add_note(
+                    "That agent is closed for this task. "
+                    "The connected tools can finish the file step. Do not call that agent again."
+                )
                 continue
             if steps >= MAX_ORCHESTRATOR_STEPS:
                 _store_memory(ctrl, memory)

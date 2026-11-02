@@ -208,7 +208,7 @@ class RunMemory:
             f"Takeover for {item.name} ({item.agent_id}) after {misses} file attempts "
             "without a write, edit, or delete.\n"
             f"task: {item.task}\n"
-            "Do this file work yourself with your tools. Do not call this agent."
+            "The connected tools can finish this file step. Do not call this agent again."
         )
 
     def refuses_agent(self, token: str, names: list[tuple[str, str]]) -> bool:
@@ -486,8 +486,6 @@ def _file_block(files: list[FileFact]) -> str:
 
 
 def _anomaly_needs_text(record: AgentRecord) -> bool:
-    if record.error == "no tool used" and record.text:
-        return True
     if record.error != "tool failed" or not record.text:
         return False
     failed = [fact for fact in record.files if not fact.ok]

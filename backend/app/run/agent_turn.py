@@ -81,17 +81,19 @@ _TOOL_ANSWER = (
 
 _TOOL_DONE = (
     "The file work succeeded. Write a short visible result for the next node. "
-    "Do not think again."
+    "Another think is optional."
 )
 
 _EMPTY_STOP_NOTE = (
-    "The last reply was empty and was discarded. The task is not finished. "
-    "Call a tool with a tool call and continue the remaining work."
+    "The last reply was empty, so it was not kept. The task is not finished. "
+    "Write the visible result from the work already done. "
+    "Call another tool only if something is still missing."
 )
 
 _TOOL_JSON_NOTE = (
-    "The last tool call to {name} was discarded: its JSON arguments were truncated. "
-    "Call the tool again with complete JSON. Prefer a smaller write if the file is large."
+    "The last tool call to {name} did not run: its JSON arguments were cut off. "
+    "Send it again with complete JSON if you still need that change. "
+    "Prefer a smaller write if the file is large."
 )
 
 

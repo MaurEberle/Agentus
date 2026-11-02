@@ -35,7 +35,8 @@ def orchestrator_instructions(
             "You have tools: "
             + ", ".join(names)
             + ".\n"
-            "Takeover is active. Call a tool with a tool call and do the failed file task yourself.\n"
+            "Takeover is active. The connected tools can finish the failed file step. "
+            "Call one with a tool call if you do that work yourself.\n"
             "Do not call the closed agent. Do not describe the tool call in a sentence.\n"
             "You may call tools as often as you need, then one JSON object.\n"
             "Five failed tool calls in a row start a think round. Two failed think rounds in a row stop the run. A successful tool call resets that count.\n"
