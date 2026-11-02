@@ -88,7 +88,7 @@ export function NetworkChat({
         )}
       </div>
       {waitingReply ? (
-        <Alert className="mb-2 border-warning/50 bg-warning/10 [&>svg]:text-warning [&>div]:pl-6">
+        <Alert className="mb-2 border-warning/50 bg-warning/10 pl-10 [&>svg]:text-warning">
           <MessageCircleQuestion className="size-4" />
           <AlertTitle>{t('shell.waitAsk')}</AlertTitle>
           <AlertDescription>{t('monitoring.chat.waitReply')}</AlertDescription>
