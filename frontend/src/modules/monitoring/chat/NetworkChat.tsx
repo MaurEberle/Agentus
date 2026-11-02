@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { selectionInside, useCopySelection } from '@/lib/copySelection';
 import { abortRunChat, sendRunChat } from '@/modules/monitoring/live/adapter';
 import { chatInputConfig } from '@/modules/monitoring/model/graph';
 import { formatTime } from '@/modules/monitoring/model/format';
@@ -36,9 +37,11 @@ export function NetworkChat({
   const waitingInput = waitingHuman && messages.length === 0;
   const lastContent = messages[messages.length - 1]?.content;
 
+  useCopySelection(listRef);
+
   useEffect(() => {
     const el = listRef.current;
-    if (!el || !stickToBottom.current) return;
+    if (!el || !stickToBottom.current || selectionInside(el)) return;
     el.scrollTop = el.scrollHeight;
   }, [generating, lastContent, messages.length]);
 
@@ -135,7 +138,7 @@ function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
     <article className={cn('flex flex-col gap-1', user ? 'items-end' : 'items-start')}>
       <div
         className={cn(
-          'max-w-[92%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
+          'max-w-[92%] cursor-text select-text whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
           user ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         )}
       >
