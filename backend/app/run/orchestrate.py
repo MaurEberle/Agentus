@@ -9,6 +9,8 @@ from app.help.visible import strip_think, think_inner
 from app.runtime.models import ToolCall
 
 _ACTIONS = {"ask", "call", "reply", "finish", "think"}
+# Keys that are the decision itself. Any other single string is the utterance.
+_DECISION_KEYS = frozenset({"action", "text", "agent", "task", "source"})
 _ACTION_RE = re.compile(r'"action"\s*:\s*"(ask|call|reply|finish|think)"')
 # A salvaged task longer than this is a pasted document with broken quotes, not an instruction.
 _MAX_SALVAGED_TASK = 500
@@ -188,6 +190,26 @@ def _prepare(raw: str) -> str:
     return text
 
 
+def _utterance(value: dict) -> str:
+    """Speech of a decision. `text` wins. Otherwise the only other string.
+
+    A tool-tuned model often keeps the action and puts the sentence in
+    `message` or `question`. That is still one decision. Two extra strings
+    are ambiguous and stay empty, so the run asks again instead of guessing.
+    """
+    spoken = str(value.get("text") or "").strip()
+    if spoken:
+        return spoken
+    extras = [
+        item.strip()
+        for key, item in value.items()
+        if key not in _DECISION_KEYS and isinstance(item, str) and item.strip()
+    ]
+    if len(extras) == 1:
+        return extras[0]
+    return ""
+
+
 def _parse_json_object(text: str) -> dict[str, str] | None:
     start = text.find("{")
     if start < 0:
@@ -199,7 +221,7 @@ def _parse_json_object(text: str) -> dict[str, str] | None:
     if isinstance(value, dict) and value.get("action") in _ACTIONS:
         return _action(
             str(value.get("action")),
-            str(value.get("text") or ""),
+            _utterance(value),
             str(value.get("agent") or ""),
             str(value.get("task") or ""),
             str(value.get("source") or ""),
