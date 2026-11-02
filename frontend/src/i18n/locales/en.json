@@ -32,6 +32,8 @@
     "or": "Or",
     "mode": "Combine tags",
     "empty": "No tags",
+    "noMatch": "No matching tags",
+    "search": "Search tags",
     "clear": "Clear all tags"
   },
   "models": {

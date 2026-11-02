@@ -32,6 +32,8 @@
     "or": "O",
     "mode": "Combinar etiquetas",
     "empty": "Sin etiquetas",
+    "noMatch": "Ninguna etiqueta coincide",
+    "search": "Buscar etiquetas",
     "clear": "Quitar todas las etiquetas"
   },
   "models": {
