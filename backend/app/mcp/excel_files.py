@@ -8,6 +8,8 @@ from app.mcp.models import McpToolInfo
 
 _SUFFIXES = {".xlsx", ".xlsm", ".xltx", ".xltm"}
 _MAX_FILES = 40
+_ZIP_MAGIC = b"PK"
+_WRITE_TOOL = "excel_write_to_sheet"
 
 
 def list_workbooks(root: str | Path) -> list[Path]:
@@ -84,6 +86,46 @@ def annotate_excel_tools(tools: list[McpToolInfo], root: str | None) -> list[Mcp
             McpToolInfo(name=tool.name, description=description, input_schema=schema)
         )
     return out
+
+
+def _is_zip_workbook(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        with path.open("rb") as handle:
+            return handle.read(2) == _ZIP_MAGIC
+    except OSError:
+        return False
+
+
+def ensure_workbook(path: Path) -> bool:
+    """Write a minimal workbook when the target is missing, empty, or not a zip.
+
+    ``excel_write_to_sheet`` only adds a sheet inside an existing workbook.
+    A zero-byte or text file named ``.xlsx`` makes that open fail with
+    ``zip: not a valid zip file``.
+    """
+    if path.suffix.lower() not in _SUFFIXES or path.is_dir() or _is_zip_workbook(path):
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    from openpyxl import Workbook
+
+    book = Workbook()
+    book.save(path)
+    return True
+
+
+def prepare_excel_write(tool_name: str, arguments: dict) -> bool:
+    if tool_name != _WRITE_TOOL:
+        return False
+    raw = arguments.get("fileAbsolutePath") or arguments.get("filepath") or arguments.get("path") or ""
+    text = str(raw).strip()
+    if not text:
+        return False
+    path = Path(text)
+    if path.is_dir():
+        return False
+    return ensure_workbook(path)
 
 
 def folder_tool_result(arguments: dict, root: str | None) -> str | None:
