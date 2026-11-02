@@ -1525,7 +1525,7 @@ def test_tool_agent_prose_is_nudged_then_calls(monkeypatch, api_env) -> None:
             )
         agent_n["n"] += 1
         if agent_n["n"] == 1:
-            assert "You must call a tool" in system
+            assert "Tools are optional" in system
             return CompletionResult(content="Ich habe gespeichert.", model=req.model, finish_reason="stop")
         if agent_n["n"] == 2:
             return CompletionResult(
@@ -2153,7 +2153,7 @@ def test_tool_agent_think_then_calls(monkeypatch, api_env) -> None:
         agent_n["n"] += 1
         if agent_n["n"] == 1:
             assert "You may think first" in system
-            assert "You must call a tool" in system
+            assert "Tools are optional" in system
             assert '{"action":"think"' not in system
             return CompletionResult(
                 content="<think>plan the write</think>",
@@ -3027,7 +3027,7 @@ def test_successful_read_keeps_tool_required(monkeypatch, api_env) -> None:
                 finish_reason="tool_calls",
             )
         if executed == ["read"]:
-            assert "You must call a tool" in (req.messages[0].content or "")
+            assert "Tools are optional" in (req.messages[0].content or "")
             assert "You already have tool results" not in (req.messages[0].content or "")
             return CompletionResult(
                 content=None,
@@ -3399,7 +3399,7 @@ def test_tool_agent_think_json_is_nudged_then_calls(monkeypatch, api_env) -> Non
                 finish_reason="stop",
             )
         if agent_n["n"] == 2:
-            assert "Call a tool with a tool call" in blob
+            assert "If the task is already answered" in blob
             return CompletionResult(
                 content=None,
                 tool_calls=[

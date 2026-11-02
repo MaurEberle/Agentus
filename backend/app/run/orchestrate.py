@@ -47,7 +47,8 @@ def orchestrator_instructions(
             "An agent failed. You have tools: "
             + ", ".join(names)
             + ".\n"
-            "Use them only to recover from that failure. Do not start new implementation with these tools.\n"
+            "Use them only to recover from that failure: inspect it, or repair that one step. "
+            "Do not start new implementation with these tools. A new task still goes to an agent.\n"
             "Call a tool with a tool call. Do not put a tool call in the JSON object and do not describe it in a sentence.\n"
             "You may call tools as often as you need, then one JSON object.\n"
             "Five failed tool calls in a row start a think round. Two failed think rounds in a row stop the run. A successful tool call resets that count.\n"

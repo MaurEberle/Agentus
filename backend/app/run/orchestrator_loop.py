@@ -9,6 +9,7 @@ from collections import deque
 
 from app.db.engine import utc_now
 from app.run import agent_turn, dispatch, orchestrator_decide, turn_runtime
+from app.run.capabilities import capability_text
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.limits import (
@@ -275,6 +276,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             turn_runtime._function_names(offered),
             takeover=memory.takeover is not None,
         )
+        system += "\n\n" + capability_text(compiled, orch.node_id, available=bool(offered))
         action = orchestrator_decide._orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
         tokens = orchestrator_decide._pop_tokens(action)
         memory.clear_anomaly()

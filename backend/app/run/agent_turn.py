@@ -19,6 +19,7 @@ from app.run.compact import (
     state_transcript,
     window_pressure,
 )
+from app.run.capabilities import capability_text
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.knowledge import retrieve
@@ -56,18 +57,21 @@ _AGENT_THINK = (
 )
 
 _AGENT_THINK_TOOLS = (
-    "You may think first with a think block. "
-    "Think is not the result and is not shown to the user. After think, call a tool with a tool call. "
-    "Do not write a JSON object for think when you have tools."
+    "You may think first in a think block. A think is not the result and is not shown. "
+    "After it, call a tool or write the visible result. "
+    "Do not put a think in a JSON object while tools are connected."
 )
 
 _TOOL_USE_NOTE = (
-    "You have tools. Call a tool with a tool call. A final sentence without a tool call is discarded."
+    "That reply did not call a tool. If you still need data or a change from a listed tool, call it now. "
+    "If the task is already answered, write that result again."
 )
 
 _TOOL_REQUIRED = (
-    "You must call a tool with a tool call. You may think first. "
-    "A final sentence without a tool call is discarded."
+    "Tools are optional. Use one when the task needs data or a change you do not already have. "
+    "Call it as a tool call, with the fields listed under Connected tools. "
+    "The role prompt and the task decide the work. Write the result in the user's language. "
+    "A finished answer is valid. Do not call a tool only to satisfy this note."
 )
 
 _TOOL_ANSWER = (
@@ -191,6 +195,7 @@ def _agent_turn(
     system = system + "\n\n" + (_AGENT_THINK_TOOLS if tools else _AGENT_THINK)
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
+    system = system + "\n\n" + capability_text(compiled, agent_id, available=bool(tools))
     mcp = turn_runtime.get_mcp()
     secret = None
     if agent.llm.provider != "ollama" and agent.llm.credential_id:
@@ -587,10 +592,9 @@ def _agent_turn(
             visible = visible_text(content)
             if len(visible) > len(best_visible):
                 best_visible = visible
-            need_tool = (not tool_ok) or (
-                file_prep
-                and not wrote_ok
-                and len(visible) < SUBSTANTIAL_RESULT_CHARS
+            short_answer = len(visible) < SUBSTANTIAL_RESULT_CHARS
+            need_tool = short_answer and (
+                not tool_ok or (file_prep and not wrote_ok)
             )
             if (
                 offered
