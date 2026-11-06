@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownAZ, ArrowDownZA, ChevronDown, RotateCcw } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +13,7 @@ import { ModelName } from '@/components/ModelName';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { queryClient } from '@/api/client';
+import { ApiError, queryClient } from '@/api/client';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { enqueueDownload, hubFiles, searchHub } from '@/modules/models/api';
 import { modelLabel } from '@/lib/modelName';
@@ -109,7 +108,16 @@ const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
 const SORTS = ['downloads', 'likes', 'trending', 'modified', 'name'] as const;
 const CAPABILITIES = ['tools', 'thinking', 'vision'] as const satisfies readonly HubCapability[];
 type Capability = HubCapability;
-const HUB_CACHE = { staleTime: Number.POSITIVE_INFINITY, gcTime: Number.POSITIVE_INFINITY } as const;
+function freshPage(): { page: number; cursors: (string | null)[] } {
+  return { page: 0, cursors: [null] };
+}
+let hubSearchGen = 0;
+let hubFilesGen = 0;
+
+function failureKey(caught: unknown): string {
+  if (caught instanceof ApiError && caught.messageKey) return caught.messageKey;
+  return 'models.hub.failed';
+}
 
 function billions(raw: string): string | null {
   const text = raw.trim().replace(',', '.');
@@ -142,34 +150,46 @@ export function HubPane() {
   const resetHubFilters = useModelsUi((state) => state.resetHubFilters);
   const {
     search, debounced, pipelines, size, minB, maxB, bounds, sort, sortDir, capabilities, page, cursors, picked, quant, share,
+    snapshot, files, filesError,
   } = hub;
   const pageSize: HubPageSize = (HUB_PAGE_SIZES as readonly number[]).includes(hub.pageSize) ? hub.pageSize : 30;
   const setSearch = (value: string) => patchHub({ search: value });
-  const setDebounced = (value: string) => patchHub((current) => (current.debounced === value ? current : { debounced: value }));
+  const setDebounced = (value: string) => patchHub((current) => (
+    current.debounced === value ? current : { debounced: value, ...freshPage() }
+  ));
   const setPipelines = (value: Pipeline[] | ((current: Pipeline[]) => Pipeline[])) =>
-    patchHub((current) => ({ pipelines: typeof value === 'function' ? value(current.pipelines) : value }));
-  const setSize = (value: HubSize) => patchHub({ size: value });
+    patchHub((current) => ({ pipelines: typeof value === 'function' ? value(current.pipelines) : value, ...freshPage() }));
+  const setSize = (value: HubSize) => patchHub({ size: value, ...freshPage() });
   const setMinB = (value: string) => patchHub({ minB: value });
   const setMaxB = (value: string) => patchHub({ maxB: value });
   const setBounds = (value: { min: string; max: string }) =>
-    patchHub((current) => (current.bounds.min === value.min && current.bounds.max === value.max ? current : { bounds: value }));
-  const setSort = (value: HubSort) => patchHub({ sort: value });
+    patchHub((current) => (
+      current.bounds.min === value.min && current.bounds.max === value.max ? current : { bounds: value, ...freshPage() }
+    ));
+  const setSort = (value: HubSort) => patchHub({ sort: value, ...freshPage() });
   const setSortDir = (value: 'asc' | 'desc' | ((current: 'asc' | 'desc') => 'asc' | 'desc')) =>
-    patchHub((current) => ({ sortDir: typeof value === 'function' ? value(current.sortDir) : value }));
-  const setPageSize = (value: HubPageSize) => patchHub({ pageSize: value });
+    patchHub((current) => ({ sortDir: typeof value === 'function' ? value(current.sortDir) : value, ...freshPage() }));
+  const setPageSize = (value: HubPageSize) => patchHub({ pageSize: value, ...freshPage() });
   const setCapabilities = (value: Capability[] | ((current: Capability[]) => Capability[])) =>
-    patchHub((current) => ({ capabilities: typeof value === 'function' ? value(current.capabilities) : value }));
+    patchHub((current) => ({ capabilities: typeof value === 'function' ? value(current.capabilities) : value, ...freshPage() }));
   const setPage = (value: number | ((current: number) => number)) =>
     patchHub((current) => ({ page: typeof value === 'function' ? value(current.page) : value }));
-  const setCursors = (value: (string | null)[] | ((current: (string | null)[]) => (string | null)[])) =>
-    patchHub((current) => ({ cursors: typeof value === 'function' ? value(current.cursors) : value }));
   const setPicked = (value: string | null) => patchHub({ picked: value });
   const setQuant = (value: string | null) => patchHub({ quant: value });
   const [queuing, setQueuing] = useState(false);
   const wide = useWideLayout();
   const listShare = clampShare(share);
-  const seenFilter = useRef<string | null>(null);
-  const filterKey = JSON.stringify([debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
+  const cursor = cursors[page] ?? '';
+  const requestKey = JSON.stringify([
+    debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, cursor, capabilities, page,
+  ]);
+  const stored = snapshot?.key === requestKey ? snapshot : null;
+  const [searching, setSearching] = useState(() => !(stored && !stored.errorKey));
+  const requestKeyRef = useRef(requestKey);
+  if (requestKeyRef.current !== requestKey) {
+    requestKeyRef.current = requestKey;
+    if (searching !== true) setSearching(true);
+  }
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(search), 400);
     return () => window.clearTimeout(timer);
@@ -181,53 +201,77 @@ export function HubPane() {
   useEffect(() => {
     rememberHubPageSize(pageSize);
   }, [pageSize]);
-  useEffect(() => {
-    if (seenFilter.current === filterKey) return;
-    const first = seenFilter.current === null;
-    seenFilter.current = filterKey;
-    if (first) return;
-    patchHub({ page: 0, cursors: [null] });
-  }, [filterKey, patchHub]);
   const resources = useHostResourcesQuery({ live: false });
   const vram = inferenceVramBytes(resources.data?.gpus ?? []);
-  const results = useQuery({
-    queryKey: ['models', 'hub', debounced, pipelines.join(','), size, bounds.min, bounds.max, sort, sortDir, pageSize, cursors[page] ?? '', capabilities.join(',')],
-    queryFn: async () => {
-      const data = await searchHub({
-        search: debounced,
-        pipeline: pipelines.length ? pipelines.join(',') : 'all',
-        size: sizeQuery(size, bounds.min, bounds.max),
-        sort,
-        direction: sortDir,
-        limit: pageSize,
-        cursor: cursors[page] ?? '',
-        caps: capabilities.join(','),
-      });
-      if (data.messageKey) throw new Error(data.messageKey);
-      return data;
-    },
-    retry: 1,
-    ...HUB_CACHE,
-  });
-  const files = useQuery({
-    queryKey: ['models', 'hub', 'files', picked],
-    queryFn: () => hubFiles(picked ?? ''),
-    enabled: Boolean(picked),
-    ...HUB_CACHE,
-  });
-  const preferred = useMemo(() => {
-    const rows = files.data?.quants ?? [];
-    return rows.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? rows[0] ?? null;
-  }, [files.data]);
   useEffect(() => {
-    const tags = files.data?.quants ?? [];
+    const current = useModelsUi.getState().hub.snapshot;
+    if (current?.key === requestKey && !current.errorKey) {
+      setSearching(false);
+      return;
+    }
+    const gen = ++hubSearchGen;
+    setSearching(true);
+    const activeCursor = cursors[page] ?? '';
+    void searchHub({
+      search: debounced,
+      pipeline: pipelines.length ? pipelines.join(',') : 'all',
+      size: sizeQuery(size, bounds.min, bounds.max),
+      sort,
+      direction: sortDir,
+      limit: pageSize,
+      cursor: activeCursor,
+      caps: capabilities.join(','),
+    }).then((data) => {
+      if (gen !== hubSearchGen) return;
+      patchHub({
+        snapshot: {
+          key: requestKey,
+          items: data.messageKey ? [] : data.items,
+          hasNext: data.messageKey ? false : data.hasNext,
+          nextCursor: data.messageKey ? undefined : data.nextCursor,
+          errorKey: data.messageKey,
+        },
+      });
+      setSearching(false);
+    }).catch((caught: unknown) => {
+      if (gen !== hubSearchGen) return;
+      patchHub({
+        snapshot: { key: requestKey, items: [], hasNext: false, errorKey: failureKey(caught) },
+      });
+      setSearching(false);
+    });
+  }, [requestKey]);
+  useEffect(() => {
+    if (!picked) return;
+    const current = useModelsUi.getState().hub;
+    if (current.files?.id === picked && !current.filesError) return;
+    const gen = ++hubFilesGen;
+    void hubFiles(picked).then((data) => {
+      if (gen !== hubFilesGen) return;
+      if (data.messageKey) {
+        patchHub({ files: null, filesError: data.messageKey });
+        return;
+      }
+      patchHub({ files: { id: picked, data }, filesError: null });
+    }).catch((caught: unknown) => {
+      if (gen !== hubFilesGen) return;
+      patchHub({ files: null, filesError: failureKey(caught) });
+    });
+  }, [picked]);
+  const detail = files?.id === picked ? files.data : null;
+  const preferred = useMemo(() => {
+    const rows = detail?.quants ?? [];
+    return rows.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? rows[0] ?? null;
+  }, [detail]);
+  useEffect(() => {
+    const tags = detail?.quants ?? [];
     if (tags.length === 0) return;
     const current = useModelsUi.getState().hub.quant;
     if (current && tags.some((item) => item.tag === current)) return;
     const next = tags.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? tags[0];
     if (next) patchHub({ quant: next.tag });
-  }, [files.data, patchHub]);
-  const chosen = (files.data?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
+  }, [detail, patchHub]);
+  const chosen = (detail?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
   function toggleCapability(key: Capability) {
     setCapabilities((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
   }
@@ -274,7 +318,7 @@ export function HubPane() {
           className="h-8 max-w-56"
         />
         <div className="flex items-center gap-1">
-          <Select value={sort} onValueChange={(value) => { setSort(value as typeof sort); setPage(0); setCursors([null]); }}>
+          <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
             <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
             <SelectContent>
               {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
@@ -286,7 +330,7 @@ export function HubPane() {
             variant="outline"
             className="size-8"
             aria-label={t('networks.filter.direction')}
-            onClick={() => { setSortDir((current) => (current === 'asc' ? 'desc' : 'asc')); setPage(0); setCursors([null]); }}
+            onClick={() => setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'))}
           >
             {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
           </Button>
@@ -413,9 +457,9 @@ export function HubPane() {
           className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b md:border-b-0"
           style={wide ? { width: `${listShare * 100}%`, flex: 'none', minWidth: '60%' } : undefined}
         >
-          {results.data && results.data.items.length > 0 ? (
+          {stored && !stored.errorKey && stored.items.length > 0 ? (
             <ul className="min-h-0 flex-1 overflow-auto">
-              {results.data.items.map((item) => (
+              {stored.items.map((item) => (
                 <li key={item.id}>
                   <button
                     type="button"
@@ -437,26 +481,26 @@ export function HubPane() {
                 </li>
               ))}
             </ul>
-          ) : results.isFetching ? (
+          ) : searching ? (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4" role="status" aria-label={t('app.loading')}>
               <BrandMark spinning className="size-24" alt="" />
               <p className="text-sm text-muted-foreground">{t('app.loading')}</p>
             </div>
-          ) : results.isError || results.data?.messageKey ? (
-            <p className="p-4 text-sm text-muted-foreground">{t('models.hub.failed')}</p>
+          ) : stored?.errorKey ? (
+            <p className="p-4 text-sm text-muted-foreground">{t(stored.errorKey, { defaultValue: t('models.hub.failed') })}</p>
           ) : (
             <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>
           )}
           <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 border-t px-3 py-2">
             <div className="flex min-w-0 flex-nowrap items-center gap-1">
-              <Button type="button" size="sm" variant="outline" disabled={page === 0 || results.isFetching} onClick={() => setPage(0)}>
+              <Button type="button" size="sm" variant="outline" disabled={page === 0 || searching} onClick={() => setPage(0)}>
                 {t('models.hub.first')}
               </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={page === 0 || results.isFetching}
+                disabled={page === 0 || searching}
                 onClick={() => setPage((current) => Math.max(0, current - 1))}
               >
                 {t('models.hub.previous')}
@@ -469,7 +513,7 @@ export function HubPane() {
                     size="sm"
                     variant={index === page ? 'secondary' : 'outline'}
                     className="min-w-8 px-2"
-                    disabled={results.isFetching}
+                    disabled={searching}
                     aria-current={index === page ? 'page' : undefined}
                     onClick={() => setPage(index)}
                   >
@@ -481,16 +525,15 @@ export function HubPane() {
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={!results.data?.hasNext || results.isFetching}
+                disabled={!stored?.hasNext || searching}
                 onClick={() => {
-                  const token = results.data?.nextCursor;
+                  const token = stored?.nextCursor;
                   if (!token) return;
-                  setCursors((current) => {
-                    const copy = current.slice(0, page + 1);
+                  patchHub((current) => {
+                    const copy = current.cursors.slice(0, current.page + 1);
                     copy.push(token);
-                    return copy;
+                    return { cursors: copy, page: current.page + 1 };
                   });
-                  setPage((current) => current + 1);
                 }}
               >
                 {t('models.hub.next')}
@@ -511,28 +554,25 @@ export function HubPane() {
         <WidthGrip label={t('models.split')} share={listShare} onChange={(next) => patchHub({ share: clampShare(next) })} />
         <div className="min-h-0 min-w-0 flex-1 overflow-auto p-3 md:border-l">
           {!picked ? <p className="text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
-          {picked && files.isFetching && !files.data ? (
+          {picked && !detail && !filesError ? (
             <div className="flex justify-center py-10">
               <Spinner size="lg" label={t('app.loading')} />
             </div>
           ) : null}
-          {picked && files.isFetching && files.data ? (
-            <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <Spinner size="sm" label={t('app.loading')} />
-              <span>{t('app.loading')}</span>
-            </div>
+          {filesError && picked && !detail ? (
+            <p className="text-sm text-muted-foreground">{t(filesError, { defaultValue: t('models.hub.failed') })}</p>
           ) : null}
-          {files.data?.reason === 'gated' ? <p className="text-sm text-destructive">{t('models.hub.gated')}</p> : null}
-          {files.data?.reason === 'no-gguf' ? <p className="text-sm text-muted-foreground">{t('models.hub.noGguf')}</p> : null}
-          {files.data ? (
+          {detail?.reason === 'gated' ? <p className="text-sm text-destructive">{t('models.hub.gated')}</p> : null}
+          {detail?.reason === 'no-gguf' ? <p className="text-sm text-muted-foreground">{t('models.hub.noGguf')}</p> : null}
+          {detail ? (
             <div className="grid gap-3">
-              <HubFacts data={files.data} />
+              <HubFacts data={detail} />
               <label className="grid gap-1 text-sm">
                 {t('models.hub.quants')}
-                <Select value={quant ?? ''} onValueChange={setQuant} disabled={!files.data.quants.length}>
+                <Select value={quant ?? ''} onValueChange={setQuant} disabled={!detail.quants.length}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {files.data.quants.map((item) => (
+                    {detail.quants.map((item) => (
                       <SelectItem key={item.tag} value={item.tag}>
                         {item.quant}{item.sizeBytes ? ` · ${formatBytes(item.sizeBytes, i18n.language)}` : ''}
                       </SelectItem>
@@ -545,13 +585,13 @@ export function HubPane() {
               ) : null}
               <Button
                 type="button"
-                disabled={!chosen || chosen.installed || !files.data.installable || queuing}
+                disabled={!chosen || chosen.installed || !detail.installable || queuing}
                 loading={queuing}
                 onClick={() => chosen && void install(chosen)}
               >
                 {chosen?.installed ? t('models.hub.installed') : t('models.hub.install')}
               </Button>
-              <a className="text-sm text-primary underline" href={files.data.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
+              <a className="text-sm text-primary underline" href={detail.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
             </div>
           ) : null}
         </div>

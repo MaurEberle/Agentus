@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { TagMatch } from '@/lib/tags';
-import type { ModelKind } from '@/modules/models/model';
+import type { HubFiles, HubHit, ModelKind } from '@/modules/models/model';
 
 export type ModelsTab = 'installed' | 'hub';
 export type InstalledSortKey = 'name' | 'size' | 'modified';
@@ -43,6 +43,19 @@ export function rememberHubPageSize(value: number): void {
   }
 }
 
+export type HubSnapshot = {
+  key: string;
+  items: HubHit[];
+  hasNext: boolean;
+  nextCursor?: string;
+  errorKey?: string;
+};
+
+export type HubFilesSnapshot = {
+  id: string;
+  data: HubFiles;
+};
+
 type HubUi = {
   search: string;
   debounced: string;
@@ -60,6 +73,9 @@ type HubUi = {
   picked: string | null;
   quant: string | null;
   share: number;
+  snapshot: HubSnapshot | null;
+  files: HubFilesSnapshot | null;
+  filesError: string | null;
 };
 
 type ModelsUiStore = {
@@ -107,6 +123,9 @@ export const useModelsUi = create<ModelsUiStore>((set) => ({
     picked: null,
     quant: null,
     share: 0.68,
+    snapshot: null,
+    files: null,
+    filesError: null,
   },
   setTab: (tab) => set({ tab }),
   patchInstalled: (patch) =>
