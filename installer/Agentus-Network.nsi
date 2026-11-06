@@ -298,6 +298,14 @@ Section "Anwendungsdateien" SecApp
   Push "install app ${PRODUCT_VERSION}"
   Call LogLine
   nsExec::ExecToLog 'taskkill /IM ${PRODUCT_EXE} /F'
+  ; _internal is the PyInstaller payload and nothing writes there at runtime. Overwriting
+  ; alone keeps files a newer build dropped (hashed frontend bundles, help docs, modules).
+  ; Only clear it when this really is our install dir (/D may point anywhere).
+  IfFileExists "$INSTDIR\${PRODUCT_EXE}" 0 +5
+    Sleep 500
+    RMDir /r "$INSTDIR\_internal"
+    Push "cleared previous _internal"
+    Call LogLine
   SetOutPath $INSTDIR
   SetOverwrite on
   File /r "..\dist\AgentusNetwork\*.*"
