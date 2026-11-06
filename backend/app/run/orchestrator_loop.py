@@ -29,6 +29,16 @@ from app.runtime.models import ChatMessage as LlmMessage
 
 log = logging.getLogger("agentus.run")
 
+_BLOCKED_REPLY_NOTE = (
+    "Your last text was not shown: you already replied and a second reply is not allowed. "
+    "It is kept above as your plan. Next emit call, ask, or finish. "
+    "To end the run with that text, use finish."
+)
+
+_REPEAT_THINK_NOTE = (
+    "You repeated the same plan. Do not think again. Act on it now: emit call, ask, or finish."
+)
+
 _FINISH_FILES_NOTE = (
     "A coding agent made no successful write or delete and returned no text. "
     "Check with a tool or call that agent again. Finish only when the files exist."
@@ -294,7 +304,13 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             turn_runtime._set_node(ctrl, orch.node_id, "error", error="run.orchestrator.unreadable")
             return "failed"
         if action.get("action") in {"think", "defer"}:
+            blocked = action.pop("_blocked", None)
             body = (action.get("text") or "").strip()
+            repeated = memory.add_think(body)
+            if blocked:
+                memory.set_nudge(_BLOCKED_REPLY_NOTE)
+            elif repeated:
+                memory.set_nudge(_REPEAT_THINK_NOTE)
             emit_log(
                 "info",
                 "run.orchestrator.think",
@@ -322,6 +338,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             continue
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
+        action.pop("_blocked", None)
+        memory.clear_nudge()
         emit_log(
             "info",
             "run.orchestrator.action",

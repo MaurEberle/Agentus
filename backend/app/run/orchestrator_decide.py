@@ -334,6 +334,8 @@ def _orchestrator_action(
                     "agent": "",
                     "task": "",
                     "source": "",
+                    # The loop tells the model why this text never reached the chat.
+                    "_blocked": "reply",
                 }
                 return _tag_tokens(action, result, out_final)
             if kind == "call":

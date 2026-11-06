@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 
 from app.help.visible import strip_think
@@ -9,6 +10,12 @@ from app.run.orchestrate import match_agent
 from app.runtime.models import ChatMessage as LlmMessage
 
 _ANOMALY_TEXT_CAP = 400
+# Orchestrator think turns kept in the prompt. Older plans drop out; the cap bounds the prompt.
+_THINK_TEXT_CAP = 600
+_THINKS_KEPT = 4
+# Replaceable runtime hint (blocked reply, repeated think). At most one in the course.
+_NUDGE_KIND = "nudge"
+_CLOSING_NOTE = "Decide the next step now with one JSON object."
 _FILES_SHOWN = 8
 _FILES_KEPT = 48
 _FILE_CHANGES = frozenset({"write", "delete", "edit", "move"})
@@ -112,6 +119,30 @@ class RunMemory:
         if cleaned:
             self.turns.append(Turn("user", "note", cleaned))
 
+    def add_think(self, text: str) -> bool:
+        """Keep an orchestrator plan in the course. True when it repeats the previous plan."""
+        cleaned = " ".join((text or "").split())
+        if not cleaned or cleaned in {"…", "...", "."}:
+            return False
+        if len(cleaned) > _THINK_TEXT_CAP:
+            cleaned = cleaned[: _THINK_TEXT_CAP - 1] + "…"
+        previous = next((turn.text for turn in reversed(self.turns) if turn.kind == "think"), None)
+        self.turns.append(Turn("assistant", "think", cleaned))
+        thinks = [index for index, turn in enumerate(self.turns) if turn.kind == "think"]
+        for index in reversed(thinks[:-_THINKS_KEPT]):
+            del self.turns[index]
+        return previous == cleaned
+
+    def set_nudge(self, text: str) -> None:
+        """Replace the single runtime hint instead of piling up notes."""
+        self.clear_nudge()
+        cleaned = (text or "").strip()
+        if cleaned:
+            self.turns.append(Turn("user", _NUDGE_KIND, cleaned))
+
+    def clear_nudge(self) -> None:
+        self.turns = [turn for turn in self.turns if turn.kind != _NUDGE_KIND]
+
     def reject(self, body: str, reason: str) -> None:
         self.rejected.append(Rejected(reason=reason, body=body or ""))
 
@@ -168,7 +199,11 @@ class RunMemory:
         messages = [LlmMessage(role="system", content=system)]
         for turn in self.turns:
             role = "assistant" if turn.role == "assistant" else "user"
-            messages.append(LlmMessage(role=role, content=turn.text))
+            content = turn.text
+            if turn.kind == "think":
+                # Shown in protocol form so the model sees its own earlier decision.
+                content = json.dumps({"action": "think", "text": turn.text}, ensure_ascii=False)
+            messages.append(LlmMessage(role=role, content=content))
         if self.records:
             messages.append(LlmMessage(role="user", content="\n".join(self._status(rec) for rec in self.records)))
         results = self._results_block()
@@ -182,6 +217,9 @@ class RunMemory:
             messages.append(LlmMessage(role="user", content=note))
         if self._anomaly:
             messages.append(LlmMessage(role="user", content=self._anomaly))
+        if messages[-1].role == "assistant":
+            # A trailing assistant turn reads as a prefill (Ollama continues it); ask for the next step.
+            messages.append(LlmMessage(role="user", content=_CLOSING_NOTE))
         return messages
 
     def note_file_attempt(self, *, agent_id: str, name: str, task: str, wrote: bool) -> bool:

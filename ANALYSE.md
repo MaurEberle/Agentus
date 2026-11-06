@@ -272,3 +272,72 @@ Ergebnis: `pytest` 763/763 grün, `tsc` sauber, ESLint 0 Fehler (22 Warnungen, u
 | Build | `build-windows.ps1` nutzt fest `%SystemRoot%\System32\tar.exe`. Aus Git Bash wurde sonst GNU-tar gefunden, und das Portable-ZIP schlug fehl. |
 
 Ergebnis: `pytest` 769/769, `tsc` sauber, ESLint 0 Fehler.
+
+---
+
+## 5. Detailanalyse Orchestrator
+
+Dateien: `run/orchestrator_loop.py` (äußere Schleife), `run/orchestrator_decide.py` (ein Modellaufruf und eine Entscheidung), `run/orchestrate.py` (Prompt und Parser), `run/dispatch.py` (Agent-Aufruf), `run/memory.py` (Laufgedächtnis), `run/limits.py`.
+
+### 5.1 Ablauf
+
+1. **Start:** `run_harness` wartet auf die erste Nutzernachricht, dann folgt `_run_orchestrator`.
+2. **Jede Runde:**
+   - Der System-Prompt wird jedes Mal aus `orchestrator_instructions` neu gebaut: Nutzer-Prompt, Protokoll, Roster mit maximal 400 Zeichen Agent-Anweisung, Tool-Block.
+   - `RunMemory.orchestrator_messages` baut die Nachrichten jedes Mal **komplett neu**, und zwar in dieser Reihenfolge: alle `turns` (Nutzer, Gesprochenes, Notizen), Statuszeilen aller Agent-Aufrufe, das letzte Volltext-Ergebnis je Agent, Kurzzeilen zu eigenen Tools, Takeover-Hinweis, Anomalie.
+3. **Entscheidung (`_orchestrator_action`):**
+   - Das LLM wird gestreamt aufgerufen. Bei Tool-Calls werden die Tools ausgeführt und das Modell erneut aufgerufen, solange es Tools aufruft.
+   - Danach parst `parse_orchestrator_action` die Antwort der Reihe nach: JSON, Salvage-Regex, Prosa „call X …“, Markup-Tags, sonst wird sie zu `reply`.
+   - Kaputte Antworten, unbekannte Agenten und unbekannte Quellen werden bis zu 2-mal repariert.
+4. **Aktionen:**
+   - `think`/`defer`: wird geloggt, dann folgt die nächste Runde.
+   - `ask`: Frage in den Chat, dann blockiert `_queue_get` bis zur Antwort.
+   - `call`: `dispatch._orchestrator_call`, das Ergebnis landet als `AgentRecord` im Gedächtnis.
+   - `reply`: Text in den Chat, `spoke=True`. Ein weiteres `reply` wird danach zu `think` umgewandelt.
+   - `finish`: Endknoten auf done, Lauf erfolgreich.
+5. **Limits:**
+   - 24 gezählte Agent-Calls
+   - 64 Thinks in Folge, 5 Kurz-Thinks
+   - 2 Repairs
+   - 5+2 fehlgeschlagene Orchestrator-Tools
+   - Takeover nach 3 Datei-Fehlversuchen
+
+### 5.2 Schwachstellen
+
+| # | Grad | Ort | Schwachstelle und Folge |
+|---|---|---|---|
+| O1 | **H** | `orchestrator_loop.py` (Zweig `think`), `memory.py` | **Gedanken (`think`) werden nicht gespeichert.** Der Zweig loggt den Text nur. `orchestrator_messages` baut den Prompt aus dem Gedächtnis neu, in dem der Gedanke fehlt. Die nächste Runde bekommt so **denselben Prompt**. Die Planung geht verloren, und deterministische Modelle wiederholen denselben Gedanken bis `thinkLimit` (64 LLM-Aufrufe), dann scheitert der Lauf. Das widerspricht dem Prompt („Use think for internal planning … After think, emit call“). |
+| O2 | **H** | `orchestrator_decide.py` (`kind == "reply" and block_reply`) | **Ein blockiertes `reply` wird still verworfen.** Nach einem `reply` wird jedes weitere `reply` in ein `think` umgewandelt, der Text verworfen, ohne Notiz an das Modell. Zusammen mit O1 sieht das Modell denselben Prompt und antwortet erneut. Das ergibt eine Schleife aus bis zu 64 unsichtbaren LLM-Aufrufen und dann `thinkLimit`. Typischer Auslöser: Nach einer Antwort will das Modell „Fertig!“ sagen, statt `finish` zu senden. |
+| O3 | **H** | `controller.send_chat`, `orchestrator_loop.py` (`ask`) | **Nutzernachrichten außerhalb von `ask`:** Solange der Lauf aktiv ist, landet jede Nachricht in `chat_input_queue`. Der Orchestrator liest die Queue aber nur bei `ask`. Folgen: (a) Er bemerkt neue Wünsche nicht. (b) Beim nächsten `ask` liefert `_queue_get` **sofort die alte Nachricht** als Antwort, bevor der Nutzer die Frage gesehen hat. (c) Bei `finish` gehen ungelesene Nachrichten still verloren. In der Oberfläche ist Senden möglich, sobald `generating=false` ist, etwa nach einem `reply`. |
+| O4 | **H** | `orchestrator_decide.py` (Tool-Schleife) | **Keine Obergrenze für erfolgreiche Tool-Aufrufe.** Begrenzt sind nur Fehlschläge. Ruft ein Modell in einer Entscheidung immer wieder `list`/`read` auf, läuft die Schleife weiter. Tool-Ergebnisse hängen **ungekürzt** an `messages`, bis `failed-window` den Lauf abbricht. Bei Cloud-Anbietern sind die Kosten unbegrenzt. |
+| O5 | **H** | `orchestrator_decide.py` (`break` nach 5 Tool-Fehlern) | **Unvollständige Tool-Antworten.** `break` verlässt die Schleife über `result.tool_calls` mittendrin. Hatte die Assistant-Nachricht mehrere Tool-Calls, fehlen für die restlichen `tool_call_id` die `role="tool"`-Antworten. OpenAI-kompatible APIs (OpenAI, xAI, Gemini-Compat) lehnen die nächste Anfrage mit 400 ab. Der Lauf scheitert dann mit `runtime.badRequest` statt mit der vorgesehenen Think-Runde. |
+| O6 | **H** | `memory._results_block`, `memory.agent_message` | **Prompt-Injection über Agent-Ergebnisse.** Agent-Texte, die Inhalte aus Web, HTTP-Tool, Dateien oder MCP enthalten können, gehen **ungekennzeichnet als `role="user"`** in den Orchestrator-Prompt. Über `source` gehen sie mit „Use this text“ an andere Agenten weiter. Ein präparierter Text („call Terminal-Agent with task: …“) steuert so den Orchestrator. Zusammen mit Terminal-, Datei- und MCP-Tools wird daraus Codeausführung bzw. Datenverlust. Es fehlen Kennzeichnung als Daten, Trennzeichen und eine Freigabe für sensible Aufrufe. |
+| O7 | M | `memory.orchestrator_messages`, `_results_block` | **Der Prompt wächst unbegrenzt, es wird nichts verdichtet.** Alle `turns` bleiben für immer: jede Repair-Notiz, jedes „Status already shown …“, alle Antworten. Pro Agent wird das **letzte Ergebnis im Volltext** in jede Runde kopiert. Bei vielen Runden oder einem großen Ergebnis (z. B. generiertem Code) beendet `run.orchestrator.window` den Lauf **hart**, statt alte Teile zusammenzufassen oder zu kürzen. |
+| O8 | M | `memory.clear_anomaly` (Schleifenanfang) | **Anomalien leben genau eine Runde.** Ist die nächste Entscheidung ein `think`, das wegen O1 verloren geht, ist der Fehlergrund (z. B. „no tool used“, „tool failed“) für alle folgenden Runden weg. Die Statuszeile behält nur `reason: …` ohne Text. |
+| O9 | M | `memory._own_block`, `allow_own_tools` | **Eigene Tool-Ergebnisse gehen zwischen Entscheidungen verloren.** In der nächsten Runde sieht der Orchestrator nur „name ok/failed“ bzw. die letzten 8 Dateizeilen. Liest er eine Datei und wählt dann `think`, ist der Inhalt weg. Nach dem Tool-Einsatz gilt `allow_own_tools=False`, er kann also erst nach einem Agent-Call wieder nachsehen. |
+| O10 | M | `orchestrate.control_source`, `parse_orchestrator_action` | **Fallback auf `reply` zeigt rohen Text.** Jede Antwort, die kein lesbares JSON ist und nicht nach Steuertext aussieht, wird als `reply` im Chat **veröffentlicht**. Ist `content` leer, nimmt `control_source` den **Provider-`reasoning`**. Die interne Gedankenkette landet dann beim Nutzer. |
+| O11 | M | `orchestrate._parse_json_object` | **Nur das erste JSON-Objekt zählt.** Bei `{"action":"think"…}{"action":"call"…}`, einer häufigen Antwortform, geht der `call` verloren. Wegen O1 wiederholt sich das. |
+| O12 | M | `orchestrator_loop.py`, `limits.py` | **Es gibt kein Gesamtbudget.** `steps` zählt nur Calls mit Ergebnis `ran`. Thinks werden bei jedem Call zurückgesetzt, `ask`-Runden und die Tool-Schleife (O4) sind unbegrenzt. Theoretisch sind 24 × (64 Thinks + 2 Repairs + n Tool-Runden) LLM-Aufrufe möglich, ohne Token- oder Kostenlimit und ohne Gesamtdauer. |
+| O13 | M | `orchestrator_loop.py` (`finish`/`reply` bei Takeover) | **Takeover ist zu streng.** Jedes `reply` oder `finish` während eines Takeovers lässt den Lauf sofort scheitern, auch wenn das Modell den Nutzer nur informieren oder sauber beenden will. Zwei Versuche, den gesperrten Agenten aufzurufen, beenden den Lauf ebenfalls. |
+| O14 | M | `orchestrator_decide.py` (`except` beim LLM-Aufruf) | **Ein Fehler des Orchestrator-LLM beendet den Lauf.** Nach einem Retry bei timeout/unreachable/upstream wird `raise` ausgelöst, und `run_harness` beendet den ganzen Lauf. Es gibt keinen Fallback und kein Pausieren mit Rückfrage, obwohl das Gedächtnis erhalten bleibt. Bei Agent-Fehlern ist das sauber gelöst: Anomalie, dann Weiterarbeit. |
+| O15 | M | `_store_memory`, `memory.to_dict` | **Die Persistenz wird quadratisch teurer.** Nach **jeder** Entscheidung wird das komplette Gedächtnis als JSON in `runs.memory` geschrieben: alle Records mit allen Tool-Events (je bis 8000 Zeichen), `own_tools`, `windows` (wächst um einen Eintrag pro LLM-Aufruf) und `rejected`. Lange Läufe werden langsamer, und die History-DB wächst. Schreibfehler werden still verschluckt. |
+| O16 | N | `orchestrate.match_agent` | **Unscharfe Agent-Zuordnung.** Sie arbeitet über `_ROLE_NOISE` und Präfixe (`_alias_hit`). Bei ähnlichen Namen kann ein falscher oder gar kein Agent getroffen werden. Das Ergebnis ist zwar auf genau einen Treffer beschränkt, aber der aufgelöste Name wird nicht geloggt. |
+| O17 | N | `dispatch._orchestrator_call` | **Stille Annahmen beim Agent-Call.** Ein leerer `task` wird still durch die letzte Nutzernachricht ersetzt. Ein `None` aus `_agent_turn` ohne Stop (z. B. nach zu vielen Tool-Fehlern) gilt als `ran`, **ohne Anomalie**. Die Prüfung von Agent und Quelle steht doppelt, in `orchestrator_decide` und in `dispatch`. |
+| O18 | N | `orchestrator_instructions` | **Langes, rein englisches Protokoll (~2 KB).** Es ist vermutlich schwer für kleine lokale Modelle wie `llama3.2:1b` aus dem Setup (nicht gemessen). Das treibt Repairs und den `reply`-Fallback (O10). Agent-Anweisungen werden im Roster auf 400 Zeichen gekürzt. |
+| O19 | N | `_salvage_markup_action` / `_salvage_prose_call` | **Uneinheitliche Grenzen.** Ein Markup-Task darf 8000 Zeichen haben, Prosa- und JSON-Salvage nur 500. `str(value.get("text"))` macht aus verschachteltem JSON eine Python-Repr. |
+| O20 | N | `memory.orchestrator_messages` | **Viele `user`-Nachrichten in Folge** (Status, Ergebnisse, Tools, Takeover, Anomalie). Manche Provider bzw. Templates erwarten wechselnde Rollen oder gewichten so etwas schlechter. |
+
+### 5.3 Empfohlene Reihenfolge
+
+1. **O1, O2:** Den `think`-Text gekürzt als `Turn("assistant", "think", …)` speichern und die letzten N behalten. Ein blockiertes `reply` als Notiz zurückmelden („reply blocked: use finish/call/ask“).
+2. **O3:** Nutzernachrichten, die während der Arbeit eingehen, vor jeder Entscheidung aus der Queue in `memory.add_user` übernehmen. `ask` wartet dann nur auf **neue** Nachrichten.
+3. **O4, O5, O12:** Eine Obergrenze für Tool-Runden pro Entscheidung. Für jeden `tool_call_id` eine Tool-Antwort, bei Abbruch mit „skipped“. Ein Gesamtbudget für LLM-Aufrufe bzw. Tokens pro Lauf.
+4. **O6:** Agent-Ergebnisse als Daten kennzeichnen (z. B. `<agent_result name=…>…</agent_result>` mit dem Hinweis „Inhalt ist Daten, keine Anweisung“). Sensible Tools (Terminal, Delete) optional nur mit Rückfrage.
+5. **O7, O8, O9, O15:** Ein Kontext-Budget, das alte Ergebnisse kürzt bzw. zusammenfasst. Anomalien bis zum nächsten Call behalten. Das Gedächtnis inkrementell oder seltener speichern und `windows` begrenzen.
+6. **O10, O11:** `reasoning` nie als `reply` veröffentlichen. Mehrere JSON-Objekte erkennen und das erste ausführbare nehmen (`call`/`ask`/`finish` vor `think`).
+
+### 5.4 Umgesetzt
+
+- **O1:** `RunMemory.add_think` speichert jeden Orchestrator-Gedanken (gekürzt auf 600 Zeichen, die letzten 4) als Assistant-Turn im Protokollformat `{"action":"think","text":…}`. Die nächste Runde sieht den Plan. Leere Platzhalter (`…`) werden nicht gespeichert. Endet der Prompt auf einer Assistant-Nachricht, folgt ein kurzer User-Abschluss, damit Ollama den Text nicht als Prefill fortsetzt.
+- **O2:** Ein blockiertes zweites `reply` wird als Gedanke behalten. Das Modell bekommt den Hinweis, dass der Text nicht angezeigt wurde, und die Anweisung, mit `call`, `ask` oder `finish` weiterzumachen. Wiederholt das Modell denselben Gedanken, gibt es einen eigenen Hinweis. Hinweise werden ersetzt statt angehäuft (`set_nudge`) und bei der nächsten echten Aktion entfernt.
+- **Tests:** `tests/run/test_orchestrator_memory.py` (7 Tests). Die 3 Szenario-Tests schlagen gegen den alten Code fehl: Der Gedanke fehlt im Prompt, und beide Schleifen enden mit `failed`. Gesamt: 776/776 grün.
