@@ -278,20 +278,23 @@ function NetworkEditor() {
       }
       if (mod && event.key.toLowerCase() === 'z') {
         event.preventDefault();
+        if (readOnly) return;
         if (event.shiftKey) useNetworkEditor.getState().redo();
         else useNetworkEditor.getState().undo();
         return;
       }
       if (typing) return;
       if (event.key === 'Escape') useNetworkEditor.getState().select([]);
+      if (mod && event.key.toLowerCase() === 'c') {
+        const state = useNetworkEditor.getState();
+        clipboard.current = duplicateNodes(state.document.nodes, state.document.edges, state.selectedNodeIds);
+      }
+      // Selection and copy stay available while the active network runs; edits do not.
+      if (readOnly) return;
       if (event.key === 'Delete' || event.key === 'Backspace') editorDeleteSelection();
       if (mod && event.key.toLowerCase() === 'd') {
         event.preventDefault();
         editorDuplicateSelection();
-      }
-      if (mod && event.key.toLowerCase() === 'c') {
-        const state = useNetworkEditor.getState();
-        clipboard.current = duplicateNodes(state.document.nodes, state.document.edges, state.selectedNodeIds);
       }
       if (mod && event.key.toLowerCase() === 'v' && clipboard.current) {
         const state = useNetworkEditor.getState();

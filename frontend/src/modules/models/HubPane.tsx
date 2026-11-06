@@ -150,7 +150,7 @@ export function HubPane() {
   const resetHubFilters = useModelsUi((state) => state.resetHubFilters);
   const {
     search, debounced, pipelines, size, minB, maxB, bounds, sort, sortDir, capabilities, page, cursors, picked, quant, share,
-    snapshot, files, filesError,
+    snapshot, files, filesError, filesNonce,
   } = hub;
   const pageSize: HubPageSize = (HUB_PAGE_SIZES as readonly number[]).includes(hub.pageSize) ? hub.pageSize : 30;
   const setSearch = (value: string) => patchHub({ search: value });
@@ -174,7 +174,9 @@ export function HubPane() {
     patchHub((current) => ({ capabilities: typeof value === 'function' ? value(current.capabilities) : value, ...freshPage() }));
   const setPage = (value: number | ((current: number) => number)) =>
     patchHub((current) => ({ page: typeof value === 'function' ? value(current.page) : value }));
-  const setPicked = (value: string | null) => patchHub({ picked: value });
+  // A new pick must not show the previous pick's error while it loads.
+  const setPicked = (value: string | null) =>
+    patchHub((current) => (current.picked === value ? current : { picked: value, filesError: null }));
   const setQuant = (value: string | null) => patchHub({ quant: value });
   const [queuing, setQueuing] = useState(false);
   const wide = useWideLayout();
@@ -244,7 +246,7 @@ export function HubPane() {
   useEffect(() => {
     if (!picked) return;
     const current = useModelsUi.getState().hub;
-    if (current.files?.id === picked && !current.filesError) return;
+    if (current.files?.id === picked && current.files.nonce === filesNonce && !current.filesError) return;
     const gen = ++hubFilesGen;
     void hubFiles(picked).then((data) => {
       if (gen !== hubFilesGen) return;
@@ -252,12 +254,12 @@ export function HubPane() {
         patchHub({ files: null, filesError: data.messageKey });
         return;
       }
-      patchHub({ files: { id: picked, data }, filesError: null });
+      patchHub({ files: { id: picked, data, nonce: filesNonce }, filesError: null });
     }).catch((caught: unknown) => {
       if (gen !== hubFilesGen) return;
       patchHub({ files: null, filesError: failureKey(caught) });
     });
-  }, [picked]);
+  }, [picked, filesNonce]);
   const detail = files?.id === picked ? files.data : null;
   const preferred = useMemo(() => {
     const rows = detail?.quants ?? [];

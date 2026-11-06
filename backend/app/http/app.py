@@ -90,6 +90,10 @@ def create_app() -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+    from app.http.guard import LoopbackGuard
+
+    # Added last so it runs first: foreign Host/Origin never reach CORS or routers.
+    app.add_middleware(LoopbackGuard)
     include_all(app)
     mount_spa(app)
     return app

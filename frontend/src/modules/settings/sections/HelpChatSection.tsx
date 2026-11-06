@@ -88,7 +88,7 @@ function ModelField({
           placeholder={placeholder ?? label}
           emptyLabel={emptyLabel}
           noModelsLabel={t('network.inspector.llm.noModels')}
-          useValueLabel={(name) => t('network.inspector.llm.useModel', { name })}
+          customValueLabel={(name) => t('network.inspector.llm.useModel', { name })}
           disabled={disabled}
         />
       ) : (

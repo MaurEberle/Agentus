@@ -36,3 +36,27 @@ def test_uvicorn_config_survives_noconsole_stdout(monkeypatch: pytest.MonkeyPatc
     assert kwargs.get("use_colors") is False
     assert kwargs.get("lifespan") == "off"
     uvicorn.Config(FastAPI(), host="127.0.0.1", port=0, **kwargs)
+
+
+def test_port_in_use_stops_before_bootstrap() -> None:
+    import socket
+
+    from app.main import _assert_port_free
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as holder:
+        holder.bind(("127.0.0.1", 0))
+        holder.listen(1)
+        port = holder.getsockname()[1]
+        with pytest.raises(SystemExit, match="already in use"):
+            _assert_port_free("127.0.0.1", port)
+
+
+def test_free_port_passes() -> None:
+    import socket
+
+    from app.main import _assert_port_free
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    _assert_port_free("127.0.0.1", port)

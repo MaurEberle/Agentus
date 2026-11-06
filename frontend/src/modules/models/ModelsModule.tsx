@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { listInstalled, saveModelTags } from '@/modules/models/api';
 import { HubPane } from '@/modules/models/HubPane';
 import type { InstalledModel, ModelKind } from '@/modules/models/model';
-import { useModelsUi } from '@/modules/models/store';
+import { invalidateHubFiles, useModelsUi } from '@/modules/models/store';
 
 const KINDS: ModelKind[] = ['embedding', 'image', 'moe', 'normal'];
 
@@ -478,7 +478,7 @@ function DeleteModelDialog({
         }
       }
       await queryClient.invalidateQueries({ queryKey: ['models'], exact: true });
-      await queryClient.invalidateQueries({ queryKey: ['models', 'hub', 'files'] });
+      invalidateHubFiles();
       onDeleted(removed);
       if (failed.length) setBlocks(failed);
       else onClose();

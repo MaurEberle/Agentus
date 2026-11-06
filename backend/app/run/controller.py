@@ -146,6 +146,10 @@ class RunController:
         with self.lock:
             if self.is_busy():
                 raise AppError("run.busy", status_code=409)
+            # stop() gives up waiting after 10 s while a tool call may still run. Clearing
+            # stop_event now would revive that harness and let it write into the new run.
+            if self.thread is not None and self.thread.is_alive():
+                raise AppError("run.busy", status_code=409)
             self.service_status = "starting"
             self.stop_event.clear()
             self.abort_generation.clear()
@@ -213,7 +217,12 @@ class RunController:
                 self.network_id = row.id
                 self.compiled = compiled
                 self.snapshot = snapshot
-                self.service_status = "starting"
+                stopped_early = self.stop_event.is_set()
+                if not stopped_early:
+                    self.service_status = "starting"
+            if stopped_early:
+                self.finish("cancelled")
+                return {"serviceStatus": "stopped", "runId": run_id}
             _seed_steps(compiled, run_id)
             publish("run", snapshot.model_dump(by_alias=True))
             self._index_knowledge(compiled, data_dir)
@@ -257,7 +266,13 @@ class RunController:
             self._phase = None
             self._phase_label = None
             with self.lock:
-                self.service_status = "running"
+                stopped_early = self.stop_event.is_set()
+                if not stopped_early:
+                    self.service_status = "running"
+            if stopped_early:
+                self.finish("cancelled")
+                return {"serviceStatus": "stopped", "runId": run_id}
+            with self.lock:
                 if self.snapshot is not None:
                     self.snapshot = self.snapshot.model_copy(update={"service_status": "running"})
                     snapshot = self.snapshot

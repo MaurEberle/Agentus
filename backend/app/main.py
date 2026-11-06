@@ -40,6 +40,22 @@ def _want_host() -> bool:
     return sys.platform == "win32"
 
 
+def _assert_port_free(host: str, port: int) -> None:
+    """Fail before bootstrap: a second process must not touch the stores.
+
+    ``db.init`` marks every ``running`` run as orphaned; done by a second
+    instance it would cancel the live run of the first one.
+    """
+    import socket
+
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(family, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind((host, port))
+        except OSError:
+            raise SystemExit(f"port {port} already in use; is Agentus Network already running?") from None
+
+
 def _bootstrap() -> None:
     try:
         from app.db import init as db_init
@@ -77,6 +93,12 @@ def _run() -> None:
     host = os.environ.get("AGENTUS_NETWORK_API_HOST", "127.0.0.1")
     port = _port()
     assert_loopback(host)
+    if _want_host():
+        from app.host.single_instance import acquire
+
+        if not acquire():
+            return  # the running instance was focused
+    _assert_port_free(host, port)
     _bootstrap()
     _maybe_start_ollama()
     if _want_host():

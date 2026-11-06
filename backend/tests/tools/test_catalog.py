@@ -39,7 +39,7 @@ def test_openai_tools_for_calculator() -> None:
 
 
 def test_http_catalog_route() -> None:
-    response = TestClient(create_app()).get("/api/tools/catalog")
+    response = TestClient(create_app(), base_url="http://127.0.0.1").get("/api/tools/catalog")
     assert response.status_code == 200
     body = response.json()
     assert body["groups"][0]["id"] == "firstParty"

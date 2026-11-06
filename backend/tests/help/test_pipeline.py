@@ -253,7 +253,7 @@ def test_abort_done_partial(api_env, monkeypatch) -> None:
     parsed = _parse(list(send_stream("q")))
     names = [n for n, _ in parsed]
     assert "done" in names
-    assert "500" not in "".join(d for _, d in parsed)
+    assert "error" not in names
     done = next(d for n, d in parsed if n == "done")
     assert "hi" in done
     assert "there" not in done

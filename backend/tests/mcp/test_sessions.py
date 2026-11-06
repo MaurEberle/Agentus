@@ -279,7 +279,7 @@ def test_postgres_app_db_no_spawn(api_env, monkeypatch) -> None:
     monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
     monkeypatch.setattr("app.mcp.service.runtime_available", lambda runtime: True)
     item = create_server(
-        McpServerCreate(recipe_id="postgres", credential_ids=["pg-1"], enabled=True)
+        McpServerCreate(recipe_id="postgres", credential_ids=["pg-1"], enabled=False)
     )
     put("pg-1", "file:C:/data/workspace.sqlite")
     from app.http.errors import AppError

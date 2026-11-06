@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { listDownloads } from '@/modules/models/api';
+import { invalidateHubFiles } from '@/modules/models/store';
 
 export function DownloadsHeader() {
   const { t } = useTranslation();
   const active = useMatch('/downloads');
   const seenDone = useRef(new Set<string>());
+  const primed = useRef(false);
   const downloads = useQuery({
     queryKey: ['models', 'downloads'],
     queryFn: listDownloads,
@@ -22,14 +24,17 @@ export function DownloadsHeader() {
   const count = items.filter((item) => item.status === 'queued' || item.status === 'running' || item.status === 'paused').length;
 
   useEffect(() => {
+    if (!downloads.data) return;
     const done = items.filter((item) => item.status === 'done').map((item) => item.id);
     const fresh = done.filter((id) => !seenDone.current.has(id));
-    if (fresh.length > 0 && seenDone.current.size > 0) {
+    // The first payload only seeds what was already finished before this session.
+    if (fresh.length > 0 && primed.current) {
       void queryClient.invalidateQueries({ queryKey: ['models'], exact: true });
-      void queryClient.invalidateQueries({ queryKey: ['models', 'hub', 'files'] });
+      invalidateHubFiles();
     }
+    primed.current = true;
     for (const id of done) seenDone.current.add(id);
-  }, [items]);
+  }, [items, downloads.data]);
 
   return (
     <>

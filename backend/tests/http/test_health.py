@@ -22,7 +22,7 @@ def test_health_ok_camel_case(client: TestClient) -> None:
 
 
 def test_health_without_db(api_env) -> None:
-    response = TestClient(create_app()).get("/api/health")
+    response = TestClient(create_app(), base_url="http://127.0.0.1").get("/api/health")
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
@@ -47,7 +47,7 @@ def test_spa_html_is_not_cached(tmp_path, monkeypatch) -> None:
     dist.mkdir()
     (dist / "index.html").write_text("<html><body>ok</body></html>", encoding="utf-8")
     monkeypatch.setenv("AGENTUS_NETWORK_STATIC_DIR", str(dist))
-    response = TestClient(create_app()).get("/")
+    response = TestClient(create_app(), base_url="http://127.0.0.1").get("/")
     assert response.status_code == 200
     assert "ok" in response.text
     assert response.headers.get("cache-control") == "no-store"

@@ -15,10 +15,11 @@ def _root(tmp_path: Path) -> dict[str, str]:
 
 def test_restricted_runs_allowlisted_program(tmp_path: Path) -> None:
     program = Path(sys.executable).stem
+    (tmp_path / "hello.py").write_text("print(41)", encoding="utf-8")
     result = execute_first_party(
         "terminal",
         config={"rootPath": str(tmp_path), "terminalMode": "restricted", "terminalPrograms": [program]},
-        args={"command": f'{program} -c "print(41)"'},
+        args={"command": f"{program} hello.py"},
     )
     assert result.ok is True
     assert result.result["exitCode"] == 0
@@ -74,10 +75,11 @@ def test_empty_allowlist_denies(tmp_path: Path) -> None:
 def test_output_is_truncated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.tools.terminal_tool.MAX_OUTPUT_CHARS", 8)
     program = Path(sys.executable).stem
+    (tmp_path / "long.py").write_text("print('abcdefghij')", encoding="utf-8")
     result = execute_first_party(
         "terminal",
         config={"rootPath": str(tmp_path), "terminalPrograms": [program]},
-        args={"command": f'{program} -c "print(\'abcdefghij\')"'},
+        args={"command": f"{program} long.py"},
     )
     assert result.ok is True
     assert result.result["truncated"] is True
@@ -86,10 +88,11 @@ def test_output_is_truncated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
 
 def test_secret_is_not_injected(tmp_path: Path) -> None:
     program = Path(sys.executable).stem
+    (tmp_path / "num.py").write_text("print(123)", encoding="utf-8")
     result = execute_first_party(
         "terminal",
         config={"rootPath": str(tmp_path), "terminalPrograms": [program]},
-        args={"command": f'{program} -c "print(123)"'},
+        args={"command": f"{program} num.py"},
         secret="credential-secret-value",
     )
     assert result.ok is True
@@ -130,3 +133,42 @@ def test_catalog_lists_terminal() -> None:
     assert "git, python" in described[0]["function"]["description"]
     open_shell = openai_tools_for_kinds(["terminal"], terminal_unrestricted=True)
     assert "PowerShell" in open_shell[0]["function"]["description"]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'python -c "print(1)"',
+        'python -Ic "print(1)"',
+        'python -X utf8 -c "print(1)"',
+        "git -c alias.x=!calc x",
+        "git -C . -c alias.x=!calc x",
+        "git --config-env=alias.x=EVIL x",
+    ],
+)
+def test_restricted_blocks_inline_code(tmp_path: Path, command: str) -> None:
+    result = execute_first_party(
+        "terminal",
+        config={"rootPath": str(tmp_path), "terminalMode": "restricted", "terminalPrograms": ["python", "git"]},
+        args={"command": command},
+    )
+    assert result.ok is False
+    assert result.error_key == "tools.terminal.inlineCode"
+
+
+def test_inline_check_ignores_subcommand_flags() -> None:
+    from app.tools.terminal_tool import _inline_code
+
+    assert _inline_code("git", ["commit", "-c", "HEAD"]) is False
+    assert _inline_code("python", ["script.py", "-c"]) is False
+    assert _inline_code("python", ["-V"]) is False
+
+
+def test_default_grant_has_no_interpreter(tmp_path: Path) -> None:
+    result = execute_first_party(
+        "terminal",
+        config={"rootPath": str(tmp_path), "terminalMode": "restricted"},
+        args={"command": "python -V"},
+    )
+    assert result.ok is False
+    assert result.error_key == "tools.terminal.notGranted"

@@ -25,7 +25,8 @@ export function isAppLanguage(value: string | undefined): value is AppLanguage {
   return Boolean(value) && (APP_LANGUAGES as readonly string[]).includes(value as string);
 }
 
-export function languageDirection(_value: AppLanguage): 'ltr' | 'rtl' {
+/** All supported languages (de, en, es) are left-to-right. */
+export function languageDirection(): 'ltr' | 'rtl' {
   return 'ltr';
 }
 

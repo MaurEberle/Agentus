@@ -14,7 +14,7 @@ export function ModelCombobox({
   onChange,
   placeholder,
   noModelsLabel,
-  useValueLabel,
+  customValueLabel,
   emptyLabel,
   restrictToOptions,
 }: {
@@ -25,7 +25,7 @@ export function ModelCombobox({
   onChange: (value: string) => void;
   placeholder?: string;
   noModelsLabel?: string;
-  useValueLabel?: (name: string) => string;
+  customValueLabel?: (name: string) => string;
   emptyLabel?: string;
   restrictToOptions?: boolean;
 }) {
@@ -127,14 +127,14 @@ export function ModelCombobox({
               </button>
             </li>
           ))}
-          {query && !exact && !restrictToOptions && useValueLabel ? (
+          {query && !exact && !restrictToOptions && customValueLabel ? (
             <li>
               <button
                 type="button"
                 className="flex w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
                 onClick={() => commit(search.trim())}
               >
-                {useValueLabel(search.trim())}
+                {customValueLabel(search.trim())}
               </button>
             </li>
           ) : null}

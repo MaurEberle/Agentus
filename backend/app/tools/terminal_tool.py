@@ -9,7 +9,8 @@ from typing import Any
 from app.tools.models import ExecuteResult
 from app.tools.sandbox import configured_root, tool_fail
 
-DEFAULT_PROGRAMS = ("git", "python", "py", "dotnet")
+# Interpreters are never implied: a missing list grants git only. Users opt in explicitly.
+DEFAULT_PROGRAMS = ("git",)
 TIMEOUT_SECONDS = 30
 MAX_OUTPUT_CHARS = 32_000
 MAX_COMMAND_CHARS = 4_000
@@ -95,10 +96,50 @@ def _run_program(root: Path, command: str, programs: set[str]) -> ExecuteResult:
     name = _program_name(token)
     if not name or name not in programs:
         return _fail("tools.terminal.notGranted", {"program": name or token})
+    if _inline_code(name, parsed[1:]):
+        return _fail("tools.terminal.inlineCode", {"program": name})
     executable = shutil.which(name)
     if not executable:
         return _fail("tools.terminal.notFound", {"program": name})
     return _spawn(root, [executable, *parsed[1:]])
+
+
+# Options that turn a granted program into a one-line code runner (python -c, git -c alias.x=!cmd).
+_INLINE_SHORT = {"python": "c", "py": "c", "node": "ep"}
+_INLINE_LONG = {
+    "node": ("--eval", "--print"),
+    "git": ("-c", "--config-env", "--exec-path"),
+}
+# Global options that consume the next argument; scanning continues after the value.
+_VALUE_OPTS = {
+    "git": ("-C", "--namespace", "--git-dir", "--work-tree", "--super-prefix"),
+    "python": ("-X", "-W"),
+    "py": ("-X", "-W"),
+    "node": ("-r", "--require", "--import", "--loader", "--conditions", "-C"),
+}
+
+
+def _inline_code(name: str, args: list[str]) -> bool:
+    """True when an option before the script/subcommand would run code from the command line."""
+    shorts = _INLINE_SHORT.get(name, "")
+    longs = _INLINE_LONG.get(name, ())
+    takes_value = _VALUE_OPTS.get(name, ())
+    skip = False
+    for arg in args:
+        if skip:
+            skip = False
+            continue
+        if not arg.startswith("-"):
+            return False
+        flag = arg.split("=", 1)[0]
+        if flag in longs or flag.lower() in longs:
+            return True
+        if flag in takes_value and "=" not in arg:
+            skip = True
+            continue
+        if shorts and not arg.startswith("--") and any(ch in shorts for ch in arg[1:].lower()):
+            return True
+    return False
 
 
 def _run_powershell(root: Path, command: str) -> ExecuteResult:

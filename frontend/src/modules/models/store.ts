@@ -54,6 +54,8 @@ export type HubSnapshot = {
 export type HubFilesSnapshot = {
   id: string;
   data: HubFiles;
+  /** `filesNonce` the data was fetched for; an older nonce means installed state may be stale. */
+  nonce: number;
 };
 
 type HubUi = {
@@ -76,6 +78,8 @@ type HubUi = {
   snapshot: HubSnapshot | null;
   files: HubFilesSnapshot | null;
   filesError: string | null;
+  /** Bumped when installed models change (download done, delete) so the picked files refetch. */
+  filesNonce: number;
 };
 
 type ModelsUiStore = {
@@ -126,6 +130,7 @@ export const useModelsUi = create<ModelsUiStore>((set) => ({
     snapshot: null,
     files: null,
     filesError: null,
+    filesNonce: 0,
   },
   setTab: (tab) => set({ tab }),
   patchInstalled: (patch) =>
@@ -143,3 +148,8 @@ export const useModelsUi = create<ModelsUiStore>((set) => ({
       hub: { ...state.hub, ...hubFilterDefaults, page: 0, cursors: [null] },
     })),
 }));
+
+/** Hub detail lives in this store, not React Query: invalidate it explicitly. */
+export function invalidateHubFiles(): void {
+  useModelsUi.getState().patchHub((hub) => ({ filesNonce: hub.filesNonce + 1 }));
+}

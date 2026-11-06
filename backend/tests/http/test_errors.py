@@ -40,7 +40,7 @@ def _with_dummy() -> FastAPI:
 
 
 def test_app_error_409(api_env) -> None:
-    response = TestClient(_with_dummy()).get("/api/_test/conflict")
+    response = TestClient(_with_dummy(), base_url="http://127.0.0.1").get("/api/_test/conflict")
     assert response.status_code == 409
     assert response.json() == {
         "messageKey": "credentials.inUse",
@@ -49,7 +49,7 @@ def test_app_error_409(api_env) -> None:
 
 
 def test_validation_is_400(api_env) -> None:
-    response = TestClient(_with_dummy()).post("/api/_test/validate", json={})
+    response = TestClient(_with_dummy(), base_url="http://127.0.0.1").post("/api/_test/validate", json={})
     assert response.status_code == 400
     body = response.json()
     assert body["messageKey"] == "http.validation"
@@ -57,7 +57,7 @@ def test_validation_is_400(api_env) -> None:
 
 
 def test_unhandled_is_500_without_traceback(api_env) -> None:
-    client = TestClient(_with_dummy(), raise_server_exceptions=False)
+    client = TestClient(_with_dummy(), base_url="http://127.0.0.1", raise_server_exceptions=False)
     response = client.get("/api/_test/boom")
     assert response.status_code == 500
     body = response.json()
@@ -67,7 +67,7 @@ def test_unhandled_is_500_without_traceback(api_env) -> None:
 
 
 def test_persist_errors_map_status(api_env) -> None:
-    client = TestClient(_with_dummy())
+    client = TestClient(_with_dummy(), base_url="http://127.0.0.1")
     invalid = client.get("/api/_test/persist-dir")
     assert invalid.status_code == 400
     assert invalid.json()["messageKey"] == "dataDir.invalidPath"

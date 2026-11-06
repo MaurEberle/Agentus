@@ -1690,7 +1690,7 @@ function ZipFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
 }
 
 const TERMINAL_CHOICES = ['git', 'python', 'py', 'dotnet', 'node', 'npm', 'pnpm', 'cargo', 'go'] as const;
-const TERMINAL_DEFAULT = ['git', 'python', 'py', 'dotnet'];
+const TERMINAL_DEFAULT = ['git'];
 
 function TerminalFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();

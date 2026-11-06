@@ -46,4 +46,4 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
 def client(api_env) -> TestClient:
     init()
     register_hooks()
-    return TestClient(create_app())
+    return TestClient(create_app(), base_url="http://127.0.0.1")
