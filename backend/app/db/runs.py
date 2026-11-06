@@ -579,7 +579,7 @@ def list_calls(
             SELECT llm_calls.* FROM llm_calls
             JOIN runs ON runs.id = llm_calls.run_id
             {where}
-            ORDER BY llm_calls.id
+            ORDER BY llm_calls.rowid
             LIMIT ? OFFSET ?
             """,
             [*params, limit, offset],

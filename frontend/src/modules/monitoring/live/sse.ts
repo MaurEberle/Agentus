@@ -173,9 +173,13 @@ export function createSseHandle(): MonitoringHandle {
       return { ...snapshot };
     },
     sendChat(text: string) {
-      void apiFetch('/run/chat', { method: 'POST', body: JSON.stringify({ text }) }).catch(() => {
-        emit({ type: 'adapterError', messageKey: 'monitoring.empty.errorTitle' });
-      });
+      return apiFetch('/run/chat', { method: 'POST', body: JSON.stringify({ text }) }).then(
+        () => true,
+        () => {
+          emit({ type: 'adapterError', messageKey: 'monitoring.empty.errorTitle' });
+          return false;
+        },
+      );
     },
     abortChat() {
       void apiFetch('/run/chat/abort', { method: 'POST' }).catch(() => undefined);

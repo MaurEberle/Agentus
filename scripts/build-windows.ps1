@@ -436,11 +436,13 @@ function New-PortableZip {
     if (Test-Path -LiteralPath $zip) {
         Remove-Item -LiteralPath $zip -Force
     }
-    $tar = Get-Command tar.exe -ErrorAction SilentlyContinue
-    if ($tar) {
+    # Only the Windows bsdtar writes zip (-a) and takes "C:\..." paths. From Git Bash the
+    # PATH lookup finds GNU tar, which reads "C:" as a remote host and fails.
+    $tar = Join-Path $env:SystemRoot "System32\tar.exe"
+    if (Test-Path -LiteralPath $tar) {
         Push-Location $stageRoot
         try {
-            & $tar.Source -a -c -f $zip "AgentusNetwork"
+            & $tar -a -c -f $zip "AgentusNetwork"
             if ($LASTEXITCODE -ne 0) {
                 throw "tar exited $LASTEXITCODE creating $zip"
             }

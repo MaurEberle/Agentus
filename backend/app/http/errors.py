@@ -58,11 +58,10 @@ def persist_status(message_key: str) -> int:
         "run.noActiveNetwork",
         "run.invalidNetwork",
         "run.knowledge.failed",
-        "dataDir.busy",
     }:
         return 409
     if message_key.startswith("graph.") or message_key.startswith("run."):
-        return 409 if message_key in {"run.busy"} else 400
+        return 400
     return 500
 
 
@@ -74,6 +73,28 @@ def _first_validation_message(exc: RequestValidationError) -> str:
     loc = ".".join(str(part) for part in first.get("loc", ()))
     msg = str(first.get("msg", "invalid"))
     return f"{loc}: {msg}" if loc else msg
+
+
+def _first_pydantic_message(exc: Any) -> str:
+    try:
+        errors = exc.errors()
+    except Exception:
+        return "invalid"
+    if not errors:
+        return "invalid"
+    first = errors[0]
+    loc = ".".join(str(part) for part in first.get("loc", ()))
+    msg = str(first.get("msg", "invalid"))
+    return f"{loc}: {msg}" if loc else msg
+
+
+def runtime_status(error_key: str) -> int:
+    """Upstream/transport trouble is a gateway problem; everything else is a bad request."""
+    if error_key in {"runtime.unreachable", "runtime.upstream"}:
+        return 502
+    if error_key == "runtime.timeout":
+        return 504
+    return 400
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -108,6 +129,35 @@ def register_exception_handlers(app: FastAPI) -> None:
         key = "http.notFound" if exc.status_code == 404 else "http.error"
         detail = exc.detail if isinstance(exc.detail, str) else None
         return error_response(exc.status_code, key, detail)
+
+    from pydantic import ValidationError
+
+    @app.exception_handler(ValidationError)
+    async def model_validation_handler(_request: Request, exc: ValidationError) -> JSONResponse:
+        # Service-level model_validate (e.g. a network document) is a client error, not a 500.
+        return error_response(400, "http.validation", _first_pydantic_message(exc))
+
+    import httpx
+
+    from app.runtime.errors import RuntimeApiError, transport_error_key
+
+    @app.exception_handler(RuntimeApiError)
+    async def runtime_error_handler(_request: Request, exc: RuntimeApiError) -> JSONResponse:
+        return error_response(runtime_status(exc.error_key), exc.error_key, exc.detail)
+
+    @app.exception_handler(httpx.HTTPError)
+    async def transport_handler(_request: Request, exc: httpx.HTTPError) -> JSONResponse:
+        if isinstance(exc, httpx.HTTPStatusError):
+            from app.runtime.errors import map_http_status
+
+            key = map_http_status(exc.response.status_code)
+            return error_response(runtime_status(key), key)
+        key = transport_error_key(exc)
+        return error_response(runtime_status(key), key)
+
+    @app.exception_handler(httpx.InvalidURL)
+    async def invalid_url_handler(_request: Request, _exc: httpx.InvalidURL) -> JSONResponse:
+        return error_response(400, "runtime.invalidUrl")
 
     @app.exception_handler(Exception)
     async def unhandled_handler(_request: Request, exc: Exception) -> JSONResponse:

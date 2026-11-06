@@ -257,3 +257,18 @@ Schweregrad: **H** = hoch, **M** = mittel, **N** = niedrig. „(V)“ markiert e
 | Lint | Prop `useValueLabel` heißt jetzt `customValueLabel`, `languageDirection()` hat keinen Parameter mehr. |
 
 Ergebnis: `pytest` 763/763 grün, `tsc` sauber, ESLint 0 Fehler (22 Warnungen, unverändert).
+
+### 4.1 Zweite Runde (Fehlerbehandlung)
+
+| Punkt | Änderung |
+|---|---|
+| B11, B12 | Zentrale Handler in `http/errors.py`: pydantic `ValidationError` ergibt 400 `http.validation`. `RuntimeApiError` und httpx-Transportfehler ergeben 502 `runtime.unreachable`/`runtime.upstream` bzw. 504 `runtime.timeout`, `httpx.InvalidURL` ergibt 400 `runtime.invalidUrl`. Keine 500er mehr bei ungültigen Netzen oder nicht erreichbarem Ollama. Den doppelten bzw. unerreichbaren Zweig in `persist_status` habe ich entfernt. |
+| B3 | Die MCP-`_SdkSession` betritt und verlässt ihre Kontexte jetzt in **einem** Task (`_lifecycle` mit `AsyncExitStack`). Ein fehlgeschlagener Start räumt Loop-Thread und Kindprozess auf, `close()` schließt den Loop. `_run` bricht Coroutinen nach einem Timeout ab, und `open()` schließt die Session, wenn `list_tools` oder das Speichern scheitert. Der neue Test `tests/mcp/test_sdk_session.py` nutzt einen echten stdio-Server. Gegen den alten Code schlägt er fehl, weil der Loop-Thread leckt. |
+| B9 | Der Download-Worker überlebt Store-Fehler (Backoff 2 s) und Fehler beim Abschließen eines Downloads. |
+| S12 | `mask_text` maskiert zusätzlich Gemini- (`AIza…`), xAI- (`xai-…`) und GitHub-Tokens. Als geheime Schlüssel gelten jetzt auch `x-api-key`, `accessToken`, `refresh_token` und `client_secret`. |
+| B22 | `list_calls` sortiert nach `rowid` (Einfügereihenfolge) statt nach UUID. |
+| F8 | Scheitert das Senden im Lauf-Chat, wird `chatGenerating` zurückgesetzt und der Text ins Eingabefeld zurückgeschrieben. |
+| F9 | Endet der Hilfe-Chat-Stream ohne `done`/`error`, wird ein Fehler gemeldet, statt dass die Anzeige endlos lädt. |
+| Build | `build-windows.ps1` nutzt fest `%SystemRoot%\System32\tar.exe`. Aus Git Bash wurde sonst GNU-tar gefunden, und das Portable-ZIP schlug fehl. |
+
+Ergebnis: `pytest` 769/769, `tsc` sauber, ESLint 0 Fehler.

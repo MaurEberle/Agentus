@@ -43,9 +43,15 @@ export function useLiveMonitoring(mockQuery: string | null) {
   }, [mockQuery]);
 }
 
-export function sendRunChat(text: string) {
-  getMonitoringHandle().sendChat?.(text);
+export async function sendRunChat(text: string): Promise<boolean> {
   useMonitoringStore.getState().setChatGenerating(true);
+  const accepted = await getMonitoringHandle().sendChat?.(text);
+  if (accepted === false) {
+    // Nothing is generating; leaving the flag set would keep the stop button forever.
+    useMonitoringStore.getState().setChatGenerating(false);
+    return false;
+  }
+  return true;
 }
 
 export function abortRunChat() {

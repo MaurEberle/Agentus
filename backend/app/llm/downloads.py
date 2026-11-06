@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
@@ -21,6 +22,8 @@ from app.llm.usage import model_usages
 from app.runtime.errors import RuntimeApiError
 from app.runtime.ollama import resident_index, tag_key
 from app.runtime.urls import ollama_native_root, settings_roots
+
+log = logging.getLogger("agentus.downloads")
 
 _LOCK = threading.Lock()
 _CANCEL = threading.Event()
@@ -334,7 +337,13 @@ def _note_progress(download_id: str, completed: int | None, total: int | None) -
 
 def _loop() -> None:
     while True:
-        row = _claim()
+        try:
+            row = _claim()
+        except Exception:
+            # Store closed or busy (e.g. data-dir switch): back off, never let the worker die.
+            log.warning("download queue unavailable; retrying", exc_info=True)
+            time.sleep(2.0)
+            continue
         if row is None:
             time.sleep(0.4)
             continue
@@ -365,10 +374,13 @@ def _loop() -> None:
         if _CANCEL.is_set():
             _PROGRESS.pop(download_id, None)
             continue
-        if outcome == "success":
-            _finish(download_id, "done")
-        else:
-            _finish(download_id, "error", "models.pull.failed")
+        try:
+            if outcome == "success":
+                _finish(download_id, "done")
+            else:
+                _finish(download_id, "error", "models.pull.failed")
+        except Exception:
+            log.warning("could not record download %s outcome", download_id, exc_info=True)
 
 
 def ensure_worker() -> None:

@@ -59,6 +59,14 @@ def connect_transport(
 
 
 class _SdkSession:
+    """One MCP client session on a private event loop.
+
+    The transport and session context managers are entered and exited inside a
+    single task (``_lifecycle``). anyio cancel scopes refuse to exit from a
+    different task; doing so used to fail silently and leave the server child
+    process running.
+    """
+
     def __init__(
         self,
         *,
@@ -71,21 +79,33 @@ class _SdkSession:
         headers: dict[str, str],
     ) -> None:
         import asyncio
+        import concurrent.futures
 
         self._loop = asyncio.new_event_loop()
-        self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
+        self._thread = threading.Thread(target=self._loop.run_forever, name="mcp-session", daemon=True)
         self._thread.start()
-        self._stdio_cm: Any = None
-        self._http_cm: Any = None
-        self._session_cm: Any = None
         self._session: Any = None
-        self._run(_setup(self, transport, command, args, url, env, cwd, headers), timeout=15)
+        self._close_event = asyncio.Event()
+        self._ready: concurrent.futures.Future[None] = concurrent.futures.Future()
+        self._main = asyncio.run_coroutine_threadsafe(
+            _lifecycle(self, transport, command, args, url, env, cwd, headers), self._loop
+        )
+        try:
+            self._ready.result(timeout=15)
+        except BaseException:
+            self.close()
+            raise
 
     def _run(self, coro: Any, timeout: float = 15.0) -> Any:
         import asyncio
+        import concurrent.futures
 
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return future.result(timeout=timeout)
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            future.cancel()
+            raise
 
     def list_tools(self) -> list[McpToolInfo]:
         return self._run(_list_tools_tolerant(self._session), timeout=15)
@@ -94,14 +114,30 @@ class _SdkSession:
         return self._run(_call_tool_tolerant(self._session, name, arguments), timeout=60)
 
     def close(self) -> None:
+        loop = self._loop
+        if loop.is_closed():
+            return
         try:
-            self._run(_teardown(self), timeout=3)
-        except Exception:
+            loop.call_soon_threadsafe(self._close_event.set)
+        except RuntimeError:
             pass
         try:
-            self._loop.call_soon_threadsafe(self._loop.stop)
-        except Exception:
+            self._main.result(timeout=5)
+        except BaseException:
+            # Still starting or hung on exit: cancel the task so the exit stack unwinds
+            # (stdio_client terminates the child process on the way out).
+            self._main.cancel()
+            try:
+                self._main.result(timeout=3)
+            except BaseException:
+                pass
+        try:
+            loop.call_soon_threadsafe(loop.stop)
+        except RuntimeError:
             pass
+        self._thread.join(timeout=3)
+        if not self._thread.is_alive():
+            loop.close()
 
 
 def _inline_json_schema_ref(schema: dict[str, Any]) -> dict[str, Any]:
@@ -328,7 +364,7 @@ async def _call_tool_tolerant(
     return call_result_from_payload(raw)
 
 
-async def _setup(
+async def _lifecycle(
     holder: _SdkSession,
     transport: str,
     command: str | None,
@@ -338,41 +374,38 @@ async def _setup(
     cwd: str | None,
     headers: dict[str, str],
 ) -> None:
-    from mcp import ClientSession
+    from contextlib import AsyncExitStack
+
+    from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
-    from mcp import StdioServerParameters
 
-    if transport == "http":
-        if not url:
-            raise McpError("mcp.ping.failed")
-        try:
-            from mcp.client.streamable_http import streamablehttp_client as http_client
-        except ImportError:
-            from mcp.client.sse import sse_client as http_client  # type: ignore[no-redef]
-        holder._http_cm = http_client(url, headers=headers or None)
-        read, write = (await holder._http_cm.__aenter__())[:2]
-    else:
-        params = StdioServerParameters(
-            command=command or "",
-            args=args,
-            env=env,
-            cwd=cwd,
-        )
-        holder._stdio_cm = stdio_client(params)
-        read, write = await holder._stdio_cm.__aenter__()
-    holder._session_cm = ClientSession(read, write)
-    holder._session = await holder._session_cm.__aenter__()
-    await holder._session.initialize()
-
-
-async def _teardown(holder: _SdkSession) -> None:
-    for cm in (holder._session_cm, holder._stdio_cm, holder._http_cm):
-        if cm is None:
-            continue
-        try:
-            await cm.__aexit__(None, None, None)
-        except Exception:
-            pass
+    try:
+        async with AsyncExitStack() as stack:
+            if transport == "http":
+                if not url:
+                    raise McpError("mcp.ping.failed")
+                try:
+                    from mcp.client.streamable_http import streamablehttp_client as http_client
+                except ImportError:
+                    from mcp.client.sse import sse_client as http_client  # type: ignore[no-redef]
+                streams = await stack.enter_async_context(http_client(url, headers=headers or None))
+                read, write = streams[:2]
+            else:
+                params = StdioServerParameters(command=command or "", args=args, env=env, cwd=cwd)
+                read, write = await stack.enter_async_context(stdio_client(params))
+            session = await stack.enter_async_context(ClientSession(read, write))
+            await session.initialize()
+            holder._session = session
+            if not holder._ready.done():
+                holder._ready.set_result(None)
+            await holder._close_event.wait()
+    except BaseException as exc:
+        if not holder._ready.done():
+            holder._ready.set_exception(exc if isinstance(exc, Exception) else McpError("mcp.ping.failed"))
+        if not isinstance(exc, Exception):
+            raise
+    finally:
+        holder._session = None
 
 
 def _content_blocks(raw: Any) -> Any:
@@ -556,22 +589,30 @@ class McpSessions:
             cwd=cwd,
             headers=headers,
         )
-        tools = apply_recipe_tool_schemas(session.list_tools(), recipe)
-        if recipe and recipe.id == "github":
-            tools = annotate_github_login(tools, env.get("GITHUB_PERSONAL_ACCESS_TOKEN"))
-        if recipe and recipe.id == "excel":
-            tools = annotate_excel_tools(tools, root)
-        stored["status"] = "ok"
-        stored["cached_tools"] = [
-            {
-                "name": item.name,
-                "description": item.description,
-                "input_schema": item.input_schema,
-            }
-            for item in tools
-        ]
-        put_mcp_server(server_id, stored)
-        live = _Live(session, tools, root=root, recipe_id=recipe.id if recipe else None)
+        try:
+            tools = apply_recipe_tool_schemas(session.list_tools(), recipe)
+            if recipe and recipe.id == "github":
+                tools = annotate_github_login(tools, env.get("GITHUB_PERSONAL_ACCESS_TOKEN"))
+            if recipe and recipe.id == "excel":
+                tools = annotate_excel_tools(tools, root)
+            stored["status"] = "ok"
+            stored["cached_tools"] = [
+                {
+                    "name": item.name,
+                    "description": item.description,
+                    "input_schema": item.input_schema,
+                }
+                for item in tools
+            ]
+            put_mcp_server(server_id, stored)
+            live = _Live(session, tools, root=root, recipe_id=recipe.id if recipe else None)
+        except BaseException:
+            # Listing or persisting failed: the transport is already up, do not leak it.
+            try:
+                session.close()
+            except Exception:
+                pass
+            raise
         with self._lock:
             self._live[server_id] = live
         self._arm_idle(server_id)

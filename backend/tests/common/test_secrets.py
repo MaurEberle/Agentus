@@ -77,3 +77,25 @@ def test_mask_obj_depth_cap() -> None:
         assert isinstance(node, dict)
         node = node["wrap"]
     assert node == "***"
+
+
+def test_mask_text_provider_keys() -> None:
+    from app.common.secrets import mask_text
+
+    text = (
+        "gemini AIzaSyA1b2C3d4E5f6G7h8I9j0KlMnOpQrStUvW "
+        "xai xai-AbCdEfGhIjKlMnOpQrStUv "
+        "gh ghp_abcdefghijklmnopqrstuvwxyz0123 ok"
+    )
+    masked = mask_text(text)
+    assert "AIzaSyA1" not in masked and "AIza***" in masked
+    assert "xai-AbCd" not in masked and "xai-***" in masked
+    assert "ghp_abc" not in masked
+    assert masked.endswith(" ok")
+
+
+def test_mask_obj_header_style_keys() -> None:
+    from app.common.secrets import mask_obj
+
+    masked = mask_obj({"x-api-key": "plain", "accessToken": "plain", "model": "m"})
+    assert masked == {"x-api-key": "***", "accessToken": "***", "model": "m"}

@@ -61,8 +61,11 @@ export function NetworkChat({
     const value = text.trim();
     if (!value || !running || generating) return;
     stickToBottom.current = true;
-    sendRunChat(value);
     setText('');
+    void sendRunChat(value).then((accepted) => {
+      // Give the text back so a failed send does not lose what the user typed.
+      if (!accepted) setText((current) => current || value);
+    });
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
