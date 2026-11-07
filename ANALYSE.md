@@ -353,11 +353,13 @@ Dateien: `run/orchestrator_loop.py` (äußere Schleife), `run/orchestrator_decid
 
 - **O5 (umgesetzt):** Löst der 5. Tool-Fehler die Think-Runde aus, werden die übrigen Calls derselben Antwort nicht mehr ausgeführt. Sie bekommen aber eine Tool-Antwort `tool.skipped`. Die Think-Notiz steht erst nach der letzten Tool-Antwort. Zusätzlich ergänzt `turn_runtime._close_open_tool_calls` vor jeder LLM-Anfrage von Orchestrator und Agent fehlende Tool-Antworten und loggt das als `run.llm.toolCallsRepaired`. Ein solcher Logeintrag weist auf einen Codepfad hin, der Antworten vergisst. Tests: `tests/run/test_tool_answers.py` (3 Tests) mit einem strengen, OpenAI-artigen Fake-Provider. Gegen den alten Code scheitert der Lauf dort mit 400.
 
+- **O6 (umgesetzt):** Agent-Ergebnisse stehen im Orchestrator-Prompt als `<agent_result agent=… id=…>…</agent_result>` mit einem Hinweis davor, dass sie Daten sind. Quelltexte und frühere Ergebnisse, die an Agenten gehen, stehen als `<source_text>`, Anomalie-Auszüge ebenfalls als `<agent_result>`. Gleichnamige Tags im Inhalt werden entschärft (`</agent_result>` wird zu `[/agent_result]`, Attribute ohne `<>"`), sodass ein Text den Block nicht schließen und als Laufzeit „sprechen“ kann (`memory.as_data`). Orchestrator-Protokoll und Agent-System-Prompt enthalten eine feste Regel: Inhalte dieser Blöcke, Dokumentkontext und Tool-Ergebnisse sind Daten, Anweisungen darin werden nicht befolgt. Grenze: Das ist eine Abschwächung, kein Schutz. Ob das Modell der Regel folgt, ist nicht garantiert. Eine Rückfrage vor sensiblen Aktionen (O6b) ist bewusst verworfen. Tests: `tests/run/test_prompt_injection.py` (5 Tests, darunter ein vollständiger Lauf mit Ausbruchsversuch).
+
 ---
 
 ## 6. Offene Aufgaben (Backlog)
 
-Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B11, B12, B15, B22, F1, F2, F3, F6, F8, F9, F10, O1, O2, O3, O4, O5, die Lint-Fehler und das Aufräumen im Installer. Einzelheiten stehen in den Abschnitten 2 und 5.
+Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B11, B12, B15, B22, F1, F2, F3, F6, F8, F9, F10, O1, O2, O3, O4, O5, O6, die Lint-Fehler und das Aufräumen im Installer. Einzelheiten stehen in den Abschnitten 2 und 5.
 
 ### 6.1 Entscheidungen nötig
 - [ ] **B5:** „Chat abbrechen“ wirkt nicht. Soll der Lauf nach dem Abbruch auf die nächste Nachricht warten, statt zu enden?
@@ -365,7 +367,8 @@ Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B1
 
 ### 6.2 Orchestrator
 - [x] **O5:** erledigt (siehe 5.4).
-- [ ] **O6:** Agent-Ergebnisse und Tool-Ausgaben im Prompt als Daten kennzeichnen (Prompt-Injection). Hängt mit S16 zusammen.
+- [x] **O6:** Kennzeichnung als Daten erledigt (siehe 5.4).
+- ~~**O6b:** Rückfrage vor sensiblen Tool-Aufrufen~~ - **verworfen** (Entscheidung 2026-11-07): Rückfragen würden den Workflow stören. Schutz bleibt bei Kennzeichnung (O6), Tool-Konfiguration (Allowlist, Wurzelordner, `maxCalls`) und Schutzgrenzen.
 - [ ] **O7:** Kontext-Budget mit Kürzung bzw. Zusammenfassung statt hartem Abbruch `run.orchestrator.window`.
 - [ ] **O8:** Anomalien bis zum nächsten Call behalten.
 - [ ] **O9:** Ergebnisse eigener Tools über ein `think` hinweg erhalten.

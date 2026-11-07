@@ -73,7 +73,8 @@ def test_anomaly_text_only_when_the_failed_file_has_no_path() -> None:
     record.files.append(FileFact(tool="file_access", action="write", path="", ok=False))
     memory.set_anomaly(record)
     blob = memory.prompt_text("system")
-    assert "text:\n" + ("X" * 400) in blob
+    assert "text:\n<agent_result" in blob
+    assert ("X" * 400) in blob
     assert "X" * 401 not in blob
 
     other = RunMemory()
