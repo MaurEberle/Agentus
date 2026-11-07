@@ -301,7 +301,6 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         )
         action = orchestrator_decide._orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
         tokens = orchestrator_decide._pop_tokens(action)
-        memory.clear_anomaly()
         _store_memory(ctrl, memory)
         if action is None:
             return "cancelled" if ctrl.stop_event.is_set() else "failed"

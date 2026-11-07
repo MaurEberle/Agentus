@@ -210,3 +210,33 @@ def test_finish_waits_for_a_late_message(monkeypatch, api_env) -> None:
     assert "Fertig." not in texts
     assert "Gern, hier die Antwort." in texts
     assert "Jetzt fertig." in texts
+
+
+def test_anomaly_survives_think_and_ends_with_next_call(monkeypatch, api_env) -> None:
+    """O8: the failure reason is still there after a think; a new call replaces it."""
+    prompts: list[str] = []
+    agent_n = {"n": 0}
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        blob = _orch_prompt(req)
+        if blob is None:
+            agent_n["n"] += 1
+            text = "" if agent_n["n"] == 1 else "zweiter Versuch ok"
+            return CompletionResult(content=text, model=req.model, finish_reason="stop")
+        prompts.append(blob)
+        step = len(prompts)
+        if step in (1, 3):
+            content = '{"action":"call","agent":"Schreiber","task":"schreib"}'
+        elif step == 2:
+            content = '{"action":"think","text":"Der Schreiber lieferte nichts, ich versuche es erneut."}'
+        else:
+            content = '{"action":"finish","text":"Fertig."}'
+        return CompletionResult(content=content, model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    assert "Anomaly for Schreiber" in prompts[1]
+    # Before O8 this was gone after the think round.
+    assert "Anomaly for Schreiber" in prompts[2]
+    assert "Anomaly for Schreiber" not in prompts[3]
+    assert stored["memory"]["anomaly"] is None

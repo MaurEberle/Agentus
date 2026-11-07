@@ -176,6 +176,8 @@ class RunMemory:
         return ""
 
     def begin_call(self, agent_id: str, name: str, task: str, has_tools: bool) -> AgentRecord:
+        # O8: an anomaly stays across think/reply/ask and ends when the next call starts.
+        self.clear_anomaly()
         record = AgentRecord(agent_id=agent_id, name=name, task=task, has_tools=has_tools)
         self.records.append(record)
         return record
@@ -415,6 +417,7 @@ class RunMemory:
             "raised": dict(self.raised),
             "misses": dict(self.misses),
             "compactLevel": self.compact_level,
+            "anomaly": self._anomaly,
             "takeover": (
                 None
                 if self.takeover is None
