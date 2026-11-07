@@ -24,6 +24,18 @@ _THINKS_KEPT = 4
 # Replaceable runtime hint (blocked reply, repeated think). At most one in the course.
 _NUDGE_KIND = "nudge"
 _CLOSING_NOTE = "Decide the next step now with one JSON object."
+
+# O7: prompt budget for the orchestrator. Level 0 is always on and only bounds growth;
+# levels 1-3 apply when the prompt does not fit the context window. The stored course is
+# never trimmed: full agent texts stay in memory and still travel as ``source``.
+MAX_COMPACT_LEVEL = 3
+_RESULT_CHARS = (20_000, 8_000, 3_000, 1_200)  # per agent result in the prompt
+_NOTES_SHOWN = (8, 4, 2, 1)  # runtime notes (repairs, "status shown", ...)
+_THINKS_SHOWN = (4, 3, 2, 1)
+_SPOKEN_SHOWN = (None, None, 6, 3)  # reply / ask / finish texts; None = all
+_STATUS_FULL = (None, 12, 6, 3)  # status lines in full; older calls become one summary
+_USER_CHARS = (None, None, 4_000, 2_000)
+_SPOKEN_KINDS = frozenset({"reply", "ask", "finish"})
 _FILES_SHOWN = 8
 _FILES_KEPT = 48
 _FILE_CHANGES = frozenset({"write", "delete", "edit", "move"})
@@ -113,6 +125,7 @@ class RunMemory:
         self.takeover_unarmed = False
         self.orch_failed_tools = 0
         self.orch_failed_thinks = 0
+        self.compact_level = 0
 
     def add_user(self, text: str) -> None:
         cleaned = (text or "").strip()
@@ -207,17 +220,20 @@ class RunMemory:
         )
 
     def orchestrator_messages(self, system: str) -> list[LlmMessage]:
+        level = min(max(self.compact_level, 0), MAX_COMPACT_LEVEL)
         messages = [LlmMessage(role="system", content=system)]
-        for turn in self.turns:
+        for turn in self._shown_turns(level):
             role = "assistant" if turn.role == "assistant" else "user"
             content = turn.text
             if turn.kind == "think":
                 # Shown in protocol form so the model sees its own earlier decision.
                 content = json.dumps({"action": "think", "text": turn.text}, ensure_ascii=False)
+            elif turn.kind == "user" and _USER_CHARS[level]:
+                content = _clip(content, _USER_CHARS[level], "user message")
             messages.append(LlmMessage(role=role, content=content))
         if self.records:
-            messages.append(LlmMessage(role="user", content="\n".join(self._status(rec) for rec in self.records)))
-        results = self._results_block()
+            messages.append(LlmMessage(role="user", content=self._status_block(level)))
+        results = self._results_block(level)
         if results:
             messages.append(LlmMessage(role="user", content=results))
         own = self._own_block()
@@ -232,6 +248,42 @@ class RunMemory:
             # A trailing assistant turn reads as a prefill (Ollama continues it); ask for the next step.
             messages.append(LlmMessage(role="user", content=_CLOSING_NOTE))
         return messages
+
+    def _shown_turns(self, level: int) -> list[Turn]:
+        """Turns for the prompt: recent notes, thinks and spoken texts; every user turn."""
+        keep: set[int] = set()
+        for kinds, limit in (
+            ({"note"}, _NOTES_SHOWN[level]),
+            ({"think"}, _THINKS_SHOWN[level]),
+            (_SPOKEN_KINDS, _SPOKEN_SHOWN[level]),
+        ):
+            hits = [index for index, turn in enumerate(self.turns) if turn.kind in kinds]
+            keep.update(hits if limit is None else hits[-limit:] if limit else [])
+        return [
+            turn
+            for index, turn in enumerate(self.turns)
+            if index in keep or turn.kind not in {"note", "think", *_SPOKEN_KINDS}
+        ]
+
+    def _status_block(self, level: int) -> str:
+        full = _STATUS_FULL[level]
+        records = self.records
+        if full is None or len(records) <= full:
+            return "\n".join(self._status(rec) for rec in records)
+        older, recent = records[:-full], records[-full:]
+        counts: dict[str, list[int]] = {}
+        names: dict[str, str] = {}
+        for rec in older:
+            names[rec.agent_id] = rec.name
+            done = rec.finished and not rec.error
+            pair = counts.setdefault(rec.agent_id, [0, 0])
+            pair[0 if done else 1] += 1
+        parts = []
+        for agent_id, (done, failed) in counts.items():
+            label = f"{names[agent_id]} ({agent_id}) {done + failed}x"
+            parts.append(label + (f", {failed} not finished" if failed else ""))
+        summary = f"Earlier calls, summarized: {'; '.join(parts)}."
+        return "\n".join([summary, *(self._status(rec) for rec in recent)])
 
     def note_file_attempt(self, *, agent_id: str, name: str, task: str, wrote: bool) -> bool:
         """Count one file-agent call. True when this miss opens takeover."""
@@ -362,6 +414,7 @@ class RunMemory:
             "windows": list(self.windows),
             "raised": dict(self.raised),
             "misses": dict(self.misses),
+            "compactLevel": self.compact_level,
             "takeover": (
                 None
                 if self.takeover is None
@@ -405,7 +458,7 @@ class RunMemory:
     def _last_result(self) -> str:
         return self._results_block()
 
-    def _results_block(self) -> str:
+    def _results_block(self, level: int = 0) -> str:
         latest: dict[str, AgentRecord] = {}
         order: list[str] = []
         for rec in self.records:
@@ -418,7 +471,12 @@ class RunMemory:
             rec = latest[agent_id]
             parts.append(
                 f"Result from {rec.name} ({rec.agent_id}):\n"
-                + as_data("agent_result", rec.text, agent=rec.name, id=rec.agent_id)
+                + as_data(
+                    "agent_result",
+                    _clip(rec.text, _RESULT_CHARS[level], f"result; set source to {rec.agent_id} to pass the full text"),
+                    agent=rec.name,
+                    id=rec.agent_id,
+                )
             )
         if not parts:
             return ""
@@ -527,6 +585,26 @@ def file_fact(name: str, args: dict, result: object, *, ok: bool) -> FileFact | 
     if action is None:
         return None
     return FileFact(tool=leaf, action=action, path=_fact_path(args, result), ok=ok, size=_fact_size(result))
+
+
+def _clip(text: str, limit: int, what: str) -> str:
+    """Keep head and tail of a long text with a visible marker of what was left out."""
+    if len(text) <= limit:
+        return text
+    head = int(limit * 0.7)
+    tail = limit - head
+    omitted = len(text) - head - tail
+    return f"{text[:head]}\n[... {omitted} characters of this {what} omitted ...]\n{text[-tail:]}"
+
+
+def clip_tool_messages(messages: list[LlmMessage], limit: int = 2_000) -> list[LlmMessage]:
+    """Shorten tool results of the current decision; keeps ids and order."""
+    out: list[LlmMessage] = []
+    for message in messages:
+        if message.role == "tool" and message.content and len(message.content) > limit:
+            message = message.model_copy(update={"content": _clip(message.content, limit, "tool result")})
+        out.append(message)
+    return out
 
 
 def as_data(tag: str, text: str, **attrs: str) -> str:

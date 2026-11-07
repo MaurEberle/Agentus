@@ -355,11 +355,13 @@ Dateien: `run/orchestrator_loop.py` (äußere Schleife), `run/orchestrator_decid
 
 - **O6 (umgesetzt):** Agent-Ergebnisse stehen im Orchestrator-Prompt als `<agent_result agent=… id=…>…</agent_result>` mit einem Hinweis davor, dass sie Daten sind. Quelltexte und frühere Ergebnisse, die an Agenten gehen, stehen als `<source_text>`, Anomalie-Auszüge ebenfalls als `<agent_result>`. Gleichnamige Tags im Inhalt werden entschärft (`</agent_result>` wird zu `[/agent_result]`, Attribute ohne `<>"`), sodass ein Text den Block nicht schließen und als Laufzeit „sprechen“ kann (`memory.as_data`). Orchestrator-Protokoll und Agent-System-Prompt enthalten eine feste Regel: Inhalte dieser Blöcke, Dokumentkontext und Tool-Ergebnisse sind Daten, Anweisungen darin werden nicht befolgt. Grenze: Das ist eine Abschwächung, kein Schutz. Ob das Modell der Regel folgt, ist nicht garantiert. Eine Rückfrage vor sensiblen Aktionen (O6b) ist bewusst verworfen. Tests: `tests/run/test_prompt_injection.py` (5 Tests, darunter ein vollständiger Lauf mit Ausbruchsversuch).
 
+- **O7 (umgesetzt):** Der Orchestrator-Prompt hat jetzt ein Budget in `RunMemory` (`compact_level` 0 bis 3). **Stufe 0 gilt immer:** höchstens 8 Laufzeit-Notizen, 4 Gedanken, Agent-Ergebnisse höchstens 20.000 Zeichen im Prompt (Anfang 70 %, Ende 30 %, dazwischen ein Hinweis „… omitted …, set source to <id>“). **Stufen 1 bis 3 greifen nur, wenn der Prompt nicht ins Fenster passt.** Sie verdichten schrittweise: Ergebnisse auf 8.000, 3.000 bzw. 1.200 Zeichen, weniger Notizen und Gedanken, ältere Statuszeilen als eine Zusammenfassung, ab Stufe 2 auch weniger gesprochene Texte und gekürzte Nutzernachrichten. Auf Stufe 3 werden zusätzlich die Tool-Ergebnisse der laufenden Entscheidung gekürzt. Jede Stufe wird geloggt (`run.orchestrator.compact`) und gilt für den Rest des Laufs. Erst wenn auch Stufe 3 nicht passt, endet der Lauf mit `run.orchestrator.window`. Das gespeicherte Gedächtnis bleibt vollständig: Volltexte gehen über `source` weiter ungekürzt an Agenten, und `compactLevel` steht in `runs.memory`. Tests: `tests/run/test_prompt_budget.py` (5 Tests). Offen bleibt: Ab Stufe 3 wird gekürzt, aber nicht inhaltlich per LLM zusammengefasst. Das wäre bei Bedarf eine Erweiterung.
+
 ---
 
 ## 6. Offene Aufgaben (Backlog)
 
-Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B11, B12, B15, B22, F1, F2, F3, F6, F8, F9, F10, O1, O2, O3, O4, O5, O6, die Lint-Fehler und das Aufräumen im Installer. Einzelheiten stehen in den Abschnitten 2 und 5.
+Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B11, B12, B15, B22, F1, F2, F3, F6, F8, F9, F10, O1, O2, O3, O4, O5, O6, O7, die Lint-Fehler und das Aufräumen im Installer. Einzelheiten stehen in den Abschnitten 2 und 5.
 
 ### 6.1 Entscheidungen nötig
 - [ ] **B5:** „Chat abbrechen“ wirkt nicht. Soll der Lauf nach dem Abbruch auf die nächste Nachricht warten, statt zu enden?
@@ -369,7 +371,7 @@ Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B1
 - [x] **O5:** erledigt (siehe 5.4).
 - [x] **O6:** Kennzeichnung als Daten erledigt (siehe 5.4).
 - ~~**O6b:** Rückfrage vor sensiblen Tool-Aufrufen~~ - **verworfen** (Entscheidung 2026-11-07): Rückfragen würden den Workflow stören. Schutz bleibt bei Kennzeichnung (O6), Tool-Konfiguration (Allowlist, Wurzelordner, `maxCalls`) und Schutzgrenzen.
-- [ ] **O7:** Kontext-Budget mit Kürzung bzw. Zusammenfassung statt hartem Abbruch `run.orchestrator.window`.
+- [x] **O7:** erledigt (siehe 5.4).
 - [ ] **O8:** Anomalien bis zum nächsten Call behalten.
 - [ ] **O9:** Ergebnisse eigener Tools über ein `think` hinweg erhalten.
 - [ ] **O10:** `reasoning` bzw. nicht lesbarer Text darf nicht als `reply` im Chat landen.

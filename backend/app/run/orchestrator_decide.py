@@ -19,7 +19,7 @@ from app.run.limits import (
     MAX_SAME_RETRIES,
     STREAM_IDLE_TIMEOUT_SEC,
 )
-from app.run.memory import RunMemory, ToolEvent
+from app.run.memory import MAX_COMPACT_LEVEL, RunMemory, ToolEvent, clip_tool_messages
 from app.run.orchestrate import control_source, match_agent, parse_orchestrator_action, reject_reason
 from app.run.turn_runtime import _SAME_RETRY
 from app.runtime.completions import estimate_token_count
@@ -112,6 +112,7 @@ def _orchestrator_action(
     model_retries = 0
     offered = list(tools)
     messages = memory.orchestrator_messages(system)
+    base_len = len(messages)
     mcp = turn_runtime.get_mcp()
     llm_node_id = orch.llm.node_id or orch.node_id
     action: dict[str, str] | None = None
@@ -120,6 +121,24 @@ def _orchestrator_action(
         while not ctrl.stop_event.is_set():
             offered = turn_runtime._available_tools(ctrl, compiled, orch.node_id, offered)
             choice = turn_runtime._bind_window(orch.llm, messages, memory)
+            while not choice.fits and memory.compact_level < MAX_COMPACT_LEVEL:
+                # O7: condense the course instead of ending the run. Messages of this
+                # decision (tool calls and results) are kept; at the last level their
+                # tool results are shortened too.
+                memory.compact_level += 1
+                extras = messages[base_len:]
+                if memory.compact_level >= MAX_COMPACT_LEVEL:
+                    extras = clip_tool_messages(extras)
+                base = memory.orchestrator_messages(system)
+                base_len = len(base)
+                messages = base + extras
+                emit_log(
+                    "info",
+                    "run.orchestrator.compact",
+                    node_id=orch.node_id,
+                    payload={"level": memory.compact_level},
+                )
+                choice = turn_runtime._bind_window(orch.llm, messages, memory)
             if not choice.fits:
                 ctrl.fail_message = "run.orchestrator.window"
                 ctrl.fail_class = "orchestrator"
