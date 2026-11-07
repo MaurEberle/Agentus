@@ -111,6 +111,8 @@ export type ToolNodeData = {
   terminalMode?: 'restricted' | 'unrestricted';
   /** Unset in restricted mode means git, python, py, and dotnet. */
   terminalPrograms?: string[];
+  /** Tool and MCP nodes: calls allowed per run (>= 1). Absent or null = unlimited. */
+  maxCalls?: number | null;
 };
 
 export type McpNodeData = {

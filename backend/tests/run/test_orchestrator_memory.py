@@ -130,3 +130,83 @@ def test_repeated_plan_gets_a_nudge(monkeypatch, api_env) -> None:
     stored = _drive(monkeypatch, _complete)
     assert stored["outcome"] == "succeeded"
     assert len(prompts) == 3
+
+
+def test_mid_run_message_reaches_the_next_decision(monkeypatch, api_env) -> None:
+    """O3: a message sent while an agent works is part of the next prompt."""
+    from app.run.controller import get_controller
+
+    prompts: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        blob = _orch_prompt(req)
+        if blob is None:
+            get_controller().chat_input_queue.put("Bitte auf Englisch")
+            return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+        prompts.append(blob)
+        if len(prompts) == 1:
+            content = '{"action":"call","agent":"Schreiber","task":"schreib"}'
+        else:
+            content = '{"action":"finish","text":"Done."}'
+        return CompletionResult(content=content, model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    assert "Bitte auf Englisch" in prompts[1]
+    users = [turn["text"] for turn in stored["memory"]["turns"] if turn["kind"] == "user"]
+    assert users == ["Hallo", "Bitte auf Englisch"]
+
+
+def test_queued_message_does_not_answer_an_unseen_question(monkeypatch, api_env) -> None:
+    """O3: text sent during the decision must not count as the answer to its question."""
+    from app.run.controller import get_controller
+
+    prompts: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        blob = _orch_prompt(req)
+        if blob is None:
+            return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+        prompts.append(blob)
+        if len(prompts) == 1:
+            get_controller().chat_input_queue.put("Und mach es kurz")
+            content = '{"action":"ask","text":"Welche Sprache?"}'
+        else:
+            content = '{"action":"finish","text":"Ok."}'
+        return CompletionResult(content=content, model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Welche Sprache?" not in texts
+    assert "Und mach es kurz" in prompts[1]
+    assert "your question was not shown: Welche Sprache?" in prompts[1]
+
+
+def test_finish_waits_for_a_late_message(monkeypatch, api_env) -> None:
+    """O3: a message that arrives during the finishing decision is handled, not dropped."""
+    from app.run.controller import get_controller
+
+    prompts: list[str] = []
+
+    def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
+        blob = _orch_prompt(req)
+        if blob is None:
+            return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+        prompts.append(blob)
+        if len(prompts) == 1:
+            get_controller().chat_input_queue.put("Noch eine Frage")
+            content = '{"action":"finish","text":"Fertig."}'
+        elif len(prompts) == 2:
+            content = '{"action":"reply","text":"Gern, hier die Antwort."}'
+        else:
+            content = '{"action":"finish","text":"Jetzt fertig."}'
+        return CompletionResult(content=content, model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete)
+    assert stored["outcome"] == "succeeded"
+    assert "before you finished" in prompts[1]
+    texts = [item["content"] for item in (stored["chat"] or [])]
+    assert "Fertig." not in texts
+    assert "Gern, hier die Antwort." in texts
+    assert "Jetzt fertig." in texts

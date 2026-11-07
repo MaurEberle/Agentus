@@ -294,6 +294,13 @@ function validateNode(
       }
     }
   }
+  if (node.type === 'tool' || node.type === 'mcp') {
+    // Mirrors graph.tool.maxCalls: absent/null = unlimited, otherwise a whole number >= 1.
+    const maxCalls = node.data.maxCalls;
+    if (maxCalls !== undefined && maxCalls !== null && !(Number.isInteger(maxCalls) && (maxCalls as number) >= 1)) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.toolMaxCalls' });
+    }
+  }
   if (node.type === 'tool') {
     const kind = asString(node.data.kind);
     if (!kind) issues.push({ nodeId: node.id, messageKey: 'network.validation.toolKind' });

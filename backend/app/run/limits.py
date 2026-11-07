@@ -16,6 +16,10 @@ MAX_EMPTY_STOPS = 5
 MAX_FAILED_TOOL_CALLS = 10
 # Same truncated tool-call JSON from llama-server. Then it counts as one failed tool.
 MAX_TOOL_JSON_ATTEMPTS = 3
+# Tool calls the orchestrator may make in one decision. Then tools are withheld and it must decide.
+MAX_ORCHESTRATOR_TOOL_CALLS = 10
+# Tool calls one agent may make for one task. Then it must answer with what it has.
+MAX_AGENT_TOOL_CALLS = 50
 # Consecutive failed orchestrator tool calls. A success resets the count.
 MAX_ORCHESTRATOR_FAILED_TOOLS = 5
 # Failed think rounds after a five-fail streak. Two in a row stop the run.

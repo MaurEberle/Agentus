@@ -494,7 +494,7 @@ def list_logs(
     where = " AND ".join(clauses)
     with locked("history") as conn:
         rows = conn.execute(
-            f"SELECT * FROM run_logs WHERE {where} ORDER BY ts ASC, id ASC",
+            f"SELECT * FROM run_logs WHERE {where} ORDER BY ts ASC, rowid ASC",
             params,
         ).fetchall()
     return [_log_dict(row) for row in rows]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import queue
 import traceback
 import uuid
 from collections import deque
@@ -37,6 +38,16 @@ _BLOCKED_REPLY_NOTE = (
 
 _REPEAT_THINK_NOTE = (
     "You repeated the same plan. Do not think again. Act on it now: emit call, ask, or finish."
+)
+
+_ASK_SUPERSEDED_NOTE = (
+    "The user wrote a new message while you were deciding, so your question was not shown: {question} "
+    "Read the new message first. Ask again only if it is still unclear."
+)
+
+_FINISH_LATE_NOTE = (
+    "The user wrote a new message before you finished, so the run did not end. "
+    "Handle that message first, then finish."
 )
 
 _FINISH_FILES_NOTE = (
@@ -278,6 +289,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     short_thinks = 0
     spoke = False
     while not ctrl.stop_event.is_set():
+        if _drain_user(ctrl, compiled, memory):
+            # New user input: a reply to it is a fresh answer, not a second reply.
+            spoke = False
         offered = tool_schemas if memory.allow_own_tools or memory.takeover is not None else []
         system = orchestrator_instructions(
             orch.system_prompt,
@@ -350,6 +364,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             spoke = False
             thinks = 0
             short_thinks = 0
+            if _drain_user(ctrl, compiled, memory):
+                # Messages already queued are not the answer to a question the user never saw.
+                memory.set_nudge(_ASK_SUPERSEDED_NOTE.format(question=(text or "").strip()[:300]))
+                continue
             _speak(ctrl, compiled, memory, "ask", text or "…", wait=True)
             reply = _queue_get(ctrl)
             if not reply or ctrl.stop_event.is_set():
@@ -391,6 +409,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             if memory.takeover:
                 _store_memory(ctrl, memory)
                 return _fail_takeover(ctrl, orch.node_id, memory)
+            if _drain_user(ctrl, compiled, memory):
+                spoke = False
+                memory.set_nudge(_FINISH_LATE_NOTE)
+                continue
             if _tool_work_unverified(memory) and not memory.finish_warned:
                 memory.finish_warned = True
                 memory.add_note(_FINISH_FILES_NOTE)
@@ -414,6 +436,31 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     _store_memory(ctrl, memory)
     turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
     return "cancelled"
+
+def _drain_user(ctrl: RunController, compiled: CompiledGraph, memory: RunMemory) -> int:
+    """Move chat messages sent while the orchestrator worked into the course.
+
+    The queue used to be read only by ``ask``: mid-run messages went unseen, then
+    answered the next question before the user saw it, or were lost on finish.
+    """
+    taken = 0
+    while True:
+        try:
+            raw = ctrl.chat_input_queue.get_nowait()
+        except queue.Empty:
+            break
+        cleaned = (raw or "").strip()
+        if not cleaned:
+            continue
+        memory.add_user(cleaned)
+        taken += 1
+        emit_log(
+            "info",
+            "run.chat.user",
+            node_id=compiled.chat_input.id if compiled.chat_input else None,
+            payload={"chars": len(cleaned), "midRun": True},
+        )
+    return taken
 
 def _tool_work_unverified(memory: RunMemory) -> bool:
     called = [rec for rec in memory.records if rec.has_tools]

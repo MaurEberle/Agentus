@@ -173,6 +173,7 @@ export function Inspector({
       {node.type === 'orchestrator' ? <OrchestratorFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'tool' ? <ToolFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'mcp' ? <McpFields node={node} readOnly={readOnly} /> : null}
+      {node.type === 'tool' || node.type === 'mcp' ? <MaxCallsField node={node} readOnly={readOnly} /> : null}
       {node.type === 'knowledge' ? <KnowledgeFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'router' ? <RouterFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'chat_input' ? <ChatInputFields node={node} readOnly={readOnly} /> : null}
@@ -1280,6 +1281,57 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
         <p className="text-xs text-muted-foreground">{t('network.inspector.tool.calculatorHint')}</p>
       ) : null}
     </>
+  );
+}
+
+/** Calls per run for one tool or MCP node. Unlimited (default) stores no value. */
+function MaxCallsField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const stored = typeof node.data.maxCalls === 'number' ? node.data.maxCalls : null;
+  const unlimited = stored === null;
+  // Local text so the field can be empty while typing; only whole numbers >= 1 are stored.
+  const [draft, setDraft] = useState(stored === null ? '' : String(stored));
+  const inputId = `max-calls-${node.id}`;
+
+  useEffect(() => {
+    setDraft(stored === null ? '' : String(stored));
+  }, [stored, node.id]);
+
+  function commit(text: string) {
+    setDraft(text);
+    const value = Number(text);
+    if (Number.isInteger(value) && value >= 1) editorUpdateNodeData(node.id, { maxCalls: value });
+  }
+
+  return (
+    <div className="space-y-2">
+      <Field label={t('network.inspector.tool.maxCalls')} htmlFor={inputId}>
+        <Input
+          id={inputId}
+          type="number"
+          min={1}
+          step={1}
+          inputMode="numeric"
+          value={unlimited ? '' : draft}
+          placeholder={unlimited ? t('network.inspector.tool.maxCallsUnlimited') : undefined}
+          disabled={readOnly || unlimited}
+          onChange={(event) => commit(event.target.value)}
+          onBlur={() => setDraft(stored === null ? '' : String(stored))}
+          className="w-32"
+        />
+      </Field>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={unlimited}
+          disabled={readOnly}
+          onCheckedChange={(value) =>
+            editorUpdateNodeData(node.id, { maxCalls: value === true ? undefined : Math.max(1, Number(draft) || 10) })
+          }
+        />
+        {t('network.inspector.tool.maxCallsUnlimited')}
+      </label>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.tool.maxCallsHint')}</p>
+    </div>
   );
 }
 

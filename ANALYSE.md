@@ -341,3 +341,74 @@ Dateien: `run/orchestrator_loop.py` (äußere Schleife), `run/orchestrator_decid
 - **O1:** `RunMemory.add_think` speichert jeden Orchestrator-Gedanken (gekürzt auf 600 Zeichen, die letzten 4) als Assistant-Turn im Protokollformat `{"action":"think","text":…}`. Die nächste Runde sieht den Plan. Leere Platzhalter (`…`) werden nicht gespeichert. Endet der Prompt auf einer Assistant-Nachricht, folgt ein kurzer User-Abschluss, damit Ollama den Text nicht als Prefill fortsetzt.
 - **O2:** Ein blockiertes zweites `reply` wird als Gedanke behalten. Das Modell bekommt den Hinweis, dass der Text nicht angezeigt wurde, und die Anweisung, mit `call`, `ask` oder `finish` weiterzumachen. Wiederholt das Modell denselben Gedanken, gibt es einen eigenen Hinweis. Hinweise werden ersetzt statt angehäuft (`set_nudge`) und bei der nächsten echten Aktion entfernt.
 - **Tests:** `tests/run/test_orchestrator_memory.py` (7 Tests). Die 3 Szenario-Tests schlagen gegen den alten Code fehl: Der Gedanke fehlt im Prompt, und beide Schleifen enden mit `failed`. Gesamt: 776/776 grün.
+- **O3:** `_drain_user` übernimmt Chat-Nachrichten, die während der Arbeit eingehen, vor jeder Entscheidung ins Gedächtnis (Log `run.chat.user` mit `midRun`). Nach neuer Eingabe ist ein `reply` wieder erlaubt. Liegen beim `ask` schon Nachrichten vor, wird die Frage nicht gestellt; das Modell bekommt die Nachricht plus einen Hinweis mit der ungestellten Frage. Bei `finish` mit ungelesener Nachricht endet der Lauf nicht, sondern die Nachricht wird zuerst behandelt.
+- **Tests O3:** 3 neue Tests in `tests/run/test_orchestrator_memory.py`, alle drei schlagen gegen den Code ohne O3 fehl. `test_orchestrator_asks_calls_and_finishes` legte die Antwort vorab in die Queue (genau das alte Fehlverhalten) und antwortet jetzt erst, wenn die Frage angezeigt wird. Gesamt: 779/779 grün.
+- **Hinweis Testumgebung:** Die Harness-Tests fragen bei Ollama-Modellen echt `/api/show` ab. Läuft Ollama nicht, braucht unter Windows jeder abgewiesene Connect ca. 2 s, und viele Harness-Tests laufen in ihr 5-s-Timeout. Das widerspricht „CI braucht kein Ollama“ aus der README und sollte in `tests/run/conftest.py` gemockt werden.
+- **O4 (umgesetzt, Entscheidungen vom 2026-11-07):**
+  - **Schutzgrenze pro Schritt** (`run/limits.py`): Orchestrator `MAX_ORCHESTRATOR_TOOL_CALLS = 10` pro Entscheidung, Agent `MAX_AGENT_TOOL_CALLS = 50` pro Auftrag. Gezählt werden einzelne Aufrufe. Ist die Grenze erreicht, bekommt das Modell keine Tools mehr und einen Hinweis; der Lauf scheitert nicht. Nicht mehr ausgeführte Calls derselben Antwort bekommen eine Tool-Antwort `tool.stepLimit`. Beim Agenten steht in der Statuszeile an den Orchestrator „tool limit reached … may be incomplete“ (`AgentRecord.capped`). Logs: `run.orchestrator.toolCap`, `run.agent.toolCap`.
+  - **Limit pro Tool-Knoten und Lauf** (`data.maxCalls`, ganze Zahl ≥ 1, fehlt = unbegrenzt = Standard). Es gilt für Tool- und MCP-Knoten und zählt alle Aufrufe, egal ob vom Orchestrator oder einem Agenten. Bei einem MCP-Knoten zählen alle Tools des Servers zusammen. Ist es erschöpft, wird der Aufruf nicht ausgeführt (`tool.limitReached`, Log `run.tool.limitReached` am Knoten), und das Tool wird danach nicht mehr angeboten. Verweigerte Aufrufe zählen **nicht** als Tool-Fehler. Zähler: `RunController.tool_calls`/`tool_refused`, Durchsetzung in `turn_runtime._dispatch_tool`.
+  - **UI:** Im Inspector gibt es für Tool- und MCP-Knoten das Feld „Max. Aufrufe pro Lauf“ mit der Checkbox „Unbegrenzt“ (Standard an). Beim Abwählen ist der Startwert 10. Die Validierung (`graph.tool.maxCalls` bzw. `network.validation.toolMaxCalls`) läuft in Backend und Frontend; Texte in de, en und es.
+  - **Nebenbei:** `list_logs` sortierte Logs mit gleichem Zeitstempel nach UUID, also zufällig. Jetzt nach `rowid`. Dadurch war `test_linear_truncated_tool_json…` instabil.
+  - **Tests:** `tests/run/test_tool_limits.py` (6 Tests). `test_orchestrator_stops_after_two_failed_think_rounds` hebt die Schrittgrenze an, weil er 15 Aufrufe in einer Entscheidung erwartet. Gesamt: 785/785 grün.
+
+- **O5 (umgesetzt):** Löst der 5. Tool-Fehler die Think-Runde aus, werden die übrigen Calls derselben Antwort nicht mehr ausgeführt. Sie bekommen aber eine Tool-Antwort `tool.skipped`. Die Think-Notiz steht erst nach der letzten Tool-Antwort. Zusätzlich ergänzt `turn_runtime._close_open_tool_calls` vor jeder LLM-Anfrage von Orchestrator und Agent fehlende Tool-Antworten und loggt das als `run.llm.toolCallsRepaired`. Ein solcher Logeintrag weist auf einen Codepfad hin, der Antworten vergisst. Tests: `tests/run/test_tool_answers.py` (3 Tests) mit einem strengen, OpenAI-artigen Fake-Provider. Gegen den alten Code scheitert der Lauf dort mit 400.
+
+---
+
+## 6. Offene Aufgaben (Backlog)
+
+Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B11, B12, B15, B22, F1, F2, F3, F6, F8, F9, F10, O1, O2, O3, O4, O5, die Lint-Fehler und das Aufräumen im Installer. Einzelheiten stehen in den Abschnitten 2 und 5.
+
+### 6.1 Entscheidungen nötig
+- [ ] **B5:** „Chat abbrechen“ wirkt nicht. Soll der Lauf nach dem Abbruch auf die nächste Nachricht warten, statt zu enden?
+- [ ] **S6:** Soll der Dateizugriff `allowWrite`/`allowDelete` standardmäßig auf `false` setzen? Das ändert das Verhalten bestehender Netze.
+
+### 6.2 Orchestrator
+- [x] **O5:** erledigt (siehe 5.4).
+- [ ] **O6:** Agent-Ergebnisse und Tool-Ausgaben im Prompt als Daten kennzeichnen (Prompt-Injection). Hängt mit S16 zusammen.
+- [ ] **O7:** Kontext-Budget mit Kürzung bzw. Zusammenfassung statt hartem Abbruch `run.orchestrator.window`.
+- [ ] **O8:** Anomalien bis zum nächsten Call behalten.
+- [ ] **O9:** Ergebnisse eigener Tools über ein `think` hinweg erhalten.
+- [ ] **O10:** `reasoning` bzw. nicht lesbarer Text darf nicht als `reply` im Chat landen.
+- [ ] **O11:** Mehrere JSON-Objekte erkennen und das erste ausführbare nehmen.
+- [ ] **O12:** Gesamtbudget pro Lauf (LLM-Aufrufe, Tokens bzw. Dauer). Die Tool-Seite ist durch O4 begrenzt.
+- [ ] **O13:** Takeover weniger strikt (`reply`/`finish` sollen erlaubt sein).
+- [ ] **O14:** Ein Fehler des Orchestrator-LLM soll pausieren bzw. nachfragen statt den Lauf zu beenden.
+- [ ] **O15:** Gedächtnis inkrementell speichern und `windows` begrenzen.
+- [ ] **O16–O20:** Agent-Zuordnung loggen, Stille Annahmen in `dispatch`, Prompt-Länge, Salvage-Grenzen, Rollenfolge.
+
+### 6.3 Sicherheit
+- [ ] **S4:** SSRF und DNS-Rebinding im HTTP-Tool (aufgelöste IP an den Connect binden, privat nur per Opt-in).
+- [ ] **S7:** Zip-Entpacken überschreibt Dateien ohne Rückfrage.
+- [ ] **S8:** MCP-Pfadbegrenzung für `paths` und `repo_path`.
+- [ ] **S9:** MCP-Rezepte ohne Versionspin, GitHub-Binary nach dem Download nicht erneut prüfen.
+- [ ] **S10:** Knoten-`baseUrl` aus importierten Netzen prüfen bzw. anzeigen.
+- [ ] **S11:** Bilder in `MarkdownView` nicht automatisch laden.
+- [ ] **S13:** `strip_secrets` mit `common/secrets` zusammenführen und Secrets schon beim Speichern filtern.
+- [ ] **S14:** MCP-Prozessen nicht die komplette Umgebung (`os.environ`) mitgeben.
+- [ ] **S15:** URL-Schema der Hilfe-Quellen prüfen und `dangerouslySetInnerHTML` ersetzen.
+
+### 6.4 Backend
+- [ ] **B7, B8:** Datenordner-Wechsel: Locks um den Wechsel der Connections, Kopieren ohne Überschreiben, Rollback bei `OSError`.
+- [ ] **B10:** Embedding-Runner: kein Kill bei `refs>0`, kein langer Lock, Shutdown-Hook.
+- [ ] **B13, B14, B16:** Wissensindex: Größen- und Anzahlgrenzen, Abbruch über `stop_event`, Provider in den Cache-Schlüssel, gesperrte Datei überspringen.
+- [ ] **B17:** `topK=0` bzw. `scoreThreshold=0` zulassen.
+- [ ] **B18:** Mehrere Tool-Knoten derselben Art an einem Agenten: Es gewinnt immer der erste. Dadurch greift `maxCalls` eines zweiten gleichartigen Knotens nie.
+- [ ] **B19–B21:** SSE-Abonnenten-Race, SSE belegt Threadpool, Snapshot pro Token, Log-Größe.
+- [ ] **B23–B26:** Settings-PATCH ohne Lock, Hilfe-Abbruch global, doppelter MCP-Start, `wait_health` mit `::1`, LIKE-Escape, `delete_networks` nicht atomar.
+
+### 6.5 Frontend
+- [ ] **F4:** Ctrl+Z in Textfeldern soll die native Undo-Funktion nutzen (Undo-Einträge im Store bündeln).
+- [ ] **F5:** Eingaben während des Speicherns gehen verloren, Undo-Historie wird nach dem ersten Speichern geleert.
+- [ ] **F7:** Polling löst alle 1,5 s `hydrateLastRun` aus.
+- [ ] **F11:** Chat-Nachrichten eines neuen Laufs maskieren.
+- [ ] **F12:** `serviceStatus` hat zwei Quellen.
+- [ ] **F13:** Watchdog wird durch eigene Events „belebt“.
+- [ ] **F14:** 22 Lint-Warnungen `exhaustive-deps` einzeln prüfen.
+- [ ] **Performance (2.4):** Neuaufbau im Canvas, `isDirty`, Undo pro Tastendruck, Log ohne Virtualisierung, Code-Splitting.
+
+### 6.6 Tests, Doku, Wartung
+- [ ] Ollama in `tests/run/conftest.py` mocken. Ohne laufendes Ollama scheitern sonst viele Harness-Tests am 5-s-Timeout.
+- [ ] Testlücken aus 2.7 schließen (Stop/Start-Race, Abbruch während der Indexierung, Zip-Überschreiben, MCP-Pfade). Es gibt noch keine Frontend-Tests.
+- [ ] README angleichen (2.6): Endpunkte, Hilfesprachen, Tools Terminal/Zip, Env-Variablen, `prompts/`.
+- [ ] Toten Code und Duplikate aufräumen (2.5), z. B. dreifache Secret-Masken, doppelter RAG/Cosinus, `include_all` schluckt `ImportError`.

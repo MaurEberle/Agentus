@@ -75,6 +75,9 @@ class RunController:
         self._phase = None
         self._phase_label = None
         self._wait_ask: WaitAsk | None = None
+        # Per tool node for this run: calls made, and nodes that refused a call (maxCalls).
+        self.tool_calls: dict[str, int] = {}
+        self.tool_refused: set[str] = set()
         set_run_slice_provider(self.slice)
 
     def reset(self) -> None:
@@ -161,6 +164,8 @@ class RunController:
             self.tokens_in = 0
             self.tokens_out = 0
             self._wait_ask = None
+            self.tool_calls = {}
+            self.tool_refused = set()
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()

@@ -18,6 +18,7 @@ from app.run.limits import (
     DEFAULT_SCORE_MIN,
     DEFAULT_TOP_K,
     MAX_AGENT_THINKS,
+    MAX_AGENT_TOOL_CALLS,
     MAX_CLOSING_THINK_TOKENS,
     MAX_EMPTY_STOPS,
     MAX_FAILED_TOOL_CALLS,
@@ -82,6 +83,14 @@ _TOOL_JSON_NOTE = (
     "Call the tool again with complete JSON. Prefer a smaller write if the file is large."
 )
 
+
+
+_AGENT_TOOL_CAP_NOTE = (
+    "You used {n} tool calls for this task, which is the limit. No more tools. "
+    "Reply now in text with your result and say what is still open."
+)
+
+_SKIP_TASK_LIMIT = "Not run: tool limit for this task reached."
 
 def _agent_tool_failures_stop(
     ctrl: RunController,
@@ -191,6 +200,7 @@ def _agent_turn(
     from app.runtime import completions as runtime_completions
 
     failed_tools = 0
+    tool_calls_used = 0
     json_attempts = 0
     nudges = 0
     thinks = 0
@@ -216,6 +226,7 @@ def _agent_turn(
     llm_node_id = agent.llm.node_id or agent_id
     try:
         while not ctrl.stop_event.is_set():
+            offered = turn_runtime._available_tools(ctrl, compiled, agent_id, offered)
             window_mem = memory if memory is not None else RunMemory()
             choice = turn_runtime._bind_window(agent.llm, messages, window_mem)
             if not choice.fits:
@@ -240,6 +251,9 @@ def _agent_turn(
                     "contextMax": context_max,
                 },
             )
+            repaired = turn_runtime._close_open_tool_calls(messages)
+            if repaired:
+                emit_log("warn", "run.llm.toolCallsRepaired", node_id=agent_id, payload={"count": repaired})
             turn_runtime._set_llm(ctrl, compiled, llm_node_id, busy=True)
             try:
                 result: CompletionResult = runtime_completions.complete_live(
@@ -438,6 +452,10 @@ def _agent_turn(
                 )
                 hit_failure_limit = False
                 for call in result.tool_calls:
+                    if tool_calls_used >= MAX_AGENT_TOOL_CALLS:
+                        turn_runtime._skip_tool_call(messages, call, "tool.stepLimit", _SKIP_TASK_LIMIT)
+                        continue
+                    tool_calls_used += 1
                     body, _fact, ok_call = turn_runtime._dispatch_tool(
                         ctrl,
                         compiled,
@@ -458,7 +476,8 @@ def _agent_turn(
                                 wrote_paths.append(_fact.path)
                         elif _fact is not None and _fact.action in _FILE_PREP_ACTIONS:
                             file_prep = True
-                    else:
+                    elif not turn_runtime._call_refused(ctrl, compiled, agent_id, call.name):
+                        # A maxCalls refusal is the network's choice, not a broken tool.
                         failed_tools += 1
                     messages.append(
                         LlmMessage(
@@ -476,6 +495,20 @@ def _agent_turn(
                         return None
                 if hit_failure_limit:
                     break
+                if tool_calls_used >= MAX_AGENT_TOOL_CALLS and offered:
+                    offered = []
+                    if record is not None:
+                        record.capped = True
+                    emit_log(
+                        "warn",
+                        "run.agent.toolCap",
+                        node_id=agent_id,
+                        payload={"calls": tool_calls_used, "max": MAX_AGENT_TOOL_CALLS},
+                    )
+                    messages.append(
+                        LlmMessage(role="user", content=_AGENT_TOOL_CAP_NOTE.format(n=tool_calls_used))
+                    )
+                    continue
                 if wrote_ok:
                     _set_system_note(messages, _TOOL_REQUIRED, _TOOL_DONE)
                     _set_system_note(messages, _TOOL_ANSWER, _TOOL_DONE)

@@ -46,6 +46,16 @@ def _orchestrator_edge_ok(edge: GraphEdge, dst: GraphNode) -> bool:
     )
 
 
+def _max_calls_ok(data: dict) -> bool:
+    """``maxCalls`` per run: absent/None is unlimited, otherwise a whole number >= 1."""
+    raw = data.get("maxCalls")
+    if raw is None:
+        return True
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        return False
+    return raw >= 1
+
+
 def _err(key: str, node_id: str | None = None) -> ValidationError:
     return ValidationError(node_id=node_id, message_key=key)
 
@@ -265,6 +275,8 @@ def validate_document(
                 errors.append(_err("graph.llm.credential", node.id))
             if provider in NEEDS_CREDENTIAL and not str(node.data.get("credentialId") or "").strip():
                 errors.append(_err("graph.llm.credential", node.id))
+        if (node.type in {"tool", "mcp"} or is_mcp_node(node)) and not _max_calls_ok(node.data):
+            errors.append(_err("graph.tool.maxCalls", node.id))
         if node.type == "mcp" or is_mcp_node(node):
             if not mcp_available:
                 errors.append(_err("graph.mcp.unavailable", node.id))

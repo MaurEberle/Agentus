@@ -26,6 +26,7 @@ const START_ERROR_DESC: Record<string, string> = {
   'graph.terminal.root': 'network.validation.terminalRoot',
   'graph.zip.root': 'network.validation.zipRoot',
   'graph.terminal.programs': 'network.validation.terminalPrograms',
+  'graph.tool.maxCalls': 'network.validation.toolMaxCalls',
   'graph.cycle': 'network.validation.cycle',
   'graph.agent.noLlm': 'network.validation.agentLlm',
   'graph.agent.noMessage': 'network.validation.agentMessage',

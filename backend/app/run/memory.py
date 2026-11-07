@@ -51,6 +51,8 @@ class AgentRecord:
     error: str = ""
     saw_tokens: bool = False
     tool_ok: bool = False
+    # The task hit MAX_AGENT_TOOL_CALLS; the result may be incomplete.
+    capped: bool = False
 
 
 @dataclass
@@ -305,6 +307,7 @@ class RunMemory:
                     "text": rec.text,
                     "finished": rec.finished,
                     "error": rec.error,
+                    "capped": rec.capped,
                     "files": [
                         {
                             "tool": fact.tool,
@@ -415,6 +418,8 @@ class RunMemory:
             line = f"{line}\n{block}"
         if rec.error:
             line = f"{line}\nreason: {rec.error}"
+        if rec.capped:
+            line = f"{line}\nnote: tool limit reached for this task; the work may be incomplete."
         return line
 
 

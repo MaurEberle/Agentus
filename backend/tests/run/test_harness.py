@@ -60,6 +60,13 @@ def test_orchestrator_asks_calls_and_finishes(monkeypatch, api_env) -> None:
     ctrl = get_controller()
     started = ctrl.start()
     ctrl.chat_input_queue.put("Hallo")
+    # Answer only once the question is shown; a pre-queued text is no answer to it.
+    import time
+
+    deadline = time.monotonic() + 5
+    while ctrl._wait_ask is None and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert ctrl._wait_ask is not None
     ctrl.chat_input_queue.put("Deutsch")
     assert ctrl.thread is not None
     ctrl.thread.join(timeout=5)
@@ -961,6 +968,8 @@ def test_orchestrator_stops_after_two_failed_think_rounds(monkeypatch, api_env) 
     from app.runtime.models import ToolCall
     from app.tools.models import ExecuteResult
 
+    # This test is about failure rounds; the per-step call cap would end it first.
+    monkeypatch.setattr("app.run.orchestrator_decide.MAX_ORCHESTRATOR_TOOL_CALLS", 100)
     executed = {"n": 0}
 
     def _execute(kind, *, config, args, secret=None):

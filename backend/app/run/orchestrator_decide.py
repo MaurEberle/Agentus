@@ -15,6 +15,7 @@ from app.run.limits import (
     MAX_CONTROL_REPAIRS,
     MAX_ORCHESTRATOR_FAILED_THINKS,
     MAX_ORCHESTRATOR_FAILED_TOOLS,
+    MAX_ORCHESTRATOR_TOOL_CALLS,
     MAX_SAME_RETRIES,
     STREAM_IDLE_TIMEOUT_SEC,
 )
@@ -32,6 +33,14 @@ _REPAIR_NOTE = (
 )
 
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
+
+_TOOL_CAP_NOTE = (
+    "You used {n} tool calls in this step, which is the limit. No more tools in this step. "
+    "Decide now with one JSON object."
+)
+
+_SKIP_STEP_LIMIT = "Not run: tool limit for this step reached."
+_SKIP_AFTER_FAILURES = "Not run: five tool calls failed in a row. Think first."
 
 _TOOL_THINK_NOTE = (
     "Five tool calls failed in a row. Think, then decide with one JSON object or a working tool call. "
@@ -106,8 +115,10 @@ def _orchestrator_action(
     mcp = turn_runtime.get_mcp()
     llm_node_id = orch.llm.node_id or orch.node_id
     action: dict[str, str] | None = None
+    own_calls = 0
     try:
         while not ctrl.stop_event.is_set():
+            offered = turn_runtime._available_tools(ctrl, compiled, orch.node_id, offered)
             choice = turn_runtime._bind_window(orch.llm, messages, memory)
             if not choice.fits:
                 ctrl.fail_message = "run.orchestrator.window"
@@ -136,6 +147,9 @@ def _orchestrator_action(
             )
             from app.runtime import completions as runtime_completions
 
+            repaired = turn_runtime._close_open_tool_calls(messages)
+            if repaired:
+                emit_log("warn", "run.llm.toolCallsRepaired", node_id=orch.node_id, payload={"count": repaired})
             turn_runtime._set_llm(ctrl, compiled, llm_node_id, busy=True)
             try:
                 result = runtime_completions.complete_live(
@@ -243,7 +257,16 @@ def _orchestrator_action(
                         tool_calls=result.tool_calls,
                     )
                 )
+                think_round = False
                 for call in result.tool_calls:
+                    if think_round:
+                        # Five failed in a row: stop running calls, but answer every id (O5).
+                        turn_runtime._skip_tool_call(messages, call, "tool.skipped", _SKIP_AFTER_FAILURES)
+                        continue
+                    if own_calls >= MAX_ORCHESTRATOR_TOOL_CALLS:
+                        turn_runtime._skip_tool_call(messages, call, "tool.stepLimit", _SKIP_STEP_LIMIT)
+                        continue
+                    own_calls += 1
                     body, fact, ok_tool = turn_runtime._dispatch_tool(
                         ctrl,
                         compiled,
@@ -276,6 +299,9 @@ def _orchestrator_action(
                         memory.orch_failed_tools = 0
                         memory.orch_failed_thinks = 0
                         continue
+                    if turn_runtime._call_refused(ctrl, compiled, orch.node_id, call.name):
+                        # A maxCalls refusal is the network's choice, not a broken tool.
+                        continue
                     memory.orch_failed_tools += 1
                     if memory.orch_failed_tools < MAX_ORCHESTRATOR_FAILED_TOOLS:
                         continue
@@ -296,9 +322,21 @@ def _orchestrator_action(
                             "round": memory.orch_failed_thinks,
                         },
                     )
+                    think_round = True
+                if think_round:
+                    # The note follows all tool answers; a user turn between them is invalid.
                     memory.add_note(_TOOL_THINK_NOTE)
                     messages.append(LlmMessage(role="user", content=_TOOL_THINK_NOTE))
-                    break
+                if own_calls >= MAX_ORCHESTRATOR_TOOL_CALLS and offered:
+                    offered = []
+                    memory.allow_own_tools = False
+                    emit_log(
+                        "warn",
+                        "run.orchestrator.toolCap",
+                        node_id=orch.node_id,
+                        payload={"calls": own_calls, "max": MAX_ORCHESTRATOR_TOOL_CALLS},
+                    )
+                    messages.append(LlmMessage(role="user", content=_TOOL_CAP_NOTE.format(n=own_calls)))
                 continue
             if result.tool_calls:
                 offered = []

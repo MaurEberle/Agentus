@@ -116,6 +116,69 @@ def _parse_args(raw: str) -> dict:
     except ValueError:
         return {}
 
+def _max_calls(data: dict) -> int | None:
+    """``maxCalls`` of a tool node: an int >= 1, or None for unlimited."""
+    raw = data.get("maxCalls")
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value >= 1 else None
+
+def _resolve_tool_node(compiled: CompiledGraph, owner_id: str, call_name: str):
+    """The tool or MCP node behind one function name of ``owner_id`` (first match)."""
+    from app.run.graph_models import is_mcp_node
+
+    mapped = map_openai_tool_name(call_name)
+    for edge in compiled.doc.edges:
+        if edge.target != owner_id or edge.target_handle != "tool":
+            continue
+        src = compiled.by_id.get(edge.source)
+        if src is None:
+            continue
+        if mapped:
+            if is_mcp_node(src) and str(src.data.get("mcpServerId") or "") == mapped[0]:
+                return src
+        elif str(src.data.get("kind")) == call_name:
+            return src
+    return None
+
+def _calls_left(ctrl: RunController, node) -> int | None:
+    limit = _max_calls(node.data)
+    if limit is None:
+        return None
+    return max(0, limit - ctrl.tool_calls.get(node.id, 0))
+
+def _available_tools(
+    ctrl: RunController, compiled: CompiledGraph, owner_id: str, schemas: list[dict]
+) -> list[dict]:
+    """Drop functions whose tool node has no calls left in this run."""
+    kept: list[dict] = []
+    for item in schemas:
+        name = str((item.get("function") or {}).get("name") or "")
+        node = _resolve_tool_node(compiled, owner_id, name) if name else None
+        if node is not None and _calls_left(ctrl, node) == 0:
+            continue
+        kept.append(item)
+    return kept
+
+def _call_refused(ctrl: RunController, compiled: CompiledGraph, owner_id: str, call_name: str) -> bool:
+    """True when the tool node behind ``call_name`` refused calls for its maxCalls."""
+    node = _resolve_tool_node(compiled, owner_id, call_name)
+    return node is not None and node.id in ctrl.tool_refused
+
+def _take_call(ctrl: RunController, node) -> int | None:
+    """Count one call on ``node``. Returns the limit when the call is refused."""
+    limit = _max_calls(node.data)
+    used = ctrl.tool_calls.get(node.id, 0)
+    if limit is not None and used >= limit:
+        ctrl.tool_refused.add(node.id)
+        return limit
+    ctrl.tool_calls[node.id] = used + 1
+    return None
+
 def _dispatch_tool(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -142,8 +205,29 @@ def _dispatch_tool(
             preview = file_fact(leaf, args, {}, ok=True)
             if preview is not None and preview.path:
                 reused = reused_file_result(record, preview.action, preview.path)
+    refused_at = None
+    if reused is None:
+        limited_node = _resolve_tool_node(compiled, owner_id, call_name)
+        if limited_node is not None:
+            refused_at = _take_call(ctrl, limited_node)
+            if refused_at is not None:
+                tool_node_id = limited_node.id
     if reused is not None:
         tool_result = reused
+    elif refused_at is not None:
+        # Not a failure: the network caps this tool. The model sees why and stops asking for it.
+        tool_result = {
+            "ok": False,
+            "error": "tool.limitReached",
+            "detail": f"This tool may run {refused_at} times per run and has no calls left. Do not call it again.",
+            "limit": refused_at,
+        }
+        emit_log(
+            "warn",
+            "run.tool.limitReached",
+            node_id=tool_node_id,
+            payload={"name": call_name, "limit": refused_at},
+        )
     elif mapped and mcp:
         from app.run.graph_models import is_mcp_node
 
@@ -224,6 +308,59 @@ def _dispatch_tool(
             fact,
         )
     return masked, fact, ok_tool
+
+def _skip_tool_call(messages: list[LlmMessage], call, error_key: str, detail: str) -> None:
+    """Answer a tool call that was not run. Every tool_call_id needs a tool message."""
+    import json
+
+    messages.append(
+        LlmMessage(
+            role="tool",
+            content=json.dumps({"ok": False, "error": error_key, "detail": detail}),
+            tool_call_id=call.id or None,
+            name=call.name or None,
+        )
+    )
+
+def _close_open_tool_calls(messages: list[LlmMessage]) -> int:
+    """Insert a skipped answer for every tool_call_id that has none. Returns the count.
+
+    OpenAI-compatible APIs reject a request in which an assistant tool call has no
+    tool message before the next non-tool message (HTTP 400). Last line of defence;
+    a repair here means some path forgot to answer and is logged by the caller.
+    """
+    import json
+
+    inserted = 0
+    index = 0
+    while index < len(messages):
+        message = messages[index]
+        index += 1
+        calls = [call for call in (message.tool_calls or []) if call.id] if message.role == "assistant" else []
+        if not calls:
+            continue
+        answered: set[str] = set()
+        while index < len(messages) and messages[index].role == "tool":
+            if messages[index].tool_call_id:
+                answered.add(messages[index].tool_call_id)
+            index += 1
+        for call in calls:
+            if call.id in answered:
+                continue
+            messages.insert(
+                index,
+                LlmMessage(
+                    role="tool",
+                    content=json.dumps(
+                        {"ok": False, "error": "tool.skipped", "detail": "Not run: no result was recorded."}
+                    ),
+                    tool_call_id=call.id,
+                    name=call.name or None,
+                ),
+            )
+            index += 1
+            inserted += 1
+    return inserted
 
 def _with_salvaged_tools(result: CompletionResult, offered: list[dict] | None) -> CompletionResult:
     if result.tool_calls or not offered:
