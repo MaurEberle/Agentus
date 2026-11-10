@@ -23,6 +23,11 @@ AUTO_OUTPUT_MAX = 16384
 AUTO_OUTPUT_ROOM_MIN = 1024
 # R1: wall-clock limit for one model call, on top of the idle watchdog.
 MAX_CALL_SECONDS = 1200.0
+# Text-only review: retries of an agent with tools that again answer with text only.
+# Then the orchestrator takes the step over.
+MAX_TEXT_RETRIES = 2
+# Takeovers that cannot happen (orchestrator lacks the tools) before the run fails.
+MAX_TAKEOVER_UNAVAILABLE = 3
 # O12: model calls per run (orchestrator and agents together). Then the run fails as run.llmBudget.
 MAX_RUN_LLM_CALLS = 400
 # O14: times one run may pause for an unreachable orchestrator model before it fails.

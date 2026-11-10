@@ -18,7 +18,7 @@ from app.mcp.recipe_loader import get_recipe
 from app.mcp.payload import coerce_tool_arguments, compact_tool_result
 from app.http.errors import AppError
 from app.mcp.runtime_check import resolve_stdio_command, runtime_available
-from app.mcp.excel_files import annotate_excel_tools, folder_tool_result, workbook_hint
+from app.mcp.excel_files import annotate_excel_tools, folder_tool_result, prepare_excel_write, workbook_hint
 from app.mcp.sandbox import confine_tool_arguments, reject_app_db_dsn, resolve_args
 
 IDLE_SEC = 300.0
@@ -679,6 +679,7 @@ class McpSessions:
             listing = folder_tool_result(args, live.root)
             if listing:
                 return {"ok": True, "result": listing}
+            prepare_excel_write(tool_name, args)
         try:
             raw = live.session.call_tool(tool_name, args)
         except Exception as exc:

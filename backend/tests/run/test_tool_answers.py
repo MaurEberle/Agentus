@@ -11,6 +11,19 @@ from app.tools.models import ExecuteResult
 from tests.run.test_harness import _drive, _orch_files_doc
 
 
+
+def _orch_tools_from_start(monkeypatch) -> None:
+    """These tests exercise the tool loop itself; normally tools open only after an agent fails."""
+    from app.run import orchestrator_loop
+    from app.run.memory import RunMemory
+
+    class _Open(RunMemory):
+        def __init__(self) -> None:
+            super().__init__()
+            self.allow_own_tools = True
+
+    monkeypatch.setattr(orchestrator_loop, "RunMemory", _Open)
+
 def _strict_openai_check(messages: list[LlmMessage]) -> None:
     """Reject like OpenAI: an assistant tool call needs its tool answer before anything else."""
     index = 0
@@ -35,6 +48,7 @@ def _writes(count: int) -> list[ToolCall]:
 
 
 def test_think_round_answers_every_call_and_continues(monkeypatch, api_env) -> None:
+    _orch_tools_from_start(monkeypatch)
     executed = {"n": 0}
 
     def _execute(kind, *, config, args, secret=None):

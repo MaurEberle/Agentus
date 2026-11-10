@@ -32,6 +32,8 @@
     "or": "Or",
     "mode": "Combine tags",
     "empty": "No tags",
+    "noMatch": "No matching tags",
+    "search": "Search tags",
     "clear": "Clear all tags"
   },
   "models": {
@@ -1754,6 +1756,8 @@
         "start": "Batch run started"
       },
       "agent": {
+        "textOnly": "Text only, no tool used; the orchestrator reviews the answer.",
+        "outputLimit": "Cut off at the output limit twice; task ended.",
         "toolCap": "Agent: {{calls}} tool calls for this task, limit reached.",
         "start": "Agent started",
         "done": "Agent finished",
@@ -1764,7 +1768,8 @@
         "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
         "emptyStop": "Discarded an empty reply ({{attempt}}/{{max}}). The task continues.",
         "emptyStops": "Task incomplete: five empty replies in a row.",
-        "truncated": "Reply was cut off; not a result."
+        "truncated": "Reply was cut off; not a result.",
+        "compact": "Context compacted so the answer fits the window."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {
@@ -1797,6 +1802,9 @@
       },
       "stepLimit": "Step limit reached",
       "orchestrator": {
+        "textRetry": "Retry of {{name}} again returned text only ({{fails}}/{{max}}).",
+        "retryIgnored": "retry without a previous text-only answer; not counted.",
+        "takeoverUnavailable": "Takeover not possible: the orchestrator lacks the tools ({{count}}/{{max}}).",
         "toolCap": "Orchestrator: {{calls}} tool calls in this step, limit reached.",
         "compact": "Orchestrator context condensed (level {{level}}).",
         "privateReasoning": "Model's internal reasoning not shown in the chat.",

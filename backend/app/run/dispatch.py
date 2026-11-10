@@ -8,8 +8,8 @@ from app.db.engine import utc_now
 from app.run import agent_turn, turn_runtime
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log
-from app.run.limits import MAX_SAME_RETRIES
-from app.run.memory import AgentRecord, RunMemory, visible_text
+from app.run.limits import MAX_SAME_RETRIES, MAX_TEXT_RETRIES
+from app.run.memory import AgentRecord, RunMemory, Takeover, visible_text
 from app.run.models import ChatMessage
 from app.run.orchestrate import match_agent
 from app.run.turn_runtime import _FILE_MUTATIONS, _SAME_RETRY
@@ -38,6 +38,9 @@ def _count_file_attempt(
     if "file_access" not in (agent.tool_kinds or []):
         return
     wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
+    # A finished text answer that never touched a file is the result, not a missed write.
+    if record.finished and record.text and not record.files:
+        return
     opened = memory.note_file_attempt(
         agent_id=agent.node_id,
         name=record.name,
@@ -59,6 +62,37 @@ def _count_file_attempt(
             "misses": memory.misses.get(agent.node_id, 0),
             "task": (record.task or "")[:300],
         },
+    )
+
+def _review_text_retry(compiled: CompiledGraph, memory: RunMemory, agent, record: AgentRecord) -> None:
+    """Count a retry that again came back as text only; open a tools takeover at the limit."""
+    agent_id = agent.node_id
+    if not record.text_only:
+        memory.text_retry_fails[agent_id] = 0
+        return
+    fails = memory.text_retry_fails.get(agent_id, 0) + 1
+    memory.text_retry_fails[agent_id] = fails
+    emit_log(
+        "warn",
+        "run.orchestrator.textRetry",
+        node_id=agent_id,
+        payload={"name": record.name, "fails": fails, "max": MAX_TEXT_RETRIES},
+    )
+    if fails < MAX_TEXT_RETRIES or memory.takeover is not None:
+        return
+    orch = compiled.orchestrator
+    if orch is None or not (orch.tool_kinds or orch.mcp):
+        # No takeover possible: the loop reports an anomaly; the next round counts afresh.
+        memory.takeover_unarmed = True
+        memory.text_retry_fails[agent_id] = 0
+        return
+    memory.takeover = Takeover(agent_id=agent_id, name=record.name, task=record.task, kind="tools")
+    memory.takeover_rejects = 0
+    emit_log(
+        "info",
+        "run.orchestrator.takeoverStart",
+        node_id=orch.node_id,
+        payload={"agent": record.name, "misses": fails, "task": (record.task or "")[:300], "kind": "tools"},
     )
 
 def _orchestrator_call(
@@ -88,11 +122,21 @@ def _orchestrator_call(
     if source.auto:
         emit_log("info", "run.memory.source", node_id=agent_id)
     name = dict(names).get(agent_id, agent_id)
+    previous = next((rec for rec in reversed(memory.records) if rec.agent_id == agent_id), None)
+    # Text-only review (variant C): only an explicit retry of a text-only answer counts.
+    is_text_retry = action.get("retry") == "1" and previous is not None and previous.text_only
+    if action.get("retry") == "1" and not is_text_retry:
+        emit_log("info", "run.orchestrator.retryIgnored", node_id=agent_id)
+    if not is_text_retry:
+        memory.text_retry_fails[agent_id] = 0
     record = memory.begin_call(agent_id, name, task, has_tools)
-    memory.allow_own_tools = True
+    record.retry = is_text_retry
+    memory.allow_own_tools = False
 
     def _ran() -> str:
         _count_file_attempt(compiled, memory, agent, record)
+        if is_text_retry:
+            _review_text_retry(compiled, memory, agent, record)
         return "ran"
 
     orch = compiled.orchestrator
@@ -118,15 +162,19 @@ def _orchestrator_call(
                 return "cancelled"
             # O17: the agent turn gave up without a result; tell the orchestrator why.
             record.error = record.error or "agent stopped"
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error == "prompt does not fit":
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error == "too many tool failures":
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
-        if record.error in {"too many thinks", "think loop", "empty stops", "runtime.generationLimit"}:
+        if record.error in {"too many thinks", "think loop", "empty stops", "runtime.generationLimit", "output limit"}:
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error:
@@ -144,6 +192,7 @@ def _orchestrator_call(
                 attempt += 1
                 record.error = ""
                 continue
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         visible = visible_text(text or "")
@@ -152,19 +201,21 @@ def _orchestrator_call(
         wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
         if not visible and not record.tool_ok:
             record.error = "empty result"
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         record.text = visible
-        if has_tools and not record.tool_ok:
-            record.error = "no tool used"
-            memory.set_anomaly(record)
-            return _ran()
         if not visible and not wrote:
             record.error = "empty result"
             emit_log("warn", "run.agent.empty", node_id=agent_id)
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         record.finished = True
+        if has_tools and not record.tools and visible:
+            # Allowed: tools are optional. The orchestrator checks the text against the task.
+            record.text_only = True
+            emit_log("info", "run.agent.textOnly", node_id=agent_id)
         if any(not fact.ok for fact in record.files):
             record.error = "tool failed"
             memory.set_anomaly(record)

@@ -32,6 +32,8 @@
     "or": "O",
     "mode": "Combinar etiquetas",
     "empty": "Sin etiquetas",
+    "noMatch": "Ninguna etiqueta coincide",
+    "search": "Buscar etiquetas",
     "clear": "Quitar todas las etiquetas"
   },
   "models": {
@@ -1687,6 +1689,8 @@
         "start": "Ejecución por lotes iniciada"
       },
       "agent": {
+        "textOnly": "Solo texto, sin herramienta; el orquestador revisa la respuesta.",
+        "outputLimit": "Cortado dos veces en el límite de salida; tarea terminada.",
         "toolCap": "Agente: {{calls}} llamadas a herramientas para esta tarea, límite alcanzado.",
         "start": "Agente iniciado",
         "done": "Agente finalizado",
@@ -1697,7 +1701,8 @@
         "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
         "emptyStop": "Respuesta vacía descartada ({{attempt}}/{{max}}). La tarea continúa.",
         "emptyStops": "Tarea incompleta: cinco respuestas vacías seguidas.",
-        "truncated": "Respuesta cortada; no es un resultado."
+        "truncated": "Respuesta cortada; no es un resultado.",
+        "compact": "Contexto compactado para que la respuesta quepa en la ventana."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1730,6 +1735,9 @@
       },
       "stepLimit": "Límite de pasos alcanzado",
       "orchestrator": {
+        "textRetry": "El reintento de {{name}} volvió a dar solo texto ({{fails}}/{{max}}).",
+        "retryIgnored": "retry sin respuesta previa de solo texto; no cuenta.",
+        "takeoverUnavailable": "Toma de control imposible: al orquestador le faltan herramientas ({{count}}/{{max}}).",
         "toolCap": "Orquestador: {{calls}} llamadas a herramientas en este paso, límite alcanzado.",
         "compact": "Contexto del orquestador condensado (nivel {{level}}).",
         "privateReasoning": "El razonamiento interno del modelo no se muestra en el chat.",

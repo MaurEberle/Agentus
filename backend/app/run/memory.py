@@ -79,6 +79,10 @@ class AgentRecord:
     tool_ok: bool = False
     # The task hit MAX_AGENT_TOOL_CALLS; the result may be incomplete.
     capped: bool = False
+    # An agent with tools answered with text only (no tool call). The orchestrator reviews it.
+    text_only: bool = False
+    # This call was a retry of a text-only answer ("retry": true).
+    retry: bool = False
 
 
 @dataclass
@@ -107,6 +111,8 @@ class Takeover:
     agent_id: str
     name: str
     task: str
+    # "file": missed writes. "tools": repeated text-only answers; any own tool success ends it.
+    kind: str = "file"
 
 
 class RunMemory:
@@ -115,7 +121,7 @@ class RunMemory:
         self.records: list[AgentRecord] = []
         self.own_tools: list[ToolEvent] = []
         self.own_files: list[FileFact] = []
-        self.allow_own_tools = True
+        self.allow_own_tools = False
         self.finish_warned = False
         self.rejected: list[Rejected] = []
         self.windows: list[dict[str, object]] = []
@@ -133,6 +139,8 @@ class RunMemory:
         self.orch_failed_thinks = 0
         self.compact_level = 0
         self.takeover_finish_warned = False
+        self.text_retry_fails: dict[str, int] = {}
+        self.takeover_unavailable = 0
         # O15: fingerprint of the last stored course; identical courses are not rewritten.
         self.persisted: str | None = None
 
@@ -318,12 +326,20 @@ class RunMemory:
         item = self.takeover
         if item is None:
             return ""
+        if item.kind == "tools":
+            fails = self.text_retry_fails.get(item.agent_id, 0)
+            return (
+                f"Takeover for {item.name} ({item.agent_id}) after {fails} retries that again "
+                "answered with text only.\n"
+                f"task: {item.task}\n"
+                "Do this step yourself with the connected tools. Do not call this agent again."
+            )
         misses = self.misses.get(item.agent_id, 0)
         return (
             f"Takeover for {item.name} ({item.agent_id}) after {misses} file attempts "
             "without a write, edit, or delete.\n"
             f"task: {item.task}\n"
-            "Do this file work yourself with your tools. Do not call this agent."
+            "The connected tools can finish this file step. Do not call this agent again."
         )
 
     def refuses_agent(self, token: str, names: list[tuple[str, str]]) -> bool:
@@ -350,12 +366,15 @@ class RunMemory:
         self.own_tools.append(event)
         if fact is not None and len(self.own_files) < _FILES_KEPT:
             self.own_files.append(fact)
-        if (
+        tools_done = self.takeover is not None and self.takeover.kind == "tools" and event.ok
+        if tools_done or (
             self.takeover is not None
             and fact is not None
             and fact.ok
             and fact.action in _FILE_CHANGES
         ):
+            if tools_done:
+                self.text_retry_fails[self.takeover.agent_id] = 0
             self.misses[self.takeover.agent_id] = 0
             self.takeover = None
             self.takeover_rejects = 0
@@ -383,6 +402,8 @@ class RunMemory:
                     "finished": rec.finished,
                     "error": rec.error,
                     "capped": rec.capped,
+                    "textOnly": rec.text_only,
+                    "retry": rec.retry,
                     "files": [
                         {
                             "tool": fact.tool,
@@ -432,6 +453,8 @@ class RunMemory:
             "raised": dict(self.raised),
             "misses": dict(self.misses),
             "compactLevel": self.compact_level,
+            "textRetryFails": dict(self.text_retry_fails),
+            "takeoverUnavailable": self.takeover_unavailable,
             "anomaly": self._anomaly,
             "takeover": (
                 None
@@ -521,6 +544,11 @@ class RunMemory:
             line = f"{line}\nreason: {rec.error}"
         if rec.capped:
             line = f"{line}\nnote: tool limit reached for this task; the work may be incomplete."
+        if rec.text_only:
+            line = (
+                f"{line}\nnote: text only. This agent has tools but used none and changed no file. "
+                "Check the text against its task."
+            )
         return line
 
 
@@ -679,8 +707,6 @@ def _file_block(files: list[FileFact]) -> str:
 
 
 def _anomaly_needs_text(record: AgentRecord) -> bool:
-    if record.error == "no tool used" and record.text:
-        return True
     if record.error != "tool failed" or not record.text:
         return False
     failed = [fact for fact in record.files if not fact.ok]

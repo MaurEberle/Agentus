@@ -163,7 +163,8 @@ def test_orchestrator_overrun_gets_one_brief_retry(monkeypatch, api_env) -> None
     assert notes == [False, True]
 
 
-def test_cut_off_reasoning_is_clipped_and_followed_by_a_nudge(monkeypatch, api_env) -> None:
+def test_cut_off_reasoning_is_discarded_and_followed_by_a_nudge(monkeypatch, api_env) -> None:
+    """A cut-off draft is not replayed; the next request carries the neutral cut-off note."""
     from app.tools.models import ExecuteResult
 
     monkeypatch.setattr(
@@ -175,7 +176,7 @@ def test_cut_off_reasoning_is_clipped_and_followed_by_a_nudge(monkeypatch, api_e
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         seen.append(list(req.messages))
         if len(seen) == 1:
-            return CompletionResult(content="", reasoning="denke " * 5000, model=req.model, finish_reason="length")
+            return CompletionResult(content="", reasoning="RAMBLE " * 5000, model=req.model, finish_reason="length")
         if not any(m.role == "tool" for m in req.messages):
             return CompletionResult(
                 content=None,
@@ -187,7 +188,6 @@ def test_cut_off_reasoning_is_clipped_and_followed_by_a_nudge(monkeypatch, api_e
 
     stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
     assert stored["outcome"] == "succeeded"
-    second = seen[1]
-    assert any("hit the output limit" in (m.content or "") for m in second)
-    longest_assistant = max(len(m.content or "") for m in second if m.role == "assistant")
-    assert longest_assistant < 2_200
+    second = "\n".join(m.content or "" for m in seen[1])
+    assert "cut off at the output or context limit" in second
+    assert "RAMBLE" not in second

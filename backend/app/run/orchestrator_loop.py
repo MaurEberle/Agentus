@@ -10,11 +10,13 @@ from collections import deque
 
 from app.db.engine import utc_now
 from app.run import agent_turn, dispatch, orchestrator_decide, turn_runtime
+from app.run.capabilities import capability_text
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.limits import (
     MAX_LLM_PAUSES,
     MAX_TAKEOVER_REJECTS,
+    MAX_TAKEOVER_UNAVAILABLE,
     MAX_AGENT_INVOCATIONS,
     MAX_ORCHESTRATOR_STEPS,
     MAX_ORCHESTRATOR_THINKS,
@@ -50,6 +52,11 @@ _ASK_SUPERSEDED_NOTE = (
 _FINISH_LATE_NOTE = (
     "The user wrote a new message before you finished, so the run did not end. "
     "Handle that message first, then finish."
+)
+
+_TAKEOVER_UNAVAILABLE_NOTE = (
+    "Takeover is not possible: you do not have the tools for this step. "
+    "Decide: call another agent with a clear task, ask the user, or finish and say what is missing."
 )
 
 _TAKEOVER_FINISH_NOTE = (
@@ -309,6 +316,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             turn_runtime._function_names(offered),
             takeover=memory.takeover is not None,
         )
+        system += "\n\n" + capability_text(compiled, orch.node_id, available=bool(offered))
         action = orchestrator_decide._orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
         tokens = orchestrator_decide._pop_tokens(action)
         _store_memory(ctrl, memory)
@@ -419,7 +427,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 if memory.takeover_rejects >= MAX_TAKEOVER_REJECTS:
                     _store_memory(ctrl, memory)
                     return _fail_takeover(ctrl, orch.node_id, memory)
-                memory.add_note("That agent is closed for this task. Use your tools. Do not call it.")
+                memory.add_note(
+                    "That agent is closed for this task. "
+                    "The connected tools can finish the file step. Do not call that agent again."
+                )
                 continue
             if steps >= MAX_ORCHESTRATOR_STEPS:
                 _store_memory(ctrl, memory)
@@ -428,8 +439,24 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             if outcome == "cancelled":
                 return "cancelled"
             if memory.takeover_unarmed:
-                _store_memory(ctrl, memory)
-                return _fail_takeover(ctrl, orch.node_id, memory, no_tool=True)
+                # Anomaly instead of an instant failure; the run fails only after repeated cases.
+                memory.takeover_unarmed = False
+                memory.takeover_unavailable += 1
+                emit_log(
+                    "warn",
+                    "run.orchestrator.takeoverUnavailable",
+                    node_id=orch.node_id,
+                    payload={"count": memory.takeover_unavailable, "max": MAX_TAKEOVER_UNAVAILABLE},
+                )
+                if memory.takeover_unavailable > MAX_TAKEOVER_UNAVAILABLE:
+                    _store_memory(ctrl, memory)
+                    return _fail_takeover(ctrl, orch.node_id, memory, no_tool=True)
+                closed = memory.takeover
+                if closed is not None:
+                    memory.misses[closed.agent_id] = 0
+                    memory.text_retry_fails[closed.agent_id] = 0
+                memory.takeover = None
+                memory.set_nudge(_TAKEOVER_UNAVAILABLE_NOTE)
             if outcome == "ran":
                 steps += 1
             continue

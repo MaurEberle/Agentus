@@ -467,9 +467,51 @@ Lauf `0fe6a4cd…` lief mit dem Build vom 2026-11-07 (inkl. O1–O20):
 
 ### 7.1 Backlog aus der Laufanalyse
 - [x] **R1:** umgesetzt. Ist `maxTokens` leer, setzt die Laufzeit für Ollama automatisch `num_predict` = Kontext/4 (4.096 bis 16.384), höchstens aber den Platz, den der Prompt im Fenster lässt (mind. 1.024). Die vom Nutzer gesetzte Kontextlänge bleibt unverändert, und die Fensterwahl sieht die automatische Grenze nicht. Ein eigenes `maxTokens` gilt immer, Cloud-Anbieter behalten ihren Standard. Zusätzlich eine Zeitgrenze von 20 min pro Aufruf (`runtime.generationLimit`): Beim Agenten wird daraus eine Anomalie ohne Retry, der Orchestrator bekommt einen kurzen zweiten Versuch. Wird eine Antwort abgeschnitten, kommt nur noch ein Auszug von 2.000 Zeichen zurück in den Verlauf (vorher das volle Reasoning), dazu der Hinweis „act now“. Der Watchdog-Abbruch meldet „no progress for 180 s after N min“ (Teil von R8). `run.llm.start` loggt `maxTokens`/`maxTokensAuto`. Im Inspector zeigt das leere Feld „Max. Tokens“ als Platzhalter, was gilt (z. B. „leer = automatisch 16.384“). Tests: `tests/run/test_output_limits.py` (8, darunter ein echter Stream-Server).
-- [ ] **R2:** Der Orchestrator bekommt außerhalb eines Takeovers nur lesende Dateiaktionen (`read`, `list`, `tree`, `stat`, `search`). Schreiben, Editieren und Löschen erlaubt die Laufzeit nur im Takeover.
+- [x] **R2:** erledigt durch den Merge von `fix/backend_testing`: Der Orchestrator bekommt Tools nur nach einem Agent-Fehler oder im Takeover (siehe Abschnitt 8).
 - [ ] **R3:** Tool-Markup in Antworten erkennen, nicht veröffentlichen und dem Modell zurückmelden, dass in diesem Schritt keine Tools verfügbar sind.
 - [ ] **R4:** Budget pro Netz einstellbar machen (Standard 400), nach R1/R2 neu bewerten.
 - [ ] **R6:** Fortschrittsmeldung nur mit geänderten Dateien.
 - [ ] **R7:** Orchestrator-Modell in `runs.models` aufnehmen.
 - [ ] **R8:** Verbindungsabbruch (`ReadError`) als `runtime.unreachable` einordnen und Tokens auch bei Fehlschlag speichern.
+
+---
+
+## 8. Merge `fix/backend_testing` → `fix/orchestrator_v2` (2026-11-10)
+
+**Übernommen wie geliefert:**
+- `capabilities.py`: Tool-Inventar im Prompt von Orchestrator und Agenten.
+- Kontextverdichtung für Agenten (`compact.py`).
+- Orchestrator-Parser `_utterance`.
+- Schärfere Prompttexte.
+- Excel-MCP legt eine fehlende Arbeitsmappe an.
+- Frontend: Chat kopieren, Tag-Suche, Scroll-Fix.
+
+**Konflikte aufgelöst:**
+- `dispatch.py`: `generationLimit` und Freigabe der Tools.
+- `orchestrate.py`: deren Tool-Text plus „up to ten tools“; die Auswertung mehrerer JSON-Objekte (O11) mit `_field` (O19) und `_utterance` kombiniert.
+- Tests: beide Seiten zusammengeführt.
+
+**Angepasst:**
+- **Der Orchestrator bekommt Tools nur nach einem Agent-Fehler** (aus dem Zweig). Damit ist **R2** erledigt. Der Abbruchpfad „agent stopped“ (O17) gibt Tools jetzt ebenfalls frei.
+- **Zusammenfassungs-Aufruf in `compact.py`:** zählt zum Laufbudget (O12), hat die 20-min-Grenze (R1), steht in der Historie (`insert_call`) und im Log (`run.llm.start`, `waitReason: compact`).
+- **Abgeschnittene Antworten:**
+  - Der Entwurf wird verworfen (Ansatz aus dem Zweig). Mein R1-Kürzen war tot und ist entfernt.
+  - Der Hinweis ist neutral formuliert („output or context limit … act now“).
+  - Zwei Abbrüche in Folge ergeben die Anomalie `output limit` (`run.agent.outputLimit`) statt fälschlich „prompt does not fit“.
+- **Excel:**
+  - Eine nicht leere Datei, die keine Arbeitsmappe ist, wird vor dem Ersetzen als `*.xlsx.bak` gesichert.
+  - Nur absolute, also bereits begrenzte Pfade werden angefasst.
+  - Fehler beim Anlegen werden geloggt und nicht weitergeworfen.
+
+**Neu: Prüfung reiner Textantworten (Variante C, Entscheidung 2026-11-10):**
+- **Textantworten erlaubt:** Agenten mit Tools dürfen mit reinem Text antworten („Tools are optional“, die Anomalie „no tool used“ entfällt). Die Statuszeile an den Orchestrator sagt dann „text only … Check the text against its task“ (`AgentRecord.text_only`, Log `run.agent.textOnly`).
+- **Wiederholung:** Passt der Text nicht zur Aufgabe, ruft der Orchestrator denselben Agenten mit `"retry": true` erneut auf. Nur so ein Aufruf zählt. Neue Aufgaben an denselben Agenten (z. B. einen planenden Architekten) zählen nicht. Ein `retry` ohne vorherige reine Textantwort wird ignoriert (`run.orchestrator.retryIgnored`).
+- **Übernahme:** Liefern **2** Wiederholungen erneut nur Text (`MAX_TEXT_RETRIES`, Log `run.orchestrator.textRetry`), übernimmt der Orchestrator. Takeover-Art `tools`: Er bekommt seine Tools, der Agent ist gesperrt, und ein erfolgreicher eigener Tool-Aufruf beendet die Übernahme. Liefert eine Wiederholung Tool-Nutzung, startet die Zählung neu.
+- **Übernahme nicht möglich** (Orchestrator ohne passende Tools, gilt für Datei- und Tool-Übernahmen): Statt sofort abzubrechen, gibt es eine Anomalie mit dem Hinweis „call another agent, ask the user, or finish and say what is missing“ (`run.orchestrator.takeoverUnavailable`). Höchstens **3**-mal pro Lauf (`MAX_TAKEOVER_UNAVAILABLE`), beim 4. Mal endet der Lauf mit `run.orchestrator.takeoverNoTool`.
+
+**Tests:**
+- Neu: `tests/run/test_text_review.py` (10 Tests).
+- Angepasst wurden Tests, die das alte Verhalten festschrieben: Orchestrator-Tools ab Start, Hinweistext bei abgeschnittenem JSON, Fehlergrund nach zwei Abbrüchen.
+- Gesamt: 840/840 grün, Typecheck sauber, ESLint 0 Fehler.
+
+**Backlog:** R2 erledigt. R5 ist durch `capabilities.py` (Wurzel und Pfadregeln im Prompt) teilweise abgedeckt; der Pfad-Hinweis bei `notFound` bleibt offen. R3, R4, R6, R7 und der Token-Teil von R8 bleiben offen.

@@ -105,6 +105,45 @@ def test_empty_ask_is_rejected() -> None:
     assert reject_reason(raw) == "empty"
 
 
+def test_reply_keeps_the_only_other_string() -> None:
+    raw = '{"action":"reply","message":"Die Datei wurde aufbereitet."}'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+    assert parsed["text"] == "Die Datei wurde aufbereitet."
+    assert reject_reason(raw) is None
+
+
+def test_ask_keeps_the_question_field() -> None:
+    raw = '{"action":"ask","question":"Von welchem Flughafen startest du?"}'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "ask"
+    assert parsed["text"] == "Von welchem Flughafen startest du?"
+    assert reject_reason(raw) is None
+
+
+def test_canonical_text_wins_over_another_string() -> None:
+    raw = '{"action":"reply","text":"Kurz","message":"Lang"}'
+    assert parse_orchestrator_action(raw)["text"] == "Kurz"
+    assert reject_reason(raw) is None
+
+
+def test_two_unnamed_strings_stay_empty() -> None:
+    raw = '{"action":"reply","message":"A","content":"B"}'
+    assert parse_orchestrator_action(raw)["text"] == ""
+    assert reject_reason(raw) == "empty"
+
+
+def test_reply_ignores_tool_markup_after_the_object() -> None:
+    raw = (
+        '{"action":"reply","message":"Die Datei wurde aufbereitet."}'
+        "</arg_value><arg_key>action</arg_key><arg_value>finish</arg_value></tool_call>"
+    )
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+    assert parsed["text"] == "Die Datei wurde aufbereitet."
+    assert reject_reason(raw) is None
+
+
 def test_pasted_story_with_broken_quotes_is_not_a_call() -> None:
     story = "Wort " * 80 + 'fragte: "hallo" und weiter'
     raw = '{"action":"call","agent":"Translate","task":"' + story + '"}'
@@ -137,7 +176,7 @@ def test_instructions_mention_connected_tools() -> None:
     text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"])
     assert "You have tools: file_access." in text
     assert "your last three tool results" in text
-    assert "instead of calling an agent" in text
+    assert "only to recover from that failure" in text
     assert "up to ten tools per decision" in text
     assert "Five failed tool calls in a row start a think round" in text
     assert "Two failed think rounds in a row stop the run" in text

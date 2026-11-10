@@ -32,6 +32,8 @@
     "or": "Oder",
     "mode": "Tags verknüpfen",
     "empty": "Keine Tags",
+    "noMatch": "Keine passenden Tags",
+    "search": "Tags suchen",
     "clear": "Alle Tags abwählen"
   },
   "models": {
@@ -1754,6 +1756,8 @@
         "start": "Batch-Lauf gestartet"
       },
       "agent": {
+        "textOnly": "Nur Text, kein Werkzeug genutzt; der Orchestrator prüft die Antwort.",
+        "outputLimit": "Zweimal an der Ausgabegrenze abgeschnitten; Auftrag beendet.",
         "toolCap": "Agent: {{calls}} Werkzeugaufrufe für diesen Auftrag, Grenze erreicht.",
         "start": "Agent gestartet",
         "done": "Agent fertig",
@@ -1764,7 +1768,8 @@
         "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
         "emptyStop": "Leere Antwort verworfen ({{attempt}}/{{max}}). Der Auftrag geht weiter.",
         "emptyStops": "Aufgabe unvollständig: fünf leere Antworten hintereinander.",
-        "truncated": "Antwort abgeschnitten; kein Ergebnis."
+        "truncated": "Antwort abgeschnitten; kein Ergebnis.",
+        "compact": "Kontext verdichtet, damit die Antwort ins Fenster passt."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {
@@ -1797,6 +1802,9 @@
       },
       "stepLimit": "Schrittlimit erreicht",
       "orchestrator": {
+        "textRetry": "Wiederholung von {{name}} lieferte wieder nur Text ({{fails}}/{{max}}).",
+        "retryIgnored": "retry ohne vorherige reine Textantwort; zählt nicht.",
+        "takeoverUnavailable": "Übernahme nicht möglich: Orchestrator fehlen die Werkzeuge ({{count}}/{{max}}).",
         "toolCap": "Orchestrator: {{calls}} Werkzeugaufrufe in diesem Schritt, Grenze erreicht.",
         "compact": "Orchestrator-Kontext verdichtet (Stufe {{level}}).",
         "privateReasoning": "Interne Überlegung des Modells nicht im Chat gezeigt.",

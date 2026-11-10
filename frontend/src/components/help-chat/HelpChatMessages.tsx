@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useCopySelection } from '@/lib/copySelection';
 import { useTranslation } from 'react-i18next';
 import { BrandMark } from '@/components/BrandMark';
 import { LightMarkdown } from '@/components/help-chat/markdown';
@@ -82,7 +83,7 @@ function Bubble({
       <div className={cn('flex min-w-0 flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
-            'max-w-full rounded-lg px-3 py-2',
+            'max-w-full cursor-text select-text rounded-lg px-3 py-2',
             isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
           )}
         >
@@ -112,6 +113,8 @@ export function HelpChatMessages({
 }) {
   const { t, i18n } = useTranslation();
   const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  useCopySelection(listRef);
   const items = streaming ? [...messages, streaming] : messages;
   const lastAssistantId = [...items].reverse().find((message) => message.role === 'assistant')?.id;
   const chillLast = Boolean(lastAssistantId) && !waiting && !streaming;
@@ -130,7 +133,7 @@ export function HelpChatMessages({
 
   return (
     <ScrollArea className="min-h-0 flex-1">
-      <div className="flex flex-col gap-3 p-3">
+      <div ref={listRef} className="flex flex-col gap-3 p-3">
         {items.map((message) => (
           <Bubble
             key={message.id}

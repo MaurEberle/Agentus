@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { compatibleTags, type TagMatch } from '@/lib/tags';
@@ -15,7 +17,7 @@ function squareCloudWidth(tags: string[]): number {
   const modeRow = 32;
   const row = 28;
   const side = (modeRow + Math.sqrt(modeRow * modeRow + 4 * total * row)) / 2;
-  return Math.ceil(Math.max(side, longest, 168));
+  return Math.ceil(Math.max(side, longest, 280));
 }
 
 export function TagCloudPanel({
@@ -38,28 +40,43 @@ export function TagCloudPanel({
   className?: string;
 }) {
   const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
+  const visible = needle ? tags.filter((tag) => tag.toLowerCase().includes(needle)) : tags;
   const allowed = compatibleTags(tagSets, selected, mode);
   return (
-    <div className={cn('flex min-w-0 flex-col', className)}>
-      <div className="flex items-center justify-end gap-2">
-        <span className={cn('text-xs', mode === 'and' ? 'font-medium text-foreground' : 'text-muted-foreground')}>
-          {t('tagCloud.and')}
-        </span>
-        <Switch
-          checked={mode === 'or'}
-          onCheckedChange={(value) => onModeChange(value ? 'or' : 'and')}
-          aria-label={t('tagCloud.mode')}
-          className="h-6 w-11 border-border bg-background p-0.5 data-[state=checked]:bg-background data-[state=unchecked]:bg-background [&>span]:bg-primary [&>span]:data-[state=checked]:translate-x-5"
+    <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', className)}>
+      <div className="flex items-center gap-3">
+        <Input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t('tagCloud.search')}
+          aria-label={t('tagCloud.search')}
+          className="h-8 min-w-0 flex-1 px-2.5 text-xs"
         />
-        <span className={cn('text-xs', mode === 'or' ? 'font-medium text-foreground' : 'text-muted-foreground')}>
-          {t('tagCloud.or')}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={cn('text-xs', mode === 'and' ? 'font-medium text-foreground' : 'text-muted-foreground')}>
+            {t('tagCloud.and')}
+          </span>
+          <Switch
+            checked={mode === 'or'}
+            onCheckedChange={(value) => onModeChange(value ? 'or' : 'and')}
+            aria-label={t('tagCloud.mode')}
+            className="h-6 w-11 border-border bg-background p-0.5 data-[state=checked]:bg-background data-[state=unchecked]:bg-background [&>span]:bg-primary [&>span]:data-[state=checked]:translate-x-5"
+          />
+          <span className={cn('text-xs', mode === 'or' ? 'font-medium text-foreground' : 'text-muted-foreground')}>
+            {t('tagCloud.or')}
+          </span>
+        </div>
       </div>
       {tags.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{t('tagCloud.empty')}</p>
+      ) : visible.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">{t('tagCloud.noMatch')}</p>
       ) : (
-        <div className="mt-2 flex min-w-0 flex-wrap justify-start gap-1.5 overflow-auto" role="group" aria-label={label}>
-          {tags.map((tag) => {
+        <div className="mt-2 flex min-h-0 min-w-0 flex-1 flex-wrap content-start justify-start gap-1.5 overflow-auto" role="group" aria-label={label}>
+          {visible.map((tag) => {
             const on = selected.includes(tag);
             const blocked = allowed !== null && !allowed.has(tag);
             return (
@@ -132,7 +149,7 @@ export function TagCloud({
       <PopoverContent
         align="start"
         style={tags.length ? { width: `min(50vw, ${squareCloudWidth(tags) + 24}px)` } : undefined}
-        className="flex max-h-[50vh] max-w-[50vw] flex-col overflow-auto p-3"
+        className="flex max-h-[50vh] max-w-[50vw] flex-col overflow-hidden p-3"
       >
         <TagCloudPanel
           tags={tags}

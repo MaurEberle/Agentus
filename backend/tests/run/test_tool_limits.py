@@ -9,6 +9,19 @@ from app.tools.models import ExecuteResult
 from tests.run.test_harness import _drive, _linear_file_doc, _orch_files_doc
 
 
+
+def _orch_tools_from_start(monkeypatch) -> None:
+    """These tests exercise the tool loop itself; normally tools open only after an agent fails."""
+    from app.run import orchestrator_loop
+    from app.run.memory import RunMemory
+
+    class _Open(RunMemory):
+        def __init__(self) -> None:
+            super().__init__()
+            self.allow_own_tools = True
+
+    monkeypatch.setattr(orchestrator_loop, "RunMemory", _Open)
+
 def _ok_execute(counter: dict):
     def _execute(kind, *, config, args, secret=None):
         del kind, config, secret
@@ -36,6 +49,7 @@ def _messages(stored: dict) -> list[str]:
 
 
 def test_orchestrator_tool_calls_are_capped_per_decision(monkeypatch, api_env) -> None:
+    _orch_tools_from_start(monkeypatch)
     executed = {"n": 0}
     monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _ok_execute(executed))
     complete_answers: list[bool] = []
