@@ -898,6 +898,9 @@
         "noIssues": "Keine Validierungsfehler."
       },
       "llm": {
+        "maxTokensAuto": "leer = automatisch {{count}}",
+        "maxTokensAutoMax": "leer = automatisch, höchstens {{count}}",
+        "maxTokensProvider": "leer = Standard des Anbieters",
         "provider": "Provider",
         "openaiCompat": "OpenAI-kompatibel",
         "model": "Modell",
@@ -1456,6 +1459,7 @@
       "splitWidth": "Breite von Netz und Aktivität ändern"
     },
     "chat": {
+      "llmRetry": "Das Orchestrator-Modell ist gerade nicht erreichbar. Schreib eine Nachricht, um es erneut zu versuchen.",
       "placeholder": "Nachricht…",
       "send": "Senden",
       "stop": "Generierung stoppen",
@@ -1737,6 +1741,7 @@
   },
   "runLog": {
     "run": {
+      "llmBudget": "Budget an Modellaufrufen für diesen Lauf aufgebraucht.",
       "start": "Lauf gestartet ({{networkName}})",
       "wait": {
         "human": "Wartet auf Eingabe",
@@ -1749,6 +1754,7 @@
         "start": "Batch-Lauf gestartet"
       },
       "agent": {
+        "toolCap": "Agent: {{calls}} Werkzeugaufrufe für diesen Auftrag, Grenze erreicht.",
         "start": "Agent gestartet",
         "done": "Agent fertig",
         "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen hintereinander beendet",
@@ -1769,6 +1775,7 @@
         "failed": "Wissen konnte nicht indiziert werden: {{name}}"
       },
       "llm": {
+        "toolCallsRepaired": "{{count}} fehlende Werkzeugantworten ergänzt.",
         "start": "LLM {{model}}",
         "done": "LLM fertig ({{durationMs}} ms)",
         "vram": "VRAM {{model}}: Schätzung {{estimated}}, belegt {{used}}, {{delta}} ({{percent}}). Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}{{placement}}.",
@@ -1776,6 +1783,7 @@
         "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
       },
       "tool": {
+        "limitReached": "Werkzeug {{name}}: Limit von {{limit}} Aufrufen pro Lauf erreicht.",
         "call": "Werkzeug {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
@@ -1789,6 +1797,11 @@
       },
       "stepLimit": "Schrittlimit erreicht",
       "orchestrator": {
+        "toolCap": "Orchestrator: {{calls}} Werkzeugaufrufe in diesem Schritt, Grenze erreicht.",
+        "compact": "Orchestrator-Kontext verdichtet (Stufe {{level}}).",
+        "privateReasoning": "Interne Überlegung des Modells nicht im Chat gezeigt.",
+        "llmPause": "Orchestrator-Modell nicht erreichbar ({{error}}); wartet auf eine Nachricht.",
+        "emptyTask": "Leerer Auftrag; letzte Nutzernachricht wird verwendet.",
         "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
         "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
         "defer": "Nächster Schritt nach der Chat-Nachricht war unlesbar; der Lauf geht weiter.",
@@ -1815,6 +1828,7 @@
       }
     },
     "runtime": {
+      "generationLimit": "Antwort nach der Zeitgrenze abgebrochen.",
       "timeout": "Kein Fortschritt vom Modell",
       "unreachable": "Runtime nicht erreichbar"
     }

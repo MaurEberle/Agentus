@@ -763,9 +763,8 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
     )
     assert len(prompts) == 4
     assert raw_listing in prompts[1]
-    assert raw_listing not in prompts[2]
-    assert "Your tools:" not in prompts[2]
-    assert raw_listing not in prompts[3]
+    # O9: later decisions keep the latest own result as a data block.
+    assert raw_listing in prompts[3] and "<tool_result" in prompts[3]
     assert ". list ok" in prompts[3]
     assert "Your tools:" in prompts[3]
     texts = [item["content"] for item in (stored["chat"] or [])]
@@ -3551,4 +3550,5 @@ def test_takeover_without_a_write_fails_the_run(monkeypatch, api_env) -> None:
     starts = [row for row in list_logs(stored["id"]) if row["message"] == "run.agent.start"]
     assert len(starts) == 3
     texts = "\n".join(item["content"] or "" for item in (stored["chat"] or []))
-    assert "Ich schaffe es nicht." not in texts
+    # O13: a reply during takeover reaches the user; the open task still fails the run.
+    assert "Ich schaffe es nicht." in texts

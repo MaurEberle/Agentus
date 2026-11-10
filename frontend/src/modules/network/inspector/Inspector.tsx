@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { ModelCombobox } from '@/components/ModelCombobox';
 import { TagInput } from '@/components/TagInput';
@@ -832,6 +833,21 @@ function DisplayNameField({ node, readOnly }: { node: GraphNode; readOnly: boole
   );
 }
 
+/**
+ * What applies when "Max tokens" is empty. Mirrors backend `turn_runtime._output_cap`:
+ * Ollama gets context / 4 (4,096 to 16,384, and at most the room the prompt leaves);
+ * cloud providers keep their own default.
+ */
+function autoMaxTokensLabel(provider: string, numCtx: unknown, t: TFunction): string {
+  if (provider !== 'ollama') return t('network.inspector.llm.maxTokensProvider');
+  const ctx = Number(numCtx);
+  if (!Number.isFinite(ctx) || ctx <= 0) {
+    return t('network.inspector.llm.maxTokensAutoMax', { count: (16384).toLocaleString() });
+  }
+  const auto = Math.min(16384, Math.max(4096, Math.floor(ctx / 4)));
+  return t('network.inspector.llm.maxTokensAuto', { count: auto.toLocaleString() });
+}
+
 function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
@@ -1079,6 +1095,8 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
             <Input
               type="number"
               value={node.data.maxTokens == null ? '' : String(node.data.maxTokens)}
+              placeholder={autoMaxTokensLabel(provider, node.data.numCtx, t)}
+              title={autoMaxTokensLabel(provider, node.data.numCtx, t)}
               disabled={readOnly}
               onChange={(event) =>
                 editorUpdateNodeData(node.id, {

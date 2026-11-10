@@ -831,6 +831,9 @@
         "noIssues": "Sin errores de validación."
       },
       "llm": {
+        "maxTokensAuto": "vacío = automático {{count}}",
+        "maxTokensAutoMax": "vacío = automático, como máximo {{count}}",
+        "maxTokensProvider": "vacío = valor por defecto del proveedor",
         "provider": "Proveedor",
         "openaiCompat": "Compatible con OpenAI",
         "model": "Modelo",
@@ -1389,6 +1392,7 @@
       "splitWidth": "Cambiar el ancho de red y actividad"
     },
     "chat": {
+      "llmRetry": "El modelo del orquestador no está disponible ahora. Envía un mensaje para intentarlo de nuevo.",
       "placeholder": "Mensaje…",
       "send": "Enviar",
       "stop": "Detener generación",
@@ -1670,6 +1674,7 @@
   },
   "runLog": {
     "run": {
+      "llmBudget": "Presupuesto de llamadas al modelo agotado para esta ejecución.",
       "start": "Ejecución iniciada ({{networkName}})",
       "wait": {
         "human": "Esperando entrada",
@@ -1682,6 +1687,7 @@
         "start": "Ejecución por lotes iniciada"
       },
       "agent": {
+        "toolCap": "Agente: {{calls}} llamadas a herramientas para esta tarea, límite alcanzado.",
         "start": "Agente iniciado",
         "done": "Agente finalizado",
         "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas seguidas",
@@ -1702,6 +1708,7 @@
         "failed": "No se pudo indexar el conocimiento: {{name}}"
       },
       "llm": {
+        "toolCallsRepaired": "Se añadieron {{count}} respuestas de herramienta que faltaban.",
         "start": "LLM {{model}}",
         "done": "LLM finalizado ({{durationMs}} ms)",
         "vram": "VRAM {{model}}: estimación {{estimated}}, usado {{used}}, {{delta}} ({{percent}}). Expertos {{expertsOnGpu}}/{{expertLayers}}, atención {{attentionLayersOnGpu}}{{placement}}.",
@@ -1709,6 +1716,7 @@
         "moeUnsplit": "No se puede repartir los expertos de {{model}}. No se envía num_gpu."
       },
       "tool": {
+        "limitReached": "Herramienta {{name}}: límite de {{limit}} llamadas por ejecución alcanzado.",
         "call": "Herramienta {{name}}"
       },
       "router": "Enrutador {{branch}} → {{target}}",
@@ -1722,6 +1730,11 @@
       },
       "stepLimit": "Límite de pasos alcanzado",
       "orchestrator": {
+        "toolCap": "Orquestador: {{calls}} llamadas a herramientas en este paso, límite alcanzado.",
+        "compact": "Contexto del orquestador condensado (nivel {{level}}).",
+        "privateReasoning": "El razonamiento interno del modelo no se muestra en el chat.",
+        "llmPause": "Modelo del orquestador no disponible ({{error}}); esperando un mensaje.",
+        "emptyTask": "Tarea vacía; se usa el último mensaje del usuario.",
         "repair": "La orden no se pudo leer, nuevo intento.",
         "unreadable": "El orquestador no entregó un paso legible.",
         "defer": "El siguiente paso tras el mensaje de chat era ilegible; la ejecución continúa.",
@@ -1743,6 +1756,7 @@
       }
     },
     "runtime": {
+      "generationLimit": "Respuesta detenida en el límite de tiempo.",
       "timeout": "Sin progreso del modelo",
       "unreachable": "Runtime no accesible"
     },

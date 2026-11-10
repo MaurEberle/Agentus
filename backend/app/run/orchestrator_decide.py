@@ -16,11 +16,19 @@ from app.run.limits import (
     MAX_ORCHESTRATOR_FAILED_THINKS,
     MAX_ORCHESTRATOR_FAILED_TOOLS,
     MAX_ORCHESTRATOR_TOOL_CALLS,
+    MAX_CALL_SECONDS,
     MAX_SAME_RETRIES,
     STREAM_IDLE_TIMEOUT_SEC,
 )
 from app.run.memory import MAX_COMPACT_LEVEL, RunMemory, ToolEvent, clip_tool_messages
-from app.run.orchestrate import control_source, match_agent, parse_orchestrator_action, reject_reason
+from app.help.visible import strip_think
+from app.run.orchestrate import (
+    control_source,
+    match_agent,
+    parse_orchestrator_action,
+    reject_reason,
+    structured_action,
+)
 from app.run.turn_runtime import _SAME_RETRY
 from app.runtime.completions import estimate_token_count
 from app.runtime.errors import RuntimeApiError
@@ -33,6 +41,10 @@ _REPAIR_NOTE = (
 )
 
 _TOOL_DECIDE_NOTE = "Reply with one JSON object. Do not call a tool."
+
+_SLOW_NOTE = (
+    "Your last answer took too long and was stopped. Decide now, briefly, with one JSON object."
+)
 
 _TOOL_CAP_NOTE = (
     "You used {n} tool calls in this step, which is the limit. No more tools in this step. "
@@ -47,6 +59,11 @@ _TOOL_THINK_NOTE = (
     "Do not repeat the same failed call."
 )
 
+
+def _from_reasoning(result: CompletionResult, raw: str) -> bool:
+    """The control text came from provider reasoning because the visible answer was empty."""
+    visible = strip_think(result.content or "").strip()
+    return bool(raw.strip()) and not visible and raw.strip() == (result.reasoning or "").strip()
 
 def _control_raw(result: CompletionResult) -> str:
     return control_source(result.content or "", result.reasoning or "")
@@ -117,6 +134,7 @@ def _orchestrator_action(
     llm_node_id = orch.llm.node_id or orch.node_id
     action: dict[str, str] | None = None
     own_calls = 0
+    slow_retries = 0
     try:
         while not ctrl.stop_event.is_set():
             offered = turn_runtime._available_tools(ctrl, compiled, orch.node_id, offered)
@@ -157,18 +175,27 @@ def _orchestrator_action(
             context_max = choice.context_max
             context_est = run_window.prompt_tokens(messages)
             options = turn_runtime._ollama_options(llm, choice)
+            output_cap, auto_cap = turn_runtime._output_cap(llm, choice, context_est)
             turn_runtime._prepare_resident(compiled, llm)
             emit_log(
                 "info",
                 "run.llm.start",
                 node_id=llm_node_id,
-                payload={"provider": llm.provider, "model": llm.model, "waitReason": "llm", "contextMax": context_max},
+                payload={
+                    "provider": llm.provider,
+                    "model": llm.model,
+                    "waitReason": "llm",
+                    "contextMax": context_max,
+                    "maxTokens": output_cap,
+                    "maxTokensAuto": auto_cap,
+                },
             )
             from app.runtime import completions as runtime_completions
 
             repaired = turn_runtime._close_open_tool_calls(messages)
             if repaired:
                 emit_log("warn", "run.llm.toolCallsRepaired", node_id=orch.node_id, payload={"count": repaired})
+            turn_runtime._charge_llm(ctrl, orch.node_id)
             turn_runtime._set_llm(ctrl, compiled, llm_node_id, busy=True)
             try:
                 result = runtime_completions.complete_live(
@@ -180,9 +207,10 @@ def _orchestrator_action(
                         credential_id=llm.credential_id,
                         secret=secret,
                         temperature=llm.temperature,
-                        max_tokens=llm.max_tokens,
+                        max_tokens=output_cap,
                         tools=offered or None,
                         timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
+                        max_duration_sec=MAX_CALL_SECONDS,
                         ollama_options=options,
                     ),
                     should_abort=ctrl.stop_event.is_set,
@@ -204,10 +232,21 @@ def _orchestrator_action(
                 ):
                     return None
                 key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"
+                if key == "runtime.generationLimit" and slow_retries < 1:
+                    # R1: one more chance with a nudge to be brief; a second overrun ends the run.
+                    slow_retries += 1
+                    emit_log("warn", key, node_id=orch.node_id, payload=turn_runtime._runtime_error_payload(exc))
+                    messages.append(LlmMessage(role="user", content=_SLOW_NOTE))
+                    continue
                 if key in _SAME_RETRY and model_retries < MAX_SAME_RETRIES:
                     model_retries += 1
                     emit_log("warn", key, node_id=orch.node_id)
                     continue
+                if isinstance(exc, RuntimeApiError) and key in _SAME_RETRY:
+                    # O14: the model is away, the course is intact. The loop pauses instead of failing.
+                    emit_log("warn", key, node_id=orch.node_id, payload=turn_runtime._runtime_error_payload(exc))
+                    action = {"action": "llm-unavailable", "text": key, "agent": "", "task": "", "source": ""}
+                    return action
                 ctrl.last_error_node_id = orch.node_id
                 emit_log(
                     "error",
@@ -384,6 +423,11 @@ def _orchestrator_action(
                 return action
             parsed = parse_orchestrator_action(raw)
             kind = parsed.get("action") or "reply"
+            if kind == "reply" and _from_reasoning(result, raw) and not structured_action(raw):
+                # O10: provider reasoning is private planning; it must never reach the chat.
+                emit_log("info", "run.orchestrator.privateReasoning", node_id=orch.node_id)
+                action = {"action": "think", "text": parsed.get("text") or "", "agent": "", "task": "", "source": ""}
+                return _tag_tokens(action, result, out_final)
             if kind == "reply" and block_reply:
                 action = {
                     "action": "think",
@@ -436,6 +480,8 @@ def _orchestrator_action(
                     }
                     return _tag_tokens(action, result, out_final)
                 parsed["agent"] = agent_id
+                # O16: keep what the model wrote next to the resolved id for the log.
+                parsed["agentToken"] = token
             if kind in {"call", "ask", "reply", "finish"}:
                 memory.orch_failed_tools = 0
                 memory.orch_failed_thinks = 0

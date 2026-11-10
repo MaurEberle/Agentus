@@ -309,6 +309,21 @@ def _dispatch_tool(
         )
     return masked, fact, ok_tool
 
+class RunBudgetExceeded(Exception):
+    """O12: the run used MAX_RUN_LLM_CALLS model calls."""
+
+    def __init__(self) -> None:
+        super().__init__("run.llmBudget")
+
+def _charge_llm(ctrl: RunController, node_id: str) -> None:
+    """Count one model call of this run; raise once the run budget is used up."""
+    from app.run.limits import MAX_RUN_LLM_CALLS
+
+    if ctrl.llm_calls >= MAX_RUN_LLM_CALLS:
+        ctrl.last_error_node_id = node_id
+        raise RunBudgetExceeded()
+    ctrl.llm_calls += 1
+
 def _skip_tool_call(messages: list[LlmMessage], call, error_key: str, detail: str) -> None:
     """Answer a tool call that was not run. Every tool_call_id needs a tool message."""
     import json
@@ -487,6 +502,31 @@ def _log_vram_compare(llm, options, choice, node_id: str) -> None:
         )
     except Exception:
         log.exception("vram compare failed model=%s", getattr(llm, "model", ""))
+
+def _output_cap(llm, choice, prompt_est: int) -> tuple[int | None, bool]:
+    """R1: max output tokens for one call. Returns (cap, automatic).
+
+    A ``maxTokens`` on the LLM node wins. Without it, Ollama would generate until the
+    context window is full (a 131k window allowed one 123k-token reasoning). The
+    automatic cap never changes the window: it is derived from it and limited to the
+    room the prompt leaves. Cloud providers keep their own defaults.
+    """
+    from app.run.limits import AUTO_OUTPUT_MAX, AUTO_OUTPUT_MIN, AUTO_OUTPUT_ROOM_MIN
+
+    if isinstance(llm.max_tokens, int) and llm.max_tokens > 0:
+        return llm.max_tokens, False
+    if llm.provider != "ollama":
+        return None, False
+    ctx = None
+    for candidate in (getattr(choice, "context_max", None), getattr(choice, "num_ctx", None), llm.num_ctx):
+        if isinstance(candidate, int) and candidate > 0:
+            ctx = candidate
+            break
+    if ctx is None:
+        return AUTO_OUTPUT_MAX, True
+    cap = min(AUTO_OUTPUT_MAX, max(AUTO_OUTPUT_MIN, ctx // 4))
+    room = max(AUTO_OUTPUT_ROOM_MIN, ctx - max(0, prompt_est))
+    return min(cap, room), True
 
 def _ollama_options(llm, choice) -> dict | None:
     if llm.provider != "ollama":

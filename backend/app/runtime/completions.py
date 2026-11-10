@@ -888,10 +888,13 @@ def _stream_once(
         "activity": time.monotonic(),
         "http": None,
         "timed_out": False,
+        "over_time": False,
         "aborted": False,
     }
     state_lock = threading.Lock()
     limit = req.timeout_sec if req.timeout_sec and req.timeout_sec > 0 else 180.0
+    total_limit = req.max_duration_sec if req.max_duration_sec and req.max_duration_sec > 0 else None
+    began = time.monotonic()
 
     def touch() -> None:
         with state_lock:
@@ -912,8 +915,14 @@ def _stream_once(
                         on_tokens(tail.tokens, tail.rate)
             except Exception:
                 log.exception("runner token tail failed model=%s", req.model)
+            now = time.monotonic()
             with state_lock:
-                quiet = time.monotonic() - float(state["activity"])
+                quiet = now - float(state["activity"])
+            if total_limit is not None and now - began >= total_limit:
+                with state_lock:
+                    state["over_time"] = True
+                _close_stream(state)
+                return
             if quiet >= limit:
                 with state_lock:
                     state["timed_out"] = True
@@ -998,9 +1007,18 @@ def _stream_once(
         with state_lock:
             aborted = bool(state["aborted"])
             timed_out = bool(state["timed_out"])
+            over_time = bool(state["over_time"])
         if aborted:
             return "done"
-        if timed_out or is_timeout_error(exc):
+        minutes = (time.monotonic() - began) / 60.0
+        if over_time:
+            yield _stream_error("runtime.generationLimit", f"stopped after {minutes:.0f} min (limit {total_limit / 60:.0f} min)")
+            return "done"
+        if timed_out:
+            # R8: our own watchdog closed the socket; say so instead of the raw socket error.
+            yield _stream_error("runtime.timeout", f"no progress for {limit:.0f} s after {minutes:.0f} min")
+            return "done"
+        if is_timeout_error(exc):
             yield _stream_error("runtime.timeout", f"{type(exc).__name__}: {exc}")
             return "done"
         if is_transport_error(exc):

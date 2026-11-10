@@ -71,10 +71,14 @@ def _orchestrator_call(
 ) -> str:
     token = action.get("agent") or ""
     agent_id = match_agent(token, names)
-    task = (action.get("task") or "").strip() or memory.last_user() or user_text
+    given_task = (action.get("task") or "").strip()
+    task = given_task or memory.last_user() or user_text
     if agent_id is None or agent_id not in compiled.agents:
         memory.add_note(_unknown_agent_note(token, names))
         return "skipped"
+    if not given_task:
+        # O17: an empty task falls back to the last user message; make that visible.
+        emit_log("warn", "run.orchestrator.emptyTask", node_id=agent_id)
     agent = compiled.agents[agent_id]
     has_tools = bool(agent.tool_kinds or agent.mcp)
     source = memory.resolve_source(action.get("source") or "", names)
@@ -110,14 +114,19 @@ def _orchestrator_call(
             reuse=continued,
         )
         if text is None:
-            return "cancelled" if ctrl.stop_event.is_set() else "ran"
+            if ctrl.stop_event.is_set():
+                return "cancelled"
+            # O17: the agent turn gave up without a result; tell the orchestrator why.
+            record.error = record.error or "agent stopped"
+            memory.set_anomaly(record)
+            return _ran()
         if record.error == "prompt does not fit":
             memory.set_anomaly(record)
             return _ran()
         if record.error == "too many tool failures":
             memory.set_anomaly(record)
             return _ran()
-        if record.error in {"too many thinks", "think loop", "empty stops"}:
+        if record.error in {"too many thinks", "think loop", "empty stops", "runtime.generationLimit"}:
             memory.set_anomaly(record)
             return _ran()
         if record.error:

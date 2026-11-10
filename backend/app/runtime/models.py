@@ -53,6 +53,8 @@ class CompletionRequest(ApiModel):
     max_tokens: int | None = Field(default=None, alias="maxTokens")
     tools: list[dict[str, Any]] | None = None
     timeout_sec: float = 120.0
+    # R1: total time one call may take, even while tokens keep coming. None = no limit.
+    max_duration_sec: float | None = Field(default=None, alias="maxDurationSec")
     ollama_options: dict[str, Any] | None = None
 
 

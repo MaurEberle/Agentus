@@ -26,7 +26,7 @@ def test_last_agent_result_returns_to_the_orchestrator() -> None:
     assert "Hallo" in blob
 
 
-def test_orchestrator_tool_lines_hide_the_result() -> None:
+def test_orchestrator_tool_lines_keep_latest_results_as_data() -> None:
     memory = RunMemory()
     memory.note_own_tool(
         ToolEvent(name="file_access", arguments="{}", ok=True, result="ROHER-LISTE"),
@@ -37,8 +37,9 @@ def test_orchestrator_tool_lines_hide_the_result() -> None:
         None,
     )
     blob = memory.prompt_text("system")
-    assert "ROHER-LISTE" not in blob
-    assert "42" not in blob
+    # O9: the latest own results stay visible, marked as data.
+    assert '<tool_result name="file_access">\nROHER-LISTE' in blob
+    assert '<tool_result name="calculator">\n42' in blob
     assert ". list ok" in blob
     assert "calculator ok" in blob
     assert memory.to_dict()["ownTools"][0]["result"] == "ROHER-LISTE"

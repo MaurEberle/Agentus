@@ -13,6 +13,8 @@ from app.run import agent_turn, dispatch, orchestrator_decide, turn_runtime
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.limits import (
+    MAX_LLM_PAUSES,
+    MAX_TAKEOVER_REJECTS,
     MAX_AGENT_INVOCATIONS,
     MAX_ORCHESTRATOR_STEPS,
     MAX_ORCHESTRATOR_THINKS,
@@ -50,6 +52,11 @@ _FINISH_LATE_NOTE = (
     "Handle that message first, then finish."
 )
 
+_TAKEOVER_FINISH_NOTE = (
+    "Takeover is still open: the file task of the closed agent is not done. "
+    "Do it with your tools now. Finish again only to end the run without it."
+)
+
 _FINISH_FILES_NOTE = (
     "A coding agent made no successful write or delete and returned no text. "
     "Check with a tool or call that agent again. Finish only when the files exist."
@@ -57,6 +64,8 @@ _FINISH_FILES_NOTE = (
 
 
 def _run_error_class(exc: BaseException) -> str:
+    if isinstance(exc, turn_runtime.RunBudgetExceeded):
+        return "budget"
     if isinstance(exc, RuntimeApiError) and exc.error_key == "runtime.timeout":
         return "timeout"
     if isinstance(exc, RuntimeApiError) and str(exc.error_key).startswith("runtime."):
@@ -288,6 +297,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     thinks = 0
     short_thinks = 0
     spoke = False
+    pauses = 0
     while not ctrl.stop_event.is_set():
         if _drain_user(ctrl, compiled, memory):
             # New user input: a reply to it is a fresh answer, not a second reply.
@@ -309,6 +319,21 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             return "failed"
         if action.get("action") == "failed-tools":
             return "failed"
+        if action.get("action") == "llm-unavailable":
+            key = action.get("text") or "runtime.unreachable"
+            pauses += 1
+            if pauses > MAX_LLM_PAUSES:
+                ctrl.fail_message = key
+                ctrl.fail_class = "llm_error"
+                ctrl.last_error_node_id = orch.node_id
+                turn_runtime._set_node(ctrl, orch.node_id, "error", error=key)
+                return "failed"
+            reply = _pause_for_model(ctrl, compiled, key)
+            if reply is None:
+                return "cancelled"
+            memory.add_user(reply)
+            spoke = False
+            continue
         if action.get("action") == "unreadable":
             ctrl.fail_message = "run.orchestrator.unreadable"
             ctrl.fail_class = "orchestrator"
@@ -357,7 +382,11 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             "info",
             "run.orchestrator.action",
             node_id=orch.node_id,
-            payload={"action": kind, "agent": action.get("agent") or ""},
+            payload={
+                "action": kind,
+                "agent": action.get("agent") or "",
+                "requested": action.get("agentToken") or "",
+            },
         )
         if kind == "ask":
             spoke = False
@@ -387,7 +416,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                     node_id=orch.node_id,
                     payload={"agent": closed.name if closed else ""},
                 )
-                if memory.takeover_rejects >= 2:
+                if memory.takeover_rejects >= MAX_TAKEOVER_REJECTS:
                     _store_memory(ctrl, memory)
                     return _fail_takeover(ctrl, orch.node_id, memory)
                 memory.add_note("That agent is closed for this task. Use your tools. Do not call it.")
@@ -406,6 +435,11 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             continue
         if kind == "finish":
             if memory.takeover:
+                # O13: one warning first; a second finish ends the run honestly as failed.
+                if not memory.takeover_finish_warned:
+                    memory.takeover_finish_warned = True
+                    memory.set_nudge(_TAKEOVER_FINISH_NOTE)
+                    continue
                 _store_memory(ctrl, memory)
                 return _fail_takeover(ctrl, orch.node_id, memory)
             if _drain_user(ctrl, compiled, memory):
@@ -422,9 +456,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             _finish_targets(ctrl, compiled, orch, text)
             _store_memory(ctrl, memory)
             return "succeeded"
-        if memory.takeover:
-            _store_memory(ctrl, memory)
-            return _fail_takeover(ctrl, orch.node_id, memory)
+        # O13: a reply during takeover informs the user; it no longer fails the run.
         if text.strip():
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
@@ -543,14 +575,50 @@ def _clear_human_wait(ctrl: RunController, compiled: CompiledGraph) -> None:
         turn_runtime._set_node(ctrl, orch.node_id, "idle")
 
 def _store_memory(ctrl: RunController, memory: RunMemory) -> None:
+    """Persist the course. O15: bounded payload, and no write when nothing changed."""
     if not ctrl.run_id:
+        return
+    import json
+
+    payload = memory.to_dict()
+    try:
+        fingerprint = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
+    except (TypeError, ValueError):
+        fingerprint = None
+    if fingerprint is not None and fingerprint == memory.persisted:
         return
     try:
         from app.db.runs import update_run
 
-        update_run(ctrl.run_id, memory=memory.to_dict())
+        update_run(ctrl.run_id, memory=payload)
+        memory.persisted = fingerprint
     except Exception:
-        return
+        log.warning("run memory not stored run=%s", ctrl.run_id, exc_info=True)
+
+def _pause_for_model(ctrl: RunController, compiled: CompiledGraph, key: str) -> str | None:
+    """O14: tell the user the orchestrator model is away and wait for a message to retry."""
+    orch = compiled.orchestrator
+    node_id = orch.node_id if orch is not None else None
+    msg = ChatMessage(
+        id=str(uuid.uuid4()),
+        run_id=ctrl.run_id or "",
+        role="assistant",
+        content="The orchestrator model is not reachable right now. Send a message to try again.",
+        created_at=utc_now(),
+        message_key="monitoring.chat.llmRetry",
+        message_params={"error": key},
+    )
+    ctrl.remember_chat(msg, generating=False)
+    speaker = node_label(compiled, node_id) or "orchestrator"
+    ctrl.set_wait_ask(speaker=speaker, excerpt=msg.content, node_id=node_id)
+    if node_id:
+        turn_runtime._set_node(ctrl, node_id, "waiting", wait="human")
+    emit_log("warn", "run.orchestrator.llmPause", node_id=node_id, payload={"error": key})
+    reply = _queue_get(ctrl)
+    _clear_human_wait(ctrl, compiled)
+    if not reply or ctrl.stop_event.is_set():
+        return None
+    return reply
 
 def _publish_assistant(ctrl: RunController, text: str) -> None:
     cleaned = text.strip()

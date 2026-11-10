@@ -35,10 +35,10 @@ def orchestrator_instructions(
             + ".\n"
             "Takeover is active. Call a tool with a tool call and do the failed file task yourself.\n"
             "Do not call the closed agent. Do not describe the tool call in a sentence.\n"
-            "You may call tools as often as you need, then one JSON object.\n"
+            "You may call up to ten tools per decision, then one JSON object.\n"
             "Five failed tool calls in a row start a think round. Two failed think rounds in a row stop the run. A successful tool call resets that count.\n"
             "After a successful write, edit, or delete, decide again with one JSON object.\n"
-            "A later step sees only short lines for your own tools, not the tool result.\n"
+            "A later step sees short lines for your own tools and your last three tool results, shortened.\n"
         )
     elif names:
         tool_block = (
@@ -47,10 +47,10 @@ def orchestrator_instructions(
             + ".\n"
             "Call a tool with a tool call. Do not put a tool call in the JSON object and do not describe it in a sentence.\n"
             "Use tools to check files after an agent. Do not use tools instead of calling an agent.\n"
-            "You may call tools as often as you need, then one JSON object.\n"
+            "You may call up to ten tools per decision, then one JSON object.\n"
             "Five failed tool calls in a row start a think round. Two failed think rounds in a row stop the run. A successful tool call resets that count.\n"
             "After the tool result, decide again with one JSON object.\n"
-            "A later step sees only short lines for your own tools, not the tool result.\n"
+            "A later step sees short lines for your own tools and your last three tool results, shortened.\n"
         )
     protocol = f"""You orchestrate this agent network.
 You are the only voice in the run chat. Agents do not speak to the user.
@@ -189,23 +189,60 @@ def _prepare(raw: str) -> str:
     return text
 
 
+# O11: models often write several objects ({"action":"think"...}{"action":"call"...}).
+# The first executable one wins, then a reply, then the first think.
+_EXECUTABLE = ("call", "ask", "finish")
+_MAX_JSON_SCAN = 40
+
+
+def _field(value: object) -> str:
+    """O19: nested JSON stays JSON text, not a Python repr."""
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False)
+    return str(value)
+
+
 def _parse_json_object(text: str) -> dict[str, str] | None:
-    start = text.find("{")
-    if start < 0:
+    decoder = json.JSONDecoder()
+    found: list[dict] = []
+    pos = 0
+    for _ in range(_MAX_JSON_SCAN):
+        start = text.find("{", pos)
+        if start < 0:
+            break
+        try:
+            value, length = decoder.raw_decode(text[start:])
+        except ValueError:
+            pos = start + 1
+            continue
+        pos = start + length
+        if isinstance(value, dict) and value.get("action") in _ACTIONS:
+            found.append(value)
+    if not found:
         return None
-    try:
-        value, _end = json.JSONDecoder().raw_decode(text[start:])
-    except ValueError:
-        return None
-    if isinstance(value, dict) and value.get("action") in _ACTIONS:
-        return _action(
-            str(value.get("action")),
-            str(value.get("text") or ""),
-            str(value.get("agent") or ""),
-            str(value.get("task") or ""),
-            str(value.get("source") or ""),
-        )
-    return None
+    chosen = (
+        next((item for item in found if item.get("action") in _EXECUTABLE), None)
+        or next((item for item in found if item.get("action") == "reply"), None)
+        or found[0]
+    )
+    return _action(
+        str(chosen.get("action")),
+        _field(chosen.get("text")),
+        _field(chosen.get("agent")),
+        _field(chosen.get("task")),
+        _field(chosen.get("source")),
+    )
+
+
+def structured_action(raw: str) -> bool:
+    """True when the text holds a control action, not just prose that falls back to reply."""
+    text = _prepare(raw)
+    return any(
+        parser(text) is not None
+        for parser in (_parse_json_object, _salvage, _salvage_prose_call, _salvage_markup_action)
+    )
 
 
 _PROSE_CALL = re.compile(
@@ -225,7 +262,8 @@ _MARKUP_PARAM = re.compile(
     r"<parameter=([^>\s/]+)>(.*?)</parameter>",
     re.DOTALL | re.IGNORECASE,
 )
-_MAX_MARKUP_TASK = 8000
+# O19: same order of magnitude as the other salvage paths; a task is an instruction.
+_MAX_MARKUP_TASK = 2000
 
 
 def _salvage_markup_action(text: str) -> dict[str, str] | None:

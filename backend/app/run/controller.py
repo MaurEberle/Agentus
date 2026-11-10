@@ -77,6 +77,7 @@ class RunController:
         self._wait_ask: WaitAsk | None = None
         # Per tool node for this run: calls made, and nodes that refused a call (maxCalls).
         self.tool_calls: dict[str, int] = {}
+        self.llm_calls = 0
         self.tool_refused: set[str] = set()
         set_run_slice_provider(self.slice)
 
@@ -166,6 +167,7 @@ class RunController:
             self._wait_ask = None
             self.tool_calls = {}
             self.tool_refused = set()
+            self.llm_calls = 0
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()

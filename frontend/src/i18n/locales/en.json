@@ -898,6 +898,9 @@
         "noIssues": "No validation issues."
       },
       "llm": {
+        "maxTokensAuto": "empty = automatic {{count}}",
+        "maxTokensAutoMax": "empty = automatic, at most {{count}}",
+        "maxTokensProvider": "empty = provider default",
         "provider": "Provider",
         "openaiCompat": "OpenAI-compatible",
         "model": "Model",
@@ -1456,6 +1459,7 @@
       "splitWidth": "Resize network and activity width"
     },
     "chat": {
+      "llmRetry": "The orchestrator model is not reachable right now. Send a message to try again.",
       "placeholder": "Message…",
       "send": "Send",
       "stop": "Stop generation",
@@ -1737,6 +1741,7 @@
   },
   "runLog": {
     "run": {
+      "llmBudget": "Model call budget for this run used up.",
       "start": "Run started ({{networkName}})",
       "wait": {
         "human": "Waiting for input",
@@ -1749,6 +1754,7 @@
         "start": "Batch run started"
       },
       "agent": {
+        "toolCap": "Agent: {{calls}} tool calls for this task, limit reached.",
         "start": "Agent started",
         "done": "Agent finished",
         "toolFailures": "Agent stopped after {{failed}} failed tool calls in a row",
@@ -1769,6 +1775,7 @@
         "failed": "Knowledge indexing failed: {{name}}"
       },
       "llm": {
+        "toolCallsRepaired": "Added {{count}} missing tool answers.",
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)",
         "vram": "VRAM {{model}}: estimate {{estimated}}, used {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
@@ -1776,6 +1783,7 @@
         "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
       },
       "tool": {
+        "limitReached": "Tool {{name}}: limit of {{limit}} calls per run reached.",
         "call": "Tool {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
@@ -1789,6 +1797,11 @@
       },
       "stepLimit": "Step limit reached",
       "orchestrator": {
+        "toolCap": "Orchestrator: {{calls}} tool calls in this step, limit reached.",
+        "compact": "Orchestrator context condensed (level {{level}}).",
+        "privateReasoning": "Model's internal reasoning not shown in the chat.",
+        "llmPause": "Orchestrator model not reachable ({{error}}); waiting for a message.",
+        "emptyTask": "Empty task; using the last user message.",
         "repair": "Control message was unreadable, trying again.",
         "unreadable": "The orchestrator did not produce a readable next step.",
         "defer": "The next step after the chat reply was unreadable; the run continues.",
@@ -1815,6 +1828,7 @@
       }
     },
     "runtime": {
+      "generationLimit": "Answer stopped at the time limit.",
       "timeout": "No progress from the model",
       "unreachable": "Runtime unreachable"
     }

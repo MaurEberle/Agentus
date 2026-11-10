@@ -359,11 +359,28 @@ Dateien: `run/orchestrator_loop.py` (äußere Schleife), `run/orchestrator_decid
 
 - **O8 (umgesetzt):** Eine Anomalie wird nicht mehr nach jeder Entscheidung gelöscht. Sie bleibt über `think`, `reply` und `ask` hinweg im Prompt und endet erst, wenn der nächste Agent-Aufruf beginnt (`RunMemory.begin_call`). Der Protokolltext im Orchestrator-Prompt sagt jetzt „It stays until your next call.“ Die aktuelle Anomalie steht als `anomaly` in `runs.memory`. Test: `test_anomaly_survives_think_and_ends_with_next_call`; gegen das alte Verhalten fehlt die Anomalie nach dem `think`.
 
+- **O9–O20 (Paket, umgesetzt bis auf O18):**
+  - **O9:** Die letzten 3 eigenen Tool-Ergebnisse des Orchestrators bleiben im Prompt, je bis 1.500 Zeichen und als `<tool_result name=…>`-Daten (`_own_results_block`). Der Prompttext ist angepasst („your last three tool results, shortened“).
+  - **O10:** Kommt eine Entscheidung nur aus dem Provider-`reasoning` (sichtbarer Inhalt leer) und ist keine Steueraktion lesbar, wird sie ein interner Gedanke und nicht im Chat veröffentlicht (`run.orchestrator.privateReasoning`). Sichtbarer Fließtext bleibt ein `reply`.
+  - **O11:** Mehrere JSON-Objekte in einer Antwort werden alle gelesen. Es gewinnt das erste ausführbare (`call`/`ask`/`finish`), dann ein `reply`, sonst der erste `think` (höchstens 40 Objekte).
+  - **O12:** Budget pro Lauf `MAX_RUN_LLM_CALLS = 400` Modellaufrufe (Orchestrator und Agenten zusammen). Danach endet der Lauf mit `run.llmBudget`, Fehlerklasse `budget`.
+  - **O13:** Ein `reply` während eines Takeovers erreicht den Nutzer, statt den Lauf zu beenden. Das erste `finish` während eines Takeovers bekommt einen Hinweis, erst das zweite beendet den Lauf als fehlgeschlagen. Gesperrte Agent-Aufrufe sind bis `MAX_TAKEOVER_REJECTS = 3` erlaubt (vorher 2).
+  - **O14:** Bleibt das Orchestrator-Modell nach dem Retry unerreichbar (`timeout`/`unreachable`/`upstream`), pausiert der Lauf: eine Chat-Meldung (`monitoring.chat.llmRetry`), Warten auf eine Nachricht, dann ein neuer Versuch mit intaktem Gedächtnis. Höchstens `MAX_LLM_PAUSES = 3` Pausen. Andere Fehler (z. B. `unauthorized`) beenden den Lauf weiterhin.
+  - **O15:** In `runs.memory` werden Listen (`windows`, `ownTools`, `rejected`, Tool-Events) auf 50 Einträge und Ergebnisse auf 2.000 Zeichen begrenzt. Ist der Stand unverändert, wird nicht neu geschrieben (Fingerprint). Schreibfehler werden geloggt statt verschluckt. Das Gedächtnis während des Laufs bleibt vollständig.
+  - **O16:** `run.orchestrator.action` loggt neben der aufgelösten Agent-ID auch den geschriebenen Namen (`requested`).
+  - **O17:** Ein leerer Auftrag wird als `run.orchestrator.emptyTask` geloggt. Gibt ein Agent-Zug ohne Stop auf, entsteht eine Anomalie („agent stopped“).
+  - **O19:** Der Markup-Salvage-Task ist auf 2.000 Zeichen begrenzt. Verschachteltes JSON in Feldern bleibt JSON statt Python-Repr.
+  - **O20:** Aufeinanderfolgende User-Nachrichten im Orchestrator-Prompt werden zu einer zusammengefasst.
+  - **Nebenbei:** Der Prompt versprach „call tools as often as you need“. Das ist korrigiert auf „up to ten tools per decision“ (passend zu O4).
+  - **O18 (zurückgestellt):** Das Protokoll ist weiter englisch und lang. Eine Kürzung lohnt sich erst nach einer Messung mit kleinen Modellen. Ohne Messdaten wäre das Risiko für funktionierende Netze höher als der Nutzen.
+  - **UI:** neue Log- und Chat-Texte in de, en und es (`runLog.run.*`, `monitoring.chat.llmRetry`).
+  - **Tests:** `tests/run/test_orchestrator_package.py` (11 Tests). Angepasst wurden 4 bestehende Tests, die das alte Verhalten festschrieben (O9: Ergebnisse verborgen, O13: `reply` im Takeover verborgen, Prompttexte). Gesamt: 810/810.
+
 ---
 
 ## 6. Offene Aufgaben (Backlog)
 
-Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B11, B12, B15, B22, F1, F2, F3, F6, F8, F9, F10, O1, O2, O3, O4, O5, O6, O7, O8, die Lint-Fehler und das Aufräumen im Installer. Einzelheiten stehen in den Abschnitten 2 und 5.
+Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B11, B12, B15, B22, F1, F2, F3, F6, F8, F9, F10, O1, O2, O3, O4, O5, O6, O7–O17, O19, O20, die Lint-Fehler und das Aufräumen im Installer. Einzelheiten stehen in den Abschnitten 2 und 5.
 
 ### 6.1 Entscheidungen nötig
 - [ ] **B5:** „Chat abbrechen“ wirkt nicht. Soll der Lauf nach dem Abbruch auf die nächste Nachricht warten, statt zu enden?
@@ -375,14 +392,15 @@ Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B1
 - ~~**O6b:** Rückfrage vor sensiblen Tool-Aufrufen~~ - **verworfen** (Entscheidung 2026-11-07): Rückfragen würden den Workflow stören. Schutz bleibt bei Kennzeichnung (O6), Tool-Konfiguration (Allowlist, Wurzelordner, `maxCalls`) und Schutzgrenzen.
 - [x] **O7:** erledigt (siehe 5.4).
 - [x] **O8:** erledigt (siehe 5.4).
-- [ ] **O9:** Ergebnisse eigener Tools über ein `think` hinweg erhalten.
-- [ ] **O10:** `reasoning` bzw. nicht lesbarer Text darf nicht als `reply` im Chat landen.
-- [ ] **O11:** Mehrere JSON-Objekte erkennen und das erste ausführbare nehmen.
-- [ ] **O12:** Gesamtbudget pro Lauf (LLM-Aufrufe, Tokens bzw. Dauer). Die Tool-Seite ist durch O4 begrenzt.
-- [ ] **O13:** Takeover weniger strikt (`reply`/`finish` sollen erlaubt sein).
-- [ ] **O14:** Ein Fehler des Orchestrator-LLM soll pausieren bzw. nachfragen statt den Lauf zu beenden.
-- [ ] **O15:** Gedächtnis inkrementell speichern und `windows` begrenzen.
-- [ ] **O16–O20:** Agent-Zuordnung loggen, Stille Annahmen in `dispatch`, Prompt-Länge, Salvage-Grenzen, Rollenfolge.
+- [x] **O9:** erledigt (siehe 5.4).
+- [x] **O10:** erledigt (siehe 5.4).
+- [x] **O11:** erledigt (siehe 5.4).
+- [x] **O12:** erledigt (siehe 5.4).
+- [x] **O13:** erledigt (siehe 5.4).
+- [x] **O14:** erledigt (siehe 5.4).
+- [x] **O15:** erledigt (siehe 5.4).
+- [x] **O16, O17, O19, O20:** erledigt (siehe 5.4).
+- [ ] **O18:** zurückgestellt. Prompt erst nach einer Messung mit kleinen Modellen kürzen bzw. übersetzen.
 
 ### 6.3 Sicherheit
 - [ ] **S4:** SSRF und DNS-Rebinding im HTTP-Tool (aufgelöste IP an den Connect binden, privat nur per Opt-in).
@@ -419,3 +437,39 @@ Stand 2026-11-07. Erledigt sind: S1, S2, S3, S5, S12, B1, B2, B3, B4, B6, B9, B1
 - [ ] Testlücken aus 2.7 schließen (Stop/Start-Race, Abbruch während der Indexierung, Zip-Überschreiben, MCP-Pfade). Es gibt noch keine Frontend-Tests.
 - [ ] README angleichen (2.6): Endpunkte, Hilfesprachen, Tools Terminal/Zip, Env-Variablen, `prompts/`.
 - [ ] Toten Code und Duplikate aufräumen (2.5), z. B. dreifache Secret-Masken, doppelter RAG/Cosinus, `include_all` schluckt `ImportError`.
+
+---
+
+## 7. Laufanalyse „Coder Architekt“ (2026-11-07)
+
+Lauf `0fe6a4cd…` lief mit dem Build vom 2026-11-07 (inkl. O1–O20):
+- **Laufzeit:** 13:07 bis 18:25 Uhr, also 5 h 17 min.
+- **Ergebnis:** `succeeded`, 32 Dateien im Projektordner `hello-world-10-languages`.
+- **Modellaufrufe:** 377, davon Orchestrator „Chef Coder“ (Qwen 35B MoE) 185, Senior (LFM2.5 24B) 102, Junior (Qwen 14B) 90.
+- **Tool-Aufrufe:** 260, davon Orchestrator 82, Senior 96, Junior 82; 20 fehlgeschlagen.
+
+**Was gut funktioniert hat:**
+- Die O4-Schrittgrenze hat den Orchestrator 8-mal gestoppt.
+- Der Retry nach dem Verbindungsabbruch hat geklappt.
+- Es mussten keine fehlenden Tool-Antworten ergänzt werden (O5).
+- Es war keine Verdichtung nötig (O7, Prompt höchstens ca. 17.700 Tokens).
+
+| # | Grad | Befund |
+|---|---|---|
+| R1 | **H** | **Ausufernde Generierung ohne Obergrenze: 72 % der Laufzeit.** Zwei einzelne Modellaufrufe dauerten 64 min (Junior: 123.102 Ausgabe-Tokens reines Reasoning, `finish_reason=length`, kein sichtbares Ergebnis) und 165 min (Senior, danach `WinError 10053` „Verbindung abgebrochen“, gespeichert als `runtime.timeout`). Die LLM-Knoten haben kein `maxTokens`, Ollama generiert also bis zum Kontextende (131k bzw. 88k). Der Idle-Watchdog greift nicht, weil laufend Tokens kommen. Danach liefen beide Agenten problemlos weiter (Retry 7 s). |
+| R2 | **H** | **Der Orchestrator macht die Arbeit der Agenten selbst.** Noch vor dem ersten Agent-Aufruf versuchte er, `package.json` und Ordner selbst zu schreiben. Insgesamt kamen 82 Datei-Tool-Aufrufe (Lesen, Schreiben, Editieren) von ihm. Er verbrauchte 49 % aller Modellaufrufe und stieß 8-mal an die 10er-Grenze. Der Prompt sagt „Use tools to check files … Do not use tools instead of calling an agent“, durchgesetzt wird das nicht. Ursache: Der eine Dateizugriffs-Knoten hängt an allen vier Knoten und erlaubt allen alle Aktionen. |
+| R3 | M | **Tool-Markup landet im Chat und erzeugt leere Gedanken.** 4 von 7 Orchestrator-Antworten im Chat enthalten rohes `<tool_call><function=file_access>…`. 19 von 82 Gedanken bestehen nur aus Tool-Markup. Grund: Nach eigener Tool-Nutzung bzw. der Grenze bekommt der Orchestrator keine Tools angeboten, schreibt den Aufruf aber als Text. `salvage_tool_calls` greift nur bei angebotenen Tools, also wird der Text veröffentlicht bzw. als `think` gezählt. |
+| R4 | M | **Budget fast erschöpft:** 377 von 400 Modellaufrufen. Ein etwas längerer Lauf wäre nach über 5 Stunden mit `run.llmBudget` gescheitert. Mit R1/R2 behoben wären es deutlich weniger Aufrufe. Alternativ das Budget pro Netz einstellbar machen. |
+| R5 | N | **Pfadfehler:** 11-mal `tools.fileAccess.notFound`, weil Modelle `src/…` ohne Projektordner schreiben, die Wurzel aber der übergeordnete Ordner ist. Das ist eine Netz-Konfiguration (Wurzel auf den Projektordner setzen oder im Prompt nennen), kein Code-Fehler. |
+| R6 | N | **Fortschrittsmeldungen im Chat listen auch Lesezugriffe** („Senior is done. Files: . list, … read“). Sie sollten nur geänderte Dateien nennen (`dispatch._publish_progress`). |
+| R7 | N | **`runs.models` ohne Orchestrator-Modell:** Die Historie zeigt nur 2 von 3 Modellen, weil `controller.start` nur Agent-Modelle sammelt. |
+| R8 | N | **Irreführende Einordnung:** Ein fehlgeschlagener Aufruf wird ohne Tokens gespeichert. Ein Verbindungsabbruch nach 165 min erscheint als `runtime.timeout`. |
+
+### 7.1 Backlog aus der Laufanalyse
+- [x] **R1:** umgesetzt. Ist `maxTokens` leer, setzt die Laufzeit für Ollama automatisch `num_predict` = Kontext/4 (4.096 bis 16.384), höchstens aber den Platz, den der Prompt im Fenster lässt (mind. 1.024). Die vom Nutzer gesetzte Kontextlänge bleibt unverändert, und die Fensterwahl sieht die automatische Grenze nicht. Ein eigenes `maxTokens` gilt immer, Cloud-Anbieter behalten ihren Standard. Zusätzlich eine Zeitgrenze von 20 min pro Aufruf (`runtime.generationLimit`): Beim Agenten wird daraus eine Anomalie ohne Retry, der Orchestrator bekommt einen kurzen zweiten Versuch. Wird eine Antwort abgeschnitten, kommt nur noch ein Auszug von 2.000 Zeichen zurück in den Verlauf (vorher das volle Reasoning), dazu der Hinweis „act now“. Der Watchdog-Abbruch meldet „no progress for 180 s after N min“ (Teil von R8). `run.llm.start` loggt `maxTokens`/`maxTokensAuto`. Im Inspector zeigt das leere Feld „Max. Tokens“ als Platzhalter, was gilt (z. B. „leer = automatisch 16.384“). Tests: `tests/run/test_output_limits.py` (8, darunter ein echter Stream-Server).
+- [ ] **R2:** Der Orchestrator bekommt außerhalb eines Takeovers nur lesende Dateiaktionen (`read`, `list`, `tree`, `stat`, `search`). Schreiben, Editieren und Löschen erlaubt die Laufzeit nur im Takeover.
+- [ ] **R3:** Tool-Markup in Antworten erkennen, nicht veröffentlichen und dem Modell zurückmelden, dass in diesem Schritt keine Tools verfügbar sind.
+- [ ] **R4:** Budget pro Netz einstellbar machen (Standard 400), nach R1/R2 neu bewerten.
+- [ ] **R6:** Fortschrittsmeldung nur mit geänderten Dateien.
+- [ ] **R7:** Orchestrator-Modell in `runs.models` aufnehmen.
+- [ ] **R8:** Verbindungsabbruch (`ReadError`) als `runtime.unreachable` einordnen und Tokens auch bei Fehlschlag speichern.

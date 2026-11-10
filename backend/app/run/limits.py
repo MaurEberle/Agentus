@@ -16,6 +16,19 @@ MAX_EMPTY_STOPS = 5
 MAX_FAILED_TOOL_CALLS = 10
 # Same truncated tool-call JSON from llama-server. Then it counts as one failed tool.
 MAX_TOOL_JSON_ATTEMPTS = 3
+# R1: output per model call when the LLM node has no maxTokens (Ollama only).
+# Context / 4, at least 4096, at most 16384, and never more than the room the prompt leaves.
+AUTO_OUTPUT_MIN = 4096
+AUTO_OUTPUT_MAX = 16384
+AUTO_OUTPUT_ROOM_MIN = 1024
+# R1: wall-clock limit for one model call, on top of the idle watchdog.
+MAX_CALL_SECONDS = 1200.0
+# O12: model calls per run (orchestrator and agents together). Then the run fails as run.llmBudget.
+MAX_RUN_LLM_CALLS = 400
+# O14: times one run may pause for an unreachable orchestrator model before it fails.
+MAX_LLM_PAUSES = 3
+# O13: calls to the closed takeover agent before the run fails.
+MAX_TAKEOVER_REJECTS = 3
 # Tool calls the orchestrator may make in one decision. Then tools are withheld and it must decide.
 MAX_ORCHESTRATOR_TOOL_CALLS = 10
 # Tool calls one agent may make for one task. Then it must answer with what it has.
