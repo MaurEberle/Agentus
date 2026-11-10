@@ -515,3 +515,34 @@ Lauf `0fe6a4cd…` lief mit dem Build vom 2026-11-07 (inkl. O1–O20):
 - Gesamt: 840/840 grün, Typecheck sauber, ESLint 0 Fehler.
 
 **Backlog:** R2 erledigt. R5 ist durch `capabilities.py` (Wurzel und Pfadregeln im Prompt) teilweise abgedeckt; der Pfad-Hinweis bei `notFound` bleibt offen. R3, R4, R6, R7 und der Token-Teil von R8 bleiben offen.
+
+---
+
+## 9. Laufanalyse „Coder Architekt“ (2026-11-10, abgebrochen)
+
+Lauf `0b716237…`: 21:06 bis 22:08 Uhr (lokal), vom Nutzer abgebrochen. 30 Modellaufrufe, 22 Tool-Aufrufe, 1 Agent-Auftrag.
+
+**Wichtig:** Der Lauf lief mit der **installierten Version vom 07.11.**, nicht mit dem Build vom 10.11. `run.llm.start` enthält kein `maxTokens`/`maxTokensAuto`. R1, der Merge (Orchestrator-Tools nur nach Fehlern, `capabilities.py`) und die Textprüfung waren also **nicht** aktiv.
+
+**Ablauf:**
+1. **Ab 21:06:** Der Orchestrator legt mit 10 eigenen Tool-Aufrufen Ordner, `greetings.ts` und `package.json` selbst an, bis zur Grenze `toolCap` (R2).
+2. **Ab 21:09:** Ein Auftrag an den Senior: „6 Infrastruktur-Dateien … (root)“. Der Senior arbeitet 14 min sauber und schreibt 11 Dateien.
+3. **Ab 21:23:** Der Orchestrator denkt. Danach erfindet er die Aktion `read_many` und wird repariert. Anschließend wiederholt er **wörtlich einen Gedanken von 21:08** („Junior hat Struktur und Daten angelegt …“, obwohl der Junior nie lief).
+4. **21:24:40:** Ein letzter Orchestrator-Aufruf startet und läuft **43,5 min ohne Ergebnis**, bis zum Abbruch. Der Leerlauf-Watchdog hat nicht ausgelöst, es kamen also laufend Tokens.
+
+**Bewertung:** Das war **keine Schleife aus vielen Runden**, sondern eine einzige ausufernde Generierung, genau der Fall aus R1. Mit dem Build vom 10.11. wäre der Aufruf bei 16.384 Ausgabe-Tokens (etwa 9 min bei dieser Geschwindigkeit) bzw. spätestens nach 20 min gestoppt worden und hätte einen kurzen zweiten Versuch bekommen.
+
+| # | Grad | Befund |
+|---|---|---|
+| L1 | **H** | **Ausufernde Generierung des Orchestrators:** 43,5 min. Ist im Build vom 10.11. durch R1 behoben, dort aber noch nicht installiert. |
+| L2 | **H** | **Projekt auf zwei Ordner verteilt:** Der Orchestrator legte `hello-world/…` an. Der Senior schrieb wie beauftragt „(root)“ in die **Tool-Wurzel** `agentus_moe_testing/` (`vite.config.ts`, `tsconfig.json`, `index.html`, `main.tsx`, `src/…`). Ursache: Die Wurzel des Dateizugriffs ist der Testordner, nicht das Projekt, und „root“ ist mehrdeutig. `capabilities.py` (im neuen Build) nennt den Agenten die Wurzel, löst die Mehrdeutigkeit aber nicht. |
+| L3 | M | **Gedanke wörtlich wiederholt, ohne Wirkung:** Die Erkennung (O1/O2) vergleicht nur mit dem **direkt vorherigen** Gedanken. Das Modell hat einen älteren Gedanken aus dem Prompt kopiert, und das bleibt unbemerkt. |
+| L4 | N | **Erfundene Tool-Aktion als Entscheidung** (`{"action":"read_many",…}`): wird korrekt repariert. Im neuen Build sagt `capabilities.py` ausdrücklich, dass Tools gerade nicht verfügbar sind. |
+| L5 | N | **Orchestrator macht selbst Dateiarbeit:** R2, im neuen Build durch den Merge behoben. |
+
+### 9.1 Backlog
+- [ ] **L1/L5:** Build vom 10.11. installieren. Danach erneut laufen lassen und prüfen, ob `maxTokensAuto`, `toolCap` und `textOnly` im Log auftauchen.
+- [ ] **L2:** Den Projektordner explizit machen. Zwei Wege:
+  - (a) Netz-Konfiguration: Wurzel des Dateizugriffs auf den Projektordner setzen.
+  - (b) Code: Der Orchestrator-Prompt verlangt Pfade **relativ zur Tool-Wurzel** und nennt die Wurzel (aus `capabilities.py`). Schreibt ein Agent eine Datei auf oberster Ebene der Wurzel, obwohl dort bereits ein Projektordner mit derselben Datei liegt, bekommt er einen Hinweis (verwandt mit R5).
+- [ ] **L3:** Die Wiederholungserkennung gegen **alle** gespeicherten Gedanken prüfen, nicht nur den letzten, und einen veralteten Gedanken, der kopiert wurde, nicht erneut speichern.

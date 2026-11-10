@@ -41,7 +41,8 @@ _BLOCKED_REPLY_NOTE = (
 )
 
 _REPEAT_THINK_NOTE = (
-    "You repeated the same plan. Do not think again. Act on it now: emit call, ask, or finish."
+    "You repeated the same plan as before. It may be outdated: check the latest status lines and "
+    "results first, then emit call, ask, or finish. Do not think again."
 )
 
 _ASK_SUPERSEDED_NOTE = (

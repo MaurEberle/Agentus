@@ -160,18 +160,23 @@ class RunMemory:
             self.turns.append(Turn("user", "note", cleaned))
 
     def add_think(self, text: str) -> bool:
-        """Keep an orchestrator plan in the course. True when it repeats the previous plan."""
+        """Keep an orchestrator plan in the course. True when it repeats a stored plan.
+
+        L3: models copy an older plan from the prompt word for word. Any stored plan
+        counts, not only the last one, and a copy is not stored a second time.
+        """
         cleaned = " ".join((text or "").split())
         if not cleaned or cleaned in {"…", "...", "."}:
             return False
         if len(cleaned) > _THINK_TEXT_CAP:
             cleaned = cleaned[: _THINK_TEXT_CAP - 1] + "…"
-        previous = next((turn.text for turn in reversed(self.turns) if turn.kind == "think"), None)
+        if any(turn.kind == "think" and turn.text == cleaned for turn in self.turns):
+            return True
         self.turns.append(Turn("assistant", "think", cleaned))
         thinks = [index for index, turn in enumerate(self.turns) if turn.kind == "think"]
         for index in reversed(thinks[:-_THINKS_KEPT]):
             del self.turns[index]
-        return previous == cleaned
+        return False
 
     def set_nudge(self, text: str) -> None:
         """Replace the single runtime hint instead of piling up notes."""

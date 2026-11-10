@@ -240,3 +240,13 @@ def test_anomaly_survives_think_and_ends_with_next_call(monkeypatch, api_env) ->
     assert "Anomaly for Schreiber" in prompts[2]
     assert "Anomaly for Schreiber" not in prompts[3]
     assert stored["memory"]["anomaly"] is None
+
+
+def test_copied_older_plan_is_detected_and_not_stored_again() -> None:
+    """L3: the run of 2026-11-10 copied a plan from two thinks earlier word for word."""
+    memory = RunMemory()
+    assert memory.add_think("Junior hat Struktur angelegt. Senior macht die Infrastruktur.") is False
+    assert memory.add_think("Senior hat 8 Dateien geschrieben. Ich prüfe sie.") is False
+    assert memory.add_think("Junior hat Struktur angelegt.  Senior macht die Infrastruktur.") is True
+    kept = [turn.text for turn in memory.turns if turn.kind == "think"]
+    assert len(kept) == 2
