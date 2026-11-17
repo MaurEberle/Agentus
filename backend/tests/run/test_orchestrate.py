@@ -167,7 +167,8 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "Use think for internal planning" in text
     assert '{"action":"think","text":"..."}' in text
     assert '{"action":"call","agent":"<id or name>","task":"..."}' in text
-    assert "Omit source" in text
+    assert 'Set source to "none"' in text
+    assert "exactly one agent has stored text" in text
 
 
 def test_instructions_mention_connected_tools() -> None:

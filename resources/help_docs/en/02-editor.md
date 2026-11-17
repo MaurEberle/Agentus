@@ -71,6 +71,7 @@ Secrets do **not** belong in inspector text or graph export — only the choice 
 
 - name not empty
 - at most one chat, at most one orchestrator, at least one end
+- without an orchestrator, the chain leads from its start (chat or first agent) to an end; with one, it has a channel to at least one agent
 - each agent: exactly one LLM edge. Without an orchestrator, one incoming message. With an orchestrator, exactly one channel and no message chain on the same agent
 - LLM: model set; cloud: credential
 - tool: kind. MCP: an enabled server from Settings; root path if the recipe needs it; file access: a folder that is not a drive root

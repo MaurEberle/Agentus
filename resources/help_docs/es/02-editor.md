@@ -71,6 +71,7 @@ Los secretos **no** van en el texto del inspector ni en la exportación del graf
 
 - Nombre no vacío
 - como máximo un chat, como máximo un orquestador, al menos un fin
+- sin orquestador, la cadena lleva desde su inicio (chat o primer agente) hasta un fin; con orquestador, este tiene un canal hacia al menos un agente
 - cada agente: exactamente una arista LLM. Sin orquestador, un mensaje entrante. Con orquestador, exactamente un canal y ninguna cadena de mensajes en el mismo agente
 - LLM: modelo definido; nube: credencial
 - Herramienta: tipo; MCP: servidor activo, ruta raíz si la receta la exige; acceso a archivos: una carpeta que no sea la raíz de la unidad

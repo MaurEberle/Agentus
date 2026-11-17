@@ -143,3 +143,49 @@ def test_refused_tool_does_not_use_up_max_calls(api_env) -> None:
     ctrl.tool_calls = {}
     _call(compiled, "ag1", openai_tool_name(_SERVER_A, "delete_thing"), fake)
     assert ctrl.tool_calls == {}
+
+
+def _call_with(compiled, owner_id: str, name: str, arguments: str, fake: _FakeMcp) -> tuple[str, bool]:
+    from app.run.controller import get_controller
+
+    ctrl = get_controller()
+    ctrl.compiled = compiled
+    body, _fact, ok = turn_runtime._dispatch_tool(
+        ctrl,
+        compiled,
+        owner_id=owner_id,
+        call_name=name,
+        call_arguments=arguments,
+        tool_kinds=compiled.agents[owner_id].tool_kinds,
+        mcp=fake,
+        record=None,
+        reuse=False,
+    )
+    return body, ok
+
+
+def test_broken_argument_json_is_reported_and_not_run(api_env) -> None:
+    """N2: broken JSON used to run the tool with {} and an unrelated error."""
+    compiled = _compiled()
+    fake = _FakeMcp()
+    name = openai_tool_name(_SERVER_A, "read_thing")
+    body, ok = _call_with(compiled, "ag1", name, '{"path": "a.txt"', fake)
+    assert ok is False
+    assert "tool.badArguments" in body
+    assert "not valid JSON" in body
+    assert fake.calls == []
+    body, ok = _call_with(compiled, "ag1", name, '["a.txt"]', fake)
+    assert ok is False
+    assert "one JSON object" in body
+    assert fake.calls == []
+
+
+def test_arguments_sent_as_a_json_string_are_unwrapped(api_env) -> None:
+    compiled = _compiled()
+    fake = _FakeMcp()
+    name = openai_tool_name(_SERVER_A, "read_thing")
+    body, ok = _call_with(compiled, "ag1", name, '"{\\"path\\": \\"a.txt\\"}"', fake)
+    assert ok is True and body == "done"
+    assert fake.calls == [(_SERVER_A, "read_thing")]
+    body, ok = _call_with(compiled, "ag1", name, "", fake)
+    assert ok is True

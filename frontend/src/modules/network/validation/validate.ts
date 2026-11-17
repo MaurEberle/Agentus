@@ -104,9 +104,17 @@ export function validateDocument(
     if (!toEnd) {
       issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorEnd' });
     }
+    const hasAgent = doc.edges.some(
+      (edge) => edge.source === orch.id && edge.targetHandle === 'channel' && byId.get(edge.target)?.type === 'agent',
+    );
+    if (!hasAgent) {
+      issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorAgents' });
+    }
   }
   if (!doc.nodes.some((node) => node.type === 'end')) {
     issues.push({ messageKey: 'network.validation.endRequired' });
+  } else if (orchestrators.length === 0 && chainStarts(doc).length > 0 && !chainReachesEnd(doc)) {
+    issues.push({ nodeId: chatInputs[0]?.id, messageKey: 'network.validation.chainEnd' });
   }
 
   for (const edge of doc.edges) {
@@ -162,6 +170,31 @@ function routerPatternProblem(match: string, pattern: string): 'routerPattern' |
   const trimmed = pattern.trim();
   if (!trimmed || trimmed.length > ROUTER_PATTERN_MAX) return 'routerPattern';
   return null;
+}
+
+/** Where a chain without orchestrator begins: the chat input, else agents nobody feeds. */
+function chainStarts(doc: AgentNetworkDocument): string[] {
+  const chat = doc.nodes.find((node) => node.type === 'chat_input');
+  if (chat) return [chat.id];
+  const fed = new Set(doc.edges.filter((edge) => edge.targetHandle === 'message').map((edge) => edge.target));
+  return doc.nodes.filter((node) => node.type === 'agent' && !fed.has(node.id)).map((node) => node.id);
+}
+
+/** N13: a chain that never reaches an end node runs and then fails. */
+function chainReachesEnd(doc: AgentNetworkDocument): boolean {
+  const types = new Map(doc.nodes.map((node) => [node.id, node.type]));
+  const queue = chainStarts(doc);
+  const seen = new Set<string>();
+  while (queue.length > 0) {
+    const id = queue.pop() as string;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (types.get(id) === 'end') return true;
+    for (const edge of doc.edges) {
+      if (edge.source === id && edge.targetHandle === 'message') queue.push(edge.target);
+    }
+  }
+  return false;
 }
 
 function routerGoesOnlyToEnds(doc: AgentNetworkDocument, routerId: string): boolean {

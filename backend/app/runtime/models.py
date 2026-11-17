@@ -38,7 +38,8 @@ class ChatMessage(ApiModel):
 
 
 class CompletionUsage(ApiModel):
-    prompt_tokens: int = Field(alias="promptTokens")
+    # None: the provider did not report it (N3); callers fall back to their estimate.
+    prompt_tokens: int | None = Field(default=None, alias="promptTokens")
     completion_tokens: int = Field(alias="completionTokens")
 
 

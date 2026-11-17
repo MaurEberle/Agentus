@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { memo, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { MessageCircleQuestion, Square, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { MarkdownView } from '@/components/MarkdownView';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -134,20 +135,22 @@ export function NetworkChat({
   );
 }
 
-function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
+// N12: the parent re-renders on every run update; a line that did not change keeps its bubble.
+const Bubble = memo(function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
   const { t } = useTranslation();
   const user = message.role === 'user';
   return (
     <article className={cn('flex flex-col gap-1', user ? 'items-end' : 'items-start')}>
       <div
         className={cn(
-          'max-w-[92%] cursor-text select-text whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
-          user ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+          'max-w-[92%] cursor-text select-text break-words rounded-lg px-3 py-2 text-sm',
+          user ? 'whitespace-pre-wrap bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         )}
       >
-        {formatChatBody(message, t)}
+        {/* N11: answers are Markdown; the user's own text stays as typed. */}
+        {user ? formatChatBody(message, t) : <MarkdownView text={formatChatBody(message, t)} bare />}
       </div>
       <time className="text-[11px] text-muted-foreground">{formatTime(message.createdAt, locale)}</time>
     </article>
   );
-}
+});

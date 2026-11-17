@@ -495,7 +495,7 @@ def _parse_usage(raw: object) -> CompletionUsage | None:
     completion = _int_field(raw, "completion_tokens", "output_tokens", "eval_count")
     if prompt is None and completion is None:
         return None
-    return CompletionUsage(prompt_tokens=prompt or 0, completion_tokens=completion or 0)
+    return CompletionUsage(prompt_tokens=prompt, completion_tokens=completion or 0)
 
 
 def _usage_nonzero(usage: CompletionUsage | None) -> bool:
@@ -942,6 +942,7 @@ def _stream_once(
     usage: CompletionUsage | None = None
     finish: str | None = None
     emitted = False
+    ended = False
     # The body read has no socket deadline. A quiet tool-call argument still
     # produces runner tokens; the watch below closes the client only when
     # neither the socket nor those tokens move.
@@ -991,6 +992,25 @@ def _stream_once(
                 _close_stream(state)
                 return
 
+    def closed_by_watch() -> tuple[bool, StreamEvent | None]:
+        """(aborted, error) when the watchdog closed the stream."""
+        with state_lock:
+            aborted = bool(state["aborted"])
+            timed_out = bool(state["timed_out"])
+            over_time = bool(state["over_time"])
+        if aborted:
+            return True, None
+        minutes = (time.monotonic() - began) / 60.0
+        if over_time:
+            return False, _stream_error(
+                "runtime.generationLimit",
+                f"stopped after {minutes:.0f} min (limit {total_limit / 60:.0f} min)",
+            )
+        if timed_out:
+            # R8: our own watchdog closed the socket; say so instead of the raw socket error.
+            return False, _stream_error("runtime.timeout", f"no progress for {limit:.0f} s after {minutes:.0f} min")
+        return False, None
+
     thread = threading.Thread(target=watch, name="llm-stream-idle", daemon=True)
     try:
         with client(timeout_sec=req.timeout_sec, unbounded_read=True) as http:
@@ -1021,6 +1041,7 @@ def _stream_once(
                     else:
                         continue
                     if data == "[DONE]":
+                        ended = True
                         break
                     try:
                         chunk = json.loads(data)
@@ -1070,19 +1091,11 @@ def _stream_once(
         yield _stream_error(exc.error_key, exc.detail)
         return "done"
     except Exception as exc:
-        with state_lock:
-            aborted = bool(state["aborted"])
-            timed_out = bool(state["timed_out"])
-            over_time = bool(state["over_time"])
+        aborted, watch_error = closed_by_watch()
         if aborted:
             return "done"
-        minutes = (time.monotonic() - began) / 60.0
-        if over_time:
-            yield _stream_error("runtime.generationLimit", f"stopped after {minutes:.0f} min (limit {total_limit / 60:.0f} min)")
-            return "done"
-        if timed_out:
-            # R8: our own watchdog closed the socket; say so instead of the raw socket error.
-            yield _stream_error("runtime.timeout", f"no progress for {limit:.0f} s after {minutes:.0f} min")
+        if watch_error is not None:
+            yield watch_error
             return "done"
         if is_timeout_error(exc):
             yield _stream_error("runtime.timeout", f"{type(exc).__name__}: {exc}")
@@ -1096,6 +1109,14 @@ def _stream_once(
         stop.set()
         if thread.ident is not None:
             thread.join(timeout=1.0)
+    if not ended and finish is None:
+        # N3: no [DONE], no done:true and no finish reason. The body stopped early
+        # (server quit, proxy cut, watchdog close); a partial answer is not an answer.
+        aborted, watch_error = closed_by_watch()
+        if aborted:
+            return "done"
+        yield watch_error or _stream_error("runtime.upstream", "the stream ended before the model finished")
+        return "done"
     yield StreamEvent(
         kind="done",
         finish_reason=finish,
@@ -1193,7 +1214,7 @@ def complete_live(
     estimated_out = _estimate()
     if usage is None or (usage.completion_tokens == 0 and (estimated_out or seen)):
         usage = CompletionUsage(
-            prompt_tokens=usage.prompt_tokens if usage else 0,
+            prompt_tokens=usage.prompt_tokens if usage else None,
             completion_tokens=max(estimated_out, seen),
         )
     out = usage.completion_tokens if usage and usage.completion_tokens else estimated_out

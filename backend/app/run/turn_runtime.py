@@ -113,14 +113,35 @@ def _function_names(schemas: list[dict]) -> list[str]:
             names.append(str(name))
     return names
 
-def _parse_args(raw: str) -> dict:
+_ARGS_SHAPE = 'Send one JSON object, for example {"action": "read", "path": "notes.txt"}.'
+
+
+def _parse_args(raw: str) -> tuple[dict, str | None]:
+    """Tool arguments, or a hint for the model when they cannot be used (N2).
+
+    Broken JSON used to become ``{}``: the tool then ran without arguments and
+    answered with an unrelated error, and the model never learned why.
+    """
     import json
 
+    text = (raw or "").strip()
+    if not text:
+        return {}, None
     try:
-        value = json.loads(raw or "{}")
-        return value if isinstance(value, dict) else {}
-    except ValueError:
-        return {}
+        value = json.loads(text)
+    except ValueError as exc:
+        return {}, f"The arguments are not valid JSON ({exc.msg} at character {exc.pos}). {_ARGS_SHAPE}"
+    if isinstance(value, str):
+        # Some models send the object as a JSON string.
+        try:
+            inner = json.loads(value)
+        except ValueError:
+            inner = None
+        if isinstance(inner, dict):
+            return inner, None
+    if not isinstance(value, dict):
+        return {}, f"The arguments must be one JSON object, not {type(value).__name__}. {_ARGS_SHAPE}"
+    return value, None
 
 def _max_calls(data: dict) -> int | None:
     """``maxCalls`` of a tool node: an int >= 1, or None for unlimited."""
@@ -232,11 +253,11 @@ def _dispatch_tool(
     reuse: bool,
 ) -> tuple[str, FileFact | None, bool]:
     tool_node_id = owner_id
-    args = _parse_args(call_arguments)
+    args, bad_args = _parse_args(call_arguments)
     mapped = map_openai_tool_name(call_name)
     leaf = mapped[1] if mapped else call_name
     reused = None
-    if reuse and record is not None:
+    if reuse and record is not None and bad_args is None:
         if leaf == "file_access" or call_name == "file_access":
             reused = reused_file_result(
                 record, str(args.get("action") or ""), str(args.get("path") or "")
@@ -248,7 +269,7 @@ def _dispatch_tool(
     # A server that is not wired to this node, or a tool its node does not allow.
     not_offered = bool(mapped) and not _mcp_offered(compiled, owner_id, mapped[0], mapped[1])
     refused_at = None
-    if reused is None and not not_offered:
+    if reused is None and not not_offered and bad_args is None:
         limited_node = _resolve_tool_node(compiled, owner_id, call_name)
         if limited_node is not None:
             refused_at = _take_call(ctrl, limited_node)
@@ -268,6 +289,9 @@ def _dispatch_tool(
             node_id=owner_id,
             payload={"name": call_name},
         )
+    elif bad_args is not None:
+        # N2: nothing runs; the model sees what was wrong with its JSON.
+        tool_result = {"ok": False, "error": "tool.badArguments", "detail": bad_args}
     elif refused_at is not None:
         # Not a failure: the network caps this tool. The model sees why and stops asking for it.
         tool_result = {
@@ -770,7 +794,20 @@ def _apply_tokens(
         }
     )
     ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime, "activity": activity})
-    return ctrl.snapshot.model_dump(by_alias=True)
+    return _live_payload(ctrl.snapshot)
+
+
+# N12: token and node updates arrive several times a second. They used to carry the
+# whole snapshot (graph, every chat line) and the client merged the chat each time.
+_LIVE_FIELDS = frozenset({"run_id", "nodes_runtime", "activity"})
+
+
+def _live_payload(snapshot) -> dict:
+    """Run id, all node states and activity. The client merges this into what it has.
+
+    Every node goes along (a few fields each), so a dropped event heals with the next.
+    """
+    return snapshot.model_dump(by_alias=True, include=_LIVE_FIELDS)
 
 def _snap_lock(ctrl: RunController):
     """M4: the controller's snapshot lock; test doubles without one get a no-op."""
@@ -816,7 +853,7 @@ def _set_node(
         runtime[node_id] = current.model_copy(update=update)
         ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime})
         _refresh_activity(ctrl)
-        payload = ctrl.snapshot.model_dump(by_alias=True)
+        payload = _live_payload(ctrl.snapshot)
     node = ctrl.compiled.by_id.get(node_id) if ctrl.compiled else None
     upsert_step(
         run_id=ctrl.run_id or "",

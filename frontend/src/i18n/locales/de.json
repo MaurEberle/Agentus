@@ -1168,6 +1168,8 @@
       "routerTarget": "Ein Router führt zu einem Agenten, einem Router oder einem Ende.",
       "routerOrchestrator": "Ein Router hinter dem Orchestrator führt nur zu Enden.",
       "orchestratorLooseAgent": "Mit Orchestrator braucht jeder Agent einen Kanal von ihm.",
+      "orchestratorAgents": "Der Orchestrator braucht einen Kanal zu mindestens einem Agenten.",
+      "chainEnd": "Ohne Orchestrator muss die Kette vom Start (Chat-Eingang oder erster Agent) bis zu einem Endknoten führen.",
       "agentMode": "Ein Agent hängt entweder in der Kette oder am Orchestrator.",
       "agentChannel": "Ein Agent hat höchstens einen Kanal.",
       "modelRequired": "Modell ist Pflicht.",
@@ -1777,6 +1779,7 @@
         "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
         "emptyStop": "Leere Antwort verworfen ({{attempt}}/{{max}}). Der Auftrag geht weiter.",
         "emptyStops": "Aufgabe unvollständig: fünf leere Antworten hintereinander.",
+        "empty": "Agent lieferte ein leeres Ergebnis",
         "truncated": "Antwort abgeschnitten; kein Ergebnis.",
         "compact": "Kontext verdichtet, damit die Antwort ins Fenster passt."
       },
@@ -1793,6 +1796,7 @@
         "toolCallsRepaired": "{{count}} fehlende Werkzeugantworten ergänzt.",
         "start": "LLM {{model}}",
         "done": "LLM fertig ({{durationMs}} ms)",
+        "release": "Andere Modelle entladen ({{dropped}}); {{keep}} bleibt geladen",
         "vram": "VRAM {{model}}: Schätzung {{estimated}}, belegt {{used}}, {{delta}} ({{percent}}). Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Modelldaten von {{model}} fehlen. Der Lauf wurde abgebrochen.",
         "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
@@ -1812,6 +1816,10 @@
         "fallbackMissing": "Hilfe-Fallback-Modell fehlt"
       },
       "stepLimit": "Schrittlimit erreicht",
+      "noEnd": "Kette hat keinen Endknoten erreicht",
+      "memory": {
+        "source": "Text des einzigen Autors automatisch angehängt"
+      },
       "orchestrator": {
         "textRetry": "Wiederholung von {{name}} lieferte wieder nur Text ({{fails}}/{{max}}).",
         "retryIgnored": "retry ohne vorherige reine Textantwort; zählt nicht.",
@@ -1821,6 +1829,9 @@
         "privateReasoning": "Interne Überlegung des Modells nicht im Chat gezeigt.",
         "llmPause": "Orchestrator-Modell nicht erreichbar ({{error}}); wartet auf eine Nachricht.",
         "emptyTask": "Leerer Auftrag; letzte Nutzernachricht wird verwendet.",
+        "action": "Orchestrator: {{action}} {{agent}}",
+        "unknownAgent": "Unbekannter Agent „{{token}}“ im Aufruf",
+        "unknownSource": "Unbekannte Quelle „{{source}}“ im Aufruf",
         "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
         "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
         "defer": "Nächster Schritt nach der Chat-Nachricht war unlesbar; der Lauf geht weiter.",
@@ -1850,7 +1861,13 @@
       "generationLimit": "Antwort nach der Zeitgrenze abgebrochen.",
       "rateLimited": "Der Anbieter drosselt die Anfragen (Rate-Limit).",
       "timeout": "Kein Fortschritt vom Modell",
-      "unreachable": "Runtime nicht erreichbar"
+      "unreachable": "Runtime nicht erreichbar",
+      "upstream": "Antwort des Modells unvollständig oder abgelehnt",
+      "badRequest": "Anfrage vom Modell abgelehnt",
+      "modelNotFound": "Modell nicht gefunden",
+      "modelInfoFailed": "Modellinfo nicht lesbar",
+      "unauthorized": "Zugang abgelehnt (Schlüssel prüfen)",
+      "missingCredential": "Zugang fehlt"
     }
   },
   "help": {

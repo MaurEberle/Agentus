@@ -125,3 +125,71 @@ def test_cloud_only_network_starts_without_ollama(monkeypatch, api_env) -> None:
     assert [who for who, _ in calls] == ["A", "B"]
     # Nothing was unloaded or kept on a daemon this network does not use.
     assert keeps == []
+
+
+def test_missing_prompt_usage_is_stored_as_the_estimate(monkeypatch, api_env) -> None:
+    """N3: without prompt usage the history showed 0 input tokens."""
+    from app.db.runs import list_calls
+    from app.runtime.models import CompletionUsage
+    from tests.run.conftest import mini_doc
+
+    def _complete(req, should_abort=None, on_progress=None):
+        return CompletionResult(
+            content="Antwort",
+            model=req.model,
+            finish_reason="stop",
+            usage=CompletionUsage(completion_tokens=3),
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=mini_doc())
+    calls = list_calls(stored["id"])
+    assert calls
+    assert all((row["tokens_in"] or 0) > 0 for row in calls)
+    assert calls[0]["tokens_out"] == 3
+
+
+def test_chain_without_reaching_an_end_says_why(monkeypatch, api_env) -> None:
+    """N13: the run failed at the end without any message."""
+    from app.run import validate as run_validate
+    from tests.run.conftest import mini_doc
+
+    # Validation would refuse this graph; the runtime still needs its own message.
+    monkeypatch.setattr(run_validate, "_chain_reaches_end", lambda *a, **k: True)
+    doc = mini_doc()
+    doc["edges"] = [edge for edge in doc["edges"] if edge["id"] != "e3"]
+
+    def _complete(req, should_abort=None, on_progress=None):
+        return CompletionResult(content="Antwort", model=req.model, finish_reason="stop")
+
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.noEnd"
+    assert "run.noEnd" in [row["message"] for row in list_logs(stored["id"])]
+
+
+def test_live_updates_leave_graph_and_chat_out(monkeypatch, api_env) -> None:
+    """N12: every token and node update carried the whole snapshot, chat included."""
+    from app.run import turn_runtime
+    from app.runtime.models import CompletionUsage
+    from tests.run.conftest import mini_doc
+
+    sent: list[dict] = []
+    real = turn_runtime.publish
+
+    def _capture(event, data):
+        if event == "run":
+            sent.append(data)
+        return real(event, data)
+
+    monkeypatch.setattr(turn_runtime, "publish", _capture)
+
+    def _complete(req, should_abort=None, on_progress=None):
+        return CompletionResult(
+            content="Antwort", model=req.model, finish_reason="stop", usage=CompletionUsage(prompt_tokens=5, completion_tokens=2)
+        )
+
+    stored = _drive(monkeypatch, _complete, doc=mini_doc())
+    assert stored["outcome"] == "succeeded"
+    assert sent
+    assert all(set(item) == {"runId", "nodesRuntime", "activity"} for item in sent)
+    assert any(item["nodesRuntime"].get("ag", {}).get("status") == "running" for item in sent)

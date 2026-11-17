@@ -139,11 +139,24 @@ export function activeNonLlm(
   return rows;
 }
 
+function sameChat(a: ChatMessage, b: ChatMessage): boolean {
+  return (
+    a.content === b.content &&
+    a.role === b.role &&
+    a.createdAt === b.createdAt &&
+    a.messageKey === b.messageKey &&
+    JSON.stringify(a.messageParams ?? null) === JSON.stringify(b.messageParams ?? null)
+  );
+}
+
+/** Insert or update one line. An unchanged line keeps the array, so the chat does not re-render (N12). */
 export function upsertChat(messages: ChatMessage[], next: ChatMessage): ChatMessage[] {
   const index = messages.findIndex((item) => item.id === next.id);
   if (index === -1) return [...messages, next];
+  const merged = { ...messages[index], ...next };
+  if (sameChat(messages[index], merged)) return messages;
   const copy = messages.slice();
-  copy[index] = { ...copy[index], ...next };
+  copy[index] = merged;
   return copy;
 }
 

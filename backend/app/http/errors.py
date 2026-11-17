@@ -104,19 +104,12 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
         return error_response(exc.status_code, exc.message_key, exc.message)
 
-    try:
-        from app.db.errors import PersistError
-    except ImportError:
-        PersistError = None  # type: ignore[misc, assignment]
+    from app.db.errors import PersistError
 
-    if PersistError is not None:
-
-        @app.exception_handler(PersistError)
-        async def persist_error_handler(
-            _request: Request, exc: Any
-        ) -> JSONResponse:
-            key = str(getattr(exc, "message_key", "http.internal"))
-            return error_response(persist_status(key), key)
+    @app.exception_handler(PersistError)
+    async def persist_error_handler(_request: Request, exc: Any) -> JSONResponse:
+        key = str(getattr(exc, "message_key", "http.internal"))
+        return error_response(persist_status(key), key)
 
     @app.exception_handler(RequestValidationError)
     async def validation_handler(

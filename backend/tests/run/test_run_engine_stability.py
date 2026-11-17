@@ -280,3 +280,24 @@ def test_a_reading_agent_with_a_text_answer_is_no_missed_write() -> None:
         _count_file_attempt(compiled, memory, agent, record)
     assert memory.misses.get("ag", 0) == 0
     assert memory.takeover is None
+
+
+def test_chat_answers_are_masked_narrowly_on_the_server(api_env) -> None:
+    """N11: agent answers went out unmasked; the client mask then changed harmless code."""
+    from app.run.controller import get_controller
+    from app.run.models import ChatMessage
+
+    ctrl = get_controller()
+    ctrl.remember_chat(
+        ChatMessage(
+            id="m1",
+            run_id="",
+            role="assistant",
+            content="token = get_token()\nkey: sk-abcdefghijklmnopqrstuvwxyz123456",
+            created_at="2026-11-17T00:00:00Z",
+        ),
+        generating=False,
+    )
+    shown = ctrl.conversation[-1].content
+    assert "token = get_token()" in shown
+    assert "sk-abcdefghijklmnopqrstuvwxyz123456" not in shown

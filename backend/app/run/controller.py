@@ -7,7 +7,7 @@ import threading
 import uuid
 from typing import Any
 
-from app.common.secrets import mask_obj, mask_text
+from app.common.secrets import mask_content, mask_obj, mask_text
 from app.common.types import ServiceStatus
 from app.db.engine import utc_now
 from app.db.networks import get_network, touch_network
@@ -705,6 +705,12 @@ class RunController:
             return bool(chat.get("generating"))
 
     def remember_chat(self, msg: ChatMessage, *, generating: bool | None = None) -> None:
+        # N11: agent and orchestrator answers went out unmasked, and the client's
+        # broad mask turned code such as ``token = get_token()`` into ``token = ***``.
+        # Every chat line now gets the narrow mask here; real secrets still go.
+        # User lines keep the broad mask from send_chat on top.
+        if msg.content:
+            msg = msg.model_copy(update={"content": mask_content(msg.content)})
         with self.lock:
             self.conversation.append(msg)
             run_id = self.run_id or ""

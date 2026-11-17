@@ -27,7 +27,7 @@ def _source_repair_note(source, memory: RunMemory) -> str:
         if rec.finished and rec.text:
             last = rec.agent_id
     hint = f" Last stored text is from {last}." if last else ""
-    return f"Unknown source: {source.missing}.{hint} Omit source to send only the task."
+    return f'Unknown source: {source.missing}.{hint} Set source to "none" to send only the task.'
 
 def unresolved_file_failures(files) -> list:
     """M8: failed file steps the call did not fix later.

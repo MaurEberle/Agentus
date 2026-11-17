@@ -267,7 +267,7 @@ def _orchestrator_action(
             out_final = usage.completion_tokens if usage else (
                 estimate_token_count(result.content) if result.content else None
             )
-            in_final = usage.prompt_tokens if usage else context_est
+            in_final = usage.prompt_tokens if usage and usage.prompt_tokens is not None else context_est
             rate_final = None
             if out_final is not None and duration_ms > 0:
                 rate_final = out_final / max(duration_ms / 1000.0, 0.05)

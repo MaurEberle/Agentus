@@ -310,6 +310,10 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
         return "cancelled"
     if end_hit:
         return "succeeded"
+    if not ctrl.fail_message:
+        # N13: say why; the run used to fail here without any message.
+        emit_log("error", "run.noEnd")
+        ctrl.fail_message = "run.noEnd"
     return "failed"
 
 def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:

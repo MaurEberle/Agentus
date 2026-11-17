@@ -41,6 +41,8 @@ const START_ERROR_DESC: Record<string, string> = {
   'graph.orchestrator.noEnd': 'network.validation.orchestratorEnd',
   'graph.orchestrator.noLlm': 'network.validation.orchestratorLlm',
   'graph.orchestrator.looseAgent': 'network.validation.orchestratorLooseAgent',
+  'graph.orchestrator.noAgents': 'network.validation.orchestratorAgents',
+  'graph.chain.noEnd': 'network.validation.chainEnd',
   'graph.agent.mode': 'network.validation.agentMode',
   'graph.agent.channel': 'network.validation.agentChannel',
   'graph.edge.invalid': 'network.validation.edgeType',

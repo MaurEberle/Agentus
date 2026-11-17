@@ -65,7 +65,7 @@ Cerrar la ventana termina la ejecución y la app. Ollama sigue vivo.
 
 ## El chat de ayuda no es el chat de la red
 
-Abajo a la derecha: burbuja = **ayuda de la app** (esta guía, términos del grafo, búsqueda web opcional). El onboarding lo explica la primera vez.
+Abajo a la derecha: burbuja = **ayuda de la app** (esta guía, términos del grafo, búsqueda web opcional). El onboarding lo explica la primera vez. La ayuda recuerda las últimas tres preguntas con sus respuestas, así que una repregunta como «¿y cómo se hace?» se refiere a ellas. Si borras el historial de ayuda en Ajustes, empieza de nuevo.
 
 En **Supervisión**, la pestaña **Chat** = **chat de la ejecución** del grafo (nodo Chat). Sin orquestador es la entrada a los agentes. Con orquestador es la conversación: puede preguntarte antes de llamar a un agente.
 

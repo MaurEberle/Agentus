@@ -71,6 +71,7 @@ Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Expo
 
 - Name nicht leer
 - höchstens ein Chat, höchstens ein Orchestrator, mindestens ein Ende
+- ohne Orchestrator führt die Kette vom Start (Chat oder erster Agent) bis zu einem Ende; mit Orchestrator hat er mindestens einen Kanal zu einem Agenten
 - jeder Agent: genau eine LLM-Kante. Ohne Orchestrator eine eingehende Nachricht. Mit Orchestrator genau ein Kanal und keine Nachrichten-Kette am selben Agenten
 - LLM: Modell gesetzt; Cloud: Zugang
 - Werkzeug: Art. MCP: aktiver Server aus den Einstellungen; Wurzelpfad wenn das Rezept ihn braucht

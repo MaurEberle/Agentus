@@ -57,21 +57,17 @@ def _assert_port_free(host: str, port: int) -> None:
 
 
 def _bootstrap() -> None:
-    try:
-        from app.db import init as db_init
+    # N8: none of these modules is optional. A swallowed ImportError started the
+    # app without persistence or MCP, and the cause surfaced later as store.missing.
+    from app.db import init as db_init
 
-        db_init()
-        from app.llm.downloads import ensure_worker
+    db_init()
+    from app.llm.downloads import ensure_worker
 
-        ensure_worker()
-    except ImportError:
-        pass
-    try:
-        from app.mcp import register_hooks
+    ensure_worker()
+    from app.mcp import register_hooks
 
-        register_hooks()
-    except ImportError:
-        pass
+    register_hooks()
 
 
 def _maybe_start_ollama() -> None:

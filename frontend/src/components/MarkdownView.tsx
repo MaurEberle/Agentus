@@ -230,10 +230,17 @@ function linesOf(text: string): ReactNode {
   ));
 }
 
-export function MarkdownView({ text }: { text: string }) {
+/** ``bare`` drops the framed box, for text that already sits in a bubble. */
+export function MarkdownView({ text, bare = false }: { text: string; bare?: boolean }) {
   const blocks = parseBlocks(text);
   return (
-    <div className="w-full min-w-0 space-y-3 rounded-md border bg-muted/30 p-4 text-sm leading-6">
+    <div
+      className={
+        bare
+          ? 'w-full min-w-0 space-y-2 break-words text-sm leading-6'
+          : 'w-full min-w-0 space-y-3 rounded-md border bg-muted/30 p-4 text-sm leading-6'
+      }
+    >
       {blocks.map((block, index) => {
         if (block.type === 'heading') {
           const Tag = `h${block.level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';

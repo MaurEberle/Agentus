@@ -432,10 +432,11 @@ def _agent_turn(
             usage = result.usage
             if usage:
                 out_final = usage.completion_tokens
-                in_final = usage.prompt_tokens
+                # N3: a provider without prompt usage gets the estimate, not 0.
+                in_final = usage.prompt_tokens if usage.prompt_tokens is not None else context_est
             elif result.content:
                 out_final = estimate_token_count(result.content)
-                in_final = None
+                in_final = context_est
             else:
                 out_final = None
                 in_final = None

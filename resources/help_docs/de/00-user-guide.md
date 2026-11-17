@@ -65,7 +65,7 @@ Schließen des Fensters beendet den Lauf und die App. Ollama lebt weiter.
 
 ## Hilfe-Chatbot ist nicht der Netz-Chat
 
-Unten rechts: Sprechblase = **Hilfe zur App** (diese Anleitung, Graph-Begriffe, optionale Websuche). Onboarding erklärt das beim ersten Öffnen.
+Unten rechts: Sprechblase = **Hilfe zur App** (diese Anleitung, Graph-Begriffe, optionale Websuche). Onboarding erklärt das beim ersten Öffnen. Die Hilfe kennt die letzten drei Fragen samt Antworten; eine Rückfrage wie „und wie geht das?“ bezieht sich darauf. Löschst du den Hilfe-Verlauf in den Einstellungen, beginnt sie neu.
 
 Im **Monitoring** der Tab **Chat** = **Lauf-Chat** des Graphen (Knoten Chat). Ohne Orchestrator ist das die Eingabe an die Agenten. Mit Orchestrator ist es das Gespräch: er kann nachfragen, bevor er Agenten aufruft.
 

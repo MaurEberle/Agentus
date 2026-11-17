@@ -1101,6 +1101,8 @@
       "routerTarget": "Un enrutador lleva a un agente, un enrutador o un fin.",
       "routerOrchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
       "orchestratorLooseAgent": "Con orquestador, cada agente necesita un canal desde él.",
+      "orchestratorAgents": "El orquestador necesita un canal hacia al menos un agente.",
+      "chainEnd": "Sin orquestador, la cadena debe llevar desde su inicio (entrada de chat o primer agente) hasta un nodo final.",
       "agentMode": "Un agente está en la cadena o en el orquestador.",
       "agentChannel": "Un agente tiene como máximo un canal.",
       "modelRequired": "El modelo es obligatorio.",
@@ -1710,6 +1712,7 @@
         "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
         "emptyStop": "Respuesta vacía descartada ({{attempt}}/{{max}}). La tarea continúa.",
         "emptyStops": "Tarea incompleta: cinco respuestas vacías seguidas.",
+        "empty": "El agente devolvió un resultado vacío",
         "truncated": "Respuesta cortada; no es un resultado.",
         "compact": "Contexto compactado para que la respuesta quepa en la ventana."
       },
@@ -1726,6 +1729,7 @@
         "toolCallsRepaired": "Se añadieron {{count}} respuestas de herramienta que faltaban.",
         "start": "LLM {{model}}",
         "done": "LLM finalizado ({{durationMs}} ms)",
+        "release": "Otros modelos descargados ({{dropped}}); {{keep}} sigue cargado",
         "vram": "VRAM {{model}}: estimación {{estimated}}, usado {{used}}, {{delta}} ({{percent}}). Expertos {{expertsOnGpu}}/{{expertLayers}}, atención {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Faltan los datos del modelo {{model}}. La ejecución se detuvo.",
         "moeUnsplit": "No se puede repartir los expertos de {{model}}. No se envía num_gpu."
@@ -1745,6 +1749,10 @@
         "fallbackMissing": "Falta el modelo de respaldo de ayuda"
       },
       "stepLimit": "Límite de pasos alcanzado",
+      "noEnd": "La cadena no llegó a un nodo final",
+      "memory": {
+        "source": "Texto guardado del único autor adjuntado automáticamente"
+      },
       "orchestrator": {
         "textRetry": "El reintento de {{name}} volvió a dar solo texto ({{fails}}/{{max}}).",
         "retryIgnored": "retry sin respuesta previa de solo texto; no cuenta.",
@@ -1754,6 +1762,9 @@
         "privateReasoning": "El razonamiento interno del modelo no se muestra en el chat.",
         "llmPause": "Modelo del orquestador no disponible ({{error}}); esperando un mensaje.",
         "emptyTask": "Tarea vacía; se usa el último mensaje del usuario.",
+        "action": "Orquestador: {{action}} {{agent}}",
+        "unknownAgent": "Agente desconocido «{{token}}» en la llamada",
+        "unknownSource": "Fuente desconocida «{{source}}» en la llamada",
         "repair": "La orden no se pudo leer, nuevo intento.",
         "unreadable": "El orquestador no entregó un paso legible.",
         "defer": "El siguiente paso tras el mensaje de chat era ilegible; la ejecución continúa.",
@@ -1778,7 +1789,13 @@
       "generationLimit": "Respuesta detenida en el límite de tiempo.",
       "rateLimited": "El proveedor limita las peticiones (límite de frecuencia).",
       "timeout": "Sin progreso del modelo",
-      "unreachable": "Runtime no accesible"
+      "unreachable": "Runtime no accesible",
+      "upstream": "La respuesta del modelo llegó incompleta o fue rechazada",
+      "badRequest": "El modelo rechazó la solicitud",
+      "modelNotFound": "Modelo no encontrado",
+      "modelInfoFailed": "No se pudo leer la información del modelo",
+      "unauthorized": "Acceso denegado (revisa la clave)",
+      "missingCredential": "Falta la credencial"
     },
     "mcp": {
       "ping": {

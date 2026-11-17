@@ -168,7 +168,8 @@ def _server_facts(server_id: str) -> tuple[str, str]:
         return "", ""
     if not isinstance(row, dict):
         return "", ""
-    return str(row.get("name") or ""), str(row.get("rootPath") or "")
+    # N1: server rows store snake_case (``root_path``); rootPath is the API alias.
+    return str(row.get("name") or ""), str(row.get("root_path") or row.get("rootPath") or "")
 
 
 def _live_tools(server_id: str) -> list[tuple[str, str]]:

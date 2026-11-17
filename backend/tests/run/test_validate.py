@@ -283,3 +283,40 @@ def test_http_without_credential_or_with_url_is_valid() -> None:
             AgentNetworkDocument.model_validate(_with_http(mini_doc(), data)), data_dir="C:/data"
         )
         assert errors == []
+
+
+def _keys(raw: dict) -> set[str]:
+    errors = validate_document(AgentNetworkDocument.model_validate(raw), data_dir="C:/data")
+    return {e.message_key for e in errors}
+
+
+def test_chain_must_reach_an_end() -> None:
+    """N13: a chain whose path never reaches the end node used to pass and then fail silently."""
+    raw = mini_doc()
+    assert "graph.chain.noEnd" not in _keys(raw)
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e3"]
+    assert "graph.chain.noEnd" in _keys(raw)
+
+
+def test_chain_without_chat_input_starts_at_the_roots() -> None:
+    raw = mini_doc()
+    raw["nodes"] = [node for node in raw["nodes"] if node["id"] != "in"]
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e1"]
+    assert "graph.chain.noEnd" not in _keys(raw)
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] != "e3"]
+    assert "graph.chain.noEnd" in _keys(raw)
+
+
+def test_orchestrator_needs_an_agent() -> None:
+    raw = _orchestrator_doc()
+    raw["nodes"] = [node for node in raw["nodes"] if node["id"] != "ag"]
+    raw["edges"] = [edge for edge in raw["edges"] if edge["id"] not in {"e3", "e4"}]
+    assert "graph.orchestrator.noAgents" in _keys(raw)
+
+
+def test_edge_into_a_chat_input_is_invalid() -> None:
+    raw = mini_doc()
+    raw["edges"].append(
+        {"id": "back", "source": "ag", "sourceHandle": "message", "target": "in", "targetHandle": "message"}
+    )
+    assert "graph.edge.invalid" in _keys(raw)

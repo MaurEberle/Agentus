@@ -65,7 +65,7 @@ Closing the window ends the run and the app. Ollama keeps running.
 
 ## Help chatbot is not network chat
 
-Bottom right: the bubble is **in-app help** (this guide, graph terms, optional web search). Onboarding explains that the first time you open it.
+Bottom right: the bubble is **in-app help** (this guide, graph terms, optional web search). Onboarding explains that the first time you open it. The help remembers the last three questions and answers, so a follow-up like “and how do I do that?” refers to them. Clearing the help history in Settings starts it fresh.
 
 In **Monitoring**, the **Chat** tab is **run chat** for the graph (Chat node). Without an orchestrator it is the input to the agents. With an orchestrator it is the conversation: it can ask you before it calls agents.
 

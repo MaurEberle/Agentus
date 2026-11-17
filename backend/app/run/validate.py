@@ -32,6 +32,12 @@ _IN_HANDLES = {
     "orchestrator": {"message", "llm", "tool"},
     "router": {"message"},
     "end": {"message"},
+    # N13: these only send. An edge into a chat input used to pass.
+    "chat_input": set(),
+    "llm": set(),
+    "tool": set(),
+    "mcp": set(),
+    "knowledge": set(),
 }
 
 
@@ -94,6 +100,31 @@ def _orchestrator_reaches_end(doc: AgentNetworkDocument, orch_id: str, by_id: di
             (dst := by_id.get(item.target)) is not None and dst.type == "end" for item in outs
         ):
             return True
+    return False
+
+
+def _chain_starts(doc: AgentNetworkDocument) -> list[str]:
+    """Where a chain without orchestrator begins: the chat input, else agents nobody feeds."""
+    chat = next((node for node in doc.nodes if node.type == "chat_input"), None)
+    if chat is not None:
+        return [chat.id]
+    fed = {edge.target for edge in doc.edges if edge.target_handle == "message"}
+    return [node.id for node in doc.nodes if node.type == "agent" and node.id not in fed]
+
+
+def _chain_reaches_end(doc: AgentNetworkDocument, by_id: dict[str, GraphNode]) -> bool:
+    """N13: a chain that never reaches an end node runs and then fails without a reason."""
+    queue = list(_chain_starts(doc))
+    seen: set[str] = set()
+    while queue:
+        node_id = queue.pop()
+        if node_id in seen:
+            continue
+        seen.add(node_id)
+        node = by_id.get(node_id)
+        if node is not None and node.type == "end":
+            return True
+        queue.extend(edge.target for edge in doc.edges if edge.source == node_id and edge.target_handle == "message")
     return False
 
 
@@ -198,8 +229,19 @@ def validate_document(
         llm_in = [e for e in doc.edges if e.target == orch.id and e.target_handle == "llm"]
         if len(llm_in) != 1:
             errors.append(_err("graph.orchestrator.noLlm", orch.id))
+        has_agent = any(
+            e.source == orch.id
+            and e.target_handle == "channel"
+            and (dst := by_id.get(e.target)) is not None
+            and dst.type == "agent"
+            for e in doc.edges
+        )
+        if not has_agent:
+            errors.append(_err("graph.orchestrator.noAgents", orch.id))
     if not any(n.type == "end" for n in doc.nodes):
         errors.append(_err("graph.end.missing"))
+    elif not orchestrators and _chain_starts(doc) and not _chain_reaches_end(doc, by_id):
+        errors.append(_err("graph.chain.noEnd", chats[0].id if chats else None))
     if _has_cycle(doc):
         errors.append(_err("graph.cycle"))
 

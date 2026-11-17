@@ -57,3 +57,20 @@ def test_capability_text_lists_root_actions_and_programs() -> None:
     withheld = capability_text(compiled, "ag", available=False)
     assert "not available on this turn" in withheld
     assert "C:/dev/hello4" in withheld
+
+
+def test_mcp_block_names_the_server_root(api_env) -> None:
+    """N1: the server row stores root_path; the inventory read rootPath and never showed it."""
+    from app.db import init
+    from app.db.settings import put_mcp_server
+
+    init()
+    put_mcp_server("srv-1", {"name": "Dateien", "enabled": True, "root_path": "C:/data/mcp-root"})
+    raw = mini_doc()
+    raw["nodes"].append(
+        {"id": "m", "type": "mcp", "position": {"x": 0, "y": 0}, "data": {"mcpServerId": "srv-1"}}
+    )
+    raw["edges"].append({"id": "em", "source": "m", "sourceHandle": "tool", "target": "ag", "targetHandle": "tool"})
+    compiled = compile_document(AgentNetworkDocument.model_validate(raw), network_id="n", network_name="mini")
+    text = capability_text(compiled, "ag", available=True)
+    assert "Root: C:/data/mcp-root." in text

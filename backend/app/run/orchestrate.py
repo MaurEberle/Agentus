@@ -65,7 +65,7 @@ When an agent fails, the runtime adds one anomaly excerpt for that agent. It sta
 Call one agent at a time, wait for the result, then decide again. You may call the same agent later with a new task.
 Call by the name or id in the roster below.
 The task field is a short instruction of a few sentences. Do not paste an agent result into it.
-To attach an agent's stored text, set source to that agent's id or name. You write the id, not the text. The runtime attaches the stored text, including from an agent that has tools. Omit source, or leave it empty, to send only the task.
+To attach an agent's stored text, set source to that agent's id or name. You write the id, not the text. The runtime attaches the stored text, including from an agent that has tools. If you omit source while exactly one agent has stored text, the runtime attaches that text. Set source to "none" to send only the task.
 If a missing detail would change the task, ask and wait. Do not write that you might ask. If the task is clear, call.
 A reply is shown in the chat. After a reply, the next JSON must be think, call, ask, or finish. Do not reply again. Do not announce a call in a reply; emit the call object. Domain work belongs to the agents.
 Use think for internal planning. Think is not shown in the chat and does not count against the step limit. After think, emit call, ask, or finish.

@@ -245,3 +245,45 @@ def test_file_fact_records_mcp_write() -> None:
     assert listed is not None
     assert listed.action == "list"
     assert file_fact("calculator", {}, {"result": 1}, ok=True) is None
+
+
+def test_source_none_sends_only_the_task() -> None:
+    """N4: with one stored text, "none" is the way to send a task without it."""
+    memory = RunMemory()
+    writer = memory.begin_call("w", "Autor", "schreib", False)
+    writer.text = "QUELLTEXT"
+    writer.finished = True
+    roster = [("w", "Autor"), ("t", "Save")]
+    assert memory.resolve_source("", roster).auto is True
+    choice = memory.resolve_source("none", roster)
+    assert choice.text == "" and not choice.missing and choice.auto is False
+    assert "QUELLTEXT" not in memory.agent_message("t", "neue Aufgabe", True, choice.text)
+    named = memory.resolve_source("None", [("x", "None")])
+    assert named.missing == "None"
+
+
+def test_stored_memory_bounds_arguments_and_texts() -> None:
+    """N5: write arguments with whole files and long agent texts went into runs.memory uncut."""
+    from app.run.memory import ToolEvent
+
+    memory = RunMemory()
+    memory.add_user("u" * 20_000)
+    record = memory.begin_call("w", "Autor", "t" * 20_000, True)
+    record.text = "x" * 50_000
+    record.tools.append(
+        ToolEvent(
+            name="file_access",
+            arguments='{"action":"write","path":"a.txt","content":"' + "y" * 100_000 + ' sk-abcdefghijklmnopqrstuvwx"}',
+            ok=True,
+            result="ok",
+        )
+    )
+    stored = memory.to_dict()
+    call = stored["calls"][0]
+    assert len(call["text"]) < 9_000
+    assert len(call["task"]) < 9_000
+    assert all(len(turn["text"]) < 9_000 for turn in stored["turns"])
+    arguments = call["tools"][0]["arguments"]
+    assert len(arguments) < 2_200
+    assert "omitted" in arguments
+    assert "sk-abcdefghijklmnopqrstuvwx" not in arguments

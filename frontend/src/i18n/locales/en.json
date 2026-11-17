@@ -1168,6 +1168,8 @@
       "routerTarget": "A router leads to an agent, a router, or an end.",
       "routerOrchestrator": "A router after the orchestrator leads only to ends.",
       "orchestratorLooseAgent": "With an orchestrator, every agent needs a channel from it.",
+      "orchestratorAgents": "The orchestrator needs a channel to at least one agent.",
+      "chainEnd": "Without an orchestrator, the chain must lead from its start (chat input or first agent) to an end node.",
       "agentMode": "An agent is either in the chain or on the orchestrator.",
       "agentChannel": "An agent has at most one channel.",
       "modelRequired": "Model is required.",
@@ -1777,6 +1779,7 @@
         "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
         "emptyStop": "Discarded an empty reply ({{attempt}}/{{max}}). The task continues.",
         "emptyStops": "Task incomplete: five empty replies in a row.",
+        "empty": "Agent returned an empty result",
         "truncated": "Reply was cut off; not a result.",
         "compact": "Context compacted so the answer fits the window."
       },
@@ -1793,6 +1796,7 @@
         "toolCallsRepaired": "Added {{count}} missing tool answers.",
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)",
+        "release": "Unloaded other models ({{dropped}}); {{keep}} stays loaded",
         "vram": "VRAM {{model}}: estimate {{estimated}}, used {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Model data for {{model}} is missing. The run was stopped.",
         "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
@@ -1812,6 +1816,10 @@
         "fallbackMissing": "Help fallback model is missing"
       },
       "stepLimit": "Step limit reached",
+      "noEnd": "The chain did not reach an end node",
+      "memory": {
+        "source": "Stored text of the only writer attached automatically"
+      },
       "orchestrator": {
         "textRetry": "Retry of {{name}} again returned text only ({{fails}}/{{max}}).",
         "retryIgnored": "retry without a previous text-only answer; not counted.",
@@ -1821,6 +1829,9 @@
         "privateReasoning": "Model's internal reasoning not shown in the chat.",
         "llmPause": "Orchestrator model not reachable ({{error}}); waiting for a message.",
         "emptyTask": "Empty task; using the last user message.",
+        "action": "Orchestrator: {{action}} {{agent}}",
+        "unknownAgent": "Unknown agent \"{{token}}\" in the call",
+        "unknownSource": "Unknown source \"{{source}}\" in the call",
         "repair": "Control message was unreadable, trying again.",
         "unreadable": "The orchestrator did not produce a readable next step.",
         "defer": "The next step after the chat reply was unreadable; the run continues.",
@@ -1850,7 +1861,13 @@
       "generationLimit": "Answer stopped at the time limit.",
       "rateLimited": "The provider is throttling requests (rate limit).",
       "timeout": "No progress from the model",
-      "unreachable": "Runtime unreachable"
+      "unreachable": "Runtime unreachable",
+      "upstream": "The model's answer was incomplete or rejected",
+      "badRequest": "The model rejected the request",
+      "modelNotFound": "Model not found",
+      "modelInfoFailed": "Could not read the model info",
+      "unauthorized": "Access denied (check the key)",
+      "missingCredential": "Credential missing"
     }
   },
   "help": {
