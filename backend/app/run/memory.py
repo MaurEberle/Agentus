@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 
 from app.common.secrets import mask_text
 from app.help.visible import strip_think
@@ -118,7 +119,9 @@ class Takeover:
     name: str
     task: str
     # "file": missed writes. "tools": repeated text-only answers; any own tool success ends it.
+    # "failed": failed calls in a row; a file change, a terminal or an MCP success ends it.
     kind: str = "file"
+    reason: str = ""
 
 
 class RunMemory:
@@ -137,7 +140,7 @@ class RunMemory:
         self.loaded: dict[str, int | None] = {}
         self._anomaly: str | None = None
         self.misses: dict[str, int] = {}
-        self.miss_limit = 3
+        self.miss_limit = 2
         self.takeover: Takeover | None = None
         self.takeover_rejects = 0
         self.takeover_unarmed = False
@@ -147,6 +150,12 @@ class RunMemory:
         self.takeover_finish_warned = False
         self.text_retry_fails: dict[str, int] = {}
         self.takeover_unavailable = 0
+        # Failed calls in a row per agent (anomaly). miss_limit of them opens a takeover.
+        self.failed_calls: dict[str, int] = {}
+        # Own tool calls (name, arguments) since the last agent call. A new one is progress.
+        self.seen_own_calls: set[tuple[str, str]] = set()
+        # Own tool calls before the first agent call (MAX_ORIENTATION_CALLS).
+        self.orientation_calls = 0
         # O15: fingerprint of the last stored course; identical courses are not rewritten.
         self.persisted: str | None = None
 
@@ -172,12 +181,14 @@ class RunMemory:
             return False
         if len(cleaned) > _THINK_TEXT_CAP:
             cleaned = cleaned[: _THINK_TEXT_CAP - 1] + "…"
-        previous = next((turn.text for turn in reversed(self.turns) if turn.kind == "think"), None)
+        earlier = [turn.text for turn in self.turns if turn.kind == "think"][-_THINKS_KEPT:]
         self.turns.append(Turn("assistant", "think", cleaned))
         thinks = [index for index, turn in enumerate(self.turns) if turn.kind == "think"]
         for index in reversed(thinks[:-_THINKS_KEPT]):
             del self.turns[index]
-        return previous == cleaned
+        # The run that looped repeated one plan in slightly different words; an exact
+        # match alone never fired.
+        return any(similar_text(cleaned, text) for text in earlier)
 
     def set_nudge(self, text: str) -> None:
         """Replace the single runtime hint instead of piling up notes."""
@@ -203,7 +214,31 @@ class RunMemory:
         self.clear_anomaly()
         record = AgentRecord(agent_id=agent_id, name=name, task=task, has_tools=has_tools)
         self.records.append(record)
+        self.seen_own_calls = set()
         return record
+
+    def had_failure(self) -> bool:
+        """True when an agent call of this run ended as an anomaly."""
+        return any(rec.error for rec in self.records)
+
+    def note_failed_call(self, agent_id: str, failed: bool) -> int:
+        """Count failed calls in a row for one agent. Returns the count after this call."""
+        if not failed:
+            self.failed_calls[agent_id] = 0
+            return 0
+        count = self.failed_calls.get(agent_id, 0) + 1
+        self.failed_calls[agent_id] = count
+        return count
+
+    def mark_own_calls(self, start: int) -> bool:
+        """True when own tool calls after index ``start`` include one not seen since the last agent call."""
+        fresh = False
+        for event in self.own_tools[start:]:
+            key = (event.name, " ".join((event.arguments or "").split()))
+            if key not in self.seen_own_calls:
+                self.seen_own_calls.add(key)
+                fresh = True
+        return fresh
 
     def resolve_source(self, token: str, roster: list[tuple[str, str]]) -> SourceChoice:
         writers = self._writers()
@@ -334,6 +369,14 @@ class RunMemory:
         item = self.takeover
         if item is None:
             return ""
+        if item.kind == "failed":
+            count = self.failed_calls.get(item.agent_id, 0)
+            reason = f" (last: {item.reason})" if item.reason else ""
+            return (
+                f"Takeover for {item.name} ({item.agent_id}) after {count} failed calls in a row{reason}.\n"
+                f"task: {item.task}\n"
+                "Do this step yourself with the connected tools. Do not call this agent again."
+            )
         if item.kind == "tools":
             fails = self.text_retry_fails.get(item.agent_id, 0)
             return (
@@ -375,6 +418,10 @@ class RunMemory:
         if fact is not None and len(self.own_files) < _FILES_KEPT:
             self.own_files.append(fact)
         tools_done = self.takeover is not None and self.takeover.kind == "tools" and event.ok
+        if self.takeover is not None and self.takeover.kind == "failed" and event.ok and fact is None:
+            # Not a file read: a terminal command or an MCP call did the work.
+            leaf = event.name.rsplit("__", 1)[-1]
+            tools_done = leaf == "terminal" or "__" in event.name
         if tools_done or (
             self.takeover is not None
             and fact is not None
@@ -384,6 +431,7 @@ class RunMemory:
             if tools_done:
                 self.text_retry_fails[self.takeover.agent_id] = 0
             self.misses[self.takeover.agent_id] = 0
+            self.failed_calls[self.takeover.agent_id] = 0
             self.takeover = None
             self.takeover_rejects = 0
 
@@ -466,6 +514,7 @@ class RunMemory:
             "misses": dict(self.misses),
             "compactLevel": self.compact_level,
             "textRetryFails": dict(self.text_retry_fails),
+            "failedCalls": dict(self.failed_calls),
             "takeoverUnavailable": self.takeover_unavailable,
             "anomaly": self._anomaly,
             "takeover": (
@@ -475,6 +524,7 @@ class RunMemory:
                     "agentId": self.takeover.agent_id,
                     "name": self.takeover.name,
                     "task": self.takeover.task,
+                    "kind": self.takeover.kind,
                 }
             ),
         }
@@ -637,6 +687,24 @@ def _fact_size(result: object) -> int | None:
         return None
     raw_size = inner.get("bytes", inner.get("size"))
     return raw_size if isinstance(raw_size, int) else None
+
+
+_SIMILAR_RATIO = 0.8
+_SIMILAR_CHARS = 400
+
+
+def similar_text(left: str, right: str) -> bool:
+    """Same plan in other words: identical, one contains the other, or 80 % alike."""
+    a = " ".join((left or "").lower().split())[:_SIMILAR_CHARS]
+    b = " ".join((right or "").lower().split())[:_SIMILAR_CHARS]
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
+    if len(shorter) >= 40 and shorter in longer:
+        return True
+    return SequenceMatcher(None, a, b).ratio() >= _SIMILAR_RATIO
 
 
 def file_fact(name: str, args: dict, result: object, *, ok: bool) -> FileFact | None:

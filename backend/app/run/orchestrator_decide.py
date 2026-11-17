@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import time
 import traceback
 
 from app.db.runs import insert_call
 from app.db.vault import get as vault_get
-from app.run import agent_turn, dispatch, turn_runtime
+from app.run import agent_turn, dispatch, orch_tools, turn_runtime
 from app.run import window as run_window
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
@@ -17,13 +18,16 @@ from app.run.limits import (
     MAX_ORCHESTRATOR_FAILED_TOOLS,
     MAX_ORCHESTRATOR_TOOL_CALLS,
     MAX_CALL_SECONDS,
+    MAX_REPEATED_CALLS,
     MAX_SAME_RETRIES,
+    MAX_SAME_TOOL_ERRORS,
     STREAM_IDLE_TIMEOUT_SEC,
 )
 from app.run.memory import MAX_COMPACT_LEVEL, RunMemory, ToolEvent, clip_tool_messages
 from app.help.visible import strip_think
 from app.run.orchestrate import (
     control_source,
+    invented_tool_action,
     match_agent,
     parse_orchestrator_action,
     reject_reason,
@@ -57,6 +61,43 @@ _TOOL_CAP_NOTE = (
 )
 
 _SKIP_STEP_LIMIT = "Not run: tool limit for this step reached."
+
+_ORIENTATION_CAP_NOTE = (
+    "You used {n} tool calls to look around before your first agent call, which is the limit. "
+    "No more tools until you have called an agent. Decide now with one JSON object: call an agent or ask."
+)
+
+_WITHDRAWN_NOTE = (
+    "{name} failed {count} times in a row with the same error ({error}). It is withdrawn for the rest of "
+    "this decision. Decide with one JSON object, or use another tool."
+)
+_SKIP_WITHDRAWN = "Not run: this tool is withdrawn for the rest of this decision."
+
+_REPEATED_DETAIL = (
+    "Not run: you already made this exact call in this step and its result is above. "
+    "Do not repeat it. Decide now: call_agent, ask_user, reply or finish, or one JSON object."
+)
+
+_REPEAT_WITHDRAWN_NOTE = (
+    "{name} was called again with the same arguments {count} times. It is withdrawn for the rest of this "
+    "decision. Decide now: call_agent, ask_user, reply or finish, or one JSON object."
+)
+
+_ANNOUNCE_NOTE = (
+    'Your text "{text}" did not decide anything; no agent was called. When you are done checking, decide: '
+    "call call_agent, ask_user, reply or finish, or answer with one JSON object."
+)
+
+
+def _error_of(body: str) -> str:
+    """The error key of a failed tool answer, for the same-error count."""
+    try:
+        data = json.loads(body)
+    except ValueError:
+        return "failed"
+    if not isinstance(data, dict):
+        return "failed"
+    return str(data.get("errorKey") or data.get("error") or "failed")
 _SKIP_AFTER_FAILURES = "Not run: five tool calls failed in a row. Think first."
 
 _TOOL_THINK_NOTE = (
@@ -85,7 +126,17 @@ def _log_repair(node_id: str, reason: str, raw: str) -> None:
     )
 
 def _give_up(block_reply: bool) -> dict[str, str]:
-    return {"action": "think" if block_reply else "unreadable"}
+    if not block_reply:
+        return {"action": "unreadable"}
+    # After a reply the run does not fail at once; the loop counts these and
+    # fails at MAX_UNREADABLE_STREAK instead of thinking forever.
+    return {"action": "think", "_unreadable": "1"}
+
+
+def _tool_request(verb: str, result: CompletionResult, out_final: int | None) -> dict[str, str]:
+    """The model wrote a tool step as a JSON action. The loop decides what it may use."""
+    action = {"action": "tool-request", "verb": verb, "text": "", "agent": "", "task": "", "source": ""}
+    return _tag_tokens(action, result, out_final)
 
 
 def _fail_orch_tools(ctrl: RunController, node_id: str, failed: int) -> dict[str, str]:
@@ -126,10 +177,21 @@ def _orchestrator_action(
     names: list[tuple[str, str]],
     *,
     block_reply: bool,
+    write_open: bool = True,
+    tool_cap: int | None = None,
+    orientation: bool = False,
 ) -> dict[str, str] | None:
     orch = compiled.orchestrator
     if orch is None:
         return None
+    cap = tool_cap or MAX_ORCHESTRATOR_TOOL_CALLS
+    # Per tool: (error, count) of failures in a row in this decision; withdrawn tools.
+    fail_streak: dict[str, tuple[str, int]] = {}
+    withdrawn: set[str] = set()
+    # Calls that already ran in this decision, and repeats per tool.
+    answered: set[tuple[str, str]] = set()
+    repeats: dict[str, int] = {}
+    announced = False
     repairs = 0
     model_retries = 0
     offered = list(tools)
@@ -143,6 +205,8 @@ def _orchestrator_action(
     try:
         while not ctrl.stop_event.is_set():
             offered = turn_runtime._available_tools(ctrl, compiled, orch.node_id, offered)
+            # With own tools offered, the decisions are tools too; without, JSON only.
+            decision_tools = orch_tools.decision_schemas() if offered else []
             choice = turn_runtime._bind_window(orch.llm, messages, memory)
             while not choice.fits and memory.compact_level < MAX_COMPACT_LEVEL:
                 # O7: condense the course instead of ending the run. Messages of this
@@ -213,7 +277,7 @@ def _orchestrator_action(
                         secret=secret,
                         temperature=llm.temperature,
                         max_tokens=output_cap,
-                        tools=offered or None,
+                        tools=(offered + decision_tools) or None,
                         timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
                         max_duration_sec=MAX_CALL_SECONDS,
                         ollama_options=options,
@@ -308,10 +372,21 @@ def _orchestrator_action(
                 ),
             )
             turn_runtime._log_vram_compare(llm, options, choice, llm_node_id)
-            result = turn_runtime._with_salvaged_tools(result, offered)
+            result = turn_runtime._with_salvaged_tools(result, offered + decision_tools)
+            decided = orch_tools.decision_from_calls(result.tool_calls) if decision_tools else None
+            if decided is not None:
+                # A decision tool ends the turn; other calls in this answer do not run.
+                emit_log(
+                    "info",
+                    "run.orchestrator.decisionTool",
+                    node_id=orch.node_id,
+                    payload={"name": decided[0], "dropped": len(result.tool_calls) - 1},
+                )
+                result = result.model_copy(update={"tool_calls": [], "content": decided[1], "reasoning": ""})
             if result.tool_calls and offered:
                 model_retries = 0
-                memory.allow_own_tools = False
+                # Write access stays open until the next agent call (dispatch resets it).
+                open_names = turn_runtime._function_names(offered)
                 turn_runtime._set_node(ctrl, orch.node_id, "running", wait="tool")
                 messages.append(
                     LlmMessage(
@@ -321,35 +396,83 @@ def _orchestrator_action(
                     )
                 )
                 think_round = False
+                notes: list[str] = []
+                visible = strip_think(result.content or "").strip()
+                if visible and not announced:
+                    # "Now I call the Junior" next to a tool call: say that nothing was decided.
+                    announced = True
+                    notes.append(_ANNOUNCE_NOTE.format(text=" ".join(visible.split())[:160]))
                 for call in result.tool_calls:
+                    if (call.name or "") in withdrawn:
+                        turn_runtime._skip_tool_call(messages, call, "tool.withdrawn", _SKIP_WITHDRAWN)
+                        continue
+                    key = orch_tools.call_key(call.name or "", call.arguments or "")
+                    if key in answered:
+                        # The same call again: its result is already above. It does not run.
+                        name = call.name or ""
+                        repeats[name] = repeats.get(name, 0) + 1
+                        turn_runtime._skip_tool_call(messages, call, "tool.repeated", _REPEATED_DETAIL)
+                        emit_log("warn", "run.orchestrator.toolRepeated", node_id=orch.node_id, payload={"name": name})
+                        if repeats[name] >= MAX_REPEATED_CALLS and name not in withdrawn:
+                            withdrawn.add(name)
+                            offered = [
+                                item for item in offered if (item.get("function") or {}).get("name") != name
+                            ]
+                            emit_log(
+                                "warn",
+                                "run.orchestrator.toolWithdrawn",
+                                node_id=orch.node_id,
+                                payload={"name": name, "error": "tool.repeated"},
+                            )
+                            notes.append(_REPEAT_WITHDRAWN_NOTE.format(name=name, count=repeats[name]))
+                        continue
                     if think_round:
                         # Five failed in a row: stop running calls, but answer every id (O5).
                         turn_runtime._skip_tool_call(messages, call, "tool.skipped", _SKIP_AFTER_FAILURES)
                         continue
-                    if own_calls >= MAX_ORCHESTRATOR_TOOL_CALLS:
+                    if own_calls >= cap:
                         turn_runtime._skip_tool_call(messages, call, "tool.stepLimit", _SKIP_STEP_LIMIT)
                         continue
                     own_calls += 1
-                    body, fact, ok_tool = turn_runtime._dispatch_tool(
-                        ctrl,
-                        compiled,
-                        owner_id=orch.node_id,
-                        call_name=call.name,
-                        call_arguments=call.arguments or "",
-                        tool_kinds=orch.tool_kinds,
-                        mcp=mcp,
-                        record=None,
-                        reuse=False,
+                    if orientation:
+                        memory.orientation_calls += 1
+                    closed = orch_tools.locked(
+                        call.name or "", call.arguments or "", open_names, write_open=write_open
                     )
-                    memory.note_own_tool(
-                        ToolEvent(
-                            name=call.name,
-                            arguments=call.arguments or "",
-                            ok=ok_tool,
-                            result=body[:8000],
-                        ),
-                        fact,
-                    )
+                    if closed is not None:
+                        # Not run: the schema did not offer it on this turn.
+                        error_key, detail = closed
+                        body = json.dumps({"ok": False, "error": error_key, "detail": detail})
+                        fact, ok_tool = None, False
+                        emit_log(
+                            "warn",
+                            "run.orchestrator.toolLocked",
+                            node_id=orch.node_id,
+                            payload={"name": call.name or "", "error": error_key},
+                        )
+                    else:
+                        body, fact, ok_tool = turn_runtime._dispatch_tool(
+                            ctrl,
+                            compiled,
+                            owner_id=orch.node_id,
+                            call_name=call.name,
+                            call_arguments=call.arguments or "",
+                            tool_kinds=orch.tool_kinds,
+                            mcp=mcp,
+                            record=None,
+                            reuse=False,
+                        )
+                    if closed is None:
+                        # A locked call ran nothing; it is no progress and no file fact.
+                        memory.note_own_tool(
+                            ToolEvent(
+                                name=call.name,
+                                arguments=call.arguments or "",
+                                ok=ok_tool,
+                                result=body[:8000],
+                            ),
+                            fact,
+                        )
                     messages.append(
                         LlmMessage(
                             role="tool",
@@ -361,10 +484,30 @@ def _orchestrator_action(
                     if ok_tool:
                         memory.orch_failed_tools = 0
                         memory.orch_failed_thinks = 0
+                        fail_streak.pop(call.name or "", None)
+                        answered.add(key)
                         continue
                     if turn_runtime._call_refused(ctrl, compiled, orch.node_id, call.name):
                         # A maxCalls refusal is the network's choice, not a broken tool.
                         continue
+                    tool_name = call.name or ""
+                    error = _error_of(body)
+                    previous = fail_streak.get(tool_name)
+                    count = previous[1] + 1 if previous and previous[0] == error else 1
+                    fail_streak[tool_name] = (error, count)
+                    if count >= MAX_SAME_TOOL_ERRORS and tool_name not in withdrawn:
+                        # Same tool, same error, again and again: stop offering it in this decision.
+                        withdrawn.add(tool_name)
+                        offered = [
+                            item for item in offered if (item.get("function") or {}).get("name") != tool_name
+                        ]
+                        emit_log(
+                            "warn",
+                            "run.orchestrator.toolWithdrawn",
+                            node_id=orch.node_id,
+                            payload={"name": tool_name, "error": error},
+                        )
+                        notes.append(_WITHDRAWN_NOTE.format(name=tool_name, count=count, error=error))
                     memory.orch_failed_tools += 1
                     if memory.orch_failed_tools < MAX_ORCHESTRATOR_FAILED_TOOLS:
                         continue
@@ -390,16 +533,28 @@ def _orchestrator_action(
                     # The note follows all tool answers; a user turn between them is invalid.
                     memory.add_note(_TOOL_THINK_NOTE)
                     messages.append(LlmMessage(role="user", content=_TOOL_THINK_NOTE))
-                if own_calls >= MAX_ORCHESTRATOR_TOOL_CALLS and offered:
+                for note in notes:
+                    messages.append(LlmMessage(role="user", content=note))
+                if own_calls >= cap and offered:
                     offered = []
-                    memory.allow_own_tools = False
-                    emit_log(
-                        "warn",
-                        "run.orchestrator.toolCap",
-                        node_id=orch.node_id,
-                        payload={"calls": own_calls, "max": MAX_ORCHESTRATOR_TOOL_CALLS},
-                    )
-                    messages.append(LlmMessage(role="user", content=_TOOL_CAP_NOTE.format(n=own_calls)))
+                    if orientation:
+                        emit_log(
+                            "warn",
+                            "run.orchestrator.orientationCap",
+                            node_id=orch.node_id,
+                            payload={"calls": memory.orientation_calls},
+                        )
+                        messages.append(
+                            LlmMessage(role="user", content=_ORIENTATION_CAP_NOTE.format(n=memory.orientation_calls))
+                        )
+                    else:
+                        emit_log(
+                            "warn",
+                            "run.orchestrator.toolCap",
+                            node_id=orch.node_id,
+                            payload={"calls": own_calls, "max": cap},
+                        )
+                        messages.append(LlmMessage(role="user", content=_TOOL_CAP_NOTE.format(n=own_calls)))
                 continue
             if result.tool_calls:
                 offered = []
@@ -417,6 +572,10 @@ def _orchestrator_action(
             raw = _control_raw(result)
             reason = reject_reason(raw)
             if reason:
+                verb = invented_tool_action(raw)
+                if verb:
+                    memory.reject(raw, "tool")
+                    return _tool_request(verb, result, out_final)
                 memory.reject(raw, reason)
                 repairs += 1
                 _log_repair(orch.node_id, reason, raw)
@@ -428,6 +587,12 @@ def _orchestrator_action(
                 return action
             parsed = parse_orchestrator_action(raw)
             kind = parsed.get("action") or "reply"
+            if kind in {"think", "reply", "ask", "finish"}:
+                # A file change or command pasted into the text: never shown, never a plan
+                # the loop keeps repeating. The loop opens the matching tools or says why not.
+                verb = invented_tool_action(parsed.get("text") or "")
+                if verb:
+                    return _tool_request(verb, result, out_final)
             if kind == "reply" and _from_reasoning(result, raw) and not structured_action(raw):
                 # O10: provider reasoning is private planning; it must never reach the chat.
                 emit_log("info", "run.orchestrator.privateReasoning", node_id=orch.node_id)

@@ -1036,13 +1036,19 @@
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",
         "channelHint": "Dieser Agent hängt am Orchestrator. Aufträge kommen über den Kanal, die Antwort geht dorthin zurück.",
-        "systemPrompt": "Systemprompt"
+        "systemPrompt": "Systemprompt",
+        "maxToolCalls": "Werkzeugaufrufe je Auftrag",
+        "maxToolCallsHint": "Danach antwortet der Agent mit dem, was er hat, und nennt, was offen ist. Leer: 100."
       },
       "orchestrator": {
         "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang. Angeschlossene Werkzeuge ruft er selbst auf.",
         "systemPrompt": "Systemprompt",
         "agentMissLimit": "Fehlversuche je Agent",
-        "agentMissLimitHint": "So oft darf ein Agent mit Dateizugriff einen Auftrag ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 3."
+        "agentMissLimitHint": "So oft in Folge darf ein Agent scheitern oder einen Auftrag mit Dateizugriff ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 2.",
+        "maxToolCalls": "Werkzeugaufrufe je Entscheidung",
+        "maxToolCallsHint": "So viele eigene Werkzeugaufrufe darf der Orchestrator nach einem gescheiterten Agentenaufruf oder in einer Übernahme für eine Entscheidung machen. Davor darf er nur Dateien lesen, höchstens 10 Aufrufe je Entscheidung. Leer: 50.",
+        "maxLlmCalls": "Modellaufrufe je Lauf",
+        "maxLlmCallsHint": "Orchestrator und Agenten zusammen. Danach endet der Lauf mit einem Fehler. Leer: 1000."
       },
       "prompt": {
         "pick": "Prompt",
@@ -1246,6 +1252,9 @@
       "toolMaxCalls": "Max. Aufrufe muss eine ganze Zahl ab 1 sein.",
       "httpCredentialUrl": "HTTP mit Zugang braucht eine vollständige URL (http/https). Der Zugang wird nur an diese Adresse gesendet.",
       "zipRoot": "ZIP braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
+      "fileAccessRootMissing": "Der Ordner des Dateizugriffs existiert nicht. Lege ihn an oder wähle einen anderen.",
+      "terminalRootMissing": "Der Arbeitsordner des Terminals existiert nicht. Lege ihn an oder wähle einen anderen.",
+      "zipRootMissing": "Der Ordner des ZIP-Werkzeugs existiert nicht. Lege ihn an oder wähle einen anderen.",
       "knowledgePath": "Quellenordner ist Pflicht.",
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
       "knowledgeSandbox": "Pfad muss unter dem Datenordner liegen.",
@@ -1866,6 +1875,7 @@
       "tool": {
         "limitReached": "Werkzeug {{name}}: Limit von {{limit}} Aufrufen pro Lauf erreicht.",
         "notOffered": "Werkzeug {{name}} ist an diesem Knoten nicht freigegeben; der Aufruf wurde nicht ausgeführt.",
+        "disabled": "Werkzeug {{name}} ist für den Rest des Laufs abgeschaltet ({{error}}).",
         "call": "Werkzeug {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
@@ -1906,7 +1916,16 @@
         "takeoverStart": "{{agent}} hat {{misses}} Dateiversuche ohne Änderung verbraucht. Der Orchestrator übernimmt.",
         "takeoverBlocked": "Aufruf von {{agent}} abgelehnt. Der Orchestrator muss die Datei selbst schreiben.",
         "takeover": "{{agent}} hat das Versuchslimit erreicht. Der Orchestrator hat keine Datei geschrieben.",
-        "takeoverNoTool": "{{agent}} hat das Versuchslimit erreicht. Am Orchestrator hängt kein Dateiwerkzeug."
+        "takeoverNoTool": "{{agent}} hat das Versuchslimit erreicht. Am Orchestrator hängt kein Dateiwerkzeug.",
+        "takeoverFailures": "{{agent}} ist {{failed}}-mal in Folge gescheitert ({{reason}}). Der Orchestrator übernimmt.",
+        "toolRequest": "Der Orchestrator hat „{{verb}}“ als Aktion geschrieben statt das Werkzeug aufzurufen.",
+        "selfTakeover": "Ein Agent ist gescheitert: Der Orchestrator darf Dateien jetzt selbst ändern.",
+        "toolLocked": "Werkzeugaufruf {{name}} nicht ausgeführt: in diesem Schritt nicht freigegeben.",
+        "stuck": "Der Orchestrator kam nicht weiter: {{decisions}} Entscheidungen ohne neuen Schritt.",
+        "orientationCap": "Orchestrator: {{calls}} Werkzeugaufrufe vor dem ersten Agentenauftrag, Grenze erreicht.",
+        "toolWithdrawn": "Werkzeug {{name}} ist für diesen Schritt zurückgezogen: wiederholt derselbe Fehler oder derselbe Aufruf ({{error}}).",
+        "toolRepeated": "Werkzeugaufruf {{name}} nicht ausgeführt: derselbe Aufruf lief in diesem Schritt schon.",
+        "decisionTool": "Der Orchestrator hat über das Werkzeug {{name}} entschieden."
       }
     },
     "mcp": {

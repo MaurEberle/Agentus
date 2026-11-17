@@ -89,6 +89,10 @@ class RunController:
         # Per tool node for this run: calls made, and nodes that refused a call (maxCalls).
         self.tool_calls: dict[str, int] = {}
         self.llm_calls = 0
+        # Model calls this run may make; None means MAX_RUN_LLM_CALLS (orchestrator maxLlmCalls).
+        self.llm_budget: int | None = None
+        # Tool nodes switched off for this run after a configuration error (node id -> error key).
+        self.broken_tools: dict[str, str] = {}
         self.tool_refused: set[str] = set()
         set_run_slice_provider(self.slice)
 
@@ -203,6 +207,8 @@ class RunController:
             self.tool_calls = {}
             self.tool_refused = set()
             self.llm_calls = 0
+            self.llm_budget = None
+            self.broken_tools = {}
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()

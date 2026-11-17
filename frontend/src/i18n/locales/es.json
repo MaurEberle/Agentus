@@ -969,13 +969,19 @@
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",
         "channelHint": "Este agente pertenece al orquestador. Los encargos llegan por el canal y el resultado vuelve por él.",
-        "systemPrompt": "Prompt de sistema"
+        "systemPrompt": "Prompt de sistema",
+        "maxToolCalls": "Llamadas a herramientas por encargo",
+        "maxToolCallsHint": "Después el agente responde con lo que tiene y dice qué queda pendiente. Vacío: 100."
       },
       "orchestrator": {
         "hint": "Un LLM por una arista. El chat llega aquí. Cada agente tiene su canal. La salida de mensaje sigue siendo el fin. Llama él mismo las herramientas conectadas.",
         "systemPrompt": "Prompt de sistema",
         "agentMissLimit": "Intentos fallidos por agente",
-        "agentMissLimitHint": "Cuántas veces un agente con acceso a archivos puede terminar una tarea sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 3."
+        "agentMissLimitHint": "Cuántas veces seguidas un agente puede fallar o terminar una tarea con acceso a archivos sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 2.",
+        "maxToolCalls": "Llamadas a herramientas por decisión",
+        "maxToolCallsHint": "Cuántas llamadas propias a herramientas puede hacer el orquestador en una decisión después de que falle un agente o durante una toma de control. Antes solo puede leer archivos, como mucho 10 llamadas por decisión. Vacío: 50.",
+        "maxLlmCalls": "Llamadas al modelo por ejecución",
+        "maxLlmCallsHint": "Orquestador y agentes juntos. Después la ejecución termina con un error. Vacío: 1000."
       },
       "prompt": {
         "pick": "Prompt",
@@ -1178,6 +1184,9 @@
       "toolMaxCalls": "Máx. llamadas debe ser un número entero de al menos 1.",
       "httpCredentialUrl": "HTTP con una credencial necesita una URL completa (http/https). La credencial solo se envía a esa dirección.",
       "zipRoot": "ZIP necesita una carpeta que no sea la raíz de una unidad.",
+      "fileAccessRootMissing": "La carpeta del acceso a archivos no existe. Créala o elige otra.",
+      "terminalRootMissing": "La carpeta de trabajo del terminal no existe. Créala o elige otra.",
+      "zipRootMissing": "La carpeta de la herramienta ZIP no existe. Créala o elige otra.",
       "knowledgePath": "La carpeta de origen es obligatoria.",
       "knowledgeRoot": "No se permite la raíz de una unidad o del sistema.",
       "knowledgeSandbox": "La ruta debe estar bajo la carpeta de datos.",
@@ -1799,6 +1808,7 @@
       "tool": {
         "limitReached": "Herramienta {{name}}: límite de {{limit}} llamadas por ejecución alcanzado.",
         "notOffered": "La herramienta {{name}} no está habilitada en este nodo; la llamada no se ejecutó.",
+        "disabled": "La herramienta {{name}} queda desactivada el resto de la ejecución ({{error}}).",
         "call": "Herramienta {{name}}"
       },
       "router": "Enrutador {{branch}} → {{target}}",
@@ -1839,7 +1849,16 @@
         "takeoverStart": "{{agent}} agotó {{misses}} intentos de archivo sin cambio. El orquestador toma el control.",
         "takeoverBlocked": "Llamada a {{agent}} rechazada. El orquestador debe escribir el archivo.",
         "takeover": "{{agent}} alcanzó el límite de intentos. El orquestador no escribió ningún archivo.",
-        "takeoverNoTool": "{{agent}} alcanzó el límite de intentos. El orquestador no tiene herramienta de archivos."
+        "takeoverNoTool": "{{agent}} alcanzó el límite de intentos. El orquestador no tiene herramienta de archivos.",
+        "takeoverFailures": "{{agent}} falló {{failed}} veces seguidas ({{reason}}). El orquestador toma el control.",
+        "toolRequest": "El orquestador escribió «{{verb}}» como acción en lugar de llamar a la herramienta.",
+        "selfTakeover": "Un agente falló: el orquestador puede cambiar archivos él mismo.",
+        "toolLocked": "Llamada {{name}} no ejecutada: no está habilitada en este paso.",
+        "stuck": "El orquestador se atascó: {{decisions}} decisiones sin un paso nuevo.",
+        "orientationCap": "Orquestador: {{calls}} llamadas a herramientas antes del primer encargo, límite alcanzado.",
+        "toolWithdrawn": "La herramienta {{name}} se retira en este paso: el mismo error o la misma llamada una y otra vez ({{error}}).",
+        "toolRepeated": "Llamada {{name}} no ejecutada: la misma llamada ya se hizo en este paso.",
+        "decisionTool": "El orquestador decidió mediante la herramienta {{name}}."
       }
     },
     "graph": {

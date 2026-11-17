@@ -1036,13 +1036,19 @@
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
         "channelHint": "This agent belongs to the orchestrator. Tasks arrive on the channel, and the result goes back there.",
-        "systemPrompt": "System prompt"
+        "systemPrompt": "System prompt",
+        "maxToolCalls": "Tool calls per task",
+        "maxToolCallsHint": "After that the agent answers with what it has and says what is still open. Empty: 100."
       },
       "orchestrator": {
         "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end. It calls tools on the tool port.",
         "systemPrompt": "System prompt",
         "agentMissLimit": "Misses per agent",
-        "agentMissLimitHint": "How often an agent with file access may finish a task without writing, editing, or deleting a file. The orchestrator then does that task. The default is 3."
+        "agentMissLimitHint": "How often in a row an agent may fail, or finish a task with file access without writing, editing, or deleting a file. The orchestrator then does that task. The default is 2.",
+        "maxToolCalls": "Tool calls per decision",
+        "maxToolCallsHint": "How many of its own tool calls the orchestrator may make for one decision after an agent call failed or during a takeover. Before that it may only read files, at most 10 calls per decision. Empty: 50.",
+        "maxLlmCalls": "Model calls per run",
+        "maxLlmCallsHint": "Orchestrator and agents together. After that the run ends with an error. Empty: 1000."
       },
       "prompt": {
         "pick": "Prompt",
@@ -1246,6 +1252,9 @@
       "toolMaxCalls": "Max. calls must be a whole number of at least 1.",
       "httpCredentialUrl": "HTTP with a credential needs a full URL (http/https). The credential is only sent to that address.",
       "zipRoot": "ZIP needs a folder that is not a drive root.",
+      "fileAccessRootMissing": "The file access folder does not exist. Create it or choose another one.",
+      "terminalRootMissing": "The terminal's working folder does not exist. Create it or choose another one.",
+      "zipRootMissing": "The zip tool's folder does not exist. Create it or choose another one.",
       "knowledgePath": "Source folder is required.",
       "knowledgeRoot": "Drive or system root is not allowed.",
       "knowledgeSandbox": "Path must be under the data folder.",
@@ -1866,6 +1875,7 @@
       "tool": {
         "limitReached": "Tool {{name}}: limit of {{limit}} calls per run reached.",
         "notOffered": "Tool {{name}} is not enabled on this node; the call was not run.",
+        "disabled": "Tool {{name}} is switched off for the rest of the run ({{error}}).",
         "call": "Tool {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
@@ -1906,7 +1916,16 @@
         "takeoverStart": "{{agent}} used {{misses}} file attempts without a change. The orchestrator takes over.",
         "takeoverBlocked": "Call to {{agent}} was refused. The orchestrator must write the file.",
         "takeover": "{{agent}} reached the attempt limit. The orchestrator did not write a file.",
-        "takeoverNoTool": "{{agent}} reached the attempt limit. The orchestrator has no file tool."
+        "takeoverNoTool": "{{agent}} reached the attempt limit. The orchestrator has no file tool.",
+        "takeoverFailures": "{{agent}} failed {{failed}} times in a row ({{reason}}). The orchestrator takes over.",
+        "toolRequest": "The orchestrator wrote “{{verb}}” as an action instead of calling the tool.",
+        "selfTakeover": "An agent failed: the orchestrator may now change files itself.",
+        "toolLocked": "Tool call {{name}} not run: not open in this step.",
+        "stuck": "The orchestrator got stuck: {{decisions}} decisions without a new step.",
+        "orientationCap": "Orchestrator: {{calls}} tool calls before the first agent call, limit reached.",
+        "toolWithdrawn": "Tool {{name}} is withdrawn for this step: the same error or the same call again and again ({{error}}).",
+        "toolRepeated": "Tool call {{name}} not run: the same call already ran in this step.",
+        "decisionTool": "The orchestrator decided through the tool {{name}}."
       }
     },
     "mcp": {

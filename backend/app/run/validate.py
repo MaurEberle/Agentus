@@ -186,6 +186,31 @@ def _knowledge_reason(source_path: str, data_dir: str) -> str | None:
     return source_block_reason(source_path, data_dir)
 
 
+def folder_exists(path: str) -> bool:
+    """A tool folder must exist before a run; a missing one failed every call (Dev Team run, 2026-11-17)."""
+    try:
+        return Path(path).expanduser().is_dir()
+    except (OSError, ValueError):
+        return False
+
+
+def _check_tool_root(node, kind_key: str, errors: list) -> None:
+    root = str(node.data.get("rootPath") or "").strip()
+    if not root:
+        errors.append(_err(f"graph.{kind_key}.root", node.id))
+        return
+    try:
+        root_path = Path(root).expanduser()
+        if not root_path.is_absolute() or is_forbidden_root(root_path):
+            errors.append(_err(f"graph.{kind_key}.root", node.id))
+            return
+    except (ValueError, OSError):
+        errors.append(_err(f"graph.{kind_key}.root", node.id))
+        return
+    if not folder_exists(root):
+        errors.append(_err(f"graph.{kind_key}.rootMissing", node.id))
+
+
 def validate_document(
     doc: AgentNetworkDocument,
     *,
@@ -370,42 +395,15 @@ def validate_document(
                 if credential_origin(node.data) is None:
                     errors.append(_err("graph.http.credentialUrl", node.id))
             if kind == "file_access":
-                root = str(node.data.get("rootPath") or "").strip()
-                if not root:
-                    errors.append(_err("graph.fileAccess.root", node.id))
-                else:
-                    try:
-                        root_path = Path(root).expanduser()
-                        if not root_path.is_absolute() or is_forbidden_root(root_path):
-                            errors.append(_err("graph.fileAccess.root", node.id))
-                    except (ValueError, OSError):
-                        errors.append(_err("graph.fileAccess.root", node.id))
+                _check_tool_root(node, "fileAccess", errors)
             if kind == "terminal":
-                root = str(node.data.get("rootPath") or "").strip()
-                if not root:
-                    errors.append(_err("graph.terminal.root", node.id))
-                else:
-                    try:
-                        root_path = Path(root).expanduser()
-                        if not root_path.is_absolute() or is_forbidden_root(root_path):
-                            errors.append(_err("graph.terminal.root", node.id))
-                    except (ValueError, OSError):
-                        errors.append(_err("graph.terminal.root", node.id))
+                _check_tool_root(node, "terminal", errors)
                 mode = str(node.data.get("terminalMode") or "restricted").strip().lower()
                 programs = node.data.get("terminalPrograms")
                 if mode != "unrestricted" and isinstance(programs, list) and not programs:
                     errors.append(_err("graph.terminal.programs", node.id))
             if kind == "zip":
-                root = str(node.data.get("rootPath") or "").strip()
-                if not root:
-                    errors.append(_err("graph.zip.root", node.id))
-                else:
-                    try:
-                        root_path = Path(root).expanduser()
-                        if not root_path.is_absolute() or is_forbidden_root(root_path):
-                            errors.append(_err("graph.zip.root", node.id))
-                    except (ValueError, OSError):
-                        errors.append(_err("graph.zip.root", node.id))
+                _check_tool_root(node, "zip", errors)
         if node.type == "knowledge":
             path = str(node.data.get("sourcePath") or "")
             reason = _knowledge_reason(path, data_dir)

@@ -223,6 +223,7 @@ def _agent_turn(
 
     failed_tools = 0
     tool_calls_used = 0
+    tool_cap = agent.max_tool_calls or MAX_AGENT_TOOL_CALLS
     json_attempts = 0
     nudges = 0
     thinks = 0
@@ -501,7 +502,7 @@ def _agent_turn(
                 )
                 hit_failure_limit = False
                 for call in result.tool_calls:
-                    if tool_calls_used >= MAX_AGENT_TOOL_CALLS:
+                    if tool_calls_used >= tool_cap:
                         turn_runtime._skip_tool_call(messages, call, "tool.stepLimit", _SKIP_TASK_LIMIT)
                         continue
                     tool_calls_used += 1
@@ -544,7 +545,7 @@ def _agent_turn(
                         return None
                 if hit_failure_limit:
                     break
-                if tool_calls_used >= MAX_AGENT_TOOL_CALLS and offered:
+                if tool_calls_used >= tool_cap and offered:
                     offered = []
                     if record is not None:
                         record.capped = True
@@ -552,7 +553,7 @@ def _agent_turn(
                         "warn",
                         "run.agent.toolCap",
                         node_id=agent_id,
-                        payload={"calls": tool_calls_used, "max": MAX_AGENT_TOOL_CALLS},
+                        payload={"calls": tool_calls_used, "max": tool_cap},
                     )
                     messages.append(
                         LlmMessage(role="user", content=_AGENT_TOOL_CAP_NOTE.format(n=tool_calls_used))

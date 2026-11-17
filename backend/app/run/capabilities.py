@@ -14,26 +14,94 @@ _FILE_WRITES = ("write", "mkdir", "edit", "move")
 _FILE_DELETES = ("delete",)
 
 
-def capability_text(compiled: CompiledGraph, owner_id: str, *, available: bool) -> str:
+def capability_text(
+    compiled: CompiledGraph, owner_id: str, *, available: bool, read_only: bool = False
+) -> str:
     blocks = _blocks(compiled, owner_id)
     if not blocks:
         return (
             "# Connected tools\n"
             "No tools and no MCP servers are connected. Do not call a tool."
         )
-    head = (
-        "Available on this turn. Call only a name listed here, with a tool call."
-        if available
-        else (
+    if available and read_only:
+        head = (
+            "Available on this turn for reading and checking: file list, read, tree, stat and search, "
+            "the terminal, web search. Changing files, zip, HTTP and MCP tools open after an agent call "
+            "failed or during a takeover. Call only an available tool, with a tool call."
+        )
+    elif available:
+        head = "Available on this turn. Call only a name listed here, with a tool call."
+    else:
+        head = (
             "Connected, but not available on this turn. Do not call a tool. "
             "Call an agent. These tools are offered only after an agent fails or during file takeover."
         )
-    )
     rules = (
         "Do not invent an action, a program, or a path outside the stated root. "
         "A file_access call without action is rejected."
     )
     return "# Connected tools\n" + head + "\n" + rules + "\n\n" + "\n\n".join(blocks)
+
+
+def orchestrator_capabilities(compiled: CompiledGraph, owner_id: str, offered: list[dict]) -> str:
+    """Connected tools of the orchestrator as far as they are open on this turn.
+
+    The agent text listed every action of the node ("Write: allowed") while the
+    orchestrator could not write; the model then tried to write (Dev Team run,
+    2026-11-17). Here a tool that is not offered is not mentioned, and the file
+    block names only the actions in the offered schema.
+    """
+    from app.run.mcp_bridge import map_openai_tool_name
+
+    names: set[str] = set()
+    file_actions: list[str] | None = None
+    servers: set[str] = set()
+    for item in offered:
+        function = item.get("function") or {}
+        name = str(function.get("name") or "")
+        if not name:
+            continue
+        names.add(name)
+        mapped = map_openai_tool_name(name)
+        if mapped:
+            servers.add(mapped[0])
+        if name == "file_access":
+            props = (function.get("parameters") or {}).get("properties") or {}
+            enum = (props.get("action") or {}).get("enum")
+            if isinstance(enum, list):
+                file_actions = [str(action) for action in enum]
+    if not names:
+        return ""
+    by_id = {node.id: node for node in compiled.doc.nodes}
+    blocks: list[str] = []
+    for edge in compiled.doc.edges:
+        if edge.target != owner_id or edge.target_handle != "tool":
+            continue
+        node = by_id.get(edge.source)
+        if node is None:
+            continue
+        if is_mcp_node(node):
+            if str(node.data.get("mcpServerId") or "") in servers:
+                blocks.append(_mcp_block(node.data))
+            continue
+        kind = str(node.data.get("kind") or "")
+        if kind not in names:
+            continue
+        title = str(node.data.get("displayName") or kind or node.id)
+        if kind == "file_access":
+            blocks.append(_file_block(title, node.data, only=file_actions))
+        elif kind == "terminal":
+            blocks.append(_terminal_block(title, node.data))
+        else:
+            blocks.append(f"## {title}\nTool name: {kind}.")
+    if not blocks:
+        return ""
+    head = (
+        "# Connected tools, open on this turn\n"
+        "Call only a tool listed here, with a native tool call. Do not invent an action, a program, "
+        "or a path outside the stated root. A file_access call without action is rejected."
+    )
+    return head + "\n\n" + "\n\n".join(blocks)
 
 
 def _blocks(compiled: CompiledGraph, owner_id: str) -> list[str]:
@@ -59,27 +127,33 @@ def _blocks(compiled: CompiledGraph, owner_id: str) -> list[str]:
     return blocks
 
 
-def _file_block(title: str, data: dict) -> str:
+def _file_block(title: str, data: dict, *, only: list[str] | None = None) -> str:
     root = str(data.get("rootPath") or "").strip() or "(no root)"
     chosen = data.get("fileActions")
     if isinstance(chosen, list) and chosen:
         actions = [name for name in FILE_ACTION_ORDER if name in {str(item) for item in chosen}]
     else:
         actions = list(FILE_ACTION_ORDER)
+    if only is not None:
+        actions = [name for name in actions if name in set(only)]
     allow_write = data.get("allowWrite")
     allow_delete = data.get("allowDelete")
     write_note = "allowed" if allow_write is not False else "denied"
     delete_note = "allowed" if allow_delete is not False else "denied"
+    writes = [name for name in _FILE_WRITES if name in actions]
     lines = [
         f"## {title}",
         "Tool name: file_access.",
         f"Root: {root}.",
         "Paths are relative to that root, or '.' for the root. Absolute paths and paths outside the root are rejected.",
         f"Actions: {', '.join(actions)}.",
-        f"Write ({', '.join(name for name in _FILE_WRITES if name in actions)}): {write_note}.",
-        f"Delete: {delete_note}.",
-        'Call shape: {"action":"<one listed action>","path":"<relative path>"}.',
     ]
+    # A write or delete line only where those actions are offered.
+    if writes or only is None:
+        lines.append(f"Write ({', '.join(writes)}): {write_note}.")
+    if "delete" in actions or only is None:
+        lines.append(f"Delete: {delete_note}.")
+    lines.append('Call shape: {"action":"<one listed action>","path":"<relative path>"}.')
     if "read" in actions:
         # H6: a file larger than one result is paged, not cut off.
         lines.append(

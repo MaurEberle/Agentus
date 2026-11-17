@@ -1,4 +1,4 @@
-"""O4: per-step tool caps (orchestrator 10, agent 50) and per-node maxCalls per run."""
+"""O4: per-step tool caps (orchestrator 50, agent 100) and per-node maxCalls per run."""
 
 from __future__ import annotations
 
@@ -33,7 +33,8 @@ def _ok_execute(counter: dict):
 
 def _reads(prefix: str, count: int) -> list[ToolCall]:
     return [
-        ToolCall(id=f"{prefix}{i}", name="file_access", arguments='{"action":"list","path":"."}')
+        # Distinct paths: the orchestrator does not run the same call twice in one decision.
+        ToolCall(id=f"{prefix}{i}", name="file_access", arguments=f'{{"action":"list","path":"d/{prefix}{i}"}}')
         for i in range(count)
     ]
 
@@ -54,15 +55,23 @@ def test_orchestrator_tool_calls_are_capped_per_decision(monkeypatch, api_env) -
     monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _ok_execute(executed))
     complete_answers: list[bool] = []
     rounds = {"n": 0}
+    called = {"v": False}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
         if "You orchestrate" not in system:
-            return CompletionResult(content="agent-text", model=req.model, finish_reason="stop")
+            # The call fails (empty result): write access opens and with it the full cap of 50.
+            return CompletionResult(content="", model=req.model, finish_reason="stop")
         complete_answers.append(_tool_answers_complete(req))
+        if not called["v"]:
+            # Before the first agent call only ten calls of looking around are allowed.
+            called["v"] = True
+            return CompletionResult(
+                content='{"action":"call","agent":"Schreiber","task":"schreib"}', model=req.model, finish_reason="stop"
+            )
         if req.tools:
             rounds["n"] += 1
-            # Three calls per round: the cap of 10 cuts the fourth round after one call.
+            # Three calls per round: the cap of 50 cuts the 17th round after two calls.
             return CompletionResult(
                 content=None, tool_calls=_reads(f"r{rounds['n']}_", 3), model=req.model, finish_reason="tool_calls"
             )
@@ -70,8 +79,8 @@ def test_orchestrator_tool_calls_are_capped_per_decision(monkeypatch, api_env) -
 
     stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
     assert stored["outcome"] == "succeeded"
-    assert executed["n"] == 10
-    assert rounds["n"] == 4
+    assert executed["n"] == 50
+    assert rounds["n"] == 17
     # Every tool_call_id got a tool message, including the two skipped ones (O5 shape).
     assert all(complete_answers)
     assert "run.orchestrator.toolCap" in _messages(stored)
@@ -91,7 +100,7 @@ def test_agent_tool_calls_are_capped_per_task(monkeypatch, api_env) -> None:
 
     stored = _drive(monkeypatch, _complete, doc=_linear_file_doc(), user_texts=())
     assert stored["outcome"] == "succeeded"
-    assert executed["n"] == 50
+    assert executed["n"] == 100
     assert seen_cap_note["v"] is True
     assert "run.agent.toolCap" in _messages(stored)
 

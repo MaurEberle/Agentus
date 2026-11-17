@@ -768,7 +768,11 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
     )
     stored = _drive(monkeypatch, _complete, doc=doc)
     assert stored["outcome"] == "succeeded", stored.get("error_message")
-    assert not seen_tools[0]
+    # Checking tools from the start: list and read, but no write before a failure.
+    first = next(item for item in seen_tools[0] if (item.get("function") or {}).get("name") == "file_access")
+    actions = first["function"]["parameters"]["properties"]["action"]["enum"]
+    assert "list" in actions and "read" in actions
+    assert "write" not in actions and "delete" not in actions
     assert any(
         tools and any((item.get("function") or {}).get("name") == "file_access" for item in tools)
         for tools in seen_tools
@@ -783,6 +787,21 @@ def test_orchestrator_calls_a_connected_tool_without_keeping_the_result(monkeypa
     assert raw_listing not in "\n".join(texts)
     assert "Fertig." in texts
     assert stored["memory"]["ownFiles"][0]["action"] == "list"
+
+
+def _can_write(req: CompletionRequest) -> bool:
+    """True when the orchestrator may change files on this turn.
+
+    Reading and checking tools are offered from the start; write actions only
+    after an agent call failed or during a takeover.
+    """
+    for item in req.tools or []:
+        function = item.get("function") or {}
+        if function.get("name") != "file_access":
+            continue
+        props = (function.get("parameters") or {}).get("properties") or {}
+        return "write" in ((props.get("action") or {}).get("enum") or [])
+    return False
 
 
 def _orch_files_doc() -> dict:
@@ -843,7 +862,11 @@ def test_orchestrator_keeps_tool_rounds_then_calls_an_agent(monkeypatch, api_env
             return CompletionResult(
                 content=None,
                 tool_calls=[
-                    ToolCall(id="c1", name="file_access", arguments='{"action":"list","path":"."}')
+                    ToolCall(
+                        id="c1",
+                        name="file_access",
+                        arguments=f'{{"action":"list","path":"d{executed["n"]}"}}',
+                    )
                 ],
                 model=req.model,
                 finish_reason="tool_calls",
@@ -879,7 +902,7 @@ def test_orchestrator_runs_a_third_xml_tool_instead_of_chatting(monkeypatch, api
         system = req.messages[0].content or ""
         if "You orchestrate" not in system:
             return CompletionResult(content="", model=req.model, finish_reason="stop")
-        if not req.tools:
+        if not _can_write(req):
             return CompletionResult(
                 content='{"action":"call","agent":"Schreiber","task":"schreib"}',
                 model=req.model,
@@ -949,7 +972,7 @@ def test_orchestrator_starts_a_think_round_after_five_failed_tools(monkeypatch, 
     def _execute(kind, *, config, args, secret=None):
         del kind, config, args, secret
         executed["n"] += 1
-        return ExecuteResult(ok=False, result="denied")
+        return ExecuteResult(ok=False, error_key=f"tools.test.e{executed['n']}", result="denied")
 
     monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
@@ -958,7 +981,7 @@ def test_orchestrator_starts_a_think_round_after_five_failed_tools(monkeypatch, 
         blob = "\n".join(message.content or "" for message in req.messages)
         if "You orchestrate" not in system:
             return CompletionResult(content="", model=req.model, finish_reason="stop")
-        if not req.tools:
+        if not _can_write(req):
             return CompletionResult(
                 content='{"action":"call","agent":"Schreiber","task":"schreib"}',
                 model=req.model,
@@ -1005,7 +1028,7 @@ def test_orchestrator_stops_after_two_failed_think_rounds(monkeypatch, api_env) 
     def _execute(kind, *, config, args, secret=None):
         del kind, config, args, secret
         executed["n"] += 1
-        return ExecuteResult(ok=False, result="denied")
+        return ExecuteResult(ok=False, error_key=f"tools.test.e{executed['n']}", result="denied")
 
     monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
@@ -1013,7 +1036,7 @@ def test_orchestrator_stops_after_two_failed_think_rounds(monkeypatch, api_env) 
         system = req.messages[0].content or ""
         if "You orchestrate" not in system:
             return CompletionResult(content="", model=req.model, finish_reason="stop")
-        if not req.tools:
+        if not _can_write(req):
             return CompletionResult(
                 content='{"action":"call","agent":"Schreiber","task":"schreib"}',
                 model=req.model,
@@ -1053,7 +1076,11 @@ def test_orchestrator_failed_tool_streak_resets_after_a_success(monkeypatch, api
         executed["n"] += 1
         path = str((args or {}).get("path") or "")
         ok = path == "ok.txt"
-        return ExecuteResult(ok=ok, result={"path": path, "bytes": 1} if ok else "denied")
+        return ExecuteResult(
+            ok=ok,
+            error_key=None if ok else f"tools.test.e{executed['n']}",
+            result={"path": path, "bytes": 1} if ok else "denied",
+        )
 
     monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
 
@@ -1062,7 +1089,7 @@ def test_orchestrator_failed_tool_streak_resets_after_a_success(monkeypatch, api
         blob = "\n".join(message.content or "" for message in req.messages)
         if "You orchestrate" not in system:
             return CompletionResult(content="", model=req.model, finish_reason="stop")
-        if not req.tools:
+        if not _can_write(req):
             return CompletionResult(
                 content='{"action":"call","agent":"Schreiber","task":"schreib"}',
                 model=req.model,

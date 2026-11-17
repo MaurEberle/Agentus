@@ -9,23 +9,29 @@ import uuid
 from collections import deque
 
 from app.db.engine import utc_now
-from app.run import agent_turn, dispatch, orchestrator_decide, turn_runtime
-from app.run.capabilities import capability_text
+from app.run import agent_turn, dispatch, orch_tools, orchestrator_decide, turn_runtime
+from app.run.capabilities import orchestrator_capabilities
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.limits import (
+    IDLE_NUDGE_DECISIONS,
+    MAX_IDLE_DECISIONS,
     MAX_LLM_PAUSES,
     MAX_TAKEOVER_REJECTS,
     MAX_TAKEOVER_UNAVAILABLE,
     MAX_AGENT_INVOCATIONS,
     MAX_ORCHESTRATOR_STEPS,
     MAX_ORCHESTRATOR_THINKS,
+    MAX_ORCHESTRATOR_TOOL_CALLS,
+    MAX_ORIENTATION_CALLS,
+    MAX_READ_DECISION_CALLS,
     MAX_SHORT_THINKS,
     MAX_TAKEOVER_THINKS,
+    MAX_UNREADABLE_STREAK,
 )
 from app.run.memory import RunMemory
 from app.run.models import ChatMessage
-from app.run.orchestrate import orchestrator_instructions
+from app.run.orchestrate import RUN_VERBS, WRITE_VERBS, orchestrator_instructions
 from app.run.router_rules import resolve_route
 from app.run.turn_runtime import _FILE_MUTATIONS
 from app.run.wait_ask import excerpt as ask_excerpt
@@ -68,6 +74,31 @@ _TAKEOVER_FINISH_NOTE = (
 # carries no text (a start node without a chat input, or a step that returned nothing).
 _BATCH_START = "Begin."
 _EMPTY_HANDOFF = "(The previous step returned no text.)"
+
+_NATIVE_TOOL_NOTE = (
+    'There is no JSON action "{verb}". Your tools are open on this turn: call {tool} with a native tool call, '
+    "then decide with one JSON object."
+)
+
+_SELF_TAKEOVER_NOTE = (
+    "An agent call failed earlier, so you may change files yourself now. "
+    'There is no JSON action "{verb}": call file_access with a native tool call '
+    "(for example action write with path and content). Write access ends with your next agent call."
+)
+
+_WRITE_LOCKED_NOTE = (
+    'There is no JSON action "{verb}". Changing files, setup, builds and tests are the agents\' work '
+    "while no agent call has failed. Call an agent with that step."
+)
+
+_NO_TOOL_NOTE = (
+    'There is no JSON action "{verb}" and you have no tool for it. Call an agent, ask the user, or finish.'
+)
+
+_IDLE_NOTE = (
+    "You made {n} decisions in a row without progress: no agent call, no new tool result, no new user message. "
+    "Act now: call an agent, ask the user, or finish. The run stops after {max} such decisions."
+)
 
 _FINISH_FILES_NOTE = (
     "A coding agent made no successful write or delete and returned no text. "
@@ -218,6 +249,44 @@ def _fail_takeover(ctrl: RunController, node_id: str, memory: RunMemory, *, no_t
     turn_runtime._set_node(ctrl, node_id, "error", error=key)
     return "failed"
 
+def _fail_stuck(ctrl: RunController, node_id: str, decisions: int) -> str:
+    emit_log("error", "run.orchestrator.stuck", node_id=node_id, payload={"decisions": decisions})
+    ctrl.fail_message = "run.orchestrator.stuck"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    turn_runtime._set_node(ctrl, node_id, "error", error="run.orchestrator.stuck")
+    return "failed"
+
+def _fail_unreadable(ctrl: RunController, node_id: str) -> str:
+    ctrl.fail_message = "run.orchestrator.unreadable"
+    ctrl.fail_class = "orchestrator"
+    ctrl.last_error_node_id = node_id
+    emit_log("error", "run.orchestrator.unreadable", node_id=node_id)
+    turn_runtime._set_node(ctrl, node_id, "error", error="run.orchestrator.unreadable")
+    return "failed"
+
+def _tool_request_note(
+    verb: str,
+    memory: RunMemory,
+    full_names: list[str],
+    write_open: bool,
+    open_names: list[str] | None = None,
+) -> tuple[str, bool]:
+    """The hint for a tool step written as JSON, and whether write access was opened."""
+    if verb in WRITE_VERBS or verb in RUN_VERBS:
+        tool = "terminal" if verb in RUN_VERBS else "file_access"
+        if tool not in full_names:
+            return _NO_TOOL_NOTE.format(verb=verb), False
+        if write_open:
+            return _NATIVE_TOOL_NOTE.format(verb=verb, tool=tool), False
+        if memory.had_failure():
+            memory.allow_own_tools = True
+            return _SELF_TAKEOVER_NOTE.format(verb=verb), True
+        return _WRITE_LOCKED_NOTE.format(verb=verb), False
+    if "file_access" not in (open_names if open_names is not None else full_names):
+        return _NO_TOOL_NOTE.format(verb=verb), False
+    return _NATIVE_TOOL_NOTE.format(verb=verb, tool="file_access"), False
+
 def _fail_think_loop(ctrl: RunController, node_id: str, thinks: int) -> str:
     emit_log("error", "run.orchestrator.thinkLoop", node_id=node_id, payload={"thinks": thinks})
     ctrl.fail_message = "run.orchestrator.thinkLoop"
@@ -322,6 +391,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         return "failed"
     memory = RunMemory()
     memory.miss_limit = orch.agent_miss_limit
+    ctrl.llm_budget = orch.max_llm_calls
     if user_text:
         memory.add_user(user_text)
     roster: list[tuple[str, str, str]] = []
@@ -333,19 +403,32 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             name = str(node.data.get("displayName") or node.data.get("role") or agent_id).strip() or agent_id
             instructions = str(node.data.get("systemPrompt") or "")
         roster.append((agent_id, name, instructions))
-    tool_schemas = turn_runtime._tool_schemas(
-        orch.tool_kinds,
-        orch.mcp,
-        orch.file_actions,
-        terminal_programs=orch.terminal_programs,
-        terminal_unrestricted=orch.terminal_unrestricted,
-    )
+    # Reading and checking always; changing files after a failed agent call or in a takeover.
+    full_tools = orch_tools.schemas(orch, write_open=True)
+    read_tools = orch_tools.schemas(orch, write_open=False)
+    full_names = turn_runtime._function_names(full_tools)
+    later = orch_tools.later_labels(orch, read_tools, full_tools)
+    tool_cap = orch.max_tool_calls or MAX_ORCHESTRATOR_TOOL_CALLS
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
     thinks = 0
     short_thinks = 0
     spoke = False
     pauses = 0
+    # Decisions without progress, and unreadable decisions turned into a think after a reply.
+    idle = 0
+    unreadable = 0
+
+    def _no_progress() -> str | None:
+        nonlocal idle
+        idle += 1
+        if idle >= MAX_IDLE_DECISIONS:
+            _store_memory(ctrl, memory)
+            turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+            return _fail_stuck(ctrl, orch.node_id, idle)
+        if idle == IDLE_NUDGE_DECISIONS:
+            memory.set_nudge(_IDLE_NOTE.format(n=idle, max=MAX_IDLE_DECISIONS))
+        return None
     while not ctrl.stop_event.is_set():
         if turn_runtime._user_aborted(ctrl):
             # M6: "stop generating" in the chat; wait for the user's next message.
@@ -358,16 +441,50 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         if _drain_user(ctrl, compiled, memory):
             # New user input: a reply to it is a fresh answer, not a second reply.
             spoke = False
-        offered = tool_schemas if memory.allow_own_tools or memory.takeover is not None else []
+            idle = 0
+        write_open = memory.allow_own_tools or memory.takeover is not None
+        offered = full_tools if write_open else read_tools
+        # Reading only (no failure yet): a small budget per decision. After a failure or
+        # in a takeover the full per-decision cap applies.
+        decision_cap = tool_cap if write_open else min(tool_cap, MAX_READ_DECISION_CALLS)
+        orientation_left: int | None = None
+        if not memory.records:
+            # Looking around before the first agent call is short; then it must delegate.
+            orientation_left = max(0, MAX_ORIENTATION_CALLS - memory.orientation_calls)
+            decision_cap = min(decision_cap, orientation_left)
+            if orientation_left == 0:
+                offered = []
+        offered = turn_runtime._available_tools(ctrl, compiled, orch.node_id, offered)
         system = orchestrator_instructions(
             orch.system_prompt,
             roster,
             turn_runtime._function_names(offered),
             takeover=memory.takeover is not None,
+            write_open=write_open,
+            tool_cap=decision_cap,
+            tools_connected=bool(full_tools),
+            later=later,
+            orientation_left=orientation_left,
+            capabilities=orchestrator_capabilities(compiled, orch.node_id, offered),
         )
-        system += "\n\n" + capability_text(compiled, orch.node_id, available=bool(offered))
-        action = orchestrator_decide._orchestrator_action(ctrl, compiled, system, memory, offered, names, block_reply=spoke)
+        own_start = len(memory.own_tools)
+        action = orchestrator_decide._orchestrator_action(
+            ctrl,
+            compiled,
+            system,
+            memory,
+            offered,
+            names,
+            block_reply=spoke,
+            write_open=write_open,
+            tool_cap=decision_cap,
+            orientation=orientation_left is not None,
+        )
         tokens = orchestrator_decide._pop_tokens(action)
+        # A new tool result is new information, also when the decision itself is a think.
+        fresh = memory.mark_own_calls(own_start)
+        if fresh:
+            idle = 0
         _store_memory(ctrl, memory)
         if action is None:
             if ctrl.stop_event.is_set():
@@ -402,12 +519,36 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             spoke = False
             continue
         if action.get("action") == "unreadable":
-            ctrl.fail_message = "run.orchestrator.unreadable"
-            ctrl.fail_class = "orchestrator"
-            ctrl.last_error_node_id = orch.node_id
-            emit_log("error", "run.orchestrator.unreadable", node_id=orch.node_id)
-            turn_runtime._set_node(ctrl, orch.node_id, "error", error="run.orchestrator.unreadable")
-            return "failed"
+            return _fail_unreadable(ctrl, orch.node_id)
+        if action.pop("_unreadable", None):
+            # After a reply, an unreadable decision became a think. Twice in a row ends the run.
+            unreadable += 1
+            if unreadable >= MAX_UNREADABLE_STREAK:
+                _store_memory(ctrl, memory)
+                turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _fail_unreadable(ctrl, orch.node_id)
+        else:
+            unreadable = 0
+        if action.get("action") == "tool-request":
+            verb = (action.get("verb") or "").strip().lower()
+            note, granted = _tool_request_note(
+                verb, memory, full_names, write_open, turn_runtime._function_names(offered)
+            )
+            emit_log(
+                "warn",
+                "run.orchestrator.toolRequest",
+                node_id=orch.node_id,
+                payload={"verb": verb, "granted": granted},
+            )
+            if granted:
+                emit_log("info", "run.orchestrator.selfTakeover", node_id=orch.node_id, payload={"verb": verb})
+            turn_runtime._set_node(ctrl, orch.node_id, "running", wait="thinking")
+            memory.set_nudge(note)
+            if not fresh:
+                stuck = _no_progress()
+                if stuck:
+                    return stuck
+            continue
         if action.get("action") in {"think", "defer"}:
             blocked = action.pop("_blocked", None)
             body = (action.get("text") or "").strip()
@@ -440,6 +581,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 _store_memory(ctrl, memory)
                 turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
                 return _fail_think_limit(ctrl, orch.node_id)
+            if not fresh:
+                stuck = _no_progress()
+                if stuck:
+                    return stuck
             continue
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
@@ -469,6 +614,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 return "cancelled"
             memory.add_user(reply)
             _clear_human_wait(ctrl, compiled)
+            idle = 0
             continue
         if kind == "call":
             spoke = False
@@ -490,6 +636,10 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                     "That agent is closed for this task. "
                     "The connected tools can finish the file step. Do not call that agent again."
                 )
+                if not fresh:
+                    stuck = _no_progress()
+                    if stuck:
+                        return stuck
                 continue
             if steps >= MAX_ORCHESTRATOR_STEPS:
                 _store_memory(ctrl, memory)
@@ -518,6 +668,11 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 memory.set_nudge(_TAKEOVER_UNAVAILABLE_NOTE)
             if outcome == "ran":
                 steps += 1
+                idle = 0
+            elif not fresh:
+                stuck = _no_progress()
+                if stuck:
+                    return stuck
             continue
         if kind == "finish":
             if memory.takeover:
@@ -525,16 +680,25 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 if not memory.takeover_finish_warned:
                     memory.takeover_finish_warned = True
                     memory.set_nudge(_TAKEOVER_FINISH_NOTE)
+                    if not fresh:
+                        stuck = _no_progress()
+                        if stuck:
+                            return stuck
                     continue
                 _store_memory(ctrl, memory)
                 return _fail_takeover(ctrl, orch.node_id, memory)
             if _drain_user(ctrl, compiled, memory):
                 spoke = False
+                idle = 0
                 memory.set_nudge(_FINISH_LATE_NOTE)
                 continue
             if _tool_work_unverified(memory) and not memory.finish_warned:
                 memory.finish_warned = True
                 memory.add_note(_FINISH_FILES_NOTE)
+                if not fresh:
+                    stuck = _no_progress()
+                    if stuck:
+                        return stuck
                 continue
             if text.strip():
                 _publish_assistant(ctrl, text.strip())
@@ -547,8 +711,12 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             _publish_assistant(ctrl, text.strip())
             memory.add_spoken("reply", text.strip())
         spoke = True
-        thinks = 0
+        # A reply is no progress: it no longer resets the think count (Dev Team run, 2026-11-16).
         short_thinks = 0
+        if not fresh:
+            stuck = _no_progress()
+            if stuck:
+                return stuck
         continue
     _store_memory(ctrl, memory)
     turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)

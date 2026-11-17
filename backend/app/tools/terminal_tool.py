@@ -124,6 +124,8 @@ def _run_program(root: Path, command: str, programs: set[str], timeout: float) -
         return _fail("tools.terminal.notGranted", {"program": name or token})
     if _inline_code(name, parsed[1:]):
         return _fail("tools.terminal.inlineCode", {"program": name})
+    if _dir_outside_root(name, parsed[1:], root):
+        return _fail("tools.terminal.outsideRoot", {"program": name})
     executable = shutil.which(name)
     if not executable:
         return _fail("tools.terminal.notFound", {"program": name})
@@ -149,6 +151,48 @@ _VALUE_OPTS = {
 }
 
 
+# Options that point a program at another directory. They must stay inside the root.
+_DIR_OPTS = {"git": ("-C", "--git-dir", "--work-tree")}
+
+
+def _dir_outside_root(name: str, args: list[str], root: Path) -> bool:
+    """True when a directory option (git -C <dir>) leaves the configured root."""
+    options = _DIR_OPTS.get(name, ())
+    if not options:
+        return False
+    from app.tools.file_access_tool import path_candidates
+
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if not arg.startswith("-"):
+            return False
+        value = None
+        if arg in options:
+            value = args[index + 1] if index + 1 < len(args) else ""
+            index += 1
+        else:
+            for option in options:
+                if option.startswith("--") and arg.startswith(option + "="):
+                    value = arg.split("=", 1)[1]
+        if value is not None and not _inside_root(value, root, path_candidates):
+            return True
+        index += 1
+    return False
+
+
+def _inside_root(value: str, root: Path, candidates) -> bool:
+    for option in candidates(value.strip()):
+        path = Path(option)
+        try:
+            resolved = (path if path.is_absolute() else root / path).resolve()
+        except OSError:
+            continue
+        if resolved.is_relative_to(root.resolve()):
+            return True
+    return False
+
+
 def _inline_code(name: str, args: list[str]) -> bool:
     """True when an option before the script/subcommand would run code from the command line."""
     shorts = _INLINE_SHORT.get(name, "")
@@ -162,7 +206,8 @@ def _inline_code(name: str, args: list[str]) -> bool:
         if not arg.startswith("-"):
             return False
         flag = arg.split("=", 1)[0]
-        if flag in longs or flag.lower() in longs:
+        # Exact for single-dash flags: git -C (directory) is not git -c (config).
+        if flag in longs or (flag.startswith("--") and flag.lower() in longs):
             return True
         if flag in takes_value and "=" not in arg:
             skip = True

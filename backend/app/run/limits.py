@@ -29,24 +29,51 @@ MAX_TEXT_RETRIES = 2
 # Takeovers that cannot happen (orchestrator lacks the tools) before the run fails.
 MAX_TAKEOVER_UNAVAILABLE = 3
 # O12: model calls per run (orchestrator and agents together). Then the run fails as run.llmBudget.
-MAX_RUN_LLM_CALLS = 400
+# The orchestrator node can set its own value (maxLlmCalls).
+MAX_RUN_LLM_CALLS = 1000
 # O14: times one run may pause for an unreachable orchestrator model before it fails.
 MAX_LLM_PAUSES = 3
 # O13: calls to the closed takeover agent before the run fails.
 MAX_TAKEOVER_REJECTS = 3
 # Tool calls the orchestrator may make in one decision. Then tools are withheld and it must decide.
-MAX_ORCHESTRATOR_TOOL_CALLS = 10
+# Node setting maxToolCalls on the orchestrator overrides it.
+MAX_ORCHESTRATOR_TOOL_CALLS = 50
 # Tool calls one agent may make for one task. Then it must answer with what it has.
-MAX_AGENT_TOOL_CALLS = 50
+# Node setting maxToolCalls on the agent overrides it.
+MAX_AGENT_TOOL_CALLS = 100
+# Bounds for the node settings above.
+NODE_TOOL_CALLS_MIN = 1
+NODE_TOOL_CALLS_MAX = 1000
+NODE_LLM_CALLS_MIN = 10
+NODE_LLM_CALLS_MAX = 10000
 # Consecutive failed orchestrator tool calls. A success resets the count.
 MAX_ORCHESTRATOR_FAILED_TOOLS = 5
 # Failed think rounds after a five-fail streak. Two in a row stop the run.
 MAX_ORCHESTRATOR_FAILED_THINKS = 2
-# File attempts without a write, edit, or delete before the orchestrator takes the task.
-DEFAULT_AGENT_MISS_LIMIT = 3
+# Failed calls in a row, or file attempts without a write, edit, or delete, before the
+# orchestrator takes the task over. Orchestrator node setting agentMissLimit.
+DEFAULT_AGENT_MISS_LIMIT = 2
 MAX_AGENT_MISS_LIMIT = 8
 # Consecutive think turns during takeover. The next one ends the run.
 MAX_TAKEOVER_THINKS = 2
+# Orchestrator decisions without progress (think, reply, refused or unreadable output).
+# Progress is an agent call, an answered question, an own tool call or a new user message.
+# At the first value the orchestrator is told to act; at the second the run fails as stuck.
+IDLE_NUDGE_DECISIONS = 4
+MAX_IDLE_DECISIONS = 8
+# Unreadable decisions in a row that the runtime turned into a think after a reply.
+MAX_UNREADABLE_STREAK = 2
+# Own tool calls of the orchestrator before its first agent call (looking around).
+# Then its tools are withheld until it has called an agent.
+MAX_ORIENTATION_CALLS = 10
+# The same error from the same tool in a row withdraws that tool for the rest of the decision.
+MAX_SAME_TOOL_ERRORS = 3
+# Repeats of an own tool call with the same arguments in one decision. They do not run;
+# the second repeat withdraws the tool for the rest of the decision.
+MAX_REPEATED_CALLS = 2
+# Own tool calls per decision while the orchestrator may only read (no failure yet).
+# MAX_ORCHESTRATOR_TOOL_CALLS applies after a failure or in a takeover. Raise when runs are steadier.
+MAX_READ_DECISION_CALLS = 10
 # Extra attempts after an unreadable orchestrator decision. Not part of the step cap.
 MAX_CONTROL_REPAIRS = 2
 # One same-prompt retry when the model died before any tool succeeded.

@@ -1141,7 +1141,7 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
           type="number"
           min={1}
           max={8}
-          value={node.data.agentMissLimit == null ? 3 : String(node.data.agentMissLimit)}
+          value={node.data.agentMissLimit == null ? 2 : String(node.data.agentMissLimit)}
           disabled={readOnly}
           onChange={(event) => {
             const raw = event.target.value;
@@ -1156,6 +1156,74 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
         />
       </Field>
       <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.agentMissLimitHint')}</p>
+      <CountField
+        node={node}
+        field="maxToolCalls"
+        fallback={50}
+        min={1}
+        max={1000}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxToolCalls')}
+        hint={t('network.inspector.orchestrator.maxToolCallsHint')}
+      />
+      <CountField
+        node={node}
+        field="maxLlmCalls"
+        fallback={1000}
+        min={10}
+        max={10000}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxLlmCalls')}
+        hint={t('network.inspector.orchestrator.maxLlmCallsHint')}
+      />
+    </>
+  );
+}
+
+/** A whole-number node setting. Empty means the default, shown as placeholder. */
+function CountField({
+  node,
+  field,
+  fallback,
+  min,
+  max,
+  readOnly,
+  label,
+  hint,
+}: {
+  node: GraphNode;
+  field: string;
+  fallback: number;
+  min: number;
+  max: number;
+  readOnly: boolean;
+  label: string;
+  hint: string;
+}) {
+  const raw = node.data[field];
+  return (
+    <>
+      <Field label={label}>
+        <Input
+          type="number"
+          min={min}
+          max={max}
+          placeholder={String(fallback)}
+          value={typeof raw === 'number' ? String(raw) : ''}
+          disabled={readOnly}
+          onChange={(event) => {
+            const text = event.target.value;
+            if (text === '') {
+              editorUpdateNodeData(node.id, { [field]: undefined });
+              return;
+            }
+            const next = Math.round(Number(text));
+            if (!Number.isFinite(next)) return;
+            editorUpdateNodeData(node.id, { [field]: Math.max(min, Math.min(max, next)) });
+          }}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </>
   );
 }
@@ -1171,6 +1239,16 @@ function AgentFields({ node, readOnly }: { node: GraphNode; readOnly: boolean })
         {t(onChannel ? 'network.inspector.agent.channelHint' : 'network.inspector.agent.hint')}
       </p>
       <SystemPromptField key={node.id} node={node} readOnly={readOnly} label={t('network.inspector.agent.systemPrompt')} />
+      <CountField
+        node={node}
+        field="maxToolCalls"
+        fallback={100}
+        min={1}
+        max={1000}
+        readOnly={readOnly}
+        label={t('network.inspector.agent.maxToolCalls')}
+        hint={t('network.inspector.agent.maxToolCallsHint')}
+      />
     </>
   );
 }

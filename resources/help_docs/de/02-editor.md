@@ -55,12 +55,15 @@ Kein Knoten gewählt: Name, Beschreibung, Tags, Statistik, Validierungsliste des
 Knoten gewählt:
 
 - **LLM:** Provider, Modell (Liste von der Runtime), Zugang für Cloud, Kontextlänge nach Modellgrenzen (Slider lokal, Auswahl Cloud), CPU-Threads pro Knoten (Standard: physische Kerne), GPU-Offload pro Layer (Standard: alle Layer, bei Ladefehler Auto), geschätzter GPU-Speicher aus Kontext und Offload (letzte N Schichten auf der GPU; volle Attention über den ganzen Kontext, Sliding-Window-Schichten nur über ihr Fenster; Warnung, wenn er nicht auf die Karte passt), Ping, erweitert Temperature / max. Tokens. Cloud ohne Zugang ist ungültig.
-- **Agent:** Systemprompt und Anzeigename. Hängt der Agent an einem Kanal, erklärt der Inspector, dass Aufträge vom Orchestrator kommen. Vor dem Ergebnis darf er intern denken; das erscheint nicht im Chat.
+- **Agent:** Systemprompt und Anzeigename. Hängt der Agent an einem Kanal, erklärt der Inspector, dass Aufträge vom Orchestrator kommen. Vor dem Ergebnis darf er intern denken; das erscheint nicht im Chat. **Werkzeugaufrufe je Auftrag** begrenzt seine Werkzeugaufrufe (leer: 100); danach antwortet er mit dem, was er hat.
 - **Werkzeug:** Art. HTTP: Methode und URL, optional Zugang. Der Zugang geht nur an die Adresse dieser URL (Schema, Host, Port); mit Zugang ist die URL Pflicht. Websuche: Zugang der Art Websuche. Dateizugriff: Wurzelordner, nicht die Laufwerkswurzel; der Agent arbeitet nur darunter, Schreiben und Löschen sind Schalter.
 - **MCP:** aktiver Server aus **Einstellungen → MCP-Server**. Standard alle Tools dieses Servers; nach einer Probe kannst du eine Teilmenge wählen. Zugänge gehören in die Einstellungen. Der Wurzelordner für Dateisystem und Excel steht am Knoten; Git behält den Ordner in den Einstellungen.
 - **Wissen:** Quellenordner (Ordnerwahl), Embedding-Provider (Ollama, OpenAI oder Gemini) und Embedding-Modell, topK, Score-Schwelle, **Index neu**. Der Ordner darf irgendwo liegen, nur nicht auf einer Laufwerk- oder Systemwurzel und nicht im Hilfe-Korpus. Gelesen werden Markdown, Text, PDF, Word (.docx), Excel (.xlsx), HTML, JSON, CSV und Quellcode. Bilder und alte .doc/.xls nicht. Cloud-Embeddings brauchen einen Zugang. Der Index gehört zu diesem Netz, nicht zur Hilfe.
 - **Chat:** Platzhalter, Starttext, Schalter „Eingabe nötig“.
-- **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Denken, Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Denken erscheint nicht im Chat und zählt nicht gegen das Schrittlimit; nur Agentenaufträge zählen. Die Agenten sind die Kanäle, keine zweite Liste. Angeschlossene Werkzeuge ruft er selbst auf. Nur die Rückfrage wartet auf den Nutzer.
+- **Orchestrator:** Systemprompt. Das Modell entscheidet zwischen Denken, Rückfrage, einem Agentenauftrag über dessen Kanal, Antwort und Abschluss. Denken erscheint nicht im Chat und zählt nicht gegen das Schrittlimit; nur Agentenaufträge zählen. Die Agenten sind die Kanäle, keine zweite Liste. Angeschlossene Werkzeuge ruft er selbst auf: Dateien lesen jederzeit, höchstens zehn Aufrufe je Entscheidung und vor dem ersten Agentenauftrag höchstens zehn insgesamt. Dateien ändern, Terminal und alle übrigen Werkzeuge erst nach einem gescheiterten Agentenaufruf oder in einer Übernahme. Sein Prompt erwähnt nur Werkzeuge, die er gerade hat. Hat er Werkzeuge, kann er auch über Werkzeugaufrufe entscheiden (call_agent, ask_user, reply, finish). Derselbe Aufruf läuft in einem Schritt nur einmal; scheitert ein Werkzeug dreimal mit demselben Fehler oder wiederholt er einen Aufruf zweimal, zieht der Lauf es für diesen Schritt zurück. Nur die Rückfrage wartet auf den Nutzer.
+  - **Fehlversuche je Agent** (leer: 2): So oft in Folge darf ein Agent scheitern oder einen Dateiauftrag ohne Änderung beenden. Danach übernimmt der Orchestrator diese Aufgabe selbst.
+  - **Werkzeugaufrufe je Entscheidung** (leer: 50) und **Modellaufrufe je Lauf** (leer: 1000, Orchestrator und Agenten zusammen).
+  - Trifft der Orchestrator mehrere Entscheidungen hintereinander ohne Fortschritt (kein Agentenauftrag, kein neues Werkzeugergebnis, keine neue Nachricht), erinnert ihn der Lauf nach vier und beendet ihn nach acht.
 - **Router:** benannte Zweige (Name + Bedingung) und Standard.
 
 Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Export — nur die Wahl eines Zugangs.
@@ -71,6 +74,7 @@ Geheimnisse gehören **nicht** in den Inspector-Text und nicht in den Graph-Expo
 
 - Name nicht leer
 - höchstens ein Chat, höchstens ein Orchestrator, mindestens ein Ende
+- die Ordner von Dateizugriff, Terminal und ZIP existieren; fehlt einer, startet der Lauf nicht. Verschwindet ein Ordner während des Laufs, schaltet der Lauf das Werkzeug ab
 - ohne Orchestrator führt die Kette vom Start (Chat oder erster Agent) bis zu einem Ende; mit Orchestrator hat er mindestens einen Kanal zu einem Agenten
 - jeder Agent: genau eine LLM-Kante. Ohne Orchestrator eine eingehende Nachricht. Mit Orchestrator genau ein Kanal und keine Nachrichten-Kette am selben Agenten
 - LLM: Modell gesetzt; Cloud: Zugang

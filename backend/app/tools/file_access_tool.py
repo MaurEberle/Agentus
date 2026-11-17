@@ -3,6 +3,8 @@ from __future__ import annotations
 import base64
 import fnmatch
 import json
+import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -130,21 +132,44 @@ def _rel(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
+# Git Bash, MSYS, Cygwin and WSL spell C:\dev as /c/dev, /cygdrive/c/dev or /mnt/c/dev.
+_POSIX_DRIVE = re.compile(r"^/(?:mnt/|cygdrive/)?([A-Za-z])(?:/(.*))?$")
+
+
+def path_candidates(text: str) -> list[str]:
+    """Readings of a model path, most literal first.
+
+    ``/c/dev/x`` means ``C:/dev/x`` (one run sent 45 such paths, all refused).
+    ``/src/App.tsx`` without a drive means the project root, not the drive root.
+    """
+    found = [text]
+    if os.name == "nt":
+        slashed = text.replace("\\", "/")
+        drive = _POSIX_DRIVE.match(slashed)
+        if drive:
+            found.append(f"{drive.group(1).upper()}:/{drive.group(2) or ''}")
+            return found
+        if slashed.startswith("/") and not slashed.startswith("//"):
+            found.append(slashed.lstrip("/"))
+    return found
+
+
 def _resolve(root: Path, raw: str) -> tuple[Path | None, str | None]:
     text = (raw or "").strip()
     if not text or text in {".", "./", ".\\"}:
         return root, None
     if "\x00" in text:
         return None, "tools.fileAccess.invalidPath"
-    candidate = Path(text)
-    joined = candidate if candidate.is_absolute() else (root / candidate)
-    try:
-        resolved = joined.resolve()
-    except OSError:
-        return None, "tools.fileAccess.invalidPath"
-    if not resolved.is_relative_to(root):
-        return None, "tools.fileAccess.outsideRoot"
-    return resolved, None
+    for option in path_candidates(text):
+        candidate = Path(option)
+        joined = candidate if candidate.is_absolute() else (root / candidate)
+        try:
+            resolved = joined.resolve()
+        except OSError:
+            return None, "tools.fileAccess.invalidPath"
+        if resolved.is_relative_to(root):
+            return resolved, None
+    return None, "tools.fileAccess.outsideRoot"
 
 
 def _list(root: Path, target: Path) -> ExecuteResult:

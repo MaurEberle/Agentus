@@ -215,15 +215,21 @@ def _calls_left(ctrl: RunController, node) -> int | None:
 def _available_tools(
     ctrl: RunController, compiled: CompiledGraph, owner_id: str, schemas: list[dict]
 ) -> list[dict]:
-    """Drop functions whose tool node has no calls left in this run."""
+    """Drop functions whose tool node has no calls left, or is switched off, in this run."""
+    broken = getattr(ctrl, "broken_tools", {}) or {}
     kept: list[dict] = []
     for item in schemas:
         name = str((item.get("function") or {}).get("name") or "")
         node = _resolve_tool_node(compiled, owner_id, name) if name else None
-        if node is not None and _calls_left(ctrl, node) == 0:
+        if node is not None and (_calls_left(ctrl, node) == 0 or node.id in broken):
             continue
         kept.append(item)
     return kept
+
+
+# A tool whose folder or setup is broken cannot work for the rest of the run.
+_CONFIG_ERRORS = (".rootNotDir", ".missingRoot")
+_DISABLED_DETAIL = "This tool is switched off for the rest of this run. Do not call it again; work without it."
 
 def _call_refused(ctrl: RunController, compiled: CompiledGraph, owner_id: str, call_name: str) -> bool:
     """True when the tool node behind ``call_name`` refused calls for its maxCalls."""
@@ -336,6 +342,11 @@ def _dispatch_tool(
             tool_node = compiled.by_id.get(edge.source)
             if tool_node and str(tool_node.data.get("kind")) == call_name:
                 tool_node_id = tool_node.id
+                broken = (getattr(ctrl, "broken_tools", {}) or {}).get(tool_node.id)
+                if broken:
+                    # Switched off earlier in this run; the model called it from memory.
+                    tool_result = {"ok": False, "error": "tool.disabled", "errorKey": broken, "detail": _DISABLED_DETAIL}
+                    break
                 if tool_node.type == "tool":
                     _set_node(ctrl, tool_node_id, "running", wait="tool", message=call_name)
                 try:
@@ -348,6 +359,23 @@ def _dispatch_tool(
                         secret=cred,
                     )
                     tool_result = out.model_dump(by_alias=True)
+                    if not out.ok and out.error_key:
+                        from app.tools.hints import failure_hint
+
+                        # The key alone did not tell a weak model how to fix the call.
+                        hint = failure_hint(call_name, out.error_key, tool_node.data)
+                        if out.error_key.endswith(_CONFIG_ERRORS):
+                            # Every later call would fail the same way: switch it off once.
+                            ctrl.broken_tools[tool_node.id] = out.error_key
+                            hint = f"{hint or ''} {_DISABLED_DETAIL}".strip()
+                            emit_log(
+                                "warn",
+                                "run.tool.disabled",
+                                node_id=tool_node.id,
+                                payload={"name": call_name, "error": out.error_key},
+                            )
+                        if hint:
+                            tool_result["hint"] = hint
                 finally:
                     if tool_node.type == "tool":
                         _set_node(ctrl, tool_node_id, "idle")
@@ -398,7 +426,8 @@ def _charge_llm(ctrl: RunController, node_id: str) -> None:
     """Count one model call of this run; raise once the run budget is used up."""
     from app.run.limits import MAX_RUN_LLM_CALLS
 
-    if ctrl.llm_calls >= MAX_RUN_LLM_CALLS:
+    budget = getattr(ctrl, "llm_budget", None) or MAX_RUN_LLM_CALLS
+    if ctrl.llm_calls >= budget:
         ctrl.last_error_node_id = node_id
         raise RunBudgetExceeded()
     ctrl.llm_calls += 1

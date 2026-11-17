@@ -119,6 +119,38 @@ def _review_text_retry(compiled: CompiledGraph, memory: RunMemory, agent, record
         payload={"agent": record.name, "misses": fails, "task": (record.task or "")[:300], "kind": "tools"},
     )
 
+def _review_failed_call(compiled: CompiledGraph, memory: RunMemory, agent, record: AgentRecord) -> None:
+    """Open a takeover after ``miss_limit`` failed calls of one agent in a row (default 2).
+
+    The miss rule counts only file calls without a write; an agent that failed on
+    the terminal, then wrote something, never reached it (Dev Team run, 2026-11-16).
+    """
+    agent_id = agent.node_id
+    count = memory.note_failed_call(agent_id, bool(record.error))
+    if count < max(1, memory.miss_limit) or memory.takeover is not None:
+        return
+    orch = compiled.orchestrator
+    if orch is None or not (orch.tool_kinds or orch.mcp):
+        # No takeover possible: the loop reports an anomaly; the next round counts afresh.
+        memory.takeover_unarmed = True
+        memory.failed_calls[agent_id] = 0
+        return
+    memory.takeover = Takeover(
+        agent_id=agent_id, name=record.name, task=record.task, kind="failed", reason=record.error
+    )
+    memory.takeover_rejects = 0
+    emit_log(
+        "info",
+        "run.orchestrator.takeoverFailures",
+        node_id=orch.node_id,
+        payload={
+            "agent": record.name,
+            "failed": count,
+            "reason": record.error,
+            "task": (record.task or "")[:300],
+        },
+    )
+
 def _orchestrator_call(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -161,6 +193,7 @@ def _orchestrator_call(
         _count_file_attempt(compiled, memory, agent, record)
         if is_text_retry:
             _review_text_retry(compiled, memory, agent, record)
+        _review_failed_call(compiled, memory, agent, record)
         return "ran"
 
     orch = compiled.orchestrator

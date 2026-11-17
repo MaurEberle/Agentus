@@ -68,6 +68,15 @@ def mini_doc(**chat: object) -> dict:
     }
 
 
+@pytest.fixture(autouse=True)
+def _tool_folders_exist(monkeypatch: pytest.MonkeyPatch):
+    """Test documents name tool folders like C:/stories that exist nowhere; the tool runs are mocked.
+
+    Tests of the missing-folder rule restore the real check.
+    """
+    monkeypatch.setattr("app.run.validate.folder_exists", lambda path: True)
+
+
 @pytest.fixture
 def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AGENTUS_NETWORK_HOME", str(tmp_path / "home"))

@@ -171,17 +171,60 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "exactly one agent has stored text" in text
 
 
-def test_instructions_mention_connected_tools() -> None:
-    plain = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
-    assert "You have tools" not in plain
+def test_instructions_have_fixed_sections_in_order() -> None:
     text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"])
-    assert "You have tools: file_access." in text
+    order = [text.index(head) for head in ("# Role", "# Agents", "# Your tools", "# Data", "# Decision")]
+    assert order == sorted(order)
+    assert text.startswith("leite\n\n# Role\nYou orchestrate this agent network")
+    assert "You do not implement anything yourself." in text
+    # The decision format comes last, after the tool text.
+    assert text.rstrip().endswith("Write ask, reply, think, and finish text in the user's language.")
+
+
+def test_instructions_mention_tools_only_when_the_orchestrator_has_them() -> None:
+    plain = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
+    assert "# Your tools" not in plain
+    assert "terminal" not in plain.lower()
+    withheld = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], [], tools_connected=True)
+    assert "# Your tools\nNot available on this turn. Call an agent or ask." in withheld
+
+
+def test_instructions_for_repair_after_a_failure() -> None:
+    text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access", "terminal"])
+    assert "# Your tools: repairing a failed step" in text
+    assert "Available now: file_access, terminal." in text
     assert "your last three tool results" in text
-    assert "only to recover from that failure" in text
-    assert "up to ten tools per decision" in text
+    assert "up to 50 tools per decision" in text
     assert "Five failed tool calls in a row start a think round" in text
     assert "Two failed think rounds in a row stop the run" in text
-    assert "At most two tool rounds" not in text
+    assert "withdrawn for the rest of that decision" in text
+
+
+def test_instructions_before_a_failure_read_files_only() -> None:
+    text = orchestrator_instructions(
+        "leite",
+        [("ag", "Schreiber", "schreibe")],
+        ["file_access"],
+        write_open=False,
+        tool_cap=8,
+        later=["file changes", "the terminal"],
+        orientation_left=8,
+    )
+    assert "# Your tools: reading files only" in text
+    assert "at most 8 more tool calls" in text
+    assert "Do not change files, create projects, install packages, build or run anything" in text
+    assert "After an agent call failed you also get file changes and the terminal" in text
+    assert 'there is no action "write"' in text
+    no_terminal = orchestrator_instructions(
+        "leite", [("ag", "Schreiber", "schreibe")], ["file_access"], write_open=False, later=["file changes"]
+    )
+    assert "terminal" not in no_terminal.lower()
+
+
+def test_instructions_during_takeover() -> None:
+    text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"], takeover=True)
+    assert "# Takeover\nTakeover is active." in text
+    assert "Do not call the closed agent." in text
 
 
 def test_match_agent_by_id_or_name() -> None:

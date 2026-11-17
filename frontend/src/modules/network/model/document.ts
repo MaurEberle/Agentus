@@ -82,13 +82,19 @@ export type LlmNodeData = {
 export type AgentNodeData = {
   displayName?: string;
   systemPrompt?: string;
+  /** Tool calls per task (1–1000). Unset: 100. */
+  maxToolCalls?: number;
 };
 
 export type OrchestratorNodeData = {
   displayName?: string;
   systemPrompt?: string;
-  /** File attempts without a write, edit, or delete before the orchestrator takes the task. */
+  /** Failed calls in a row, or file attempts without a change, before the orchestrator takes the task (1–8). Unset: 2. */
   agentMissLimit?: number;
+  /** Own tool calls per decision (1–1000). Unset: 50. */
+  maxToolCalls?: number;
+  /** Model calls per run, orchestrator and agents together (10–10000). Unset: 1000. */
+  maxLlmCalls?: number;
 };
 
 export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'terminal' | 'zip';

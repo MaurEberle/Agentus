@@ -54,7 +54,7 @@ def test_think_round_answers_every_call_and_continues(monkeypatch, api_env) -> N
     def _execute(kind, *, config, args, secret=None):
         del kind, config, args, secret
         executed["n"] += 1
-        return ExecuteResult(ok=False, result="denied")
+        return ExecuteResult(ok=False, error_key=f"tools.test.e{executed['n']}", result="denied")
 
     monkeypatch.setattr("app.run.turn_runtime.tools_execute.execute_first_party", _execute)
     after_round: list[list[LlmMessage]] = []

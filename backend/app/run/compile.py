@@ -5,7 +5,14 @@ from dataclasses import dataclass, field
 
 from app.run.channels import normalize_channel_edges
 from app.run.graph_models import AgentNetworkDocument, GraphNode, is_mcp_node, normalize_mcp_nodes
-from app.run.limits import DEFAULT_AGENT_MISS_LIMIT, MAX_AGENT_MISS_LIMIT
+from app.run.limits import (
+    DEFAULT_AGENT_MISS_LIMIT,
+    MAX_AGENT_MISS_LIMIT,
+    NODE_LLM_CALLS_MAX,
+    NODE_LLM_CALLS_MIN,
+    NODE_TOOL_CALLS_MAX,
+    NODE_TOOL_CALLS_MIN,
+)
 from app.run.router_rules import CompiledRouter, rules_from_data
 
 
@@ -40,6 +47,9 @@ class CompiledOrchestrator:
     terminal_unrestricted: bool = False
     terminal_programs: list[str] | None = None
     agent_miss_limit: int = DEFAULT_AGENT_MISS_LIMIT
+    # Node overrides; None means the default in limits.py.
+    max_tool_calls: int | None = None
+    max_llm_calls: int | None = None
 
 
 @dataclass
@@ -54,6 +64,8 @@ class CompiledAgent:
     file_actions: list[str] | None = None
     terminal_unrestricted: bool = False
     terminal_programs: list[str] | None = None
+    # Node override of MAX_AGENT_TOOL_CALLS; None means the default.
+    max_tool_calls: int | None = None
 
 
 @dataclass
@@ -247,6 +259,18 @@ def _agent_miss_limit(data: dict) -> int:
     return value
 
 
+def _node_count(data: dict, key: str, low: int, high: int) -> int | None:
+    """A whole-number node setting, clamped to ``low..high``. Unset or invalid: None."""
+    raw = data.get(key)
+    if isinstance(raw, bool) or raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return max(low, min(high, value))
+
+
 def _compile_orchestrator(
     doc: AgentNetworkDocument, by_id: dict[str, GraphNode]
 ) -> CompiledOrchestrator | None:
@@ -285,6 +309,8 @@ def _compile_orchestrator(
         terminal_unrestricted=terminal_unrestricted,
         terminal_programs=terminal_programs,
         agent_miss_limit=_agent_miss_limit(node.data),
+        max_tool_calls=_node_count(node.data, "maxToolCalls", NODE_TOOL_CALLS_MIN, NODE_TOOL_CALLS_MAX),
+        max_llm_calls=_node_count(node.data, "maxLlmCalls", NODE_LLM_CALLS_MIN, NODE_LLM_CALLS_MAX),
     )
 
 
@@ -337,6 +363,7 @@ def compile_document(
             terminal_programs=terminal_programs,
             knowledge_node_ids=knowledge_ids,
             outbound_message=outbound,
+            max_tool_calls=_node_count(node.data, "maxToolCalls", NODE_TOOL_CALLS_MIN, NODE_TOOL_CALLS_MAX),
         )
 
     topo = list(agents.keys())
