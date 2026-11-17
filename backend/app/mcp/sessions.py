@@ -8,7 +8,7 @@ import threading
 import time
 from typing import Any, Protocol
 
-from app.common.secrets import mask_obj, mask_text
+from app.common.secrets import mask_content_obj, mask_text
 from app.db.errors import PersistError
 from app.db.settings import get_mcp_server, put_mcp_server
 from app.db.vault import get as vault_get
@@ -692,12 +692,13 @@ class McpSessions:
             payload = {
                 "ok": False,
                 "errorKey": "mcp.call.failed",
-                "result": mask_obj(raw.get("result")),
+                "result": mask_content_obj(raw.get("result")),
             }
             if live.recipe_id == "excel" and live.root:
                 payload["error"] = workbook_hint(live.root)
             return payload
-        return {"ok": True, "result": mask_obj(compact_tool_result(raw.get("result")))}
+        # Narrow mask (H5): results are data the model works with, not log text.
+        return {"ok": True, "result": mask_content_obj(compact_tool_result(raw.get("result")))}
 
     def _live_or_reopen(self, server_id: str) -> _Live | None:
         with self._lock:

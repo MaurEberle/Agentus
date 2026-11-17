@@ -877,11 +877,14 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const onlyMoe = ollamaListReady && moeNames.length > 0 && denseNames.length === 0;
   const onlyDense = ollamaListReady && denseNames.length > 0 && moeNames.length === 0;
   const storedKind = node.data.modelKind === 'moe' ? 'moe' : node.data.modelKind === 'dense' ? 'dense' : null;
-  const modelKind: 'dense' | 'moe' = onlyMoe
+  // The list the stored model is in decides its kind; only then the stored or the only kind.
+  const listedKind: 'dense' | 'moe' | null = moeNames.includes(model)
     ? 'moe'
-    : onlyDense
+    : denseNames.includes(model)
       ? 'dense'
-      : (storedKind ?? (moeNames.includes(model) ? 'moe' : 'dense'));
+      : null;
+  const modelKind: 'dense' | 'moe' =
+    listedKind ?? (onlyMoe ? 'moe' : onlyDense ? 'dense' : (storedKind ?? 'dense'));
   const modelOptions = useMemo(() => {
     if (provider === 'ollama') return modelKind === 'moe' ? moeNames : denseNames;
     if (!catalogProvider) return [];
@@ -895,13 +898,20 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         : false;
   const modelLocked = catalogProvider && !credentialId;
 
+  // H4: a stored model is never cleared or swapped here. An empty list (Ollama down,
+  // offline, a provider without a catalog) or a list without the model says nothing
+  // about the choice; opening the node must not change the network. Only an empty
+  // field is filled.
+  const modelUnavailable =
+    Boolean(model) &&
+    !modelLocked &&
+    !modelsLoading &&
+    (provider === 'ollama' || catalogProvider) &&
+    !modelOptions.includes(model);
   useEffect(() => {
-    if (readOnly || modelLocked || modelsLoading) return;
+    if (readOnly || modelLocked || modelsLoading || modelOptions.length === 0) return;
     const patch: Record<string, unknown> = {};
-    if (provider === 'ollama' && node.data.modelKind !== modelKind) patch.modelKind = modelKind;
-    if (modelOptions.length === 0) {
-      if (model) patch.model = '';
-    } else if (!modelOptions.includes(model)) {
+    if (!model) {
       patch.model = modelOptions[0];
       patch.numCtx = undefined;
       patch.numGpu = undefined;
@@ -910,6 +920,8 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numCpuMoe = undefined;
       patch.gpuPlacement = undefined;
     }
+    const kindKnown = !model || modelOptions.includes(model);
+    if (provider === 'ollama' && kindKnown && node.data.modelKind !== modelKind) patch.modelKind = modelKind;
     if (Object.keys(patch).length > 0) editorUpdateNodeData(node.id, patch);
   }, [model, modelKind, modelLocked, modelOptions, modelsLoading, node.data.modelKind, node.id, provider, readOnly]);
   const catalogFailed =
@@ -1060,6 +1072,8 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         />
         {catalogFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
+        ) : modelUnavailable ? (
+          <p className="text-xs text-destructive">{t('network.inspector.llm.modelUnavailable')}</p>
         ) : null}
       </Field>
       {model && !modelLocked ? <ContextWindowField node={node} readOnly={readOnly} /> : null}
@@ -1287,6 +1301,10 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
               ))}
             </SelectContent>
           </Select>
+          {/* H2: the key only travels to the origin of the URL above. */}
+          {listedId !== 'none' ? (
+            <p className="text-xs text-muted-foreground">{t('network.inspector.tool.credentialUrlHint')}</p>
+          ) : null}
         </Field>
       ) : null}
       {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
@@ -1923,15 +1941,13 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
     credentialMatchesProvider(item.kind, embedProvider),
   );
 
+  // H4: same rule as the LLM node. A stored embedding model stays; only an empty field is filled.
+  const embedUnavailable =
+    Boolean(embedModel) && !embedLocked && !embedLoading && !embedOptions.includes(embedModel);
   useEffect(() => {
     if (readOnly || embedLocked || embedLoading) return;
-    if (embedOptions.length === 0) {
-      if (embedModel) editorUpdateNodeData(node.id, { embeddingModel: '' });
-      return;
-    }
-    if (!embedOptions.includes(embedModel)) {
-      editorUpdateNodeData(node.id, { embeddingModel: embedOptions[0] });
-    }
+    if (embedModel || embedOptions.length === 0) return;
+    editorUpdateNodeData(node.id, { embeddingModel: embedOptions[0] });
   }, [embedLoading, embedLocked, embedModel, embedOptions, node.id, readOnly]);
 
   function applyPath(path: string) {
@@ -2053,6 +2069,8 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
         />
         {embedFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
+        ) : embedUnavailable ? (
+          <p className="text-xs text-destructive">{t('network.inspector.llm.modelUnavailable')}</p>
         ) : null}
       </Field>
       <Field label={t('network.inspector.knowledge.path')}>

@@ -8,10 +8,12 @@ from contextlib import contextmanager
 from app.common.http import client
 from app.runtime.completions import _auth_secret, _endpoint, request_headers
 from app.runtime.errors import (
+    RATE_LIMIT_RETRIES,
     RuntimeApiError,
     is_transport_error,
     raise_for_status,
     raise_transport,
+    rate_limit_wait,
     response_json,
 )
 from app.runtime.models import EmbedRequest, EmbedResult
@@ -87,6 +89,24 @@ def _vector(raw: object) -> list[float]:
 
 
 def _embed_once(req: EmbedRequest) -> EmbedResult:
+    """One request. A throttled call (HTTP 429) waits and is repeated (H11)."""
+    import time
+
+    attempt = 0
+    while True:
+        try:
+            return _embed_request(req)
+        except RuntimeApiError as exc:
+            if exc.error_key != "runtime.rateLimited" or attempt >= RATE_LIMIT_RETRIES:
+                raise
+            wait = rate_limit_wait(exc.retry_after, attempt)
+            if wait is None:
+                raise
+            attempt += 1
+            time.sleep(wait)
+
+
+def _embed_request(req: EmbedRequest) -> EmbedResult:
     secret = _auth_secret(req.provider, req.secret, req.credential_id)
     url = _endpoint(req.provider, req.base_url, embeddings=True)
     headers = request_headers(req.provider, secret)

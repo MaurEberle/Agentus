@@ -854,6 +854,7 @@
         "kindDense": "Modelos normales",
         "kindMoe": "Modelos MoE",
         "noModels": "No hay modelos cargados.",
+        "modelUnavailable": "Este modelo no está disponible ahora. La selección sigue guardada.",
         "useModel": "Usar «{{name}}»",
         "temperature": "Temperatura",
         "maxTokens": "Máx. tokens",
@@ -968,6 +969,7 @@
         "maxCalls": "Máx. llamadas por ejecución",
         "maxCallsUnlimited": "Sin límite",
         "maxCallsHint": "Cuenta todas las llamadas a esta herramienta en una ejecución, del orquestador o de cualquier agente. Después ya no se ofrece.",
+        "credentialUrlHint": "La credencial solo se envía al esquema, host y puerto de la URL de arriba, nunca a otras direcciones.",
         "terminalProgramPlaceholder": "Nombre del programa",
         "terminalProgramAdd": "Añadir",
         "dateHint": "Muestra la hora actual en una zona IANA; por defecto UTC. Un instante se puede desplazar días, horas y minutos, también hacia atrás. La diferencia entre dos instantes sale en segundos, horas y días. Las partes son fecha, hora y día de la semana; el lunes es 1. El mismo instante se puede ver en otra zona.",
@@ -1107,6 +1109,7 @@
       "terminalRoot": "El terminal necesita una carpeta que no sea la raíz de una unidad.",
       "terminalPrograms": "El modo restringido necesita al menos un programa.",
       "toolMaxCalls": "Máx. llamadas debe ser un número entero de al menos 1.",
+      "httpCredentialUrl": "HTTP con una credencial necesita una URL completa (http/https). La credencial solo se envía a esa dirección.",
       "zipRoot": "ZIP necesita una carpeta que no sea la raíz de una unidad.",
       "knowledgePath": "La carpeta de origen es obligatoria.",
       "knowledgeRoot": "No se permite la raíz de una unidad o del sistema.",
@@ -1691,6 +1694,7 @@
       "agent": {
         "textOnly": "Solo texto, sin herramienta; el orquestador revisa la respuesta.",
         "outputLimit": "Cortado dos veces en el límite de salida; tarea terminada.",
+        "window": "El prompt no cabe en ninguna ventana de contexto.",
         "toolCap": "Agente: {{calls}} llamadas a herramientas para esta tarea, límite alcanzado.",
         "start": "Agente iniciado",
         "done": "Agente finalizado",
@@ -1722,6 +1726,7 @@
       },
       "tool": {
         "limitReached": "Herramienta {{name}}: límite de {{limit}} llamadas por ejecución alcanzado.",
+        "notOffered": "La herramienta {{name}} no está habilitada en este nodo; la llamada no se ejecutó.",
         "call": "Herramienta {{name}}"
       },
       "router": "Enrutador {{branch}} → {{target}}",
@@ -1765,6 +1770,7 @@
     },
     "runtime": {
       "generationLimit": "Respuesta detenida en el límite de tiempo.",
+      "rateLimited": "El proveedor limita las peticiones (límite de frecuencia).",
       "timeout": "Sin progreso del modelo",
       "unreachable": "Runtime no accesible"
     },

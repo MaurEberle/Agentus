@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Query, Response
 
 from app.db.runs import (
+    call_stats_by_model,
     delete_runs,
     get_run,
     list_calls,
@@ -60,21 +61,30 @@ def get_runs(
 def get_calls(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    since: str | None = None,
     networkId: str | None = None,
     outcome: str | None = None,
     model: str | None = None,
     q: str | None = None,
+    from_ts: str | None = Query(default=None, alias="from"),
+    to_ts: str | None = Query(default=None, alias="to"),
 ) -> dict[str, Any]:
-    rows = list_calls(
-        None,
-        limit=limit,
-        offset=offset,
-        network_id=networkId,
-        outcome=outcome.split(",") if outcome else None,
-        model=model,
-        q=q,
-    )
-    return {"items": [_camel_call(row) for row in rows]}
+    # H10: the same filters as GET /runs, including the time range, and newest first.
+    filters: dict[str, Any] = {
+        "since": since,
+        "from_ts": from_ts,
+        "to_ts": to_ts,
+        "network_id": networkId,
+        "outcome": outcome.split(",") if outcome else None,
+        "model": model,
+        "q": q,
+    }
+    rows = list_calls(None, limit=limit, offset=offset, newest_first=True, **filters)
+    return {
+        "items": [_camel_call(row) for row in rows],
+        # Counted over every call of the filtered runs, not over the page above.
+        "byModel": [_camel_model_stats(row) for row in call_stats_by_model(**filters)],
+    }
 
 
 @router.get("/runs/{run_id}")
@@ -182,6 +192,19 @@ def _camel_call(row: dict[str, Any]) -> dict[str, Any]:
         "tokensIn": row.get("tokens_in"),
         "tokensOut": row.get("tokens_out"),
         "errorMessage": row.get("error_message"),
+    }
+
+
+def _camel_model_stats(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "provider": row["provider"],
+        "model": row["model"],
+        "calls": row["calls"],
+        "ok": row["ok"],
+        "error": row["error"],
+        "medianMs": row.get("median_ms"),
+        "tokensIn": row.get("tokens_in"),
+        "tokensOut": row.get("tokens_out"),
     }
 
 

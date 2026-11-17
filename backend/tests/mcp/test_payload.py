@@ -41,3 +41,37 @@ def test_coerce_whole_floats() -> None:
         "query": "user:me",
         "ok": True,
     }
+
+
+def test_long_result_stays_valid_json_and_keeps_later_fields() -> None:
+    import json
+
+    raw = {"ok": True, "result": {"exitCode": 1, "stdout": "o" * 30_000, "stderr": "boom", "timedOut": False}}
+    text = format_tool_result(raw)
+    assert len(text) <= 4000
+    data = json.loads(text)
+    assert data["truncated"] is True
+    assert data["result"]["stderr"] == "boom"
+    assert data["result"]["timedOut"] is False
+    assert "characters omitted" in data["result"]["stdout"]
+    # Head and tail of the long field survive.
+    assert data["result"]["stdout"].startswith("ooo") and data["result"]["stdout"].endswith("ooo")
+    # The caller's object is not changed.
+    assert len(raw["result"]["stdout"]) == 30_000
+
+
+def test_long_plain_text_keeps_head_and_tail() -> None:
+    text = format_tool_result("A" * 5000 + "TAIL")
+    assert len(text) <= 4000
+    assert text.startswith("AAA") and text.endswith("TAIL")
+    assert "characters omitted" in text
+
+
+def test_many_small_values_fall_back_to_a_preview() -> None:
+    import json
+
+    raw = [{"id": index, "name": f"n{index}"} for index in range(2000)]
+    text = format_tool_result(raw)
+    assert len(text) <= 4000
+    data = json.loads(text)
+    assert data["truncated"] is True and data["totalChars"] > 4000

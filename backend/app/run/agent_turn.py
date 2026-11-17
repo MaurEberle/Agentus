@@ -268,8 +268,7 @@ def _agent_turn(
             last_context_max = None
             choice = turn_runtime._bind_window(agent.llm, messages, window_mem)
             if not choice.fits:
-                _mark_window(ctrl, agent_id, record)
-                return ""
+                return _mark_window(ctrl, agent_id, record)
             options = turn_runtime._ollama_options(agent.llm, choice)
             context_max = choice.context_max if choice.context_max is not None else turn_runtime._static_context_max(agent.llm.num_ctx)
             context_est = run_window.prompt_tokens(messages)
@@ -584,8 +583,7 @@ def _agent_turn(
                 overflows += 1
                 if overflows >= 2:
                     # Two cut-offs in a row: the output limit (R1), not the prompt, is the cause.
-                    _mark_output_limit(ctrl, agent_id, record)
-                    return ""
+                    return _mark_output_limit(ctrl, agent_id, record)
                 _store_think(messages, TRUNCATED_NOTE)
                 turn_runtime._set_node(ctrl, agent_id, "running", wait="thinking")
                 continue
@@ -692,24 +690,44 @@ def _agent_turn(
                     created_at=utc_now(),
                 )
                 ctrl.remember_chat(msg, generating=False)
-                conversation.append(LlmMessage(role="assistant", content=text))
+                # Paket 6 / H8: the answer is the return value and travels on the outgoing
+                # edge. It is not appended to a list the next step would read as history.
                 content = text
         return content
     finally:
         turn_runtime._set_llm(ctrl, compiled, llm_node_id, busy=False)
 
-def _mark_output_limit(ctrl: RunController, agent_id: str, record: AgentRecord | None) -> None:
-    if record is not None:
-        record.error = "output limit"
+def _fail_linear(ctrl: RunController, agent_id: str, key: str) -> None:
+    """End a linear run at this agent (H7).
+
+    A chain has no orchestrator that could react to an anomaly. An empty text
+    handed on would reach the end node and close the run as succeeded with no
+    answer. Returning None makes ``_run_linear`` stop with ``fail_message``.
+    """
+    emit_log("error", key, node_id=agent_id)
+    turn_runtime._set_node(ctrl, agent_id, "error", error=key)
+    ctrl.fail_message = key
+    ctrl.fail_class = "llm_error"
+    ctrl.last_error_node_id = agent_id
+    return None
+
+
+def _mark_output_limit(ctrl: RunController, agent_id: str, record: AgentRecord | None) -> str | None:
+    if record is None:
+        return _fail_linear(ctrl, agent_id, "run.agent.outputLimit")
+    record.error = "output limit"
     turn_runtime._set_node(ctrl, agent_id, "done")
     emit_log("warn", "run.agent.outputLimit", node_id=agent_id)
+    return ""
 
 
-def _mark_window(ctrl: RunController, agent_id: str, record: AgentRecord | None) -> None:
-    if record is not None:
-        record.error = "prompt does not fit"
+def _mark_window(ctrl: RunController, agent_id: str, record: AgentRecord | None) -> str | None:
+    if record is None:
+        return _fail_linear(ctrl, agent_id, "run.agent.window")
+    record.error = "prompt does not fit"
     turn_runtime._set_node(ctrl, agent_id, "done")
     emit_log("warn", "run.agent.window", node_id=agent_id)
+    return ""
 
 
 def _make_room(

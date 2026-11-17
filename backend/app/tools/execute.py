@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.common.secrets import mask_obj
+from app.common.secrets import mask_content_obj
 from app.tools.calculator_tool import run as run_calculator
 from app.tools.datetime_tool import run as run_datetime
 from app.tools.file_access_tool import run as run_file_access
@@ -42,5 +42,7 @@ def execute_first_party(
     except Exception:
         return ExecuteResult(ok=False, error_key="tools.unknownKind")
     if result.ok:
-        result = result.model_copy(update={"result": mask_obj(result.result)})
+        # Narrow mask: the model reads this and may write it back (H5). Real secrets
+        # and key formats go; source code like f"Bearer {token}" stays intact.
+        result = result.model_copy(update={"result": mask_content_obj(result.result)})
     return result

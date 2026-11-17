@@ -104,6 +104,19 @@ export function computeErrorTop(runs: RunSummary[], limit = 8): ErrorTopRow[] {
   return [...map.values()].sort((a, b) => b.count - a.count).slice(0, limit);
 }
 
+/** Rows the server counted over every call of the filtered runs (`byModel` of GET /runs/calls). */
+export function modelRowsFromStats(stats: Array<Omit<ModelAggRow, 'errorRate'>>): ModelAggRow[] {
+  return stats
+    .map((row) => ({
+      ...row,
+      medianMs: row.medianMs ?? null,
+      tokensIn: row.tokensIn ?? null,
+      tokensOut: row.tokensOut ?? null,
+      errorRate: row.calls === 0 ? 0 : row.error / row.calls,
+    }))
+    .sort((a, b) => b.calls - a.calls);
+}
+
 export function aggregateModels(calls: LlmCall[]): ModelAggRow[] {
   const map = new Map<string, { row: ModelAggRow; durations: number[] }>();
   for (const call of calls) {

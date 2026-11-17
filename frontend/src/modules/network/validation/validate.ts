@@ -19,6 +19,15 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function hasCycle(doc: AgentNetworkDocument): boolean {
   const outgoing = new Map<string, string[]>();
   for (const node of doc.nodes) outgoing.set(node.id, []);
@@ -304,6 +313,10 @@ function validateNode(
   if (node.type === 'tool') {
     const kind = asString(node.data.kind);
     if (!kind) issues.push({ nodeId: node.id, messageKey: 'network.validation.toolKind' });
+    // Mirrors graph.http.credentialUrl: a credential is only sent to the origin of the node URL.
+    if (kind === 'http' && asString(node.data.credentialId) && !isHttpUrl(asString(node.data.url))) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.httpCredentialUrl' });
+    }
     if (kind === 'file_access') {
       const root = asString(node.data.rootPath);
       if (!root || isForbiddenDataRoot(root)) {

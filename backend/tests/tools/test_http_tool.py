@@ -9,6 +9,8 @@ from app.common.http import client as real_client
 from app.tools.execute import execute_first_party
 
 _PUBLIC = "http://93.184.216.34/x"
+# The node URL names the origin its credential may go to (H2).
+_BOUND = {"url": "http://93.184.216.34"}
 
 
 def _install(monkeypatch: pytest.MonkeyPatch, handler) -> None:
@@ -128,6 +130,7 @@ def test_cross_host_redirect_drops_credentials(monkeypatch: pytest.MonkeyPatch) 
     _install(monkeypatch, handler)
     result = execute_first_party(
         "http",
+        config=_BOUND,
         args={
             "url": _PUBLIC,
             "headers": {"Cookie": "sid=1", "Proxy-Authorization": "Basic eA=="},
@@ -154,6 +157,7 @@ def test_custom_secret_sets_bearer_and_header(monkeypatch: pytest.MonkeyPatch) -
     _install(monkeypatch, handler)
     result = execute_first_party(
         "http",
+        config=_BOUND,
         args={"url": _PUBLIC},
         secret='{"token":"live-bearer","headers":{"X-Api-Key":"k-1"}}',
     )
@@ -172,7 +176,7 @@ def test_same_host_redirect_keeps_authorization(monkeypatch: pytest.MonkeyPatch)
         return httpx.Response(200, text="same")
 
     _install(monkeypatch, handler)
-    result = execute_first_party("http", args={"url": _PUBLIC}, secret="dummy-bearer")
+    result = execute_first_party("http", config=_BOUND, args={"url": _PUBLIC}, secret="dummy-bearer")
     assert result.ok is True
     assert seen == ["Bearer dummy-bearer", "Bearer dummy-bearer"]
 
@@ -182,6 +186,74 @@ def test_redirect_to_loopback_is_blocked(monkeypatch: pytest.MonkeyPatch) -> Non
         return httpx.Response(302, headers={"location": "http://127.0.0.1/secret"})
 
     _install(monkeypatch, handler)
-    result = execute_first_party("http", args={"url": _PUBLIC}, secret="dummy-bearer")
+    result = execute_first_party("http", config=_BOUND, args={"url": _PUBLIC}, secret="dummy-bearer")
     assert result.ok is False
     assert result.error_key == "tools.http.blockedHost"
+
+
+def test_credential_stays_home_for_another_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("authorization"))
+        return httpx.Response(200, text="ok")
+
+    _install(monkeypatch, handler)
+    result = execute_first_party(
+        "http",
+        config={"url": "https://api.example.com/v1"},
+        args={"url": _PUBLIC},
+        secret="dummy-bearer",
+    )
+    assert result.ok is True
+    assert seen == [None]
+    assert result.result["credentialSent"] is False
+
+
+def test_credential_needs_a_node_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("authorization"))
+        return httpx.Response(200, text="ok")
+
+    _install(monkeypatch, handler)
+    result = execute_first_party("http", args={"url": _PUBLIC}, secret="dummy-bearer")
+    assert result.ok is True
+    assert seen == [None]
+
+
+def test_credential_is_bound_to_scheme_and_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("authorization"))
+        return httpx.Response(200, text="ok")
+
+    _install(monkeypatch, handler)
+    # Same host, but https or another port: not the origin the key belongs to.
+    for config in ({"url": "https://93.184.216.34"}, {"url": "http://93.184.216.34:8080"}):
+        execute_first_party("http", config=config, args={"url": _PUBLIC}, secret="dummy-bearer")
+    assert seen == [None, None]
+
+
+def test_custom_header_is_dropped_when_a_redirect_leaves_the_origin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[tuple[str, str | None]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.url.host, request.headers.get("x-api-key")))
+        if request.url.host == "93.184.216.34":
+            return httpx.Response(302, headers={"location": "http://203.0.113.10/y"})
+        return httpx.Response(200, text="landed")
+
+    _install(monkeypatch, handler)
+    result = execute_first_party(
+        "http",
+        config=_BOUND,
+        args={"url": _PUBLIC},
+        secret='{"headers":{"X-Api-Key":"k-1"}}',
+    )
+    assert result.ok is True
+    assert seen == [("93.184.216.34", "k-1"), ("203.0.113.10", None)]

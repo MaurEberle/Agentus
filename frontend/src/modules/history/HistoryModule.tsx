@@ -23,7 +23,14 @@ import { RunList } from '@/modules/history/list/RunList';
 import { endOfLocalDay, fileStamp, modelKey, safeFilePart, shortId, startOfLocalDay } from '@/modules/history/model/format';
 import { maskLog, maskText } from '@/modules/monitoring/model/mask';
 import { downloadBlob, zipStore } from '@/modules/networks/model/zip';
-import { aggregateModels, aggregateNetworks, computeChart, computeErrorTop, computeKpis } from '@/modules/history/model/stats';
+import {
+  aggregateModels,
+  aggregateNetworks,
+  computeChart,
+  computeErrorTop,
+  computeKpis,
+  modelRowsFromStats,
+} from '@/modules/history/model/stats';
 import {
   defaultHistoryFilter,
   historySearchFrom,
@@ -142,7 +149,14 @@ export function HistoryModule() {
   const kpis = useMemo(() => computeKpis(items), [items]);
   const buckets = useMemo(() => computeChart(items, bounds.from, bounds.to, i18n.language), [bounds.from, bounds.to, i18n.language, items]);
   const errors = useMemo(() => computeErrorTop(items), [items]);
-  const modelRows = useMemo(() => aggregateModels(callsQuery.data ?? []), [callsQuery.data]);
+  // H10: the server counts every call of the filtered runs. The page of calls is only a
+  // fallback for an older backend; it covers at most STATS_LIMIT calls.
+  const modelRows = useMemo(() => {
+    const data = callsQuery.data;
+    if (!data) return [];
+    if (data.byModel) return modelRowsFromStats(data.byModel);
+    return aggregateModels(data.items);
+  }, [callsQuery.data]);
   const networkRows = useMemo(() => aggregateNetworks(items), [items]);
 
   const modelOptions = useMemo(() => {

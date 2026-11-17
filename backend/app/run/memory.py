@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import dataclass, field
 
+from app.common.secrets import mask_text
 from app.help.visible import strip_think
 from app.run.orchestrate import match_agent
 from app.runtime.models import ChatMessage as LlmMessage
@@ -419,7 +420,8 @@ class RunMemory:
                             "name": event.name,
                             "arguments": event.arguments,
                             "ok": event.ok,
-                            "result": event.result[:_PERSIST_RESULT_CHARS],
+                            # Stored history keeps the broad mask; the live course is masked narrowly (H5).
+                            "result": mask_text(event.result[:_PERSIST_RESULT_CHARS]),
                         }
                         for event in rec.tools[-_PERSIST_LIST_MAX:]
                     ],
@@ -441,7 +443,7 @@ class RunMemory:
                     "name": event.name,
                     "arguments": event.arguments,
                     "ok": event.ok,
-                    "result": event.result[:_PERSIST_RESULT_CHARS],
+                    "result": mask_text(event.result[:_PERSIST_RESULT_CHARS]),
                 }
                 for event in self.own_tools[-_PERSIST_LIST_MAX:]
             ],

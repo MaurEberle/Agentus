@@ -80,6 +80,12 @@ def _file_block(title: str, data: dict) -> str:
         f"Delete: {delete_note}.",
         'Call shape: {"action":"<one listed action>","path":"<relative path>"}.',
     ]
+    if "read" in actions:
+        # H6: a file larger than one result is paged, not cut off.
+        lines.append(
+            "read returns one page of a file. When the result has nextOffset, more lines follow: "
+            "read again with offset set to nextOffset."
+        )
     return "\n".join(lines)
 
 

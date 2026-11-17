@@ -321,6 +321,12 @@ def validate_document(
                 pass
             elif kind and kind not in FIRST_PARTY_KINDS:
                 errors.append(_err("graph.mcp.server", node.id))
+            if kind == "http" and str(node.data.get("credentialId") or "").strip():
+                # H2: the credential is sent to the origin of this URL and nowhere else.
+                from app.tools.http_tool import credential_origin
+
+                if credential_origin(node.data) is None:
+                    errors.append(_err("graph.http.credentialUrl", node.id))
             if kind == "file_access":
                 root = str(node.data.get("rootPath") or "").strip()
                 if not root:

@@ -64,6 +64,11 @@ _TAKEOVER_FINISH_NOTE = (
     "Do it with your tools now. Finish again only to end the run without it."
 )
 
+# Linear chain: a step always gets one user message. These stand in when its edge
+# carries no text (a start node without a chat input, or a step that returned nothing).
+_BATCH_START = "Begin."
+_EMPTY_HANDOFF = "(The previous step returned no text.)"
+
 _FINISH_FILES_NOTE = (
     "A coding agent made no successful write or delete and returned no text. "
     "Check with a tool or call that agent again. Finish only when the files exist."
@@ -216,22 +221,42 @@ def _fail_think_loop(ctrl: RunController, node_id: str, thinks: int) -> str:
     turn_runtime._set_node(ctrl, node_id, "error", error="run.orchestrator.thinkLoop")
     return "failed"
 
+def _chain_roots(compiled: CompiledGraph) -> list[str]:
+    """Agents no other node hands a message to. They start a chain without a chat input."""
+    fed = {edge.target for edge in compiled.doc.edges if edge.target_handle == "message"}
+    roots = [agent_id for agent_id in compiled.topo_agents if agent_id not in fed]
+    # A graph without a root cannot pass validation (cycle); keep the old start as a net.
+    return roots or list(compiled.topo_agents)
+
+
+def _step_input(payload: str, *, start: bool) -> list[LlmMessage]:
+    """The one user message of a linear step: the text of its incoming edge (Paket 6, H8).
+
+    Every step used to share one growing list, so the second agent read the answer of
+    the first as its own assistant turn and the request ended on an assistant message.
+    """
+    text = (payload or "").strip()
+    if not text:
+        text = _BATCH_START if start else _EMPTY_HANDOFF
+    return [LlmMessage(role="user", content=text)]
+
+
 def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) -> str:
-    conversation: list[LlmMessage] = []
-    if user_text:
-        conversation.append(LlmMessage(role="user", content=user_text))
-    pending: deque[tuple[str, str]] = deque()
+    # (node, text of the incoming edge, True for a start node)
+    pending: deque[tuple[str, str, bool]] = deque()
     if compiled.chat_input:
         for edge in compiled.doc.edges:
             if edge.source == compiled.chat_input.id:
-                pending.append((edge.target, user_text or ""))
+                pending.append((edge.target, user_text or "", True))
     else:
-        for agent_id in compiled.topo_agents:
-            pending.append((agent_id, user_text or ""))
+        # Without a chat input only the roots start. Seeding every agent ran the later
+        # ones twice, the first time before their input existed (M9).
+        for agent_id in _chain_roots(compiled):
+            pending.append((agent_id, user_text or "", True))
     end_hit: set[str] = set()
     invocations = 0
     while pending and not ctrl.stop_event.is_set():
-        node_id, payload = pending.popleft()
+        node_id, payload, start = pending.popleft()
         node = compiled.by_id.get(node_id)
         if node is None:
             continue
@@ -255,20 +280,22 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
                 payload={"target": target, "branch": branch},
             )
             turn_runtime._set_node(ctrl, node_id, "done")
-            pending.append((target, payload))
+            pending.append((target, payload, start))
             continue
         if node.type != "agent":
             continue
         invocations += 1
         if invocations > MAX_AGENT_INVOCATIONS:
             return _fail_step_limit(ctrl, node_id)
-        text = agent_turn._agent_turn(ctrl, compiled, node_id, payload, conversation)
+        text = agent_turn._agent_turn(
+            ctrl, compiled, node_id, payload, _step_input(payload, start=start)
+        )
         if text is None:
             if ctrl.stop_event.is_set():
                 break
             return "failed" if ctrl.fail_message else "cancelled"
         for target in compiled.agents[node_id].outbound_message:
-            pending.append((target, text))
+            pending.append((target, text, False))
     if ctrl.stop_event.is_set():
         return "cancelled"
     if end_hit:

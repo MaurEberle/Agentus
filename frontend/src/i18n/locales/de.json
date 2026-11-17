@@ -921,6 +921,7 @@
         "kindDense": "Normale Modelle",
         "kindMoe": "MoE-Modelle",
         "noModels": "Keine Modelle geladen.",
+        "modelUnavailable": "Dieses Modell ist gerade nicht verfügbar. Die Auswahl bleibt gespeichert.",
         "useModel": "„{{name}}“ verwenden",
         "temperature": "Temperature",
         "maxTokens": "Max. Tokens",
@@ -1035,6 +1036,7 @@
         "maxCalls": "Max. Aufrufe pro Lauf",
         "maxCallsUnlimited": "Unbegrenzt",
         "maxCallsHint": "Zählt alle Aufrufe dieses Werkzeugs in einem Lauf, egal ob vom Orchestrator oder einem Agenten. Danach wird es nicht mehr angeboten.",
+        "credentialUrlHint": "Der Zugang wird nur an Schema, Host und Port der URL oben gesendet, nie an andere Adressen.",
         "terminalProgramPlaceholder": "Programmname",
         "terminalProgramAdd": "Hinzufügen",
         "dateHint": "Zeigt die aktuelle Zeit in einer IANA-Zeitzone, Standard ist UTC. Ein Zeitpunkt lässt sich um Tage, Stunden und Minuten verschieben, auch rückwärts. Der Abstand zweier Zeitpunkte kommt in Sekunden, Stunden und Tagen. Bestandteile sind Datum, Uhrzeit und Wochentag, Montag ist 1. Dieselbe Zeit lässt sich in eine andere Zeitzone umrechnen.",
@@ -1175,6 +1177,7 @@
       "terminalRoot": "Das Terminal braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "terminalPrograms": "Im eingeschränkten Modus ist mindestens ein Programm nötig.",
       "toolMaxCalls": "Max. Aufrufe muss eine ganze Zahl ab 1 sein.",
+      "httpCredentialUrl": "HTTP mit Zugang braucht eine vollständige URL (http/https). Der Zugang wird nur an diese Adresse gesendet.",
       "zipRoot": "ZIP braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "knowledgePath": "Quellenordner ist Pflicht.",
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
@@ -1758,6 +1761,7 @@
       "agent": {
         "textOnly": "Nur Text, kein Werkzeug genutzt; der Orchestrator prüft die Antwort.",
         "outputLimit": "Zweimal an der Ausgabegrenze abgeschnitten; Auftrag beendet.",
+        "window": "Der Prompt passt in kein Kontextfenster.",
         "toolCap": "Agent: {{calls}} Werkzeugaufrufe für diesen Auftrag, Grenze erreicht.",
         "start": "Agent gestartet",
         "done": "Agent fertig",
@@ -1789,6 +1793,7 @@
       },
       "tool": {
         "limitReached": "Werkzeug {{name}}: Limit von {{limit}} Aufrufen pro Lauf erreicht.",
+        "notOffered": "Werkzeug {{name}} ist an diesem Knoten nicht freigegeben; der Aufruf wurde nicht ausgeführt.",
         "call": "Werkzeug {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
@@ -1837,6 +1842,7 @@
     },
     "runtime": {
       "generationLimit": "Antwort nach der Zeitgrenze abgebrochen.",
+      "rateLimited": "Der Anbieter drosselt die Anfragen (Rate-Limit).",
       "timeout": "Kein Fortschritt vom Modell",
       "unreachable": "Runtime nicht erreichbar"
     }

@@ -1,6 +1,14 @@
 import { apiFetch } from '@/api/client';
 import { normalizeRun, normalizeRunDetail } from '@/modules/history/model/normalize';
-import type { LlmCall, LogEvent, LogFilter, RunDetail, RunListFilter, RunSummary } from '@/modules/history/model/types';
+import type {
+  LlmCall,
+  LogEvent,
+  LogFilter,
+  ModelAggRow,
+  RunDetail,
+  RunListFilter,
+  RunSummary,
+} from '@/modules/history/model/types';
 
 function queryString(filter: RunListFilter): string {
   const params = new URLSearchParams();
@@ -41,9 +49,19 @@ export async function listRunLogs(runId: string, logFilter?: LogFilter): Promise
   return body.items ?? [];
 }
 
-export async function listCalls(filter: RunListFilter = {}): Promise<LlmCall[]> {
-  const body = await apiFetch<{ items: LlmCall[] }>(`/runs/calls${queryString(filter)}`);
-  return body.items;
+export type ModelCallStats = Omit<ModelAggRow, 'errorRate'>;
+
+/**
+ * `items` is one page of calls, newest first. `byModel` is counted by the server over every
+ * call of the filtered runs: aggregating the page showed only the oldest 500 calls (H10).
+ */
+export async function listCalls(
+  filter: RunListFilter = {},
+): Promise<{ items: LlmCall[]; byModel?: ModelCallStats[] }> {
+  const body = await apiFetch<{ items: LlmCall[]; byModel?: ModelCallStats[] }>(
+    `/runs/calls${queryString(filter)}`,
+  );
+  return { items: body.items ?? [], byModel: body.byModel };
 }
 
 export async function deleteRuns(ids: string[]): Promise<void> {

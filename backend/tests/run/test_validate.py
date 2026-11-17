@@ -255,3 +255,31 @@ def test_legacy_tool_kind_mcp_validates_as_mcp() -> None:
         mcp_enabled=lambda _sid: True,
     )
     assert not any(e.message_key.startswith("graph.mcp.") for e in errors)
+
+
+def _with_http(raw: dict, data: dict) -> dict:
+    raw["nodes"].append(
+        {"id": "web", "type": "tool", "position": {"x": 0, "y": 0}, "data": {"kind": "http", **data}}
+    )
+    raw["edges"].append(
+        {"id": "eh", "source": "web", "sourceHandle": "tool", "target": "ag", "targetHandle": "tool"}
+    )
+    return raw
+
+
+def test_http_credential_needs_a_url() -> None:
+    # H2: the credential is sent to the origin of the node URL and nowhere else.
+    for data in ({"credentialId": "c-1"}, {"credentialId": "c-1", "url": "api.example.com"}):
+        errors = validate_document(
+            AgentNetworkDocument.model_validate(_with_http(mini_doc(), data)), data_dir="C:/data"
+        )
+        assert [e.message_key for e in errors] == ["graph.http.credentialUrl"]
+        assert errors[0].node_id == "web"
+
+
+def test_http_without_credential_or_with_url_is_valid() -> None:
+    for data in ({}, {"url": ""}, {"credentialId": "c-1", "url": "https://api.example.com/v1"}):
+        errors = validate_document(
+            AgentNetworkDocument.model_validate(_with_http(mini_doc(), data)), data_dir="C:/data"
+        )
+        assert errors == []

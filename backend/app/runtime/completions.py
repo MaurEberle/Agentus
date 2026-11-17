@@ -13,6 +13,7 @@ from typing import Any
 from app.common.http import client
 from app.common.types import Provider
 from app.runtime.errors import (
+    RATE_LIMIT_RETRIES,
     RuntimeApiError,
     clip_error_detail,
     is_timeout_error,
@@ -20,7 +21,9 @@ from app.runtime.errors import (
     map_http_status,
     raise_for_status,
     raise_transport,
+    rate_limit_wait,
     response_json,
+    retry_after_seconds,
     transport_error_key,
 )
 from app.runtime.models import (
@@ -680,6 +683,30 @@ def complete(req: CompletionRequest) -> CompletionResult:
     )
 
 
+def _tool_slot(acc: dict[int, dict[str, str]], item: dict[str, Any], fn: dict[str, Any]) -> int:
+    """Which accumulated call one streamed tool-call item belongs to (H9).
+
+    OpenAI deltas carry ``index`` on the item. Native Ollama carries it, if at all,
+    in ``function.index`` and omits it for the first call. Reading only the item
+    put two parallel native calls into slot 0, and the last one won.
+    """
+    for holder in (item, fn):
+        raw = holder.get("index")
+        if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0:
+            return raw
+    call_id = str(item.get("id") or "")
+    if call_id:
+        for index, slot in acc.items():
+            if slot["id"] == call_id:
+                return index
+        return (max(acc) + 1) if acc else 0
+    if isinstance(fn.get("arguments"), dict) or not acc:
+        # A complete native call without id or index: a call of its own.
+        return (max(acc) + 1) if acc else 0
+    # A text fragment without id or index continues the call that is being written.
+    return max(acc)
+
+
 def _accumulate_tool_delta(
     acc: dict[int, dict[str, str]], raw: object
 ) -> list[ToolCall]:
@@ -688,11 +715,11 @@ def _accumulate_tool_delta(
     for item in raw:
         if not isinstance(item, dict):
             continue
-        index = int(item.get("index") or 0)
+        fn = item.get("function") if isinstance(item.get("function"), dict) else {}
+        index = _tool_slot(acc, item, fn)
         slot = acc.setdefault(index, {"id": "", "name": "", "arguments": ""})
         if item.get("id"):
             slot["id"] = str(item["id"])
-        fn = item.get("function") if isinstance(item.get("function"), dict) else {}
         if fn.get("name"):
             slot["name"] = str(fn["name"])
         if "arguments" in fn and fn["arguments"] is not None:
@@ -850,8 +877,11 @@ def complete_stream(
         yield StreamEvent(kind="error", error_key=exc.error_key)
         return
     current = req
-    for attempt in range(2):
+    gpu_retried = False
+    rate_waits = 0
+    while True:
         payload = _payload(current, stream=True)
+        info: dict[str, Any] = {}
         outcome = yield from _stream_once(
             url,
             headers,
@@ -859,12 +889,43 @@ def complete_stream(
             current,
             on_tokens=on_tokens,
             should_abort=should_abort,
+            info=info,
         )
-        if outcome == "retry" and attempt == 0:
+        if outcome == "retry" and not gpu_retried:
+            gpu_retried = True
             log.info("ollama gpu max failed, retrying with auto model=%s", req.model)
             current = _retry_gpu_auto(current)
             continue
+        if outcome == "rate":
+            # H11: the provider throttles. Wait as asked (or back off) and call again.
+            wait = rate_limit_wait(info.get("retry_after"), rate_waits)
+            if rate_waits < RATE_LIMIT_RETRIES and wait is not None:
+                rate_waits += 1
+                log.info(
+                    "rate limited, retry %s/%s in %.1f s model=%s",
+                    rate_waits,
+                    RATE_LIMIT_RETRIES,
+                    wait,
+                    req.model,
+                )
+                if _wait_abortable(wait, should_abort):
+                    return
+                continue
+            yield _stream_error("runtime.rateLimited", info.get("detail"))
+            return
         return
+
+
+def _wait_abortable(seconds: float, should_abort: Callable[[], bool] | None) -> bool:
+    """Sleep in short steps. True when the caller asked to stop meanwhile."""
+    deadline = time.monotonic() + max(0.0, seconds)
+    while True:
+        if should_abort is not None and should_abort():
+            return True
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return False
+        time.sleep(min(0.2, left))
 
 
 def _stream_once(
@@ -875,6 +936,7 @@ def _stream_once(
     *,
     on_tokens: Callable[[int, float | None], None] | None = None,
     should_abort: Callable[[], bool] | None = None,
+    info: dict[str, Any] | None = None,
 ) -> Generator[StreamEvent, None, str]:
     acc: dict[int, dict[str, str]] = {}
     usage: CompletionUsage | None = None
@@ -940,6 +1002,10 @@ def _stream_once(
                     err_text = _read_body(response)
                     if _can_retry_gpu(payload, response.status_code, err_text):
                         return "retry"
+                    if response.status_code == 429 and info is not None:
+                        info["retry_after"] = retry_after_seconds(response.headers)
+                        info["detail"] = err_text
+                        return "rate"
                     yield _stream_error(map_http_status(response.status_code), err_text)
                     return "done"
                 for line in response.iter_lines():

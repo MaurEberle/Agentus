@@ -921,6 +921,7 @@
         "kindDense": "Standard models",
         "kindMoe": "MoE models",
         "noModels": "No models loaded.",
+        "modelUnavailable": "This model is not available right now. The choice stays saved.",
         "useModel": "Use “{{name}}”",
         "temperature": "Temperature",
         "maxTokens": "Max tokens",
@@ -1035,6 +1036,7 @@
         "maxCalls": "Max. calls per run",
         "maxCallsUnlimited": "Unlimited",
         "maxCallsHint": "Counts every call of this tool in one run, from the orchestrator or any agent. After that it is no longer offered.",
+        "credentialUrlHint": "The credential is only sent to the scheme, host and port of the URL above, never to other addresses.",
         "terminalProgramPlaceholder": "Program name",
         "terminalProgramAdd": "Add",
         "dateHint": "Shows the current time in an IANA time zone, default UTC. An instant can be shifted by days, hours, and minutes, including backwards. The gap between two instants comes back in seconds, hours, and days. Parts are the date, the clock time, and the weekday; Monday is 1. The same instant can be shown in another time zone.",
@@ -1175,6 +1177,7 @@
       "terminalRoot": "The terminal needs a folder that is not a drive root.",
       "terminalPrograms": "Restricted mode needs at least one program.",
       "toolMaxCalls": "Max. calls must be a whole number of at least 1.",
+      "httpCredentialUrl": "HTTP with a credential needs a full URL (http/https). The credential is only sent to that address.",
       "zipRoot": "ZIP needs a folder that is not a drive root.",
       "knowledgePath": "Source folder is required.",
       "knowledgeRoot": "Drive or system root is not allowed.",
@@ -1758,6 +1761,7 @@
       "agent": {
         "textOnly": "Text only, no tool used; the orchestrator reviews the answer.",
         "outputLimit": "Cut off at the output limit twice; task ended.",
+        "window": "The prompt does not fit any context window.",
         "toolCap": "Agent: {{calls}} tool calls for this task, limit reached.",
         "start": "Agent started",
         "done": "Agent finished",
@@ -1789,6 +1793,7 @@
       },
       "tool": {
         "limitReached": "Tool {{name}}: limit of {{limit}} calls per run reached.",
+        "notOffered": "Tool {{name}} is not enabled on this node; the call was not run.",
         "call": "Tool {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
@@ -1837,6 +1842,7 @@
     },
     "runtime": {
       "generationLimit": "Answer stopped at the time limit.",
+      "rateLimited": "The provider is throttling requests (rate limit).",
       "timeout": "No progress from the model",
       "unreachable": "Runtime unreachable"
     }

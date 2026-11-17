@@ -103,6 +103,29 @@ def _host_of(url: str) -> str:
     return (urlparse(url).hostname or "").lower().rstrip(".")
 
 
+def _origin(url: str) -> tuple[str, str, int] | None:
+    """``(scheme, host, port)`` of an http(s) URL, or None."""
+    try:
+        parsed = urlparse((url or "").strip())
+        scheme = (parsed.scheme or "").lower()
+        host = (parsed.hostname or "").lower().rstrip(".")
+        port = parsed.port
+    except ValueError:
+        return None
+    if scheme not in {"http", "https"} or not host:
+        return None
+    return scheme, host, port or (443 if scheme == "https" else 80)
+
+
+def credential_origin(config: dict[str, Any] | None) -> tuple[str, str, int] | None:
+    """Where the credential of an HTTP tool node may go: the origin of its URL field.
+
+    The request URL comes from the model. Without this binding a confused or
+    injected model sends the stored key to any host it names (H2).
+    """
+    return _origin(str((config or {}).get("url") or ""))
+
+
 def _drop_credentials(headers: dict[str, str]) -> dict[str, str]:
     return {key: value for key, value in headers.items() if key.lower() not in _CREDENTIAL_HEADERS}
 
@@ -168,7 +191,12 @@ def run(
         headers = {str(k): str(v) for k, v in raw_headers.items()}
     from app.common.custom_credential import apply_http_secret
 
-    headers = apply_http_secret(secret, headers)
+    # H2: the credential only travels to the origin of the node's URL field.
+    bound = credential_origin(cfg)
+    send_secret = bool(secret) and bound is not None and _origin(url) == bound
+    own = {key.lower() for key in headers}
+    headers = apply_http_secret(secret if send_secret else None, headers)
+    secret_headers = {key.lower() for key in headers} - own
     body = argv.get("body") if method in _BODY_METHODS else None
     content = None if body is None else str(body)
 
@@ -196,6 +224,15 @@ def run(
                             return _fail(blocked)
                         if _host_of(nxt) != _host_of(current):
                             headers = _drop_credentials(headers)
+                        if secret_headers and _origin(nxt) != bound:
+                            # Leaving the bound origin: nothing from the vault goes along,
+                            # custom headers (X-Api-Key) included.
+                            headers = {
+                                key: value
+                                for key, value in headers.items()
+                                if key.lower() not in secret_headers
+                            }
+                            secret_headers = set()
                         current = nxt
                         if response.status_code in {301, 302, 303}:
                             current_method = "GET"
@@ -204,11 +241,14 @@ def run(
                     text, too_large = _read_body(response, max_bytes)
                     if too_large:
                         return _fail(too_large)
-                    payload = {
+                    payload: dict[str, Any] = {
                         "status": response.status_code,
                         "headers": _mask_headers(response.headers),
                         "body": mask_text(text or ""),
                     }
+                    if secret and not send_secret:
+                        # Tell the model why a 401 may follow: the key stayed home.
+                        payload["credentialSent"] = False
                     if response.status_code >= 400:
                         return _fail("tools.http.upstream", payload)
                     return ExecuteResult(ok=True, result=mask_obj(payload))

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import time
 
-from app.common.secrets import mask_obj
+from app.common.secrets import mask_content_obj, mask_obj
 from app.db.engine import utc_now
 from app.db.runs import upsert_step
 from app.db.vault import get as vault_get
@@ -40,7 +40,10 @@ from app.tools.catalog import openai_tools_for_kinds
 
 log = logging.getLogger("agentus.run")
 
-_SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
+# runtime.rateLimited arrives here only after the call itself waited and retried (H11).
+_SAME_RETRY = frozenset(
+    {"runtime.timeout", "runtime.unreachable", "runtime.upstream", "runtime.rateLimited"}
+)
 
 _TRUNCATED_REASONS = frozenset({"length", "max_tokens", "truncated"})
 
@@ -145,6 +148,40 @@ def _resolve_tool_node(compiled: CompiledGraph, owner_id: str, call_name: str):
             return src
     return None
 
+def _mcp_bindings(
+    compiled: CompiledGraph, owner_id: str
+) -> list[tuple[str, list[str] | None, str | None]]:
+    """MCP servers wired to ``owner_id`` with the tool names its node allows."""
+    agent = compiled.agents.get(owner_id)
+    if agent is not None:
+        return list(agent.mcp)
+    orch = compiled.orchestrator
+    if orch is not None and orch.node_id == owner_id:
+        return list(orch.mcp)
+    return []
+
+
+def _mcp_offered(compiled: CompiledGraph, owner_id: str, server_id: str, tool_name: str) -> bool:
+    """True when this node may call ``tool_name`` on ``server_id`` (H1).
+
+    The schema sent to the model is no boundary: a model can name any tool, and
+    ``salvage_tool_calls`` turns text into calls. The wiring and the tool choice
+    of the MCP node decide, exactly as they decide what is offered.
+    """
+    from app.mcp.names import safe_token
+
+    for bound_id, allow, _cred in _mcp_bindings(compiled, owner_id):
+        if bound_id != server_id:
+            continue
+        # An empty choice offers every tool of the server (see _tool_schemas).
+        if not allow:
+            return True
+        wanted = safe_token(tool_name)
+        if any(name == tool_name or safe_token(str(name)) == wanted for name in allow):
+            return True
+    return False
+
+
 def _calls_left(ctrl: RunController, node) -> int | None:
     limit = _max_calls(node.data)
     if limit is None:
@@ -205,8 +242,10 @@ def _dispatch_tool(
             preview = file_fact(leaf, args, {}, ok=True)
             if preview is not None and preview.path:
                 reused = reused_file_result(record, preview.action, preview.path)
+    # A server that is not wired to this node, or a tool its node does not allow.
+    not_offered = bool(mapped) and not _mcp_offered(compiled, owner_id, mapped[0], mapped[1])
     refused_at = None
-    if reused is None:
+    if reused is None and not not_offered:
         limited_node = _resolve_tool_node(compiled, owner_id, call_name)
         if limited_node is not None:
             refused_at = _take_call(ctrl, limited_node)
@@ -214,6 +253,18 @@ def _dispatch_tool(
                 tool_node_id = limited_node.id
     if reused is not None:
         tool_result = reused
+    elif not_offered:
+        tool_result = {
+            "ok": False,
+            "error": "tool.notOffered",
+            "detail": "This tool is not connected to you. Call only a tool listed under Connected tools.",
+        }
+        emit_log(
+            "warn",
+            "run.tool.notOffered",
+            node_id=owner_id,
+            payload={"name": call_name},
+        )
     elif refused_at is not None:
         # Not a failure: the network caps this tool. The model sees why and stops asking for it.
         tool_result = {
@@ -295,7 +346,8 @@ def _dispatch_tool(
         payload=payload,
     )
     fact = None if reused is not None else file_fact(leaf, args, tool_result, ok=ok_tool)
-    masked = format_tool_result(mask_obj(tool_result))
+    # Narrow mask (H5): the model works with this text and may write it back.
+    masked = format_tool_result(mask_content_obj(tool_result))
     if record is not None:
         record_tool(
             record,

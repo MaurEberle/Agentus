@@ -550,7 +550,49 @@ def list_calls(
     outcome: list[str] | None = None,
     model: str | None = None,
     q: str | None = None,
+    newest_first: bool = False,
 ) -> list[dict[str, Any]]:
+    """Calls of one run in the order they happened, or a page across runs.
+
+    ``newest_first`` is for the page across runs: with the default order a limit
+    returned the oldest calls ever made, whatever the time range (H10).
+    """
+    where, params = _call_filters(
+        run_id,
+        since=since,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        network_id=network_id,
+        outcome=outcome,
+        model=model,
+        q=q,
+    )
+    order = "DESC" if newest_first else "ASC"
+    with locked("history") as conn:
+        rows = conn.execute(
+            f"""
+            SELECT llm_calls.* FROM llm_calls
+            JOIN runs ON runs.id = llm_calls.run_id
+            {where}
+            ORDER BY llm_calls.rowid {order}
+            LIMIT ? OFFSET ?
+            """,
+            [*params, limit, offset],
+        ).fetchall()
+    return [_call_dict(row) for row in rows]
+
+
+def _call_filters(
+    run_id: str | None,
+    *,
+    since: str | None,
+    from_ts: str | None,
+    to_ts: str | None,
+    network_id: str | None,
+    outcome: list[str] | None,
+    model: str | None,
+    q: str | None,
+) -> tuple[str, list[object]]:
     clauses: list[str] = []
     params: list[object] = []
     if run_id:
@@ -573,18 +615,87 @@ def list_calls(
         if extra:
             parts.append(extra.removeprefix(" AND "))
         where = " WHERE " + " AND ".join(p for p in parts if p)
+    return where, params
+
+
+def _median(values: list[int]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return float(ordered[mid])
+    return (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def call_stats_by_model(
+    *,
+    since: str | None = None,
+    from_ts: str | None = None,
+    to_ts: str | None = None,
+    network_id: str | None = None,
+    outcome: list[str] | None = None,
+    model: str | None = None,
+    q: str | None = None,
+) -> list[dict[str, Any]]:
+    """Per provider and model over every call of the filtered runs, not over one page (H10)."""
+    where, params = _call_filters(
+        None,
+        since=since,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        network_id=network_id,
+        outcome=outcome,
+        model=model,
+        q=q,
+    )
     with locked("history") as conn:
         rows = conn.execute(
             f"""
-            SELECT llm_calls.* FROM llm_calls
+            SELECT llm_calls.provider AS provider, llm_calls.model AS model,
+                   COUNT(*) AS calls,
+                   SUM(CASE WHEN llm_calls.ok THEN 1 ELSE 0 END) AS ok,
+                   SUM(llm_calls.tokens_in) AS tokens_in,
+                   SUM(llm_calls.tokens_out) AS tokens_out
+            FROM llm_calls
             JOIN runs ON runs.id = llm_calls.run_id
             {where}
-            ORDER BY llm_calls.rowid
-            LIMIT ? OFFSET ?
+            GROUP BY llm_calls.provider, llm_calls.model
             """,
-            [*params, limit, offset],
+            params,
         ).fetchall()
-    return [_call_dict(row) for row in rows]
+        durations = conn.execute(
+            f"""
+            SELECT llm_calls.provider AS provider, llm_calls.model AS model,
+                   llm_calls.duration_ms AS duration_ms
+            FROM llm_calls
+            JOIN runs ON runs.id = llm_calls.run_id
+            {where}{" AND" if where else " WHERE"} llm_calls.duration_ms IS NOT NULL
+            """,
+            params,
+        ).fetchall()
+    spans: dict[tuple[str, str], list[int]] = {}
+    for row in durations:
+        spans.setdefault((row["provider"], row["model"]), []).append(int(row["duration_ms"]))
+    stats: list[dict[str, Any]] = []
+    for row in rows:
+        calls = int(row["calls"] or 0)
+        ok = int(row["ok"] or 0)
+        stats.append(
+            {
+                "provider": row["provider"],
+                "model": row["model"],
+                "calls": calls,
+                "ok": ok,
+                "error": calls - ok,
+                "median_ms": _median(spans.get((row["provider"], row["model"]), [])),
+                # SUM over no value is NULL: "not reported" stays apart from zero.
+                "tokens_in": row["tokens_in"],
+                "tokens_out": row["tokens_out"],
+            }
+        )
+    stats.sort(key=lambda item: item["calls"], reverse=True)
+    return stats
 
 
 def upsert_step(

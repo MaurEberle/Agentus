@@ -265,15 +265,20 @@ def test_move_search_and_tree(tmp_path) -> None:
 def test_read_head_and_many(tmp_path) -> None:
     root = tmp_path / "root"
     root.mkdir()
-    (root / "a.txt").write_text("one\ntwo\nthree", encoding="utf-8")
-    (root / "b.txt").write_text("bee", encoding="utf-8")
+    # Bytes, not write_text: on Windows that would store CRLF and the page shows it.
+    (root / "a.txt").write_bytes(b"one\ntwo\nthree")
+    (root / "b.txt").write_bytes(b"bee")
     head = execute_first_party(
         "file_access",
         config={"rootPath": str(root)},
         args={"action": "read", "path": "a.txt", "head": 2},
     )
     assert head.ok is True
-    assert head.result["content"] == "one\ntwo"
+    # A page is the exact text of its lines, line endings included.
+    assert head.result["content"] == "one\ntwo\n"
+    assert head.result["lines"] == 3
+    assert (head.result["startLine"], head.result["endLine"]) == (1, 2)
+    assert head.result["nextOffset"] == 3
     many = execute_first_party(
         "file_access",
         config={"rootPath": str(root)},
@@ -281,3 +286,87 @@ def test_read_head_and_many(tmp_path) -> None:
     )
     assert many.ok is True
     assert [item["path"] for item in many.result["files"]] == ["a.txt", "b.txt"]
+
+
+def test_read_pages_through_a_large_file(tmp_path) -> None:
+    import json
+
+    from app.mcp.payload import TOOL_RESULT_CHARS, format_tool_result
+
+    root = tmp_path / "root"
+    root.mkdir()
+    lines = [f"line {index:04d} " + "x" * 40 for index in range(1, 401)]
+    (root / "big.txt").write_bytes("\n".join(lines).encode("utf-8"))
+    seen: list[str] = []
+    offset: int | None = None
+    for _ in range(40):
+        args: dict[str, object] = {"action": "read", "path": "big.txt"}
+        if offset is not None:
+            args["offset"] = offset
+        page = execute_first_party("file_access", config={"rootPath": str(root)}, args=args)
+        assert page.ok is True
+        # The whole result fits the tool budget and stays valid JSON.
+        text = format_tool_result(page.model_dump(by_alias=True))
+        assert len(text) <= TOOL_RESULT_CHARS
+        assert json.loads(text)["result"]["lines"] == 400
+        seen.append(page.result["content"])
+        offset = page.result.get("nextOffset")
+        if offset is None:
+            assert "truncated" not in page.result
+            break
+        assert page.result["truncated"] is True
+    assert "".join(seen) == "\n".join(lines)
+    assert len(seen) > 1
+
+
+def test_read_offset_and_limit_pick_a_line_range(tmp_path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "a.txt").write_bytes(b"one\ntwo\nthree\nfour\n")
+    page = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "read", "path": "a.txt", "offset": 2, "limit": 2},
+    )
+    assert page.result["content"] == "two\nthree\n"
+    assert (page.result["startLine"], page.result["endLine"]) == (2, 3)
+    assert page.result["nextOffset"] == 4
+    assert "truncated" not in page.result
+    tail = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "read", "path": "a.txt", "tail": 1},
+    )
+    assert tail.result["content"] == "four\n"
+    assert "nextOffset" not in tail.result
+
+
+def test_read_keeps_code_that_only_looks_like_a_secret(tmp_path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    source = 'headers = {"Authorization": f"Bearer {token}"}\nKEY = "sk-abcdefghijklmnop"\n'
+    (root / "client.py").write_bytes(source.encode("utf-8"))
+    read = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "read", "path": "client.py"},
+    )
+    content = read.result["content"]
+    # H5: the template survives; a real-looking key is still masked.
+    assert 'f"Bearer {token}"}' in content
+    assert "sk-abcdefghijklmnop" not in content
+    assert "sk-***" in content
+
+
+def test_edit_reads_the_whole_file_not_one_page(tmp_path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    lines = [f"line {index:04d} " + "x" * 40 for index in range(1, 401)]
+    (root / "big.txt").write_bytes("\n".join(lines).encode("utf-8"))
+    edited = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "edit", "path": "big.txt", "oldText": "line 0390 ", "newText": "LINE 390 "},
+    )
+    assert edited.ok is True
+    assert "LINE 390 " in (root / "big.txt").read_text(encoding="utf-8")

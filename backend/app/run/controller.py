@@ -528,7 +528,9 @@ class RunController:
             settings = load_settings()
         except Exception:
             settings = None
-        if settings is not None:
+        # H3: a run without an Ollama model loaded nothing there; do not wait on a
+        # daemon that may not even be installed.
+        if settings is not None and _uses_ollama(self.compiled):
             release_others(settings, self.compiled, current=None)
             help_chat = settings.help_chat
             primary = (help_chat.model or "").strip()
@@ -547,6 +549,10 @@ class RunController:
         from app.runtime.ollama import list_ollama_models
         from app.run.vram import release_others
 
+        if not _uses_ollama(compiled):
+            # H3: a network of cloud models must start without Ollama.
+            set_help_degraded(False)
+            return False
         try:
             installed = {item.name for item in list_ollama_models()}
         except RuntimeApiError as exc:
@@ -618,6 +624,17 @@ class RunController:
     def abort_chat(self) -> None:
         self.abort_generation.set()
         self.flush_chat(generating=False)
+
+
+def _uses_ollama(compiled: CompiledGraph | None) -> bool:
+    """True when an agent or the orchestrator of this network runs on Ollama."""
+    if compiled is None:
+        return False
+    for agent in compiled.agents.values():
+        if agent.llm.provider == "ollama" and agent.llm.model:
+            return True
+    orch = compiled.orchestrator
+    return bool(orch is not None and orch.llm.provider == "ollama" and orch.llm.model)
 
 
 def _require_model_show(tag: str) -> None:
