@@ -1,6 +1,10 @@
 MAX_AGENT_INVOCATIONS = 32
 # Agent dispatches (call). think / reply / ask / repair do not count.
-MAX_ORCHESTRATOR_STEPS = 24
+# Orchestrator node setting maxAgentCalls overrides it. At the limit the orchestrator
+# gets one closing turn for a summary; the run still ends as run.stepLimit.
+MAX_ORCHESTRATOR_STEPS = 50
+NODE_AGENT_CALLS_MIN = 1
+NODE_AGENT_CALLS_MAX = 500
 # Consecutive think turns without call/ask/finish. Runaway guard, not a work budget.
 MAX_ORCHESTRATOR_THINKS = 64
 # Consecutive think turns in one agent invocation without a tool call or result.

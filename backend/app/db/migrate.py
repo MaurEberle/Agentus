@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 
 from app.common.types import StoreId
@@ -173,6 +174,46 @@ V1: dict[StoreId, tuple[str, ...]] = {
     "workspace": _WORKSPACE_V1,
     "history": _HISTORY_V1,
 }
+
+
+log = logging.getLogger("agentus.db")
+
+# Columns that later versions added. A store whose version number says "done" but
+# that lacks one gets it here: another code state had used version 3 of the history
+# store for a column "briefing", so runs.memory never came and no run course was
+# ever stored (Dev Team history, 2026-11-17).
+_REQUIRED_COLUMNS: dict[str, tuple[tuple[str, str, str], ...]] = {
+    "help": (
+        ("help_chat_rag_chunks", "locale", "TEXT"),
+        ("help_chat_rag_chunks", "embedding_provider", "TEXT"),
+    ),
+    "history": (
+        ("runs", "updated_at", "TEXT"),
+        ("runs", "memory", "TEXT"),
+    ),
+    "workspace": (
+        ("network_rag_collections", "content_fingerprint", "TEXT"),
+        ("prompts", "created_at", "TEXT"),
+        ("model_downloads", "digests", "TEXT NOT NULL DEFAULT '[]'"),
+        ("model_downloads", "preinstalled", "INTEGER NOT NULL DEFAULT 0"),
+    ),
+}
+
+
+def ensure_columns(store: StoreId, conn: sqlite3.Connection) -> list[str]:
+    """Add every required column that is missing. Returns ``table.column`` of those added."""
+    added: list[str] = []
+    for table, column, ddl in _REQUIRED_COLUMNS.get(store, ()):
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        if not rows:
+            continue
+        names = {str(row[1]) for row in rows}
+        if column in names:
+            continue
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+        added.append(f"{table}.{column}")
+        log.warning("store %s: added missing column %s.%s", store, table, column)
+    return added
 
 
 def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
@@ -353,3 +394,4 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
             conn.execute("ROLLBACK")
             raise
         current = 8
+    ensure_columns(store, conn)

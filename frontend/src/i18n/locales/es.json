@@ -978,6 +978,8 @@
         "systemPrompt": "Prompt de sistema",
         "agentMissLimit": "Intentos fallidos por agente",
         "agentMissLimitHint": "Cuántas veces seguidas un agente puede fallar o terminar una tarea con acceso a archivos sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 2.",
+        "maxAgentCalls": "Encargos a agentes por ejecución",
+        "maxAgentCallsHint": "Cuántas veces el orquestador puede dar encargos a los agentes. Al llegar al límite resume en el chat lo que está hecho y lo que queda pendiente, y la ejecución termina. Cada ronda de revisión y cada comprobación cuentan. Vacío: 50.",
         "maxToolCalls": "Llamadas a herramientas por decisión",
         "maxToolCallsHint": "Cuántas llamadas propias a herramientas puede hacer el orquestador en una decisión después de que falle un agente o durante una toma de control. Antes solo puede leer archivos, como mucho 10 llamadas por decisión. Vacío: 50.",
         "maxLlmCalls": "Llamadas al modelo por ejecución",
@@ -1857,6 +1859,7 @@
         "stuck": "El orquestador se atascó: {{decisions}} decisiones sin un paso nuevo.",
         "orientationCap": "Orquestador: {{calls}} llamadas a herramientas antes del primer encargo, límite alcanzado.",
         "toolWithdrawn": "La herramienta {{name}} se retira en este paso: el mismo error o la misma llamada una y otra vez ({{error}}).",
+        "stepClose": "Límite de {{calls}} encargos alcanzado. El orquestador resume y la ejecución termina.",
         "toolRepeated": "Llamada {{name}} no ejecutada: la misma llamada ya se hizo en este paso.",
         "decisionTool": "El orquestador decidió mediante la herramienta {{name}}."
       }

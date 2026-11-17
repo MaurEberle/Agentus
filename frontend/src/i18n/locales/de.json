@@ -1045,6 +1045,8 @@
         "systemPrompt": "Systemprompt",
         "agentMissLimit": "Fehlversuche je Agent",
         "agentMissLimitHint": "So oft in Folge darf ein Agent scheitern oder einen Auftrag mit Dateizugriff ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 2.",
+        "maxAgentCalls": "Agentenaufrufe je Lauf",
+        "maxAgentCallsHint": "So oft darf der Orchestrator Agenten beauftragen. Ist die Grenze erreicht, fasst er im Chat zusammen, was fertig ist und was offen bleibt, und der Lauf endet. Jede Review-Runde und jeder Prüfauftrag zählt mit. Leer: 50.",
         "maxToolCalls": "Werkzeugaufrufe je Entscheidung",
         "maxToolCallsHint": "So viele eigene Werkzeugaufrufe darf der Orchestrator nach einem gescheiterten Agentenaufruf oder in einer Übernahme für eine Entscheidung machen. Davor darf er nur Dateien lesen, höchstens 10 Aufrufe je Entscheidung. Leer: 50.",
         "maxLlmCalls": "Modellaufrufe je Lauf",
@@ -1924,6 +1926,7 @@
         "stuck": "Der Orchestrator kam nicht weiter: {{decisions}} Entscheidungen ohne neuen Schritt.",
         "orientationCap": "Orchestrator: {{calls}} Werkzeugaufrufe vor dem ersten Agentenauftrag, Grenze erreicht.",
         "toolWithdrawn": "Werkzeug {{name}} ist für diesen Schritt zurückgezogen: wiederholt derselbe Fehler oder derselbe Aufruf ({{error}}).",
+        "stepClose": "Grenze von {{calls}} Agentenaufrufen erreicht. Der Orchestrator fasst zusammen, dann endet der Lauf.",
         "toolRepeated": "Werkzeugaufruf {{name}} nicht ausgeführt: derselbe Aufruf lief in diesem Schritt schon.",
         "decisionTool": "Der Orchestrator hat über das Werkzeug {{name}} entschieden."
       }

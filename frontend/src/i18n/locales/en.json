@@ -1045,6 +1045,8 @@
         "systemPrompt": "System prompt",
         "agentMissLimit": "Misses per agent",
         "agentMissLimitHint": "How often in a row an agent may fail, or finish a task with file access without writing, editing, or deleting a file. The orchestrator then does that task. The default is 2.",
+        "maxAgentCalls": "Agent calls per run",
+        "maxAgentCallsHint": "How often the orchestrator may give tasks to agents. At the limit it sums up in the chat what is done and what is still open, and the run ends. Every review round and every check counts. Empty: 50.",
         "maxToolCalls": "Tool calls per decision",
         "maxToolCallsHint": "How many of its own tool calls the orchestrator may make for one decision after an agent call failed or during a takeover. Before that it may only read files, at most 10 calls per decision. Empty: 50.",
         "maxLlmCalls": "Model calls per run",
@@ -1924,6 +1926,7 @@
         "stuck": "The orchestrator got stuck: {{decisions}} decisions without a new step.",
         "orientationCap": "Orchestrator: {{calls}} tool calls before the first agent call, limit reached.",
         "toolWithdrawn": "Tool {{name}} is withdrawn for this step: the same error or the same call again and again ({{error}}).",
+        "stepClose": "Limit of {{calls}} agent calls reached. The orchestrator sums up, then the run ends.",
         "toolRepeated": "Tool call {{name}} not run: the same call already ran in this step.",
         "decisionTool": "The orchestrator decided through the tool {{name}}."
       }

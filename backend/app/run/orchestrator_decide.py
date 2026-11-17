@@ -83,6 +83,11 @@ _REPEAT_WITHDRAWN_NOTE = (
     "decision. Decide now: call_agent, ask_user, reply or finish, or one JSON object."
 )
 
+_DECIDE_NOW_NOTE = (
+    "Your tools are used up for this step, and a tool call written as text does not run. "
+    "Decide now with one JSON object: call, ask, reply or finish."
+)
+
 _ANNOUNCE_NOTE = (
     'Your text "{text}" did not decide anything; no agent was called. When you are done checking, decide: '
     "call call_agent, ask_user, reply or finish, or answer with one JSON object."
@@ -372,8 +377,9 @@ def _orchestrator_action(
                 ),
             )
             turn_runtime._log_vram_compare(llm, options, choice, llm_node_id)
-            result = turn_runtime._with_salvaged_tools(result, offered + decision_tools)
-            decided = orch_tools.decision_from_calls(result.tool_calls) if decision_tools else None
+            # Decision tools written as text are read even when no tool is offered.
+            result = turn_runtime._with_salvaged_tools(result, offered + orch_tools.decision_schemas())
+            decided = orch_tools.decision_from_calls(result.tool_calls)
             if decided is not None:
                 # A decision tool ends the turn; other calls in this answer do not run.
                 emit_log(
@@ -558,7 +564,6 @@ def _orchestrator_action(
                 continue
             if result.tool_calls:
                 offered = []
-                memory.allow_own_tools = False
                 raw = _control_raw(result)
                 if not raw.strip():
                     repairs += 1
@@ -570,6 +575,17 @@ def _orchestrator_action(
                     action = _give_up(block_reply)
                     return action
             raw = _control_raw(result)
+            if own_calls >= cap and invented_tool_action(raw):
+                # Tools used up for this step, and the model writes the next call as text:
+                # not to the chat, and not a new step with a fresh budget. Decide now.
+                memory.reject(raw, "tool")
+                repairs += 1
+                _log_repair(orch.node_id, "toolText", raw)
+                if repairs <= MAX_CONTROL_REPAIRS:
+                    messages.append(LlmMessage(role="user", content=_DECIDE_NOW_NOTE))
+                    continue
+                action = _give_up(block_reply)
+                return action
             reason = reject_reason(raw)
             if reason:
                 verb = invented_tool_action(raw)

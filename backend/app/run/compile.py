@@ -8,6 +8,8 @@ from app.run.graph_models import AgentNetworkDocument, GraphNode, is_mcp_node, n
 from app.run.limits import (
     DEFAULT_AGENT_MISS_LIMIT,
     MAX_AGENT_MISS_LIMIT,
+    NODE_AGENT_CALLS_MAX,
+    NODE_AGENT_CALLS_MIN,
     NODE_LLM_CALLS_MAX,
     NODE_LLM_CALLS_MIN,
     NODE_TOOL_CALLS_MAX,
@@ -50,6 +52,7 @@ class CompiledOrchestrator:
     # Node overrides; None means the default in limits.py.
     max_tool_calls: int | None = None
     max_llm_calls: int | None = None
+    max_agent_calls: int | None = None
 
 
 @dataclass
@@ -311,6 +314,7 @@ def _compile_orchestrator(
         agent_miss_limit=_agent_miss_limit(node.data),
         max_tool_calls=_node_count(node.data, "maxToolCalls", NODE_TOOL_CALLS_MIN, NODE_TOOL_CALLS_MAX),
         max_llm_calls=_node_count(node.data, "maxLlmCalls", NODE_LLM_CALLS_MIN, NODE_LLM_CALLS_MAX),
+        max_agent_calls=_node_count(node.data, "maxAgentCalls", NODE_AGENT_CALLS_MIN, NODE_AGENT_CALLS_MAX),
     )
 
 

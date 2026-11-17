@@ -485,7 +485,8 @@ def test_orchestrator_step_limit_is_stored(monkeypatch, api_env) -> None:
     assert stored["outcome"] == "failed"
     assert stored["error_message"] == "run.stepLimit"
     assert stored["error_class"] == "orchestrator"
-    assert orch_n["n"] == 3
+    # Two calls, the refused third, then two closing decisions without a summary.
+    assert orch_n["n"] == 5
 
 
 def test_think_does_not_consume_the_step_limit(monkeypatch, api_env) -> None:

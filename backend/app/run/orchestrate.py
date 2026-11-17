@@ -200,13 +200,46 @@ RUN_VERBS = frozenset({"run", "exec", "execute", "command", "terminal", "shell",
 _TOOL_VERBS = READ_VERBS | WRITE_VERBS | RUN_VERBS
 
 
-def invented_tool_action(text: str) -> str | None:
-    """The verb of the first tool step written as a JSON action, or None.
+_XML_FUNCTION = re.compile(r"<function=([A-Za-z0-9_.:\-]+)\s*>", re.IGNORECASE)
+_XML_ACTION = re.compile(r"<parameter=action>\s*([A-Za-z_]+)", re.IGNORECASE)
+# Decision tools are not tool steps; a missed one is handled as a decision elsewhere.
+_DECISION_FUNCTIONS = frozenset({"call_agent", "ask_user"})
 
-    Control actions (think, call, ...) are not tool steps. An object without an
-    action counts when it has a command, or a path with content.
+
+def _tool_name_verb(name: str, action: str) -> str:
+    """The verb for a tool written as text: its file action, ``run`` or ``use``."""
+    leaf = name.lower().rsplit("__", 1)[-1]
+    if leaf == "file_access":
+        return action if action in _TOOL_VERBS else "read"
+    if leaf == "terminal":
+        return "run"
+    return "use"
+
+
+def _xml_tool_action(raw: str) -> str | None:
+    """A tool call written as text markup (<function=file_access>…), as the model did
+    after its tools were withdrawn; the text went to the chat (Dev Team run, 2026-11-17)."""
+    for match in _XML_FUNCTION.finditer(raw):
+        name = match.group(1).lower()
+        if name in _CONTROL_FUNCTION_NAMES or name in _DECISION_FUNCTIONS:
+            continue
+        action = _XML_ACTION.search(raw[match.end():])
+        return _tool_name_verb(name, (action.group(1).lower() if action else ""))
+    return None
+
+
+def invented_tool_action(text: str) -> str | None:
+    """The verb of the first tool step written as text, or None.
+
+    JSON actions ({"action": "write", ...}), tool_call JSON ({"name": "file_access",
+    "arguments": {...}}) and XML markup (<function=file_access>). Control actions
+    (think, call, ...) are not tool steps. An object without an action counts when
+    it has a command, or a path with content. ``use`` stands for any other tool.
     """
     raw = text or ""
+    markup = _xml_tool_action(raw)
+    if markup:
+        return markup
     if "{" not in raw:
         return None
     decoder = json.JSONDecoder()
@@ -223,6 +256,12 @@ def invented_tool_action(text: str) -> str | None:
         pos = start + length
         if not isinstance(value, dict):
             continue
+        call_args = value.get("arguments") if isinstance(value.get("arguments"), dict) else None
+        if isinstance(value.get("name"), str) and call_args is not None:
+            name = value["name"].lower()
+            if name in _CONTROL_FUNCTION_NAMES or name in _DECISION_FUNCTIONS:
+                continue
+            return _tool_name_verb(name, str(call_args.get("action") or "").lower())
         verb = str(value.get("action") or value.get("tool") or "").strip().lower()
         if verb in _ACTIONS:
             continue

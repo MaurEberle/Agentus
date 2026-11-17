@@ -95,6 +95,8 @@ export type OrchestratorNodeData = {
   maxToolCalls?: number;
   /** Model calls per run, orchestrator and agents together (10–10000). Unset: 1000. */
   maxLlmCalls?: number;
+  /** Agent calls per run (1–500). At the limit the orchestrator writes a summary, then the run ends. Unset: 50. */
+  maxAgentCalls?: number;
 };
 
 export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'terminal' | 'zip';

@@ -1158,6 +1158,16 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
       <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.agentMissLimitHint')}</p>
       <CountField
         node={node}
+        field="maxAgentCalls"
+        fallback={50}
+        min={1}
+        max={500}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxAgentCalls')}
+        hint={t('network.inspector.orchestrator.maxAgentCallsHint')}
+      />
+      <CountField
+        node={node}
         field="maxToolCalls"
         fallback={50}
         min={1}

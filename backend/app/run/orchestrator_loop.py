@@ -95,6 +95,11 @@ _NO_TOOL_NOTE = (
     'There is no JSON action "{verb}" and you have no tool for it. Call an agent, ask the user, or finish.'
 )
 
+_STEP_CLOSE_NOTE = (
+    "You have used all {n} agent calls of this run; that call was not made. No more agent calls. "
+    "Close now with finish: a short summary for the user of what is done and what is still open."
+)
+
 _IDLE_NOTE = (
     "You made {n} decisions in a row without progress: no agent call, no new tool result, no new user message. "
     "Act now: call an agent, ask the user, or finish. The run stops after {max} such decisions."
@@ -265,6 +270,12 @@ def _fail_unreadable(ctrl: RunController, node_id: str) -> str:
     turn_runtime._set_node(ctrl, node_id, "error", error="run.orchestrator.unreadable")
     return "failed"
 
+_TOOL_AS_TEXT_NOTE = (
+    "A tool call written as text does not run. Call a tool with a native tool call; "
+    "the tools open on this turn are listed under Connected tools."
+)
+
+
 def _tool_request_note(
     verb: str,
     memory: RunMemory,
@@ -272,7 +283,9 @@ def _tool_request_note(
     write_open: bool,
     open_names: list[str] | None = None,
 ) -> tuple[str, bool]:
-    """The hint for a tool step written as JSON, and whether write access was opened."""
+    """The hint for a tool step written as text, and whether write access was opened."""
+    if verb == "use":
+        return _TOOL_AS_TEXT_NOTE, False
     if verb in WRITE_VERBS or verb in RUN_VERBS:
         tool = "terminal" if verb in RUN_VERBS else "file_access"
         if tool not in full_names:
@@ -409,6 +422,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     full_names = turn_runtime._function_names(full_tools)
     later = orch_tools.later_labels(orch, read_tools, full_tools)
     tool_cap = orch.max_tool_calls or MAX_ORCHESTRATOR_TOOL_CALLS
+    step_cap = orch.max_agent_calls or MAX_ORCHESTRATOR_STEPS
+    # At the step limit: decisions left for the closing summary (None until then).
+    closing: int | None = None
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
     thinks = 0
@@ -444,6 +460,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             idle = 0
         write_open = memory.allow_own_tools or memory.takeover is not None
         offered = full_tools if write_open else read_tools
+        if closing is not None:
+            # Closing turn: no tools, only the summary.
+            offered = []
         # Reading only (no failure yet): a small budget per decision. After a failure or
         # in a takeover the full per-decision cap applies.
         decision_cap = tool_cap if write_open else min(tool_cap, MAX_READ_DECISION_CALLS)
@@ -529,6 +548,15 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                 return _fail_unreadable(ctrl, orch.node_id)
         else:
             unreadable = 0
+        if closing is not None and action.get("action") in {"think", "defer", "tool-request"}:
+            # Closing turn after the step limit: no planning rounds, only the summary.
+            closing -= 1
+            if closing <= 0:
+                _store_memory(ctrl, memory)
+                turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _fail_step_limit(ctrl, orch.node_id)
+            memory.set_nudge(_STEP_CLOSE_NOTE.format(n=steps))
+            continue
         if action.get("action") == "tool-request":
             verb = (action.get("verb") or "").strip().lower()
             note, granted = _tool_request_note(
@@ -589,6 +617,19 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
         action.pop("_blocked", None)
+        if closing is not None:
+            # The step limit was reached: a text is the summary, then the run ends as stepLimit.
+            if kind in {"finish", "reply", "ask"} and text.strip():
+                _publish_assistant(ctrl, text.strip())
+                memory.add_spoken("finish", text.strip())
+                _store_memory(ctrl, memory)
+                return _fail_step_limit(ctrl, orch.node_id)
+            closing -= 1
+            if closing <= 0:
+                _store_memory(ctrl, memory)
+                return _fail_step_limit(ctrl, orch.node_id)
+            memory.set_nudge(_STEP_CLOSE_NOTE.format(n=steps))
+            continue
         memory.clear_nudge()
         emit_log(
             "info",
@@ -641,9 +682,13 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
                     if stuck:
                         return stuck
                 continue
-            if steps >= MAX_ORCHESTRATOR_STEPS:
+            if steps >= step_cap:
+                # One closing turn for a summary instead of ending without a word.
+                emit_log("warn", "run.orchestrator.stepClose", node_id=orch.node_id, payload={"calls": steps})
+                closing = 2
+                memory.set_nudge(_STEP_CLOSE_NOTE.format(n=steps))
                 _store_memory(ctrl, memory)
-                return _fail_step_limit(ctrl, orch.node_id)
+                continue
             outcome = dispatch._orchestrator_call(ctrl, compiled, memory, names, action, user_text)
             if outcome == "cancelled":
                 return "cancelled"

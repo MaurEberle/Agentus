@@ -70,7 +70,9 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
     if action in DELETE_ACTIONS and not allow_delete:
         return _fail("tools.fileAccess.deleteDenied")
 
-    target, err = _resolve(root, str(raw_args.get("path") or ""))
+    # read_many reads its own list; a list written into ``path`` is not one path.
+    single = "." if action == "read_many" else str(raw_args.get("path") or "")
+    target, err = _resolve(root, single)
     if err or target is None:
         return _fail(err or "tools.fileAccess.invalidPath")
 
@@ -94,7 +96,7 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
                 limit=_optional_int(raw_args.get("limit")),
             )
         if action == "read_many":
-            return _read_many(root, raw_args.get("paths"), encoding)
+            return _read_many(root, read_many_paths(raw_args), encoding)
         if action == "write":
             return _write(root, target, raw_args.get("content"), encoding)
         if action == "mkdir":
@@ -395,6 +397,23 @@ def _delete(root: Path, target: Path) -> ExecuteResult:
         return ExecuteResult(ok=True, result={"path": rel, "deleted": "dir"})
     target.unlink()
     return ExecuteResult(ok=True, result={"path": rel, "deleted": "file"})
+
+
+def read_many_paths(args: dict[str, Any]) -> object:
+    """``paths`` as a list. A model sent the list as a JSON string in ``path`` four times in a row."""
+    raw = args.get("paths")
+    if raw is None:
+        raw = args.get("path")
+    if isinstance(raw, str):
+        text = raw.strip()
+        if text.startswith("["):
+            try:
+                raw = json.loads(text)
+            except ValueError:
+                return None
+        elif text:
+            raw = [part.strip() for part in text.split(",") if part.strip()]
+    return raw
 
 
 def _read_many(root: Path, raw_paths: object, encoding: str) -> ExecuteResult:
