@@ -376,7 +376,6 @@ def _orchestrator_action(
                     },
                 ),
             )
-            turn_runtime._log_vram_compare(llm, options, choice, llm_node_id)
             # Decision tools written as text are read even when no tool is offered.
             result = turn_runtime._with_salvaged_tools(result, offered + orch_tools.decision_schemas())
             decided = orch_tools.decision_from_calls(result.tool_calls)

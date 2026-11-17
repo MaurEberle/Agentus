@@ -482,7 +482,6 @@ def _agent_turn(
                     },
                 ),
             )
-            turn_runtime._log_vram_compare(agent.llm, options, choice, llm_node_id)
             if usage is not None and usage.prompt_tokens:
                 last_prompt_tokens = usage.prompt_tokens
                 last_context_max = context_max

@@ -1803,7 +1803,6 @@
         "start": "LLM {{model}}",
         "done": "LLM finalizado ({{durationMs}} ms)",
         "release": "Otros modelos descargados ({{dropped}}); {{keep}} sigue cargado",
-        "vram": "VRAM {{model}}: estimación {{estimated}}, usado {{used}}, {{delta}} ({{percent}}). Expertos {{expertsOnGpu}}/{{expertLayers}}, atención {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Faltan los datos del modelo {{model}}. La ejecución se detuvo.",
         "moeUnsplit": "No se puede repartir los expertos de {{model}}. No se envía num_gpu."
       },

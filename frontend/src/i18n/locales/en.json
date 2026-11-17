@@ -1870,7 +1870,6 @@
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)",
         "release": "Unloaded other models ({{dropped}}); {{keep}} stays loaded",
-        "vram": "VRAM {{model}}: estimate {{estimated}}, used {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Model data for {{model}} is missing. The run was stopped.",
         "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
       },

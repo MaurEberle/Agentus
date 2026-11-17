@@ -564,13 +564,6 @@ def _inference_gpus() -> list:
 def _inference_pool_bytes() -> int:
     return sum(max(0, gpu.vram_total_bytes) for gpu in _inference_gpus())
 
-def _display_count(value: object) -> str | int:
-    if isinstance(value, bool) or value is None:
-        return "—"
-    if isinstance(value, int):
-        return value
-    return "—"
-
 def _moe_auto_options(llm, choice, layers: int | None) -> dict:
     """Leave MoE placement to llama.cpp.
 
@@ -589,61 +582,6 @@ def _moe_auto_options(llm, choice, layers: int | None) -> dict:
             payload={"model": llm.model},
         )
     return {}
-
-def _log_vram_compare(llm, options, choice, node_id: str) -> None:
-    if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
-        return
-    try:
-        from app.runtime.ollama import loaded_memory
-        from app.runtime.vram_est import estimate_vram_bytes, plan_moe_offload, vram_profile, with_kv_cache
-
-        profile = with_kv_cache(vram_profile(llm.model, base_url=llm.base_url), getattr(llm, "kv_cache_type", None))
-        num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
-        opts = options if isinstance(options, dict) else {}
-        num_gpu = opts.get("num_gpu")
-        num_cpu = opts.get("num_cpu_moe")
-        plan = (
-            plan_moe_offload(profile, num_ctx=num_ctx, pool_bytes=_inference_pool_bytes())
-            if profile is not None
-            else None
-        )
-        estimated: int | None
-        if plan is not None and (isinstance(num_cpu, int) or "num_gpu" not in opts):
-            estimated = plan.estimated_gpu_bytes
-        elif profile is not None:
-            gpu = num_gpu if isinstance(num_gpu, int) and num_gpu > 0 else None
-            estimated = estimate_vram_bytes(profile, num_ctx=num_ctx, num_gpu=gpu)
-        else:
-            estimated = None
-        size, size_vram = loaded_memory(llm.model, base_url=llm.base_url)
-        if estimated is None and size_vram is None:
-            return
-        delta = None if estimated is None or size_vram is None else size_vram - estimated
-        payload = {
-            "model": llm.model,
-            "estimatedBytes": _display_count(estimated),
-            "actualVramBytes": _display_count(size_vram),
-            "actualBytes": _display_count(size),
-            "deltaBytes": _display_count(delta),
-            "expertsOnGpu": plan.experts_on_gpu if plan else "—",
-            "expertLayers": plan.expert_layers if plan else "—",
-            "attentionLayersOnGpu": plan.attention_layers_on_gpu if plan else "—",
-            "numGpu": _display_count(num_gpu),
-            "numCpuMoe": _display_count(num_cpu),
-            "numCtx": num_ctx,
-        }
-        emit_log("info", "run.llm.vram", node_id=node_id, payload=payload)
-        log.info(
-            "vram compare model=%s estimated=%s actual_vram=%s delta=%s num_gpu=%s num_cpu_moe=%s",
-            llm.model,
-            estimated,
-            size_vram,
-            delta,
-            num_gpu,
-            num_cpu,
-        )
-    except Exception:
-        log.exception("vram compare failed model=%s", getattr(llm, "model", ""))
 
 def _output_cap(llm, choice, prompt_est: int) -> tuple[int | None, bool]:
     """R1: max output tokens for one call. Returns (cap, automatic).

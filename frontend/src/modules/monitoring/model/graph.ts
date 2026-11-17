@@ -195,6 +195,9 @@ export function logHasExtra(event: LogEvent): boolean {
   return true;
 }
 
+// Lines older runs still hold but the app no longer writes or shows (VRAM/expert split per model call).
+const RETIRED_LOG_MESSAGES = new Set(['run.llm.vram']);
+
 export function filterLogs(
   logs: LogEvent[],
   opts: {
@@ -207,6 +210,7 @@ export function filterLogs(
   const q = opts.query.trim().toLowerCase();
   const min = logLevelRank(opts.levelMin);
   return logs.filter((event) => {
+    if (RETIRED_LOG_MESSAGES.has(event.message)) return false;
     if (logLevelRank(event.level) < min) return false;
     if (opts.errorsOnly && event.level !== 'error' && event.level !== 'warn') return false;
     if (opts.nodeId && event.nodeId !== opts.nodeId) return false;

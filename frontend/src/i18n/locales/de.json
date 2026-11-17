@@ -1870,7 +1870,6 @@
         "start": "LLM {{model}}",
         "done": "LLM fertig ({{durationMs}} ms)",
         "release": "Andere Modelle entladen ({{dropped}}); {{keep}} bleibt geladen",
-        "vram": "VRAM {{model}}: Schätzung {{estimated}}, belegt {{used}}, {{delta}} ({{percent}}). Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}{{placement}}.",
         "modelInfo": "Modelldaten von {{model}} fehlen. Der Lauf wurde abgebrochen.",
         "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
       },
