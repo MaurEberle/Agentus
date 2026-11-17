@@ -218,7 +218,7 @@ def _orchestrator_action(
                         max_duration_sec=MAX_CALL_SECONDS,
                         ollama_options=options,
                     ),
-                    should_abort=ctrl.stop_event.is_set,
+                    should_abort=turn_runtime._abort_check(ctrl),
                     on_progress=lambda out, rate, cap=context_max, used=context_est: turn_runtime._publish_tokens(
                         ctrl,
                         orch.node_id,

@@ -11,7 +11,7 @@ import { notify } from '@/lib/notifications';
 import { ApiError } from '@/api/client';
 import { isHistoryStoreOk } from '@/modules/dashboard/model';
 import { listNetworkSummaries } from '@/modules/network/api';
-import { useStoresQuery } from '@/modules/settings/api';
+import { useSettingsQuery, useStoresQuery } from '@/modules/settings/api';
 import { deleteRuns, deleteRunsOlderThan, getRun, listCalls, listRunLogs, listRuns, toApiFilter } from '@/modules/history/api';
 import { RunsChart } from '@/modules/history/chart/RunsChart';
 import { RunDetailPanel } from '@/modules/history/detail/RunDetailPanel';
@@ -22,7 +22,8 @@ import { KpiRow } from '@/modules/history/kpi/KpiRow';
 import { RunList } from '@/modules/history/list/RunList';
 import { endOfLocalDay, fileStamp, modelKey, safeFilePart, shortId, startOfLocalDay } from '@/modules/history/model/format';
 import { maskLog, maskText } from '@/modules/monitoring/model/mask';
-import { downloadBlob, zipStore } from '@/modules/networks/model/zip';
+import { zipStore } from '@/modules/networks/model/zip';
+import { saveExportFile } from '@/lib/saveFile';
 import {
   aggregateModels,
   aggregateNetworks,
@@ -130,14 +131,17 @@ export function HistoryModule() {
     queryFn: () => listRunLogs(runId ?? ''),
     enabled: Boolean(runId) && historyOk,
   });
+  const settingsQuery = useSettingsQuery();
+  // M15: purge by the retention from Settings → Data. Unlimited (null) offers no purge.
+  const purgeDays = settingsQuery.data ? (settingsQuery.data.historyRetentionDays ?? null) : null;
   const purgePreview = useQuery({
-    queryKey: ['runs', 'purge-preview'],
+    queryKey: ['runs', 'purge-preview', purgeDays],
     queryFn: () =>
       listRuns({
-        to: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        to: new Date(Date.now() - (purgeDays ?? 0) * 24 * 60 * 60 * 1000).toISOString(),
         limit: STATS_LIMIT,
       }),
-    enabled: purgeOpen && historyOk,
+    enabled: purgeOpen && historyOk && purgeDays != null,
   });
 
   const items = useMemo(() => runsQuery.data?.items ?? [], [runsQuery.data?.items]);
@@ -300,9 +304,13 @@ export function HistoryModule() {
   }
 
   async function confirmPurge() {
+    if (purgeDays == null) {
+      setPurgeOpen(false);
+      return;
+    }
     setBusy(true);
     try {
-      const result = await deleteRunsOlderThan(90);
+      const result = await deleteRunsOlderThan(purgeDays);
       notify({
         titleKey: 'history.notify.purged',
         values: { count: String(result.deleted) },
@@ -331,15 +339,15 @@ export function HistoryModule() {
           text: logsToJsonl(logs),
         });
       }
-      if (files.length === 1 && files[0]) {
-        downloadBlob(files[0].name, new Blob([files[0].text], { type: 'application/x-ndjson' }));
-      } else {
-        downloadBlob(
-          `history-logs-${fileStamp()}.zip`,
-          zipStore(files.map((file) => ({ name: file.name, data: encoder.encode(file.text) }))),
-        );
-      }
-      notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
+      // M17: the save dialog of the host; a blob download is blocked in the desktop app.
+      const saved =
+        files.length === 1 && files[0]
+          ? await saveExportFile(files[0].name, new Blob([files[0].text], { type: 'application/x-ndjson' }))
+          : await saveExportFile(
+              `history-logs-${fileStamp()}.zip`,
+              zipStore(files.map((file) => ({ name: file.name, data: encoder.encode(file.text) }))),
+            );
+      if (saved) notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
     } catch {
       notify({ titleKey: 'history.notify.exportError', variant: 'error' });
     } finally {
@@ -502,6 +510,7 @@ export function HistoryModule() {
                 onDelete={() => setDeleteOpen(true)}
                 onExport={() => void exportIds(selectedIds)}
                 onPurge={() => setPurgeOpen(true)}
+                purgeDays={purgeDays}
               />
             </div>
           </div>
@@ -598,7 +607,7 @@ export function HistoryModule() {
       {purgeOpen ? (
         <ConfirmBar
           title={t('history.retention.title')}
-          body={t('history.retention.body', { count: purgePreview.data?.total ?? 0 })}
+          body={t('history.retention.body', { count: purgePreview.data?.total ?? 0, days: purgeDays ?? 0 })}
           confirm={t('history.retention.confirm')}
           cancel={t('history.delete.cancel')}
           busy={busy}

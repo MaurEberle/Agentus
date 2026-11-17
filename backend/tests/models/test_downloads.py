@@ -82,3 +82,54 @@ def test_remove_finished_keeps_the_model_files(api_env, tmp_path, monkeypatch) -
     removed = remove_downloads([created.items[0].id])
     assert removed.items == []
     assert sorted(path.name for path in blobs.iterdir()) == [stem, f"{stem}-partial"]
+
+
+def test_removing_a_redownload_keeps_the_installed_model(api_env, monkeypatch) -> None:
+    """M19: a pull of a model that was installed before must not delete it on remove."""
+    init()
+    forgotten: list[str] = []
+    monkeypatch.setattr("app.llm.downloads._installed_before", lambda model: True)
+    monkeypatch.setattr("app.llm.downloads.fetch_manifest_digests", lambda _model: [])
+    monkeypatch.setattr("app.llm.downloads.discard_blob_files", lambda digests, root=None: None)
+    monkeypatch.setattr("app.llm.downloads._forget_installed", lambda model: forgotten.append(model))
+    created = enqueue(DownloadCreate(model="hf.co/acme/Model-GGUF:Q4_K_M", label="Model"))
+    remove_downloads([created.items[0].id])
+    assert forgotten == []
+
+    monkeypatch.setattr("app.llm.downloads._installed_before", lambda model: False)
+    fresh = enqueue(DownloadCreate(model="hf.co/acme/Fresh-GGUF:Q4_K_M", label="Fresh"))
+    remove_downloads([fresh.items[0].id])
+    assert forgotten == ["hf.co/acme/Fresh-GGUF:Q4_K_M"]
+
+
+def test_unknown_install_state_counts_as_installed(monkeypatch) -> None:
+    from app.llm import downloads
+
+    def _down(*args, **kwargs):
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(downloads, "client", _down)
+    assert downloads._installed_before("hf.co/acme/Model-GGUF:Q4_K_M") is True
+
+
+def _pull_with(monkeypatch, lines: list[bytes]) -> str:
+    import httpx
+
+    from app.common.http import client as real_client
+    from app.llm import pull
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"\n".join(lines) + b"\n")
+
+    def fake_client(**kwargs):
+        kwargs.pop("unbounded_read", None)
+        return real_client(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(pull, "client", fake_client)
+    return pull.pull_events("hf.co/acme/Model-GGUF:Q4_K_M")
+
+
+def test_pull_without_success_line_is_an_error(monkeypatch) -> None:
+    """M19: a stream that stops early used to count as a finished download."""
+    assert _pull_with(monkeypatch, [b'{"status":"pulling manifest"}', b'{"status":"downloading","completed":5,"total":10}']) == "error"
+    assert _pull_with(monkeypatch, [b'{"status":"pulling manifest"}', b'{"status":"success"}']) == "success"

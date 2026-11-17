@@ -1,4 +1,4 @@
-import { getChromeHost } from '@/lib/chromeHost';
+import { getChromeHost, type SaveKind } from '@/lib/chromeHost';
 
 export class ExportCancelled extends Error {
   constructor() {
@@ -30,13 +30,29 @@ type SavePicker = (options: {
   types?: Array<{ description?: string; accept: Record<string, string[]> }>;
 }) => Promise<{ createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void> }> }>;
 
-/** Ask where to store an export. False means the user closed the dialog. */
+function saveKind(filename: string): SaveKind {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.zip')) return 'zip';
+  if (lower.endsWith('.jsonl')) return 'jsonl';
+  return 'json';
+}
+
+const PICKER_TYPES: Record<SaveKind, { description: string; accept: Record<string, string[]> }> = {
+  json: { description: 'JSON', accept: { 'application/json': ['.json'] } },
+  jsonl: { description: 'JSON Lines', accept: { 'application/x-ndjson': ['.jsonl'] } },
+  zip: { description: 'ZIP', accept: { 'application/zip': ['.zip'] } },
+};
+
+/**
+ * Ask where to store an export. False means the user closed the dialog.
+ * The desktop app has no browser downloads (M17); the host bridge writes the file.
+ */
 export async function saveExportFile(filename: string, blob: Blob): Promise<boolean> {
-  const kind = filename.toLowerCase().endsWith('.zip') ? 'zip' : 'json';
+  const kind = saveKind(filename);
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const host = getChromeHost();
   if (host?.saveFile) {
-    const content = kind === 'json' ? new TextDecoder().decode(bytes) : bytesToBase64(bytes);
+    const content = kind === 'zip' ? bytesToBase64(bytes) : new TextDecoder().decode(bytes);
     const saved = await host.saveFile(filename, content, kind);
     return Boolean(saved);
   }
@@ -45,11 +61,7 @@ export async function saveExportFile(filename: string, blob: Blob): Promise<bool
     try {
       const handle = await picker({
         suggestedName: filename,
-        types: [
-          kind === 'json'
-            ? { description: 'JSON', accept: { 'application/json': ['.json'] } }
-            : { description: 'ZIP', accept: { 'application/zip': ['.zip'] } },
-        ],
+        types: [PICKER_TYPES[kind]],
       });
       const writable = await handle.createWritable();
       await writable.write(blob);

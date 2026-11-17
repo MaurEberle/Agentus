@@ -29,6 +29,28 @@ def _source_repair_note(source, memory: RunMemory) -> str:
     hint = f" Last stored text is from {last}." if last else ""
     return f"Unknown source: {source.missing}.{hint} Omit source to send only the task."
 
+def unresolved_file_failures(files) -> list:
+    """M8: failed file steps the call did not fix later.
+
+    Only the last state of a path counts: a failed write followed by a good one is
+    fixed. A failed read or listing is a probe (does the file exist?), not a failed
+    task, so only changes count. A failure without a path counts until a later step
+    of the same action succeeds.
+    """
+    open_items = []
+    for index, fact in enumerate(files):
+        if fact.ok or fact.action not in _FILE_MUTATIONS:
+            continue
+        later = files[index + 1 :]
+        if fact.path:
+            fixed = any(item.ok and item.path == fact.path for item in later)
+        else:
+            fixed = any(item.ok and item.action == fact.action for item in later)
+        if not fixed:
+            open_items.append(fact)
+    return open_items
+
+
 def _count_file_attempt(
     compiled: CompiledGraph,
     memory: RunMemory,
@@ -38,8 +60,10 @@ def _count_file_attempt(
     if "file_access" not in (agent.tool_kinds or []):
         return
     wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
-    # A finished text answer that never touched a file is the result, not a missed write.
-    if record.finished and record.text and not record.files:
+    # M8: a finished text answer that never tried to change a file is the result,
+    # not a missed write; reading files for it does not make it one.
+    tried_write = any(fact.action in _FILE_MUTATIONS for fact in record.files)
+    if record.finished and record.text and not tried_write:
         return
     opened = memory.note_file_attempt(
         agent_id=agent.node_id,
@@ -160,6 +184,9 @@ def _orchestrator_call(
         if text is None:
             if ctrl.stop_event.is_set():
                 return "cancelled"
+            if record.error == turn_runtime.USER_STOPPED:
+                # M6: the user stopped it; the loop waits for the next message.
+                return "ran"
             # O17: the agent turn gave up without a result; tell the orchestrator why.
             record.error = record.error or "agent stopped"
             memory.allow_own_tools = True
@@ -216,7 +243,7 @@ def _orchestrator_call(
             # Allowed: tools are optional. The orchestrator checks the text against the task.
             record.text_only = True
             emit_log("info", "run.agent.textOnly", node_id=agent_id)
-        if any(not fact.ok for fact in record.files):
+        if unresolved_file_failures(record.files):
             record.error = "tool failed"
             memory.set_anomaly(record)
         else:

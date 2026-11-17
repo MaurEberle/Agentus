@@ -70,3 +70,17 @@ def test_delete_running_network_409(client: TestClient) -> None:
     response = client.delete(f"/api/networks/{network_id}")
     assert response.status_code == 409
     client.post("/api/run/stop")
+
+
+def test_validate_an_unsaved_network(client: TestClient) -> None:
+    """M24: "Validate" on a network without an id hit a route that did not exist."""
+    ok = client.post("/api/networks/validate", json=mini_doc())
+    assert ok.status_code == 200
+    assert ok.json()["valid"] is True
+    broken = mini_doc()
+    broken["nodes"] = [node for node in broken["nodes"] if node["type"] != "end"]
+    response = client.post("/api/networks/validate", json=broken)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["valid"] is False
+    assert body["errors"]

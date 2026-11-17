@@ -548,6 +548,8 @@
       "pick": "Elegir carpeta",
       "busy": "No se puede cambiar de carpeta mientras una red arranca, se ejecuta o se detiene.",
       "invalidRoot": "No se permite la raíz de una unidad o del sistema.",
+      "targetHasData": "La carpeta de destino ya contiene datos. Copiar los sobrescribiría; elige una carpeta vacía o cambia sin copiar.",
+      "switchFailed": "El cambio ha fallado. La aplicación sigue usando la carpeta de datos anterior.",
       "stores": "Almacenes",
       "storeName": "Almacén",
       "fileName": "Archivo",
@@ -964,6 +966,7 @@
         "terminalUnrestricted": "Sin restricción",
         "terminalUnrestrictedHint": "PowerShell se ejecuta como el usuario de la app. La carpeta solo es el directorio inicial. Sin pregunta durante la ejecución y sin elevación.",
         "terminalHint": "Solo los programas marcados, sin tuberías ni redirección. La carpeta es el directorio inicial.",
+        "terminalTimeout": "Límite de tiempo por comando (segundos, 5–600)",
         "zipHint": "Lista un ZIP en la carpeta raíz y lo extrae allí. Las rutas permanecen en la carpeta.",
         "terminalPrograms": "Programas",
         "maxCalls": "Máx. llamadas por ejecución",
@@ -1406,7 +1409,8 @@
       "empty": "Aún no hay mensajes en esta ejecución.",
       "disabled": "El chat solo está disponible durante una ejecución.",
       "agentDone": "{{name}} ha terminado.",
-      "agentDoneFiles": "{{name}} ha terminado. Archivos: {{files}}."
+      "agentDoneFiles": "{{name}} ha terminado. Archivos: {{files}}.",
+      "aborted": "Detenido. Envía un mensaje para continuar."
     },
     "log": {
       "pause": "Pausar",
@@ -1500,7 +1504,7 @@
       "refresh": "Actualizar",
       "delete": "Eliminar",
       "export": "Exportar registros",
-      "purge": "Eliminar anteriores a 90 días"
+      "purge": "Eliminar anteriores a {{days}} días"
     },
     "filter": {
       "range": "Periodo",
@@ -1664,7 +1668,7 @@
     },
     "retention": {
       "title": "Eliminar ejecuciones antiguas",
-      "body": "Se eliminarán {{count}} ejecuciones de más de 90 días.",
+      "body": "Se eliminarán {{count}} ejecuciones de más de {{days}} días.",
       "confirm": "Eliminar"
     },
     "notify": {
@@ -1686,7 +1690,8 @@
         "ask": "Pregunta de {{speaker}}"
       },
       "chat": {
-        "user": "Mensaje del usuario"
+        "user": "Mensaje del usuario",
+        "aborted": "Generación detenida desde el chat"
       },
       "batch": {
         "start": "Ejecución por lotes iniciada"
@@ -1714,7 +1719,8 @@
         "embed": "Indexando conocimiento: {{name}} ({{chunks}} fragmentos, {{model}})",
         "ready": "Conocimiento listo: {{name}}",
         "cached": "El conocimiento está al día: {{name}}",
-        "failed": "No se pudo indexar el conocimiento: {{name}}"
+        "failed": "No se pudo indexar el conocimiento: {{name}}",
+        "limit": "Conocimiento {{name}}: {{files}} archivos, se indexan los primeros {{max}}"
       },
       "llm": {
         "toolCallsRepaired": "Se añadieron {{count}} respuestas de herramienta que faltaban.",

@@ -132,6 +132,21 @@ def replace_chunks(network_id: str, node_id: str, chunks: list[RagChunk]) -> Non
             )
 
 
+def chunk_stamp(network_id: str, node_id: str) -> tuple[int, int]:
+    """(count, max rowid) of a collection's chunks. Cheap change marker for caches."""
+    with locked("workspace") as conn:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS n, COALESCE(MAX(rowid), 0) AS last
+            FROM network_rag_chunks WHERE network_id = ? AND node_id = ?
+            """,
+            (network_id, node_id),
+        ).fetchone()
+    if row is None:
+        return 0, 0
+    return int(row["n"]), int(row["last"])
+
+
 def list_chunks(network_id: str, node_id: str) -> list[RagChunk]:
     with locked("workspace") as conn:
         rows = conn.execute(

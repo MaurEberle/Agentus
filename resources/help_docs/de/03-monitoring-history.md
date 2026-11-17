@@ -33,7 +33,7 @@ Chat und Log stehen über Netz und Aktivität. Die drei Karten behalten ihre Hö
 
 ## Netz-Chat (Monitoring)
 
-Tab **Chat** (beim Start eines Laufs, wenn der Graph einen Chat-Eingang hat): Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht. Bei einer Rückfrage erscheinen ein Hinweis in der Glocke und in der Kopfzeile; das Taskleisten-Symbol blinkt, wenn das Fenster im Hintergrund liegt.
+Tab **Chat** (beim Start eines Laufs, wenn der Graph einen Chat-Eingang hat): Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht. Bei einer Rückfrage erscheinen ein Hinweis in der Glocke und in der Kopfzeile; das Taskleisten-Symbol blinkt, wenn das Fenster im Hintergrund liegt. **Generierung stoppen** bricht die laufende Antwort ab. Mit Orchestrator bleibt der Lauf offen und wartet auf deine nächste Nachricht; in einer Kette ohne Orchestrator endet der Lauf als Abbruch.
 
 Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 
@@ -45,7 +45,7 @@ Payloads und Meldungen **maskieren** Geheimnisse (zum Beispiel `Bearer`, Schlüs
 
 ## Historie
 
-Ribbon: Aktualisieren, Löschen ausgewählter Läufe, Logs exportieren, alte Einträge nach Aufbewahrung bereinigen (siehe Einstellungen → Daten, Default 90 Tage).
+Ribbon: Aktualisieren, Löschen ausgewählter Läufe, Logs exportieren, alte Einträge nach Aufbewahrung bereinigen (siehe Einstellungen → Daten, Default 90 Tage; bei „Unbegrenzt“ gibt es den Knopf nicht).
 
 **Ein Filter** steuert alles: Zeitraum (Heute, 7/30 Tage, von–bis), Netz, Modell, Suche (Lauf-ID, Netz, Fehler). KPIs, Diagramm „Läufe nach Tag“, häufigste Fehler, Tabs Historie / Pro Modell / Pro Netz und die Liste verwenden denselben Filter.
 

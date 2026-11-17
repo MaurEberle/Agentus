@@ -12,9 +12,20 @@ from app.tools.sandbox import configured_root, tool_fail
 # Interpreters are never implied: a missing list grants git only. Users opt in explicitly.
 DEFAULT_PROGRAMS = ("git",)
 TIMEOUT_SECONDS = 30
+TIMEOUT_MIN = 5
+TIMEOUT_MAX = 600
 MAX_OUTPUT_CHARS = 32_000
 MAX_COMMAND_CHARS = 4_000
 _SHELL_BREAKS = set("|<>&;\n\r")
+# M14: cmd.exe parses the arguments of a .cmd/.bat shim (npm, npx, pnpm) again,
+# quotes included. These characters would start a second command there.
+_BATCH_SUFFIXES = (".cmd", ".bat")
+_BATCH_METAS = set('&|<>^%!"()\n\r')
+# PowerShell 5.1 writes to a pipe in the OEM code page; switch it to UTF-8 first.
+_PS_UTF8 = (
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+    "$OutputEncoding = [System.Text.Encoding]::UTF8; "
+)
 
 
 def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteResult:
@@ -30,13 +41,28 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
     if len(command) > MAX_COMMAND_CHARS:
         return _fail("tools.terminal.commandTooLong")
 
+    timeout = _timeout(cfg)
     unrestricted = str(cfg.get("terminalMode") or "restricted").strip().lower() == "unrestricted"
     if unrestricted:
-        return _run_powershell(root, command)
+        return _run_powershell(root, command, timeout)
     programs = _programs(cfg)
     if not programs:
         return _fail("tools.terminal.notGranted")
-    return _run_program(root, command, programs)
+    return _run_program(root, command, programs, timeout)
+
+
+def _timeout(cfg: dict[str, Any]) -> float:
+    """Per node ``timeoutSec`` (M14), clamped to 5..600 s. Unset: TIMEOUT_SECONDS."""
+    raw = cfg.get("timeoutSec")
+    if raw is None or isinstance(raw, bool) or not str(raw).strip():
+        return float(TIMEOUT_SECONDS)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return float(TIMEOUT_SECONDS)
+    if value != value:  # NaN
+        return float(TIMEOUT_SECONDS)
+    return max(float(TIMEOUT_MIN), min(float(TIMEOUT_MAX), value))
 
 
 def _programs(cfg: dict[str, Any]) -> set[str]:
@@ -86,7 +112,7 @@ def _split_command(command: str) -> tuple[list[str] | None, str | None]:
     return args, None
 
 
-def _run_program(root: Path, command: str, programs: set[str]) -> ExecuteResult:
+def _run_program(root: Path, command: str, programs: set[str], timeout: float) -> ExecuteResult:
     parsed, error = _split_command(command)
     if error or not parsed:
         return _fail(error or "tools.terminal.missingCommand")
@@ -101,7 +127,11 @@ def _run_program(root: Path, command: str, programs: set[str]) -> ExecuteResult:
     executable = shutil.which(name)
     if not executable:
         return _fail("tools.terminal.notFound", {"program": name})
-    return _spawn(root, [executable, *parsed[1:]])
+    if executable.lower().endswith(_BATCH_SUFFIXES) and any(
+        char in _BATCH_METAS for arg in parsed[1:] for char in arg
+    ):
+        return _fail("tools.terminal.shellSyntax", {"program": name})
+    return _spawn(root, [executable, *parsed[1:]], timeout)
 
 
 # Options that turn a granted program into a one-line code runner (python -c, git -c alias.x=!cmd).
@@ -142,17 +172,18 @@ def _inline_code(name: str, args: list[str]) -> bool:
     return False
 
 
-def _run_powershell(root: Path, command: str) -> ExecuteResult:
+def _run_powershell(root: Path, command: str, timeout: float | None = None) -> ExecuteResult:
     executable = shutil.which("powershell") or shutil.which("pwsh")
     if not executable:
         return _fail("tools.terminal.notFound", {"program": "powershell"})
     return _spawn(
         root,
-        [executable, "-NoProfile", "-NonInteractive", "-Command", command],
+        [executable, "-NoProfile", "-NonInteractive", "-Command", _PS_UTF8 + command],
+        timeout,
     )
 
 
-def _spawn(root: Path, argv: list[str]) -> ExecuteResult:
+def _spawn(root: Path, argv: list[str], timeout: float | None = None) -> ExecuteResult:
     try:
         proc = subprocess.Popen(
             argv,
@@ -167,7 +198,7 @@ def _spawn(root: Path, argv: list[str]) -> ExecuteResult:
         return _fail("tools.terminal.notFound", {"program": Path(argv[0]).name})
     timed_out = False
     try:
-        stdout_b, stderr_b = proc.communicate(timeout=TIMEOUT_SECONDS)
+        stdout_b, stderr_b = proc.communicate(timeout=TIMEOUT_SECONDS if timeout is None else timeout)
     except subprocess.TimeoutExpired as exc:
         timed_out = True
         _kill_tree(proc)
@@ -199,8 +230,18 @@ def _clip(text: str) -> tuple[str, bool]:
 
 
 def _decode(data: bytes | None) -> str:
+    """UTF-8 first; Windows console programs that ignore it write the OEM code page."""
     if not data:
         return ""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    if os.name == "nt":
+        try:
+            return data.decode("oem")
+        except (LookupError, UnicodeDecodeError):
+            pass
     return data.decode("utf-8", errors="replace")
 
 

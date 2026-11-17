@@ -6,6 +6,7 @@ Tests patch ``tools_execute``, ``get_mcp``, ``_set_llm``, and
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 
@@ -48,6 +49,8 @@ _SAME_RETRY = frozenset(
 _TRUNCATED_REASONS = frozenset({"length", "max_tokens", "truncated"})
 
 _FILE_MUTATIONS = frozenset({"write", "delete", "edit", "move"})
+# M6: record.error of an agent call the user stopped from the chat.
+USER_STOPPED = "stopped by user"
 
 _FILE_PREP_ACTIONS = frozenset({"read", "list", "stat", "mkdir", "search", "tree", "read_many"})
 
@@ -437,6 +440,36 @@ def _with_salvaged_tools(result: CompletionResult, offered: list[dict] | None) -
         return result
     return result.model_copy(update={"tool_calls": calls})
 
+# M3: VRAM a model took when it was last seen loaded (Ollama /api/ps), by tag key.
+_SEEN_VRAM: dict[str, int] = {}
+_FIT_MARGIN = 1.10
+
+
+def _fits_beside_resident(llm) -> bool:
+    """True when the model is loaded already, or fits next to the loaded ones.
+
+    Unknown VRAM (no GPU data, model never seen loaded) is False: then the
+    other models are unloaded as before.
+    """
+    from app.runtime.ollama import resident_index, tag_key
+
+    pool = _inference_pool_bytes()
+    if pool <= 0:
+        return False
+    resident = resident_index(base_url=llm.base_url)
+    for key, (_size, vram) in resident.items():
+        if isinstance(vram, int) and vram > 0:
+            _SEEN_VRAM[key] = vram
+    key = tag_key(llm.model)
+    if key in resident:
+        return True
+    need = _SEEN_VRAM.get(key)
+    if not need:
+        return False
+    used = sum(vram for _size, vram in resident.values() if isinstance(vram, int))
+    return used + need * _FIT_MARGIN <= pool
+
+
 def _prepare_resident(compiled: CompiledGraph, llm) -> None:
     if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
         return
@@ -444,6 +477,10 @@ def _prepare_resident(compiled: CompiledGraph, llm) -> None:
     from app.settings.service import load_settings
 
     try:
+        # M3: two models of one network that fit together stay loaded; switching
+        # between them no longer reloads each one on every call.
+        if _fits_beside_resident(llm):
+            return
         settings = load_settings()
         dropped = release_others(settings, compiled, current=llm.model)
     except Exception:
@@ -668,8 +705,36 @@ def _publish_tokens(
     context_used: int | None = None,
     context_max: int | None = None,
 ) -> None:
+    with _snap_lock(ctrl):
+        payload = _apply_tokens(
+            ctrl,
+            agent_id,
+            llm_node_id,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            per_second=per_second,
+            committed=committed,
+            context_used=context_used,
+            context_max=context_max,
+        )
+    if payload is not None:
+        publish("run", payload)
+
+
+def _apply_tokens(
+    ctrl: RunController,
+    agent_id: str,
+    llm_node_id: str,
+    *,
+    tokens_in: int | None,
+    tokens_out: int | None,
+    per_second: float | None,
+    committed: bool,
+    context_used: int | None,
+    context_max: int | None,
+) -> dict | None:
     if not ctrl.snapshot:
-        return
+        return None
     live_out = 0 if tokens_out is None else tokens_out
     live_in = 0 if tokens_in is None else tokens_in
     if committed:
@@ -705,7 +770,24 @@ def _publish_tokens(
         }
     )
     ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime, "activity": activity})
-    publish("run", ctrl.snapshot.model_dump(by_alias=True))
+    return ctrl.snapshot.model_dump(by_alias=True)
+
+def _snap_lock(ctrl: RunController):
+    """M4: the controller's snapshot lock; test doubles without one get a no-op."""
+    lock = getattr(ctrl, "snap_lock", None)
+    return lock if lock is not None else contextlib.nullcontext()
+
+
+def _abort_check(ctrl: RunController):
+    """M6: model calls stop on Stop and on "stop generating" in the chat."""
+    check = getattr(ctrl, "should_abort", None)
+    return check if callable(check) else ctrl.stop_event.is_set
+
+
+def _user_aborted(ctrl: RunController) -> bool:
+    flag = getattr(ctrl, "abort_generation", None)
+    return bool(flag is not None and flag.is_set() and not ctrl.stop_event.is_set())
+
 
 def _set_node(
     ctrl: RunController,
@@ -718,21 +800,23 @@ def _set_node(
     llm: NodeLlmInfo | None = None,
     clear_llm: bool = False,
 ) -> None:
-    if not ctrl.snapshot:
-        return
-    runtime = dict(ctrl.snapshot.nodes_runtime)
-    current = runtime.get(node_id, NodeRuntime())
-    update: dict[str, object] = {"status": status, "wait_reason": wait, "error": error}
-    if message is not None:
-        cleaned = " ".join(message.split())
-        update["last_message"] = cleaned[:LAST_MESSAGE_MAX] or None
-    if llm is not None:
-        update["llm"] = llm
-    if clear_llm:
-        update["llm"] = None
-    runtime[node_id] = current.model_copy(update=update)
-    ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime})
-    _refresh_activity(ctrl)
+    with _snap_lock(ctrl):
+        if not ctrl.snapshot:
+            return
+        runtime = dict(ctrl.snapshot.nodes_runtime)
+        current = runtime.get(node_id, NodeRuntime())
+        update: dict[str, object] = {"status": status, "wait_reason": wait, "error": error}
+        if message is not None:
+            cleaned = " ".join(message.split())
+            update["last_message"] = cleaned[:LAST_MESSAGE_MAX] or None
+        if llm is not None:
+            update["llm"] = llm
+        if clear_llm:
+            update["llm"] = None
+        runtime[node_id] = current.model_copy(update=update)
+        ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime})
+        _refresh_activity(ctrl)
+        payload = ctrl.snapshot.model_dump(by_alias=True)
     node = ctrl.compiled.by_id.get(node_id) if ctrl.compiled else None
     upsert_step(
         run_id=ctrl.run_id or "",
@@ -744,7 +828,7 @@ def _set_node(
         wait_reason=wait,
         error_message=error,
     )
-    publish("run", ctrl.snapshot.model_dump(by_alias=True))
+    publish("run", payload)
 
 def _refresh_activity(ctrl: RunController) -> None:
     snap = ctrl.snapshot

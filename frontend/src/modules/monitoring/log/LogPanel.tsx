@@ -21,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { notify } from '@/lib/notifications';
+import { saveExportFile } from '@/lib/saveFile';
 import { cn } from '@/lib/utils';
 import { clipPreview, fileStamp, formatTime, safeFilePart, shortId } from '@/modules/monitoring/model/format';
 import { filterLogs, logHasExtra, nodeDisplayName } from '@/modules/monitoring/model/graph';
@@ -100,7 +102,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
     if (el) el.scrollTop = 0;
   }
 
-  function exportVisible() {
+  async function exportVisible() {
     const name = run?.networkName ?? 'network';
     const id = run?.runId ?? 'run';
     const lines = filtered.map((event) =>
@@ -116,12 +118,13 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
       }),
     );
     const blob = new Blob([`${lines.join('\n')}\n`], { type: 'application/x-ndjson' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${safeFilePart(name)}-${shortId(id)}-${fileStamp()}.jsonl`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    // M17: through the host save dialog; the desktop app drops blob downloads.
+    try {
+      const saved = await saveExportFile(`${safeFilePart(name)}-${shortId(id)}-${fileStamp()}.jsonl`, blob);
+      if (saved) notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
+    } catch {
+      notify({ titleKey: 'history.notify.exportError', variant: 'error' });
+    }
   }
 
   return (
@@ -181,7 +184,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
           {!autoscroll && unseen > 0 ? (
             <Badge variant="secondary">{t('monitoring.log.newCount', { count: unseen })}</Badge>
           ) : null}
-          <Button type="button" size="sm" variant="outline" onClick={exportVisible} disabled={filtered.length === 0}>
+          <Button type="button" size="sm" variant="outline" onClick={() => void exportVisible()} disabled={filtered.length === 0}>
             <Download className="size-3.5" />
             {t('monitoring.log.export')}
           </Button>

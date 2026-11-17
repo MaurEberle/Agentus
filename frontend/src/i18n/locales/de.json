@@ -548,6 +548,8 @@
       "pick": "Ordner wählen",
       "busy": "Ordnerwechsel ist gesperrt, solange ein Netz startet, läuft oder stoppt.",
       "invalidRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "targetHasData": "Im Zielordner liegen schon Daten. Kopieren würde sie überschreiben; wähle einen leeren Ordner oder wechsle ohne Kopieren.",
+      "switchFailed": "Der Wechsel ist fehlgeschlagen. Die App nutzt weiter den bisherigen Datenordner.",
       "stores": "Stores",
       "storeName": "Store",
       "fileName": "Datei",
@@ -1031,6 +1033,7 @@
         "terminalUnrestricted": "Uneingeschränkt",
         "terminalUnrestrictedHint": "PowerShell läuft als der Benutzer der App. Der Ordner ist nur das Startverzeichnis. Keine Rückfrage im Lauf, keine erhöhten Rechte.",
         "terminalHint": "Nur die angekreuzten Programme, ohne Pipes und Umleitung. Der Ordner ist das Startverzeichnis.",
+        "terminalTimeout": "Zeitlimit je Befehl (Sekunden, 5–600)",
         "zipHint": "Listet eine ZIP im Wurzelordner auf und entpackt sie dorthin. Pfade bleiben im Ordner.",
         "terminalPrograms": "Programme",
         "maxCalls": "Max. Aufrufe pro Lauf",
@@ -1473,7 +1476,8 @@
       "empty": "Noch keine Nachrichten in diesem Lauf.",
       "disabled": "Chat nur während eines Laufs.",
       "agentDone": "{{name}} ist fertig.",
-      "agentDoneFiles": "{{name}} ist fertig. Dateien: {{files}}."
+      "agentDoneFiles": "{{name}} ist fertig. Dateien: {{files}}.",
+      "aborted": "Gestoppt. Schreib eine Nachricht, um weiterzumachen."
     },
     "log": {
       "pause": "Halten",
@@ -1567,7 +1571,7 @@
       "refresh": "Aktualisieren",
       "delete": "Löschen",
       "export": "Logs exportieren",
-      "purge": "Älter als 90 Tage löschen"
+      "purge": "Älter als {{days}} Tage löschen"
     },
     "filter": {
       "range": "Zeitraum",
@@ -1731,7 +1735,7 @@
     },
     "retention": {
       "title": "Ältere Läufe löschen",
-      "body": "{{count}} Läufe älter als 90 Tage werden gelöscht.",
+      "body": "{{count}} Läufe älter als {{days}} Tage werden gelöscht.",
       "confirm": "Löschen"
     },
     "notify": {
@@ -1753,7 +1757,8 @@
         "ask": "Rückfrage von {{speaker}}"
       },
       "chat": {
-        "user": "Nutzereingabe"
+        "user": "Nutzereingabe",
+        "aborted": "Generierung im Chat gestoppt"
       },
       "batch": {
         "start": "Batch-Lauf gestartet"
@@ -1781,7 +1786,8 @@
         "embed": "Wissen wird indiziert: {{name}} ({{chunks}} Abschnitte, {{model}})",
         "ready": "Wissen bereit: {{name}}",
         "cached": "Wissen ist aktuell: {{name}}",
-        "failed": "Wissen konnte nicht indiziert werden: {{name}}"
+        "failed": "Wissen konnte nicht indiziert werden: {{name}}",
+        "limit": "Wissen {{name}}: {{files}} Dateien, indiziert werden die ersten {{max}}"
       },
       "llm": {
         "toolCallsRepaired": "{{count}} fehlende Werkzeugantworten ergänzt.",

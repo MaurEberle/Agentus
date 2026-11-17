@@ -322,7 +322,13 @@ def _write(root: Path, target: Path, content: object, encoding: str) -> ExecuteR
         return _fail("tools.fileAccess.notFound")
     if content is None:
         return _fail("tools.fileAccess.missingContent")
-    text = str(content)
+    if isinstance(content, (dict, list)):
+        if encoding == "base64":
+            return _fail("tools.fileAccess.invalidAction")
+        # M10: a JSON object from the model is written as JSON, not as a Python repr.
+        text = json.dumps(content, ensure_ascii=False, indent=2) + "\n"
+    else:
+        text = content if isinstance(content, str) else json.dumps(content)
     if encoding == "base64":
         try:
             data = base64.b64decode(text, validate=True)
@@ -408,6 +414,35 @@ def _edit_pairs(raw: dict[str, Any]) -> tuple[list[tuple[str, str]] | None, str 
     return pairs, None
 
 
+def _to_lf(value: str) -> str:
+    return value.replace("\r\n", "\n")
+
+
+def _to_crlf(value: str) -> str:
+    return _to_lf(value).replace("\n", "\r\n")
+
+
+def _match_line_endings(text: str, old: str, new: str) -> tuple[str, str]:
+    """M11: models send ``\\n``; Windows files use ``\\r\\n``. Keep the file's style."""
+    crlf = text.count("\r\n")
+    uniform_crlf = crlf > 0 and crlf == text.count("\n")
+    if old not in text:
+        if crlf and "\n" in old:
+            candidate = _to_crlf(old)
+            if candidate in text:
+                return candidate, _to_crlf(new)
+        if "\r\n" in old:
+            candidate = _to_lf(old)
+            if candidate in text:
+                return candidate, _to_lf(new) if not uniform_crlf else _to_crlf(new)
+        return old, new
+    if uniform_crlf:
+        return old, _to_crlf(new)
+    if crlf == 0 and "\r\n" in new:
+        return old, _to_lf(new)
+    return old, new
+
+
 def _edit(root: Path, target: Path, raw: dict[str, Any]) -> ExecuteResult:
     if not target.is_file():
         return _fail("tools.fileAccess.notFile")
@@ -423,6 +458,7 @@ def _edit(root: Path, target: Path, raw: dict[str, Any]) -> ExecuteResult:
     if err or pairs is None:
         return _fail(err or "tools.fileAccess.invalidAction")
     for old, new in pairs:
+        old, new = _match_line_endings(text, old, new)
         count = text.count(old)
         if count == 0:
             return _fail("tools.fileAccess.editMiss")

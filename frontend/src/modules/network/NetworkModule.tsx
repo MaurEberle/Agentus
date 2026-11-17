@@ -110,6 +110,21 @@ export function NetworkModule() {
   );
 }
 
+/** M23: an open dropdown, menu, popover or dialog owns the keyboard. */
+function overlayOpen(): boolean {
+  return Boolean(
+    document.querySelector(
+      '[role="dialog"][data-state="open"], [role="alertdialog"], [role="listbox"], [role="menu"], [data-radix-popper-content-wrapper]',
+    ),
+  );
+}
+
+/** M23: graph keys act on the canvas or with nothing focused, not on a focused button or field. */
+function canvasHasFocus(target: HTMLElement | null): boolean {
+  if (!target || target === document.body || target === document.documentElement) return true;
+  return Boolean(target.closest('.react-flow'));
+}
+
 function NetworkEditor() {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -268,14 +283,23 @@ function NetworkEditor() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      const typing =
-        target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      const typing = Boolean(
+        target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable),
+      );
       const mod = event.metaKey || event.ctrlKey;
       if (mod && event.key.toLowerCase() === 's') {
         event.preventDefault();
         if (!readOnly) void save();
         return;
       }
+      // M23: inside a text field Ctrl+Z is the field's own undo, not the graph's.
+      if (typing) return;
+      // M23: dropdowns, menus and dialogs own their keys (arrows, Escape, Delete).
+      if (overlayOpen()) return;
       if (mod && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         if (readOnly) return;
@@ -283,15 +307,17 @@ function NetworkEditor() {
         else useNetworkEditor.getState().undo();
         return;
       }
-      if (typing) return;
-      if (event.key === 'Escape') useNetworkEditor.getState().select([]);
+      // Plain keys act on the graph only from the canvas: Delete on a focused button,
+      // or arrows on a focused checkbox, must not move or remove the selected node.
+      const onCanvas = canvasHasFocus(target);
+      if (event.key === 'Escape' && onCanvas) useNetworkEditor.getState().select([]);
       if (mod && event.key.toLowerCase() === 'c') {
         const state = useNetworkEditor.getState();
         clipboard.current = duplicateNodes(state.document.nodes, state.document.edges, state.selectedNodeIds);
       }
       // Selection and copy stay available while the active network runs; edits do not.
       if (readOnly) return;
-      if (event.key === 'Delete' || event.key === 'Backspace') editorDeleteSelection();
+      if ((event.key === 'Delete' || event.key === 'Backspace') && onCanvas) editorDeleteSelection();
       if (mod && event.key.toLowerCase() === 'd') {
         event.preventDefault();
         editorDuplicateSelection();
@@ -306,6 +332,7 @@ function NetworkEditor() {
         });
         state.select(pasted.nodes.map((node) => node.id));
       }
+      if (!onCanvas) return;
       if (event.key === 'ArrowLeft') editorNudge(-1, 0);
       if (event.key === 'ArrowRight') editorNudge(1, 0);
       if (event.key === 'ArrowUp') editorNudge(0, -1);
@@ -330,7 +357,8 @@ function NetworkEditor() {
       const saved = current.id
         ? await updateNetwork(current.id, payload)
         : await createNetwork(payload);
-      useNetworkEditor.getState().markSaved(saved);
+      // M24: typing during the request must not be replaced by the server copy.
+      useNetworkEditor.getState().markSaved(saved, current);
       notify({ titleKey: 'network.notify.saved', variant: 'success' });
       if (!pendingActionRef.current && (!id || id !== saved.id)) {
         allowLeaveRef.current = true;
@@ -351,10 +379,11 @@ function NetworkEditor() {
   async function saveAsConfirmed(name: string): Promise<boolean> {
     setSaving(true);
     try {
-      const { id: _id, ...rest } = useNetworkEditor.getState().document;
+      const before = useNetworkEditor.getState().document;
+      const { id: _id, ...rest } = before;
       void _id;
       const saved = await createNetwork({ ...rest, name });
-      useNetworkEditor.getState().markSaved(saved);
+      useNetworkEditor.getState().markSaved(saved, before);
       notify({ titleKey: 'network.notify.saved', variant: 'success' });
       if (!pendingActionRef.current) {
         allowLeaveRef.current = true;

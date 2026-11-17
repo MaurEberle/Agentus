@@ -6,9 +6,12 @@ from typing import Any
 from app.db.paths import RAG_DIR_NAME, is_invalid_data_dir
 from app.http.errors import AppError
 
-_PATH_KEYS = frozenset(
+# M12: generic keys for servers without their own list. ``target`` and
+# ``output`` are left out: git uses ``target`` for a revision, not a path.
+DEFAULT_PATH_KEYS = frozenset(
     {
         "path",
+        "paths",
         "filepath",
         "file_path",
         "filePath",
@@ -16,10 +19,10 @@ _PATH_KEYS = frozenset(
         "filename",
         "file_name",
         "file",
+        "files",
         "source",
         "destination",
-        "output",
-        "target",
+        "repo_path",
         "workbook",
     }
 )
@@ -82,7 +85,21 @@ def reject_app_db_dsn(secret: str | None) -> None:
         raise AppError("mcp.postgres.appDb", status_code=400)
 
 
-def confine_tool_arguments(arguments: dict[str, Any], root: str) -> dict[str, Any]:
+def confine_tool_arguments(
+    arguments: dict[str, Any],
+    root: str,
+    *,
+    path_keys: frozenset[str] | set[str] | None = None,
+    check_keys: frozenset[str] | set[str] = frozenset(),
+) -> dict[str, Any]:
+    """Keep path arguments under ``root``.
+
+    ``path_keys`` are rewritten to absolute paths under the root. ``check_keys``
+    are only checked and keep their value (git ``files`` are relative to
+    ``repo_path``). Without a recipe list the generic keys apply.
+    """
+    rewrite = DEFAULT_PATH_KEYS if path_keys is None else frozenset(path_keys)
+    check = frozenset(check_keys)
     try:
         base = Path(root).expanduser().resolve()
     except (OSError, RuntimeError):
@@ -90,7 +107,7 @@ def confine_tool_arguments(arguments: dict[str, Any], root: str) -> dict[str, An
     if not base.is_dir():
         raise AppError("mcp.root.invalid", status_code=400)
 
-    def fix_str(value: str) -> str:
+    def fix_str(value: str, *, keep: bool = False) -> str:
         raw = Path(value)
         try:
             resolved = raw.resolve() if raw.is_absolute() else (base / value).resolve()
@@ -100,15 +117,17 @@ def confine_tool_arguments(arguments: dict[str, Any], root: str) -> dict[str, An
             resolved.relative_to(base)
         except ValueError:
             raise AppError("mcp.root.denied", status_code=400)
-        return str(resolved)
+        return value if keep else str(resolved)
 
     def walk(obj: Any, key: str | None = None) -> Any:
         if isinstance(obj, dict):
             return {str(name): walk(item, str(name)) for name, item in obj.items()}
         if isinstance(obj, list):
             return [walk(item, key) for item in obj]
-        if isinstance(obj, str) and key in _PATH_KEYS:
+        if isinstance(obj, str) and key in rewrite:
             return fix_str(obj)
+        if isinstance(obj, str) and key in check:
+            return fix_str(obj, keep=True)
         return obj
 
     return walk(arguments)

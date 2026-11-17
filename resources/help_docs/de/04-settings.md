@@ -73,7 +73,7 @@ Löschen entfernt die Server-Konfiguration, nicht Ollama und nicht Zugänge. Im 
 
 Zeigt den **Datenordner** und den Zustand der Stores: Einstellungen, Hilfe, Workspace, Historie — ohne SQL-Ansicht und ohne Secrets.
 
-Ordner **wechseln** nur, wenn kein Netz startet, läuft oder stoppt. Laufwerks- oder Systemwurzeln sind ungültig. Optional Inhalt in den neuen Ordner kopieren; der alte Ordner bleibt liegen.
+Ordner **wechseln** nur, wenn kein Netz startet, läuft oder stoppt. Laufwerks- oder Systemwurzeln sind ungültig. Optional Inhalt in den neuen Ordner kopieren; der alte Ordner bleibt liegen. Liegen im Zielordner schon Daten, kopiert die App nicht darüber, sondern meldet das. Scheitert der Wechsel, bleibt der bisherige Ordner aktiv.
 
 **Portabel** oder ein von außen vorgegebener Ordner: Pfad **schreibgeschützt**.
 

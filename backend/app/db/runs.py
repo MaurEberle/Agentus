@@ -59,6 +59,33 @@ def _run_dict(row: Any) -> dict[str, Any]:
     }
 
 
+# M16: the run list carries only these columns. Graph, chat and memory of up to 500
+# runs made /runs several megabytes; the detail view loads them per run.
+_SUMMARY_COLUMNS = (
+    "id, network_id, network_name, started_at, ended_at, outcome, error_message, "
+    "error_class, error_node_id, error_node_name, models"
+)
+
+
+def _run_summary_dict(row: Any) -> dict[str, Any]:
+    models = json_loads(row["models"], default=[])
+    if not isinstance(models, list):
+        models = []
+    return {
+        "id": row["id"],
+        "network_id": row["network_id"],
+        "network_name": row["network_name"],
+        "started_at": row["started_at"],
+        "ended_at": row["ended_at"],
+        "outcome": row["outcome"],
+        "error_message": row["error_message"],
+        "error_class": row["error_class"],
+        "error_node_id": row["error_node_id"],
+        "error_node_name": row["error_node_name"],
+        "models": models,
+    }
+
+
 def _optional_json(row: Any, key: str) -> Any:
     try:
         raw = row[key]
@@ -393,13 +420,13 @@ def list_runs(
         total = int(total_row["n"]) if total_row else 0
         rows = conn.execute(
             f"""
-            SELECT * FROM runs WHERE 1=1{where}
+            SELECT {_SUMMARY_COLUMNS} FROM runs WHERE 1=1{where}
             ORDER BY started_at DESC
             LIMIT ? OFFSET ?
             """,
             [*params, limit, offset],
         ).fetchall()
-    return [_run_dict(row) for row in rows], total
+    return [_run_summary_dict(row) for row in rows], total
 
 
 def latest_run_id_by_network() -> dict[str, str]:
@@ -479,7 +506,45 @@ def list_logs(
     level: str | None = None,
     q: str | None = None,
     node_id: str | None = None,
+    limit: int | None = None,
 ) -> list[dict[str, Any]]:
+    """Logs oldest first. ``limit`` keeps the newest N (M16)."""
+    where, params = _log_filters(run_id, level=level, q=q, node_id=node_id)
+    with locked("history") as conn:
+        if limit is None:
+            rows = conn.execute(
+                f"SELECT * FROM run_logs WHERE {where} ORDER BY ts ASC, rowid ASC",
+                params,
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                f"SELECT * FROM run_logs WHERE {where} ORDER BY ts DESC, rowid DESC LIMIT ?",
+                [*params, max(0, int(limit))],
+            ).fetchall()
+            rows = list(reversed(rows))
+    return [_log_dict(row) for row in rows]
+
+
+def count_logs(
+    run_id: str,
+    *,
+    level: str | None = None,
+    q: str | None = None,
+    node_id: str | None = None,
+) -> int:
+    where, params = _log_filters(run_id, level=level, q=q, node_id=node_id)
+    with locked("history") as conn:
+        row = conn.execute(f"SELECT COUNT(*) AS n FROM run_logs WHERE {where}", params).fetchone()
+    return int(row["n"]) if row else 0
+
+
+def _log_filters(
+    run_id: str,
+    *,
+    level: str | None,
+    q: str | None,
+    node_id: str | None,
+) -> tuple[str, list[object]]:
     clauses = ["run_id = ?"]
     params: list[object] = [run_id]
     if level:
@@ -491,13 +556,7 @@ def list_logs(
     if q:
         clauses.append("message LIKE ?")
         params.append(f"%{q}%")
-    where = " AND ".join(clauses)
-    with locked("history") as conn:
-        rows = conn.execute(
-            f"SELECT * FROM run_logs WHERE {where} ORDER BY ts ASC, rowid ASC",
-            params,
-        ).fetchall()
-    return [_log_dict(row) for row in rows]
+    return " AND ".join(clauses), params
 
 
 def insert_call(

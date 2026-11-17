@@ -33,7 +33,7 @@ Chat and log sit above the network and activity. The three cards keep their heig
 
 ## Run chat (monitoring)
 
-**Chat** tab (opens when a run starts, if the graph has a chat input): the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. The run waits only on a follow-up question. Agent text and internal commands do not appear here. A follow-up question shows in the notification bell and the header; the taskbar icon flashes while the window is in the background.
+**Chat** tab (opens when a run starts, if the graph has a chat input): the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. The run waits only on a follow-up question. Agent text and internal commands do not appear here. A follow-up question shows in the notification bell and the header; the taskbar icon flashes while the window is in the background. **Stop generating** ends the answer in progress. With an orchestrator the run stays open and waits for your next message; in a chain without one the run ends as cancelled.
 
 This is **not** the help bubble. History and tools belong to the network.
 
@@ -45,7 +45,7 @@ Payloads and messages **mask** secrets (for example `Bearer`, key prefixes). Do 
 
 ## History
 
-Ribbon: refresh, delete selected runs, export logs, purge older than retention (see Settings → Data, default 90 days).
+Ribbon: refresh, delete selected runs, export logs, purge older than retention (see Settings → Data, default 90 days; with “Unlimited” the button is hidden).
 
 **One filter** drives everything: range (today, 7/30 days, from–to), network, model, search (run id, network, error). KPIs, “runs by day” chart, top errors, tabs History / By model / By network, and the list all use that filter.
 

@@ -370,3 +370,71 @@ def test_edit_reads_the_whole_file_not_one_page(tmp_path) -> None:
     )
     assert edited.ok is True
     assert "LINE 390 " in (root / "big.txt").read_text(encoding="utf-8")
+
+
+def test_write_object_content_is_json(tmp_path) -> None:
+    """M10: an object as content is written as JSON, not as a Python repr."""
+    import json
+
+    config = {"rootPath": str(tmp_path)}
+    written = execute_first_party(
+        "file_access",
+        config=config,
+        args={"action": "write", "path": "package.json", "content": {"name": "demo", "private": True}},
+    )
+    assert written.ok is True
+    text = (tmp_path / "package.json").read_text(encoding="utf-8")
+    assert json.loads(text) == {"name": "demo", "private": True}
+    assert "True" not in text
+
+
+def test_write_object_with_base64_is_rejected(tmp_path) -> None:
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={"action": "write", "path": "x.bin", "content": {"a": 1}, "encoding": "base64"},
+    )
+    assert result.ok is False
+    assert result.error_key == "tools.fileAccess.invalidAction"
+
+
+def test_edit_matches_lf_text_in_crlf_file(tmp_path) -> None:
+    """M11: the model sends LF, the file has CRLF; the edit lands and keeps CRLF."""
+    target = tmp_path / "app.py"
+    target.write_bytes(b"def a():\r\n    return 1\r\n\r\ndef b():\r\n    return 2\r\n")
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={
+            "action": "edit",
+            "path": "app.py",
+            "oldText": "def a():\n    return 1\n",
+            "newText": "def a():\n    return 10\n",
+        },
+    )
+    assert result.ok is True, result.error_key
+    assert target.read_bytes() == b"def a():\r\n    return 10\r\n\r\ndef b():\r\n    return 2\r\n"
+
+
+def test_edit_single_line_in_crlf_file_keeps_crlf(tmp_path) -> None:
+    target = tmp_path / "notes.txt"
+    target.write_bytes(b"one\r\ntwo\r\n")
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={"action": "edit", "path": "notes.txt", "oldText": "one", "newText": "one\nhalf"},
+    )
+    assert result.ok is True, result.error_key
+    assert target.read_bytes() == b"one\r\nhalf\r\ntwo\r\n"
+
+
+def test_edit_crlf_text_in_lf_file(tmp_path) -> None:
+    target = tmp_path / "unix.txt"
+    target.write_bytes(b"alpha\nbeta\n")
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={"action": "edit", "path": "unix.txt", "oldText": "alpha\r\nbeta", "newText": "alpha\r\ngamma"},
+    )
+    assert result.ok is True, result.error_key
+    assert target.read_bytes() == b"alpha\ngamma\n"

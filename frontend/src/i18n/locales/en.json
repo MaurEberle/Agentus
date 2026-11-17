@@ -548,6 +548,8 @@
       "pick": "Choose folder",
       "busy": "Changing the folder is blocked while a network is starting, running, or stopping.",
       "invalidRoot": "A drive or system root is not allowed.",
+      "targetHasData": "The target folder already holds data. Copying would overwrite it; pick an empty folder or switch without copying.",
+      "switchFailed": "The switch failed. The app keeps using the previous data folder.",
       "stores": "Stores",
       "storeName": "Store",
       "fileName": "File",
@@ -1031,6 +1033,7 @@
         "terminalUnrestricted": "Unrestricted",
         "terminalUnrestrictedHint": "PowerShell runs as the app user. The folder is only the start directory. No prompt during a run, and no elevation.",
         "terminalHint": "Only the checked programs, without pipes or redirection. The folder is the start directory.",
+        "terminalTimeout": "Time limit per command (seconds, 5–600)",
         "zipHint": "Lists a ZIP in the root folder and extracts it there. Paths stay inside the folder.",
         "terminalPrograms": "Programs",
         "maxCalls": "Max. calls per run",
@@ -1473,7 +1476,8 @@
       "empty": "No messages in this run yet.",
       "disabled": "Chat is available only while a run is active.",
       "agentDone": "{{name}} is done.",
-      "agentDoneFiles": "{{name}} is done. Files: {{files}}."
+      "agentDoneFiles": "{{name}} is done. Files: {{files}}.",
+      "aborted": "Stopped. Send a message to continue."
     },
     "log": {
       "pause": "Hold",
@@ -1567,7 +1571,7 @@
       "refresh": "Refresh",
       "delete": "Delete",
       "export": "Export logs",
-      "purge": "Delete older than 90 days"
+      "purge": "Delete older than {{days}} days"
     },
     "filter": {
       "range": "Range",
@@ -1731,7 +1735,7 @@
     },
     "retention": {
       "title": "Delete older runs",
-      "body": "{{count}} runs older than 90 days will be deleted.",
+      "body": "{{count}} runs older than {{days}} days will be deleted.",
       "confirm": "Delete"
     },
     "notify": {
@@ -1753,7 +1757,8 @@
         "ask": "Follow-up from {{speaker}}"
       },
       "chat": {
-        "user": "User message"
+        "user": "User message",
+        "aborted": "Generation stopped from the chat"
       },
       "batch": {
         "start": "Batch run started"
@@ -1781,7 +1786,8 @@
         "embed": "Indexing knowledge: {{name}} ({{chunks}} chunks, {{model}})",
         "ready": "Knowledge ready: {{name}}",
         "cached": "Knowledge is up to date: {{name}}",
-        "failed": "Knowledge indexing failed: {{name}}"
+        "failed": "Knowledge indexing failed: {{name}}",
+        "limit": "Knowledge {{name}}: {{files}} files, indexing the first {{max}}"
       },
       "llm": {
         "toolCallsRepaired": "Added {{count}} missing tool answers.",

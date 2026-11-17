@@ -130,3 +130,19 @@ def test_open_external_allows_public_http(monkeypatch) -> None:
     assert api.openExternal("https://user:secret@example.com/docs") is False
     assert api.openExternal("javascript:alert(1)") is False
     assert opened == ["https://example.com/docs"]
+
+
+def test_save_file_writes_log_lines(tmp_path) -> None:
+    """M17: log exports (.jsonl) go through the host dialog as text."""
+    from webview.util import parse_file_type
+
+    target = tmp_path / "lauf.jsonl"
+    api = ChromeHostApi()
+    win = _SaveWindow((str(target),))
+    api._window = win
+    text = '{"level": "info", "message": "run.start"}\n{"level": "warn", "message": "ä"}\n'
+    saved = api.saveFile("lauf", text, "jsonl")
+    assert saved == str(target)
+    assert target.read_text(encoding="utf-8") == text
+    assert win.save_filename == "lauf.jsonl"
+    assert parse_file_type(win.file_types[0])[1] == "*.jsonl"

@@ -29,6 +29,9 @@ class RecipeRecord:
     notes: str | None = None
     available: bool = True
     tool_schemas: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # M12: argument names that hold paths. None = generic list.
+    path_keys: list[str] | None = None
+    path_check_keys: list[str] = field(default_factory=list)
 
 
 def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
@@ -59,6 +62,10 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
         for name, schema in raw_schemas.items()
         if isinstance(name, str) and isinstance(schema, dict)
     }
+    raw_keys = raw.get("pathKeys")
+    path_keys = [str(key) for key in raw_keys if str(key).strip()] if isinstance(raw_keys, list) else None
+    raw_check = raw.get("pathCheckKeys")
+    path_check = [str(key) for key in raw_check if str(key).strip()] if isinstance(raw_check, list) else []
     return RecipeRecord(
         id=recipe_id,
         title_key=title,
@@ -76,6 +83,8 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
         notes=str(raw["notes"]) if raw.get("notes") else None,
         available=available,
         tool_schemas=tool_schemas,
+        path_keys=path_keys,
+        path_check_keys=path_check,
     )
 
 

@@ -30,7 +30,12 @@ import {
   type ValidationIssue,
 } from '@/modules/network/model/document';
 import { PromptPickDialog } from '@/modules/network/inspector/PromptPickDialog';
-import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
+import {
+  editorDeleteSelection,
+  editorNormalizeNodeData,
+  editorUpdateNodeData,
+  useNetworkEditor,
+} from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
@@ -234,7 +239,7 @@ function ContextWindowField({ node, readOnly }: { node: GraphNode; readOnly: boo
   useEffect(() => {
     if (readOnly || max == null || min == null) return;
     if (!Number.isFinite(current) || current < min || current > max) {
-      editorUpdateNodeData(node.id, { numCtx: max });
+      editorNormalizeNodeData(node.id, { numCtx: max });
     }
   }, [current, max, min, node.id, readOnly]);
 
@@ -335,7 +340,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
       ) {
         return;
       }
-      editorUpdateNodeData(node.id, {
+      editorNormalizeNodeData(node.id, {
         gpuPlacement: 'auto',
         numGpuPercent: undefined,
         numGpu: undefined,
@@ -352,7 +357,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
       ) {
         return;
       }
-      editorUpdateNodeData(node.id, {
+      editorNormalizeNodeData(node.id, {
         gpuPlacement: 'layers',
         numGpuLayers: value,
         numGpuPercent: undefined,
@@ -368,7 +373,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     ) {
       return;
     }
-    editorUpdateNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
+    editorNormalizeNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
   }, [
     auto,
     isMoe,
@@ -597,7 +602,7 @@ function VramNeedField({ node, readOnly }: { node: GraphNode; readOnly: boolean 
     ) {
       return;
     }
-    editorUpdateNodeData(node.id, {
+    editorNormalizeNodeData(node.id, {
       gpuPlacement: 'auto',
       numGpuLayers: next.numGpuLayers,
       numCpuMoe: next.numCpuMoe,
@@ -775,7 +780,7 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
     // Full load was the old automatic default. A value the user picked stays.
     const oldFullDefault = !touched && current === threads;
     if (missing || oldFullDefault) {
-      editorUpdateNodeData(node.id, { numThread: standard, numThreadTouched: true });
+      editorNormalizeNodeData(node.id, { numThread: standard, numThreadTouched: true });
     }
   }, [current, node.id, readOnly, standard, threads, touched]);
 
@@ -922,7 +927,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
     }
     const kindKnown = !model || modelOptions.includes(model);
     if (provider === 'ollama' && kindKnown && node.data.modelKind !== modelKind) patch.modelKind = modelKind;
-    if (Object.keys(patch).length > 0) editorUpdateNodeData(node.id, patch);
+    if (Object.keys(patch).length > 0) editorNormalizeNodeData(node.id, patch);
   }, [model, modelKind, modelLocked, modelOptions, modelsLoading, node.data.modelKind, node.id, provider, readOnly]);
   const catalogFailed =
     catalogProvider &&
@@ -1849,6 +1854,19 @@ function TerminalFields({ node, readOnly }: { node: GraphNode; readOnly: boolean
       <p className="text-xs text-muted-foreground">
         {t(unrestricted ? 'network.inspector.tool.terminalUnrestrictedHint' : 'network.inspector.tool.terminalHint')}
       </p>
+      <Field label={t('network.inspector.tool.terminalTimeout')}>
+        <Input
+          type="number"
+          min={5}
+          max={600}
+          value={node.data.timeoutSec == null ? 30 : Number(node.data.timeoutSec)}
+          disabled={readOnly}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            if (Number.isFinite(value)) editorUpdateNodeData(node.id, { timeoutSec: value });
+          }}
+        />
+      </Field>
       {unrestricted ? null : (
         <div className="space-y-2">
           <p className="text-sm font-medium">{t('network.inspector.tool.terminalPrograms')}</p>
@@ -1947,7 +1965,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
   useEffect(() => {
     if (readOnly || embedLocked || embedLoading) return;
     if (embedModel || embedOptions.length === 0) return;
-    editorUpdateNodeData(node.id, { embeddingModel: embedOptions[0] });
+    editorNormalizeNodeData(node.id, { embeddingModel: embedOptions[0] });
   }, [embedLoading, embedLocked, embedModel, embedOptions, node.id, readOnly]);
 
   function applyPath(path: string) {

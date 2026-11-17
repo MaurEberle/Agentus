@@ -309,7 +309,7 @@ def _agent_turn(
                         max_duration_sec=MAX_CALL_SECONDS,
                         ollama_options=options,
                     ),
-                    should_abort=ctrl.stop_event.is_set,
+                    should_abort=turn_runtime._abort_check(ctrl),
                     on_progress=lambda out, rate, cap=context_max, used=context_est: (
                         _note_tokens(record, out),
                         turn_runtime._publish_tokens(
@@ -331,6 +331,11 @@ def _agent_turn(
                 if isinstance(exc, RuntimeApiError) and (
                     exc.error_key == "run.cancelled" or ctrl.stop_event.is_set()
                 ):
+                    if record is not None and not ctrl.stop_event.is_set():
+                        # M6: stopped from the chat, not a failure of the agent.
+                        record.error = turn_runtime.USER_STOPPED
+                        turn_runtime._set_node(ctrl, agent_id, "idle")
+                        turn_runtime._set_llm(ctrl, compiled, llm_node_id, busy=False)
                     return None
                 tool_name = truncated_tool_call_name(exc)
                 if tool_name is not None:
@@ -758,7 +763,7 @@ def _make_room(
         if changed:
             emit_log("info", "run.agent.compact", node_id=agent_id, payload={"messages": before})
         return True
-    state = _compact_state(ctrl, compiled, agent_id, llm, messages)
+    state = _compact_state(ctrl, compiled, agent_id, llm, messages, budget=budget)
     if state:
         messages[:] = rewrite_with_state(messages, state)
         compact_transcript(messages, budget=budget)
@@ -771,16 +776,42 @@ def _make_room(
     return True
 
 
+# M7: the summary call keeps the agent's window and leaves room for its instructions
+# and the 800-token answer. Characters per token are estimated low on purpose.
+_COMPACT_RESERVE_TOKENS = 1_200
+_COMPACT_CHARS_PER_TOKEN = 3
+_COMPACT_MAX_CHARS = 48_000
+
+
+def _compact_limit(budget: int | None) -> int:
+    if not isinstance(budget, int) or budget <= 0:
+        return _COMPACT_MAX_CHARS
+    room = max(1_000, budget - _COMPACT_RESERVE_TOKENS) * _COMPACT_CHARS_PER_TOKEN
+    return min(_COMPACT_MAX_CHARS, room)
+
+
 def _compact_state(
-    ctrl: RunController, compiled: CompiledGraph, agent_id: str, llm, messages: list[LlmMessage]
+    ctrl: RunController,
+    compiled: CompiledGraph,
+    agent_id: str,
+    llm,
+    messages: list[LlmMessage],
+    *,
+    budget: int | None = None,
 ) -> str:
     """One summary call. Counted like any model call: budget, time limit, history, log."""
+    from types import SimpleNamespace
+
+    from app.mcp.payload import clip_middle
     from app.runtime import completions as runtime_completions
 
     secret = None
     if llm.provider != "ollama" and llm.credential_id:
         secret = vault_get(llm.credential_id)
-    transcript = state_transcript(messages)
+    # M7: same num_ctx, threads and GPU placement as the agent's own call. Without
+    # them Ollama reloads the model with its default window and cuts the transcript.
+    options = turn_runtime._ollama_options(llm, SimpleNamespace(num_ctx=budget))
+    transcript = clip_middle(state_transcript(messages), _compact_limit(budget))
     request = CompletionRequest(
         provider=llm.provider,  # type: ignore[arg-type]
         model=llm.model,
@@ -793,7 +824,7 @@ def _compact_state(
                     "Omit raw table cells and repeated drafts. At most 600 words."
                 ),
             ),
-            LlmMessage(role="user", content=transcript[:48_000]),
+            LlmMessage(role="user", content=transcript),
         ],
         base_url=llm.base_url,
         credential_id=llm.credential_id,
@@ -802,6 +833,7 @@ def _compact_state(
         max_tokens=800,
         timeout_sec=STREAM_IDLE_TIMEOUT_SEC,
         max_duration_sec=MAX_CALL_SECONDS,
+        ollama_options=options,
     )
     turn_runtime._charge_llm(ctrl, agent_id)
     emit_log(
@@ -814,7 +846,7 @@ def _compact_state(
     try:
         result = runtime_completions.complete_live(
             request,
-            should_abort=ctrl.stop_event.is_set,
+            should_abort=turn_runtime._abort_check(ctrl),
         )
     except Exception as exc:
         key = exc.error_key if isinstance(exc, RuntimeApiError) else "runtime.upstream"

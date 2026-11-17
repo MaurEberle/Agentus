@@ -172,3 +172,52 @@ def test_default_grant_has_no_interpreter(tmp_path: Path) -> None:
     )
     assert result.ok is False
     assert result.error_key == "tools.terminal.notGranted"
+
+
+def test_batch_shim_rejects_cmd_metacharacters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """M14: cmd.exe re-parses the arguments of a .cmd shim, quotes included."""
+    shim = tmp_path / "npm.cmd"
+    shim.write_text("@echo off\r\necho %*\r\n", encoding="utf-8")
+    monkeypatch.setattr("app.tools.terminal_tool.shutil.which", lambda name: str(shim))
+    spawned: list[list[str]] = []
+    monkeypatch.setattr(
+        "app.tools.terminal_tool._spawn",
+        lambda root, argv, timeout=None: spawned.append(argv),
+    )
+    result = execute_first_party(
+        "terminal",
+        config={"rootPath": str(tmp_path), "terminalMode": "restricted", "terminalPrograms": ["npm"]},
+        args={"command": 'npm run "x & calc"'},
+    )
+    assert result.ok is False
+    assert result.error_key == "tools.terminal.shellSyntax"
+    assert spawned == []
+
+
+def test_timeout_comes_from_the_node() -> None:
+    from app.tools.terminal_tool import _timeout
+
+    assert _timeout({}) == 30
+    assert _timeout({"timeoutSec": 120}) == 120
+    assert _timeout({"timeoutSec": 1}) == 5
+    assert _timeout({"timeoutSec": 9999}) == 600
+    assert _timeout({"timeoutSec": "abc"}) == 30
+
+
+def test_decode_falls_back_to_the_oem_code_page() -> None:
+    from app.tools.terminal_tool import _decode
+
+    assert _decode("Größe".encode("utf-8")) == "Größe"
+    if os.name == "nt":
+        assert _decode("Größe".encode("oem")) == "Größe"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="unrestricted mode uses PowerShell")
+def test_powershell_output_keeps_umlauts(tmp_path: Path) -> None:
+    result = execute_first_party(
+        "terminal",
+        config={"rootPath": str(tmp_path), "terminalMode": "unrestricted"},
+        args={"command": "Write-Output ('Gr' + [char]0x00F6 + [char]0x00DF + 'e')"},
+    )
+    assert result.ok is True
+    assert "Größe" in result.result["stdout"]

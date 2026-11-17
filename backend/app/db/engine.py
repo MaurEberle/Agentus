@@ -96,15 +96,17 @@ def require_conn(store: StoreId) -> sqlite3.Connection:
 
 @contextmanager
 def locked(store: StoreId) -> Iterator[sqlite3.Connection]:
-    conn = require_conn(store)
+    # M20: take the lock first. A data-dir switch closes the connection under the
+    # same lock; a caller that waited must not then use the closed handle.
     with _locks[store]:
+        conn = require_conn(store)
         yield conn
 
 
 @contextmanager
 def transaction(store: StoreId) -> Iterator[sqlite3.Connection]:
-    conn = require_conn(store)
     with _locks[store]:
+        conn = require_conn(store)
         conn.execute("BEGIN")
         try:
             yield conn
@@ -129,34 +131,37 @@ def open_all() -> None:
 
     for store in STORE_IDS:
         path = db_path(store)
-        existing = _conns.pop(store, None)
-        if existing is not None:
+        with _locks[store]:
+            existing = _conns.pop(store, None)
+            if existing is not None:
+                try:
+                    existing.close()
+                except sqlite3.Error:
+                    pass
             try:
-                existing.close()
+                conn = _connect_file(path)
+                migrate(store, conn)
+                _conns[store] = conn
+                _states[store] = "ok"
             except sqlite3.Error:
-                pass
-        try:
-            conn = _connect_file(path)
-            migrate(store, conn)
-            _conns[store] = conn
-            _states[store] = "ok"
-        except sqlite3.Error:
-            _states[store] = "error"
-            _conns.pop(store, None)
-        except OSError:
-            _states[store] = "missing" if not path.exists() else "error"
-            _conns.pop(store, None)
+                _states[store] = "error"
+                _conns.pop(store, None)
+            except OSError:
+                _states[store] = "missing" if not path.exists() else "error"
+                _conns.pop(store, None)
 
 
 def close_store(store: StoreId, *, state: str = "missing") -> None:
-    conn = _conns.pop(store, None)
-    if conn is not None:
-        try:
-            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            conn.close()
-        except sqlite3.Error:
-            pass
-    _states[store] = state
+    # M20: waits for a query that still holds the store.
+    with _locks[store]:
+        conn = _conns.pop(store, None)
+        if conn is not None:
+            try:
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                conn.close()
+            except sqlite3.Error:
+                pass
+        _states[store] = state
 
 
 def close_all() -> None:

@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.http.app import create_app
-from app.http.guard import host_allowed, origin_allowed
+from app.http.guard import fetch_site_allowed, host_allowed, origin_allowed
 
 
 @pytest.mark.parametrize(
@@ -54,6 +54,36 @@ def test_cross_site_origin_rejected() -> None:
 
 
 def test_loopback_origin_allowed() -> None:
-    client = TestClient(create_app(), base_url="http://127.0.0.1")
+    client = TestClient(create_app(), base_url="http://127.0.0.1:8765")
     response = client.get("/api/health", headers={"Origin": "http://127.0.0.1:8765"})
     assert response.status_code == 200
+
+
+def test_other_local_port_is_another_program() -> None:
+    """M21: any page on localhost:3000 used to reach /api/run/stop."""
+    client = TestClient(create_app(), base_url="http://127.0.0.1:8765")
+    response = client.post("/api/run/stop", headers={"Origin": "http://localhost:3000"})
+    assert response.status_code == 403
+    assert response.json() == {"messageKey": "http.forbiddenOrigin"}
+
+
+def test_own_origin_under_another_loopback_name_is_allowed() -> None:
+    assert origin_allowed("http://localhost:8765", "127.0.0.1:8765") is True
+    assert origin_allowed("http://127.0.0.1:5173", "127.0.0.1:8765") is False
+    assert origin_allowed("http://127.0.0.1:5173", "127.0.0.1:8765", {"http://127.0.0.1:5173"}) is True
+
+
+def test_dev_origin_passes_with_the_dev_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENTUS_NETWORK_DEV", "1")
+    client = TestClient(create_app(), base_url="http://127.0.0.1:8765")
+    response = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
+    assert response.status_code == 200
+
+
+def test_cross_site_get_without_origin_is_refused() -> None:
+    """An <img> on a foreign page sends no Origin, but Sec-Fetch-Site: cross-site."""
+    client = TestClient(create_app(), base_url="http://127.0.0.1:8765")
+    response = client.get("/api/runtime/models", headers={"Sec-Fetch-Site": "cross-site"})
+    assert response.status_code == 403
+    assert fetch_site_allowed("same-origin") is True
+    assert fetch_site_allowed(None) is True

@@ -54,6 +54,17 @@ def get_controller() -> RunController:
 class RunController:
     def __init__(self) -> None:
         self.lock = threading.Lock()
+        # M4: one lock for read-modify-write of the snapshot. Harness, token watch
+        # thread and HTTP threads all patch it.
+        self.snap_lock = threading.RLock()
+        # M1: a start() in flight counts as busy until it returns.
+        self._starting = False
+        # M2: model cleanup of a finished run runs in the background; a new start
+        # waits for it and bumps the generation so a late cleanup skips its work.
+        self._run_gen = 0
+        self._cleanup_lock = threading.Lock()
+        # Set by stop(closing=True): whoever finishes the run skips the help preload.
+        self._closing = False
         self.service_status: ServiceStatus = "stopped"
         self.run_id: str | None = None
         self.started_at: str | None = None
@@ -83,9 +94,11 @@ class RunController:
 
     def reset(self) -> None:
         self.stop_event.set()
+        self.wait_cleanup(timeout=10)
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=2)
         self.service_status = "stopped"
+        self._starting = False
         self.run_id = None
         self.started_at = None
         self.network_id = None
@@ -129,8 +142,9 @@ class RunController:
         if self.service_status == "running":
             self._phase = "ask"
             self._phase_label = speaker
-        if self.snapshot is not None:
-            self.snapshot = self.snapshot.model_copy(update={"wait_ask": ask})
+        with self.snap_lock:
+            if self.snapshot is not None:
+                self.snapshot = self.snapshot.model_copy(update={"wait_ask": ask})
         return ask
 
     def clear_wait_ask(self, *, publish_run: bool = False) -> None:
@@ -138,13 +152,20 @@ class RunController:
         if self._phase == "ask":
             self._phase = None
             self._phase_label = None
-        if self.snapshot is not None:
+        with self.snap_lock:
+            if self.snapshot is None:
+                return
             self.snapshot = self.snapshot.model_copy(update={"wait_ask": None})
-            if publish_run:
-                publish("run", self.snapshot.model_dump(by_alias=True))
+            payload = self.snapshot.model_dump(by_alias=True)
+        if publish_run:
+            publish("run", payload)
 
     def is_busy(self) -> bool:
-        return self.service_status in {"starting", "running", "stopping"}
+        return self._starting or self.service_status in {"starting", "running", "stopping"}
+
+    def should_abort(self) -> bool:
+        """Model calls stop on Stop and on "stop generating" in the chat (M6)."""
+        return self.stop_event.is_set() or self.abort_generation.is_set()
 
     def start(self) -> dict[str, str]:
         with self.lock:
@@ -154,7 +175,21 @@ class RunController:
             # stop_event now would revive that harness and let it write into the new run.
             if self.thread is not None and self.thread.is_alive():
                 raise AppError("run.busy", status_code=409)
+            # M1: Stop during a long start sets the status to stopped while this call
+            # still runs. Without the gate a second start() cleared stop_event and both
+            # went on to launch a harness.
+            self._starting = True
+            self._run_gen += 1
+        try:
+            return self._start()
+        finally:
+            with self.lock:
+                self._starting = False
+
+    def _start(self) -> dict[str, str]:
+        with self.lock:
             self.service_status = "starting"
+            self._closing = False
             self.stop_event.clear()
             self.abort_generation.clear()
             self.chat_input_queue = queue.Queue()
@@ -228,14 +263,12 @@ class RunController:
                 if not stopped_early:
                     self.service_status = "starting"
             if stopped_early:
-                self.finish("cancelled")
-                return {"serviceStatus": "stopped", "runId": run_id}
+                return self._cancel_start(run_id)
             _seed_steps(compiled, run_id)
             publish("run", snapshot.model_dump(by_alias=True))
             self._index_knowledge(compiled, data_dir)
             if self.stop_event.is_set():
-                self.finish("cancelled")
-                return {"serviceStatus": "stopped", "runId": run_id}
+                return self._cancel_start(run_id)
             mcp_bindings = [item for ag in compiled.agents.values() for item in ag.mcp]
             if compiled.orchestrator:
                 mcp_bindings.extend(compiled.orchestrator.mcp)
@@ -277,9 +310,8 @@ class RunController:
                 if not stopped_early:
                     self.service_status = "running"
             if stopped_early:
-                self.finish("cancelled")
-                return {"serviceStatus": "stopped", "runId": run_id}
-            with self.lock:
+                return self._cancel_start(run_id)
+            with self.snap_lock:
                 if self.snapshot is not None:
                     self.snapshot = self.snapshot.model_copy(update={"service_status": "running"})
                     snapshot = self.snapshot
@@ -312,6 +344,22 @@ class RunController:
             self._fail_start("run.startFailed", detail or None)
             raise AppError("run.startFailed", status_code=500, message=detail or None) from exc
 
+    def _cancel_start(self, run_id: str) -> dict[str, str]:
+        """Stop arrived during start. stop() may have finished the run already (M1)."""
+        with self.lock:
+            stopped = self.service_status == "stopped"
+        if stopped:
+            # finish() ran before start() opened MCP sessions; close them here.
+            mcp = get_mcp()
+            if mcp is not None:
+                try:
+                    mcp.close_all()
+                except Exception:
+                    pass
+        else:
+            self.finish("cancelled")
+        return {"serviceStatus": "stopped", "runId": run_id}
+
     def _fail_start(self, message_key: str | None = None, message: str | None = None) -> None:
         run_id = self.run_id
         if run_id:
@@ -332,7 +380,7 @@ class RunController:
         self._phase = None
         self._phase_label = None
         self._wait_ask = None
-        self.teardown(outcome=None)
+        self.teardown(outcome=None, preload_help=False)
         with self.lock:
             self.service_status = "stopped"
             self.run_id = None
@@ -358,6 +406,7 @@ class RunController:
                 continue
             name = node_label(compiled, node_id) or node_id
             worked = False
+            failure: dict = {}
 
             def on_progress(
                 phase: str,
@@ -368,6 +417,12 @@ class RunController:
             ) -> None:
                 nonlocal worked
                 extra = {"name": name, **payload}
+                if phase == "error":
+                    failure.update(payload)
+                    return
+                if phase == "limit":
+                    emit_log("warn", "run.knowledgeIndex.limit", node_id=node_id, payload=extra)
+                    return
                 if phase == "cached":
                     emit_log("info", "run.knowledgeIndex.cached", node_id=node_id, payload=extra)
                     return
@@ -393,7 +448,8 @@ class RunController:
                     "error",
                     "run.knowledgeIndex.failed",
                     node_id=node_id,
-                    payload={"name": name},
+                    # M22: with the reason (embedding error key), not just "failed".
+                    payload={"name": name, **failure},
                 )
                 raise AppError("run.knowledge.failed", status_code=409)
             if worked:
@@ -421,26 +477,34 @@ class RunController:
 
     def _mark_indexing(self, node_id: str) -> None:
         self._node_status(node_id, "running", wait="index")
-        if self.snapshot is None:
-            return
-        activity = self.snapshot.activity.model_copy(update={"current_node_ids": [node_id]})
-        self.snapshot = self.snapshot.model_copy(update={"activity": activity})
-        publish("run", self.snapshot.model_dump(by_alias=True))
+        with self.snap_lock:
+            if self.snapshot is None:
+                return
+            activity = self.snapshot.activity.model_copy(update={"current_node_ids": [node_id]})
+            self.snapshot = self.snapshot.model_copy(update={"activity": activity})
+            payload = self.snapshot.model_dump(by_alias=True)
+        publish("run", payload)
 
     def _clear_indexing(self, node_id: str) -> None:
         self._node_status(node_id, "idle")
-        if self.snapshot is None:
-            return
-        activity = self.snapshot.activity.model_copy(update={"current_node_ids": []})
-        self.snapshot = self.snapshot.model_copy(update={"activity": activity})
-        publish("run", self.snapshot.model_dump(by_alias=True))
+        with self.snap_lock:
+            if self.snapshot is None:
+                return
+            activity = self.snapshot.activity.model_copy(update={"current_node_ids": []})
+            self.snapshot = self.snapshot.model_copy(update={"activity": activity})
+            payload = self.snapshot.model_dump(by_alias=True)
+        publish("run", payload)
 
-    def stop(self) -> dict[str, str]:
+    def stop(self, *, closing: bool = False) -> dict[str, str]:
+        """``closing``: the app window closes; do not load the help model again (M2)."""
         with self.lock:
             if self.service_status in {"stopped", "disconnected"}:
                 return {"serviceStatus": "stopped"}
             self.service_status = "stopping"
             run_id = self.run_id
+            if closing:
+                # The harness may finish the run before this call does.
+                self._closing = True
         publish("service", {"serviceStatus": "stopping"})
         self.stop_event.set()
         self.abort_generation.set()
@@ -455,7 +519,7 @@ class RunController:
         with self.lock:
             already = self.service_status == "stopped"
         if not already:
-            self.finish("cancelled")
+            self.finish("cancelled", preload_help=not closing)
         return {"serviceStatus": "stopped"}
 
     def finish(
@@ -466,6 +530,7 @@ class RunController:
         error_class: str | None = None,
         error_node_id: str | None = None,
         error_node_name: str | None = None,
+        preload_help: bool = True,
     ) -> None:
         run_id = self.run_id
         if run_id:
@@ -501,18 +566,24 @@ class RunController:
             if self.service_status == "stopped":
                 return
         self.clear_wait_ask()
-        self.teardown(outcome=outcome)
+        # M2: unloading models and loading the help model take up to minutes. The
+        # status goes to stopped first; that part runs in the background.
+        self.teardown(outcome=outcome, preload_help=preload_help and not self._closing)
         with self.lock:
             self.service_status = "stopped"
-        if self.snapshot:
-            patch: dict[str, Any] = {"service_status": "stopped", "outcome": outcome}
-            if error_message:
-                patch["error_message"] = error_message
-            self.snapshot = self.snapshot.model_copy(update=patch)
-            publish("run", self.snapshot.model_dump(by_alias=True))
+        payload = None
+        with self.snap_lock:
+            if self.snapshot:
+                patch: dict[str, Any] = {"service_status": "stopped", "outcome": outcome}
+                if error_message:
+                    patch["error_message"] = error_message
+                self.snapshot = self.snapshot.model_copy(update=patch)
+                payload = self.snapshot.model_dump(by_alias=True)
+        if payload is not None:
+            publish("run", payload)
         publish("service", {"serviceStatus": "stopped"})
 
-    def teardown(self, outcome: str | None) -> None:
+    def teardown(self, outcome: str | None, *, preload_help: bool = True) -> None:
         self.stop_event.set()
         mcp = get_mcp()
         if mcp is not None:
@@ -520,29 +591,54 @@ class RunController:
                 mcp.close_all()
             except Exception:
                 pass
-        from app.run.vram import release_others
-        from app.runtime.ollama import ensure_loaded
-        from app.settings.service import load_settings
-
-        try:
-            settings = load_settings()
-        except Exception:
-            settings = None
         # H3: a run without an Ollama model loaded nothing there; do not wait on a
         # daemon that may not even be installed.
-        if settings is not None and _uses_ollama(self.compiled):
-            release_others(settings, self.compiled, current=None)
-            help_chat = settings.help_chat
-            primary = (help_chat.model or "").strip()
-            if help_chat.provider == "ollama" and primary:
-                try:
-                    ensure_loaded(primary)
-                except Exception:
-                    pass
+        if _uses_ollama(self.compiled):
+            self._release_models(self.compiled, preload_help=preload_help)
         self._unloads.clear()
         self._help_model = None
         set_help_degraded(False)
         stop_resources()
+
+    def _release_models(self, compiled: CompiledGraph | None, *, preload_help: bool) -> None:
+        """M2: unload the run's models and preload the help model in the background.
+
+        A start() in between bumps ``_run_gen``; the cleanup then leaves Ollama alone,
+        and the new start waits on ``_cleanup_lock`` before it touches models.
+        """
+        gen = self._run_gen
+
+        def work() -> None:
+            from app.run.vram import release_network
+            from app.runtime.ollama import ensure_loaded
+            from app.settings.service import load_settings
+
+            with self._cleanup_lock:
+                if self._run_gen != gen:
+                    return
+                try:
+                    settings = load_settings()
+                except Exception:
+                    return
+                release_network(settings, compiled)
+                if not preload_help or self._run_gen != gen:
+                    return
+                help_chat = settings.help_chat
+                primary = (help_chat.model or "").strip()
+                if help_chat.provider == "ollama" and primary:
+                    try:
+                        ensure_loaded(primary)
+                    except Exception:
+                        pass
+
+        self._cleanup = threading.Thread(target=work, name="run-cleanup", daemon=True)
+        self._cleanup.start()
+
+    def wait_cleanup(self, timeout: float | None = None) -> None:
+        """Tests and shutdown: wait for the background model cleanup."""
+        thread = getattr(self, "_cleanup", None)
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=timeout)
 
     def _vram_start(self, compiled: CompiledGraph, settings: Any) -> bool:
         from app.runtime.errors import RuntimeApiError
@@ -553,6 +649,9 @@ class RunController:
             # H3: a network of cloud models must start without Ollama.
             set_help_degraded(False)
             return False
+        with self._cleanup_lock:
+            # M2: the last run's model cleanup is done (or skipped) before this one loads.
+            pass
         try:
             installed = {item.name for item in list_ollama_models()}
         except RuntimeApiError as exc:
@@ -589,14 +688,21 @@ class RunController:
                 update_run(run_id, chat=payload or None)
             except StoreUnavailable:
                 pass
-        snap = self.snapshot
-        if snap is None:
-            return
-        prev = snap.chat if isinstance(snap.chat, dict) else {}
-        gen = bool(prev.get("generating")) if generating is None else generating
-        self.snapshot = snap.model_copy(
-            update={"chat": {"messages": payload, "generating": gen}}
-        )
+        with self.snap_lock:
+            snap = self.snapshot
+            if snap is None:
+                return
+            prev = snap.chat if isinstance(snap.chat, dict) else {}
+            gen = bool(prev.get("generating")) if generating is None else generating
+            self.snapshot = snap.model_copy(
+                update={"chat": {"messages": payload, "generating": gen}}
+            )
+
+    def generating(self) -> bool:
+        with self.snap_lock:
+            snap = self.snapshot
+            chat = snap.chat if snap is not None and isinstance(snap.chat, dict) else {}
+            return bool(chat.get("generating"))
 
     def remember_chat(self, msg: ChatMessage, *, generating: bool | None = None) -> None:
         with self.lock:
@@ -611,6 +717,8 @@ class RunController:
                 raise AppError("run.busy", status_code=409)
             run_id = self.run_id or ""
         self.clear_wait_ask(publish_run=True)
+        # M6: a new message ends an earlier "stop generating".
+        self.abort_generation.clear()
         self.chat_input_queue.put(text)
         msg = ChatMessage(
             id=str(uuid.uuid4()),
@@ -622,7 +730,13 @@ class RunController:
         self.remember_chat(msg, generating=True)
 
     def abort_chat(self) -> None:
-        self.abort_generation.set()
+        """M6: stop the model call that answers the chat; the run then waits for the user.
+
+        Only acts while something generates. Set during a wait, the flag would cut off
+        the answer to the next message.
+        """
+        if self.service_status == "running" and self.generating():
+            self.abort_generation.set()
         self.flush_chat(generating=False)
 
 

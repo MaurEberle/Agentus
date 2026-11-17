@@ -124,27 +124,32 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
         )
         outcome = "failed"
     finally:
-        if outcome == "succeeded":
-            emit_log("info", "run.succeeded")
-        elif outcome == "cancelled":
-            emit_log("warn", "run.cancelled")
-        else:
-            emit_log("error", "run.failed")
         extra: dict[str, str] = {}
-        if outcome == "failed" and fail_exc is not None:
-            extra["error_message"] = str(fail_exc)[:500]
-            extra["error_class"] = _run_error_class(fail_exc)
-        elif outcome == "failed" and ctrl.fail_message:
-            extra["error_message"] = ctrl.fail_message
-            extra["error_class"] = ctrl.fail_class or "orchestrator"
-        if outcome == "failed":
-            node_id = getattr(ctrl, "last_error_node_id", None)
-            if node_id:
-                extra["error_node_id"] = node_id
-                name = node_label(compiled, node_id)
-                if name:
-                    extra["error_node_name"] = name
-        ctrl.finish(outcome, **extra)
+        try:
+            if outcome == "succeeded":
+                emit_log("info", "run.succeeded")
+            elif outcome == "cancelled":
+                emit_log("warn", "run.cancelled")
+            else:
+                emit_log("error", "run.failed")
+            if outcome == "failed" and fail_exc is not None:
+                extra["error_message"] = str(fail_exc)[:500]
+                extra["error_class"] = _run_error_class(fail_exc)
+            elif outcome == "failed" and ctrl.fail_message:
+                extra["error_message"] = ctrl.fail_message
+                extra["error_class"] = ctrl.fail_class or "orchestrator"
+            if outcome == "failed":
+                node_id = getattr(ctrl, "last_error_node_id", None)
+                if node_id:
+                    extra["error_node_id"] = node_id
+                    name = node_label(compiled, node_id)
+                    if name:
+                        extra["error_node_name"] = name
+        except Exception:
+            # M5: a closed store or a full disk must not keep the run "running".
+            log.exception("run end log failed run=%s", getattr(ctrl, "run_id", None))
+        finally:
+            ctrl.finish(outcome, **extra)
 
 def _wait_user(ctrl: RunController, compiled: CompiledGraph) -> str | None:
     chat = compiled.chat_input
@@ -293,6 +298,11 @@ def _run_linear(ctrl: RunController, compiled: CompiledGraph, user_text: str) ->
         if text is None:
             if ctrl.stop_event.is_set():
                 break
+            if turn_runtime._user_aborted(ctrl):
+                # M6: a chain has no conversation to return to; stopping it ends the run.
+                emit_log("warn", "run.chat.aborted", node_id=node_id)
+                turn_runtime._set_node(ctrl, node_id, "idle")
+                return "cancelled"
             return "failed" if ctrl.fail_message else "cancelled"
         for target in compiled.agents[node_id].outbound_message:
             pending.append((target, text, False))
@@ -333,6 +343,14 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     spoke = False
     pauses = 0
     while not ctrl.stop_event.is_set():
+        if turn_runtime._user_aborted(ctrl):
+            # M6: "stop generating" in the chat; wait for the user's next message.
+            reply = _wait_after_abort(ctrl, compiled)
+            if reply is None:
+                return "cancelled"
+            memory.add_user(reply)
+            spoke = False
+            continue
         if _drain_user(ctrl, compiled, memory):
             # New user input: a reply to it is a fresh answer, not a second reply.
             spoke = False
@@ -348,7 +366,17 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         tokens = orchestrator_decide._pop_tokens(action)
         _store_memory(ctrl, memory)
         if action is None:
-            return "cancelled" if ctrl.stop_event.is_set() else "failed"
+            if ctrl.stop_event.is_set():
+                return "cancelled"
+            # M6: decide returns None only when the call was cancelled. Without Stop
+            # that was the chat's "stop generating", even if a new message already
+            # cleared the flag.
+            reply = _wait_after_abort(ctrl, compiled)
+            if reply is None:
+                return "cancelled"
+            memory.add_user(reply)
+            spoke = False
+            continue
         if action.get("action") == "failed-window":
             turn_runtime._set_node(ctrl, orch.node_id, "error", error="run.orchestrator.window")
             return "failed"
@@ -673,6 +701,37 @@ def _pause_for_model(ctrl: RunController, compiled: CompiledGraph, key: str) -> 
     if not reply or ctrl.stop_event.is_set():
         return None
     return reply
+
+def _wait_after_abort(ctrl: RunController, compiled: CompiledGraph) -> str | None:
+    """M6: say that generation stopped, then wait for the next user message."""
+    orch = compiled.orchestrator
+    node_id = orch.node_id if orch is not None else None
+    emit_log("warn", "run.chat.aborted", node_id=node_id)
+    if orch is not None:
+        turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+    for agent_id in compiled.agents:
+        runtime = ctrl.snapshot.nodes_runtime.get(agent_id) if ctrl.snapshot else None
+        if runtime is not None and runtime.status == "running":
+            turn_runtime._set_node(ctrl, agent_id, "idle")
+    msg = ChatMessage(
+        id=str(uuid.uuid4()),
+        run_id=ctrl.run_id or "",
+        role="assistant",
+        content="Stopped. Send a message to continue.",
+        created_at=utc_now(),
+        message_key="monitoring.chat.aborted",
+    )
+    ctrl.remember_chat(msg, generating=False)
+    speaker = node_label(compiled, node_id) or "orchestrator"
+    ctrl.set_wait_ask(speaker=speaker, excerpt=msg.content, node_id=node_id)
+    _wait_chat(ctrl, compiled)
+    reply = _queue_get(ctrl)
+    ctrl.abort_generation.clear()
+    _clear_human_wait(ctrl, compiled)
+    if not reply or ctrl.stop_event.is_set():
+        return None
+    return reply
+
 
 def _publish_assistant(ctrl: RunController, text: str) -> None:
     cleaned = text.strip()

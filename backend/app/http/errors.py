@@ -45,8 +45,10 @@ def error_response(
 
 
 def persist_status(message_key: str) -> int:
-    if message_key in {"dataDir.busy", "credentials.inUse"}:
+    if message_key in {"dataDir.busy", "dataDir.targetHasData", "credentials.inUse"}:
         return 409
+    if message_key == "dataDir.switchFailed":
+        return 500
     if message_key == "db.notFound" or message_key.endswith(".notFound"):
         return 404
     if message_key.startswith("dataDir.") or message_key.startswith("store."):

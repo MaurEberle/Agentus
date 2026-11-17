@@ -33,7 +33,7 @@ Chat y registro están encima de la red y la actividad. Las tres tarjetas mantie
 
 ## Chat de red (supervisión)
 
-Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano.
+Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano. **Detener la generación** corta la respuesta en curso. Con orquestador la ejecución sigue abierta y espera tu siguiente mensaje; en una cadena sin orquestador termina como cancelada.
 
 Esto **no** es la burbuja de ayuda. Historial y herramientas son los de la red.
 
@@ -45,7 +45,7 @@ Las cargas y los mensajes **enmascaran** secretos (por ejemplo `Bearer`, prefijo
 
 ## Historial
 
-Cinta: Actualizar, borrar ejecuciones seleccionadas, exportar registros, depurar entradas antiguas según retención (véase Ajustes → Datos, predeterminado 90 días).
+Cinta: Actualizar, borrar ejecuciones seleccionadas, exportar registros, depurar entradas antiguas según retención (véase Ajustes → Datos, predeterminado 90 días; con «Ilimitado» no aparece el botón).
 
 **Un filtro** lo controla todo: periodo (hoy, 7/30 días, desde–hasta), red, modelo, búsqueda (ID de ejecución, red, error). KPI, gráfico «ejecuciones por día», errores más frecuentes, pestañas Historial / Por modelo / Por red y la lista usan el mismo filtro.
 

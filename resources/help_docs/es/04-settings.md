@@ -51,7 +51,7 @@ Borrar quita la configuración del servidor, no Ollama ni las credenciales.
 
 Muestra la **carpeta de datos** y el estado de los almacenes: Ajustes, Ayuda, Espacio de trabajo, Historial — sin vista SQL y sin secretos.
 
-**Cambiar** carpeta solo si ninguna red inicia, corre o se detiene. Las raíces de unidad o de sistema no valen. Opcional copiar el contenido a la carpeta nueva; la antigua se queda.
+**Cambiar** carpeta solo si ninguna red inicia, corre o se detiene. Las raíces de unidad o de sistema no valen. Opcional copiar el contenido a la carpeta nueva; la antigua se queda. Si la carpeta de destino ya tiene datos, la app no copia encima y lo avisa. Si el cambio falla, sigue activa la carpeta anterior.
 
 **Portátil** o una carpeta impuesta desde fuera: ruta **de solo lectura**.
 

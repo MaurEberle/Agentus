@@ -212,14 +212,57 @@ def test_compact_summary_call_is_counted_and_recorded(monkeypatch) -> None:
     monkeypatch.setattr("app.runtime.completions.complete_live", _complete)
     ctrl = SimpleNamespace(stop_event=threading.Event(), run_id="r1")
     compiled = SimpleNamespace(by_id={})
-    llm = SimpleNamespace(provider="ollama", model="m", base_url=None, credential_id=None, node_id="llm1")
+    monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: False)
+    monkeypatch.setattr("app.runtime.ollama.model_block_count", lambda *a, **k: 16)
+    llm = SimpleNamespace(
+        provider="ollama",
+        model="m",
+        base_url=None,
+        credential_id=None,
+        node_id="llm1",
+        num_thread=6,
+        num_gpu=None,
+        num_gpu_percent=None,
+        gpu_placement="auto",
+    )
     from app.runtime.models import ChatMessage
 
-    out = agent_turn._compact_state(ctrl, compiled, "ag", llm, [ChatMessage(role="user", content="x")])
+    out = agent_turn._compact_state(
+        ctrl, compiled, "ag", llm, [ChatMessage(role="user", content="x")], budget=16384
+    )
     assert out == "state"
     assert charged == ["ag"]
     assert recorded and recorded[0]["ok"] is True and recorded[0]["node_id"] == "ag"
     assert requests[0].max_duration_sec and requests[0].max_duration_sec > 0
+    # M7: the summary call runs in the agent's window, so Ollama does not reload the model.
+    assert requests[0].ollama_options["num_ctx"] == 16384
+    assert requests[0].ollama_options["num_thread"] == 6
+
+
+def test_compact_transcript_fits_a_small_window(monkeypatch) -> None:
+    from app.run import agent_turn
+
+    requests: list[CompletionRequest] = []
+    monkeypatch.setattr("app.run.turn_runtime._charge_llm", lambda ctrl, node_id: None)
+    monkeypatch.setattr(agent_turn, "insert_call", lambda **kw: None)
+    monkeypatch.setattr(agent_turn, "emit_log", lambda *a, **k: None)
+    monkeypatch.setattr(
+        "app.runtime.completions.complete_live",
+        lambda req, should_abort=None, on_progress=None: (
+            requests.append(req) or CompletionResult(content="s", model=req.model, finish_reason="stop")
+        ),
+    )
+    ctrl = SimpleNamespace(stop_event=threading.Event(), run_id="r1")
+    llm = SimpleNamespace(provider="openai", model="m", base_url=None, credential_id=None, node_id="llm1")
+    from app.runtime.models import ChatMessage
+
+    long = [ChatMessage(role="user", content="TASK-START")]
+    long += [ChatMessage(role="assistant", content="x" * 1_500) for _ in range(40)]
+    long += [ChatMessage(role="assistant", content="LAST-STATE")]
+    agent_turn._compact_state(ctrl, SimpleNamespace(by_id={}), "ag", llm, long, budget=8192)
+    sent = requests[0].messages[-1].content
+    assert len(sent) <= (8192 - 1200) * 3
+    assert "TASK-START" in sent and "LAST-STATE" in sent
 
 
 # ---------------------------------------------------------------- excel safety

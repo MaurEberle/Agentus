@@ -74,7 +74,7 @@ Delete removes the server config, not Ollama and not credentials. In the network
 
 Shows the **data folder** and store health: settings, help, workspace, history — no SQL browser, no secrets.
 
-**Change folder** only when no network is starting, running, or stopping. Drive or system roots are invalid. Optionally copy contents into the new folder; the old folder stays.
+**Change folder** only when no network is starting, running, or stopping. Drive or system roots are invalid. Optionally copy contents into the new folder; the old folder stays. If the target already holds data, the app does not copy over it and says so. If the switch fails, the previous folder stays active.
 
 **Portable** or an externally fixed folder: path is **read-only**.
 

@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Query, Response
+from pydantic import Field
 
 from app.db.runs import (
     call_stats_by_model,
     delete_runs,
+    count_logs,
     get_run,
     list_calls,
     list_logs,
@@ -25,7 +27,8 @@ class DeleteRunsBody(ApiModel):
 
 
 class PurgeBody(ApiModel):
-    older_than_days: int | None = None
+    # M15: at least one day; 0 used to become 90 and a negative value deleted everything.
+    older_than_days: int | None = Field(default=None, alias="olderThanDays", ge=1, le=36_500)
 
     model_config = ApiModel.model_config
 
@@ -98,17 +101,23 @@ def get_one(run_id: str) -> dict[str, Any]:
     return body
 
 
+LOGS_DEFAULT_LIMIT = 5_000
+
+
 @router.get("/runs/{run_id}/logs")
 def get_logs(
     run_id: str,
     level: str | None = None,
     q: str | None = None,
     nodeId: str | None = None,
+    limit: int = Query(default=LOGS_DEFAULT_LIMIT, ge=1, le=50_000),
 ) -> dict[str, Any]:
+    """The newest ``limit`` log lines, oldest first; ``total`` counts all matches (M16)."""
     if get_run(run_id) is None:
         raise AppError("db.notFound", status_code=404)
-    rows = list_logs(run_id, level=level, q=q, node_id=nodeId)
-    return {"items": [_camel_log(row) for row in rows]}
+    rows = list_logs(run_id, level=level, q=q, node_id=nodeId, limit=limit)
+    total = count_logs(run_id, level=level, q=q, node_id=nodeId)
+    return {"items": [_camel_log(row) for row in rows], "total": total}
 
 
 @router.delete("/runs", status_code=204)
@@ -122,9 +131,19 @@ def delete_many(body: DeleteRunsBody) -> Response:
 
 
 @router.post("/runs/purge")
-def purge(body: dict[str, Any]) -> dict[str, int]:
-    days = int(body.get("olderThanDays") or body.get("older_than_days") or 90)
-    return {"deleted": purge_older_than(days)}
+def purge(body: PurgeBody) -> dict[str, int]:
+    """Delete finished runs older than the given days, or than the retention setting.
+
+    Retention "unlimited" (None) deletes nothing.
+    """
+    days = body.older_than_days
+    if days is None:
+        from app.settings.service import load_settings
+
+        days = load_settings().history_retention_days
+    if days is None:
+        return {"deleted": 0}
+    return {"deleted": purge_older_than(int(days))}
 
 
 def _camel_run(row: dict[str, Any]) -> dict[str, Any]:

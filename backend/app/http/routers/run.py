@@ -42,6 +42,9 @@ def run_get() -> Any:
     return snap.model_dump(by_alias=True)
 
 
+SSE_LOG_REPLAY = 1_000
+
+
 @router.get("/run/stream")
 def run_stream():
     ctrl = get_controller()
@@ -60,7 +63,8 @@ def run_stream():
                 from app.http.routers.runs import _camel_log
                 from app.db.runs import list_logs
 
-                for row in list_logs(run_id):
+                # M16: a reconnect replays the tail, not every line of a long run.
+                for row in list_logs(run_id, limit=SSE_LOG_REPLAY):
                     yield sse_event("log", _camel_log(row))
                 for msg in list(ctrl.conversation):
                     yield sse_event(

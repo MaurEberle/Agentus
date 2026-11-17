@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import socket
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
@@ -198,7 +199,13 @@ def run(
     headers = apply_http_secret(secret if send_secret else None, headers)
     secret_headers = {key.lower() for key in headers} - own
     body = argv.get("body") if method in _BODY_METHODS else None
-    content = None if body is None else str(body)
+    if isinstance(body, (dict, list)):
+        # M10: an object body is JSON, never a Python repr.
+        content = json.dumps(body, ensure_ascii=False)
+        if "content-type" not in {key.lower() for key in headers}:
+            headers["Content-Type"] = "application/json"
+    else:
+        content = None if body is None else str(body)
 
     current = url
     current_method = method

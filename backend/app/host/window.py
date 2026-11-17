@@ -86,7 +86,8 @@ def on_closing(server: Any, port: int) -> bool:
     try:
         from app.run.controller import get_controller
 
-        get_controller().stop()
+        # M2: closing the app does not load the help model again.
+        get_controller().stop(closing=True)
     except Exception:
         pass
     return True

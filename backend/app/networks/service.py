@@ -218,6 +218,18 @@ def validate_network(network_id: str, document: dict[str, Any] | None = None) ->
     }
 
 
+def validate_document_body(document: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(document, dict):
+        raise AppError("networks.invalidDocument", status_code=400)
+    data_dir = str(get_bootstrap().data_dir)
+    doc = AgentNetworkDocument.model_validate(document)
+    errors = validate_document(doc, data_dir=data_dir, **validation_kwargs())
+    return {
+        "valid": not errors,
+        "errors": [e.model_dump(by_alias=True) for e in errors],
+    }
+
+
 def export_network(network_id: str) -> dict[str, Any]:
     row = get_network(network_id)
     if row is None:

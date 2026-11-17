@@ -1,3 +1,6 @@
+/** Text kinds travel as text, zip as base64. */
+export type SaveKind = 'json' | 'jsonl' | 'zip';
+
 export interface ChromeHost {
   minimize: () => void;
   maximize: () => void;
@@ -5,7 +8,7 @@ export interface ChromeHost {
   close: () => void;
   isMaximized: () => boolean | Promise<boolean>;
   pickFolder?: () => Promise<string | null>;
-  saveFile?: (name: string, content: string, kind: 'json' | 'zip') => Promise<string | null>;
+  saveFile?: (name: string, content: string, kind: SaveKind) => Promise<string | null>;
   requestAttention?: (active?: boolean) => void | Promise<void>;
   openExternal?: (url: string) => boolean | Promise<boolean>;
 }

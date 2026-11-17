@@ -185,8 +185,8 @@ export async function setDataDir(input: { path: string; copy?: boolean }): Promi
     method: 'POST',
     body: JSON.stringify(input),
   });
-  await queryClient.invalidateQueries({ queryKey: ['stores'] });
-  await queryClient.invalidateQueries({ queryKey: ['settings'] });
+  // M20: networks, runs, prompts, credentials and the session all live in the new folder.
+  await queryClient.invalidateQueries();
   return location;
 }
 

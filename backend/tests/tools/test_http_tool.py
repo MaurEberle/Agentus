@@ -257,3 +257,25 @@ def test_custom_header_is_dropped_when_a_redirect_leaves_the_origin(
     )
     assert result.ok is True
     assert seen == [("93.184.216.34", "k-1"), ("203.0.113.10", None)]
+
+
+def test_object_body_is_sent_as_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    """M10: an object body goes out as JSON with a JSON content type."""
+    import json
+
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = request.content.decode("utf-8")
+        seen["type"] = request.headers.get("content-type")
+        return httpx.Response(200, text="ok")
+
+    _install(monkeypatch, handler)
+    result = execute_first_party(
+        "http",
+        config={"method": "POST"},
+        args={"url": _PUBLIC, "method": "POST", "body": {"name": "demo", "ok": True}},
+    )
+    assert result.ok is True, result.error_key
+    assert json.loads(str(seen["body"])) == {"name": "demo", "ok": True}
+    assert seen["type"] == "application/json"

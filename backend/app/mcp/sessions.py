@@ -22,6 +22,9 @@ from app.mcp.excel_files import annotate_excel_tools, folder_tool_result, prepar
 from app.mcp.sandbox import confine_tool_arguments, reject_app_db_dsn, resolve_args
 
 IDLE_SEC = 300.0
+# M13: the first ``npx -y`` / ``uvx`` start downloads the package.
+HTTP_START_SEC = 15.0
+STDIO_START_SEC = 120.0
 
 
 class TransportSession(Protocol):
@@ -55,6 +58,7 @@ def connect_transport(
         env=env,
         cwd=cwd,
         headers=headers or {},
+        start_timeout=HTTP_START_SEC if transport == "http" else STDIO_START_SEC,
     )
 
 
@@ -77,6 +81,7 @@ class _SdkSession:
         env: dict[str, str],
         cwd: str | None,
         headers: dict[str, str],
+        start_timeout: float = HTTP_START_SEC,
     ) -> None:
         import asyncio
         import concurrent.futures
@@ -91,7 +96,7 @@ class _SdkSession:
             _lifecycle(self, transport, command, args, url, env, cwd, headers), self._loop
         )
         try:
-            self._ready.result(timeout=15)
+            self._ready.result(timeout=start_timeout)
         except BaseException:
             self.close()
             raise
@@ -489,10 +494,14 @@ class _Live:
         tools: list[McpToolInfo] | None = None,
         root: str | None = None,
         recipe_id: str | None = None,
+        path_keys: list[str] | None = None,
+        path_check_keys: list[str] | None = None,
     ) -> None:
         self.session = session
         self.root = root
         self.recipe_id = recipe_id
+        self.path_keys = None if path_keys is None else frozenset(path_keys)
+        self.path_check_keys = frozenset(path_check_keys or ())
         self.tools = list(tools or [])
         self.last_used = time.monotonic()
         self.timer: threading.Timer | None = None
@@ -605,7 +614,14 @@ class McpSessions:
                 for item in tools
             ]
             put_mcp_server(server_id, stored)
-            live = _Live(session, tools, root=root, recipe_id=recipe.id if recipe else None)
+            live = _Live(
+                session,
+                tools,
+                root=root,
+                recipe_id=recipe.id if recipe else None,
+                path_keys=recipe.path_keys if recipe else None,
+                path_check_keys=recipe.path_check_keys if recipe else None,
+            )
         except BaseException:
             # Listing or persisting failed: the transport is already up, do not leak it.
             try:
@@ -672,7 +688,12 @@ class McpSessions:
             args = default_filesystem_arguments(tool_name, args)
         if live.root:
             try:
-                args = confine_tool_arguments(args, live.root)
+                args = confine_tool_arguments(
+                    args,
+                    live.root,
+                    path_keys=live.path_keys,
+                    check_keys=live.path_check_keys,
+                )
             except AppError as exc:
                 return {"ok": False, "errorKey": exc.message_key}
         if live.recipe_id == "excel":
@@ -742,6 +763,17 @@ class McpSessions:
             timer.start()
 
     def _idle_close(self, server_id: str) -> None:
+        with self._lock:
+            wanted = server_id in self._wanted
+        if wanted:
+            # M13: a run still holds this server. One model call may take far
+            # longer than IDLE_SEC, and a restart drops the server's state.
+            self._arm_idle(server_id)
+            return
+        self._drop(server_id)
+
+    def _drop(self, server_id: str) -> None:
+        """Close one live session. A run that still wants it reopens it on the next call."""
         with self._lock:
             live = self._live.pop(server_id, None)
         if live is None:
