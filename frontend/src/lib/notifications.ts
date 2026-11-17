@@ -11,6 +11,8 @@ export interface NotifyOptions {
   action?: string;
   duration?: number;
   values?: Record<string, string>;
+  /** Button in the toast (the bell entry uses ``action``). */
+  toastAction?: { labelKey: string; onClick: () => void };
 }
 
 function showToast(
@@ -19,6 +21,7 @@ function showToast(
   description: string | undefined,
   id: string,
   duration?: number,
+  action?: { label: string; onClick: () => void },
 ) {
   const options: ExternalToast = {
     id,
@@ -26,6 +29,15 @@ function showToast(
     testId: id,
     duration,
     onDismiss: () => useAppStore.getState().markRead(id),
+    action: action
+      ? {
+          label: action.label,
+          onClick: () => {
+            useAppStore.getState().markRead(id);
+            action.onClick();
+          },
+        }
+      : undefined,
   };
   switch (variant) {
     case 'success':
@@ -62,6 +74,9 @@ export function notify(options: NotifyOptions) {
   }
 
   if (options.toast !== false) {
-    showToast(variant, title, description, id, options.duration);
+    const action = options.toastAction
+      ? { label: i18n.t(options.toastAction.labelKey), onClick: options.toastAction.onClick }
+      : undefined;
+    showToast(variant, title, description, id, options.duration, action);
   }
 }

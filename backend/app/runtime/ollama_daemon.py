@@ -91,6 +91,11 @@ def _inference_vendor_id() -> int | None:
     return int(vendor) if isinstance(vendor, int) else None
 
 
+def inference_vendor_id() -> int | None:
+    """PCI vendor of the GPU used for inference, or None."""
+    return _inference_vendor_id()
+
+
 def ollama_process_env(launch_exe: Path) -> dict[str, str]:
     """Point NVIDIA and AMD at their backend. Intel stays on Ollama's discovery."""
     import os

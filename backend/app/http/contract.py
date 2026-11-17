@@ -37,6 +37,7 @@ class ContractRoute:
 ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("GET", "/api/health", META),
     ContractRoute("GET", "/api/about", META),
+    ContractRoute("POST", "/api/app/restart", META),
     ContractRoute("GET", "/api/session", SESSION),
     ContractRoute("PUT", "/api/session/active-network", SESSION),
     ContractRoute("POST", "/api/run/start", RUN),
@@ -97,6 +98,9 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("GET", "/api/runtime/model-stats", RUNTIME),
     ContractRoute("POST", "/api/runtime/test-llm", RUNTIME),
     ContractRoute("GET", "/api/runtime/resources", RUNTIME),
+    ContractRoute("GET", "/api/runtime/ollama", RUNTIME),
+    ContractRoute("POST", "/api/runtime/ollama/check", RUNTIME),
+    ContractRoute("POST", "/api/runtime/ollama/update", RUNTIME),
     ContractRoute("GET", "/api/mcp/recipes", MCP),
     ContractRoute("GET", "/api/mcp/servers", MCP),
     ContractRoute("POST", "/api/mcp/servers", MCP),

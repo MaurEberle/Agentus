@@ -18,9 +18,11 @@ Arten unter anderem: xAI, OpenAI, Claude, Gemini, OpenAI-kompatibel, Websuche, G
 
 ## Runtime
 
-**Ollama-Basis-URL** (üblich die lokale Adresse von Ollama). **Verbindung prüfen** und die **Modellliste** laufen über die App. Die Liste teilt sich in **Normale Modelle** und **Embedding-Modelle**. Ein Modell gilt als Embedding, wenn der Name `embed` enthält. Eine leere Gruppe zeigt **Keine**.
+**Ollama-Laufzeit:** Im Betrieb **Eigene Laufzeit** (Standard) kopiert die App das installierte Ollama in ihren Ordner und startet die Kopie auf eigenem Port (meist 11435) mit demselben Modellordner. Die Karte zeigt Zustand, Version, Port und die Version des installierten Ollama. Die Ollama-App lädt Updates wie gewohnt. Ist die installierte Version neuer, meldet Agentus das per Benachrichtigung und hier in der Karte. **Übernehmen und neu starten** kopiert die neue Version, startet sie einmal zur Probe, schließt Agentus und öffnet es wieder. Startet die neue Version danach nicht, nutzt die App wieder die alte. Während ein Lauf oder ein Modell-Download läuft, geht das nicht. Findet die App kein installiertes Ollama oder startet die Kopie nicht, nutzt sie die Adresse unten. Im Betrieb **Externes Ollama** nutzt die App nur die Adresse. Ein Wechsel des Betriebs gilt nach einem Neustart.
 
-Ist die Adresse lokal und Ollama installiert, aber aus, startet die App den Dienst beim Öffnen und beendet ihn nicht. Ohne erreichbares Ollama bleiben lokale LLM-Knoten und die Standard-Hilfe stehen. Modelle installierst du mit Ollama selbst oder beim Setup; die App **pullt** zur Laufzeit nicht still. Eine OpenAI-kompatible Basis-URL wird hier nicht mehr angeboten.
+**Ollama-Basis-URL** (bei externem Ollama die Adresse, sonst die Ausweichadresse). **Verbindung prüfen** und die **Modellliste** laufen über die App. Die Liste teilt sich in **Normale Modelle** und **Embedding-Modelle**. Ein Modell gilt als Embedding, wenn der Name `embed` enthält. Eine leere Gruppe zeigt **Keine**.
+
+Ohne erreichbares Ollama bleiben lokale LLM-Knoten und die Standard-Hilfe stehen. Modelle installierst du mit Ollama selbst oder beim Setup; die App **pullt** zur Laufzeit nicht still. Eine OpenAI-kompatible Basis-URL wird hier nicht mehr angeboten.
 
 ## Hilfe-Chatbot
 

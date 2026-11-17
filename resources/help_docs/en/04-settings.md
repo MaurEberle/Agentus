@@ -18,9 +18,11 @@ Kinds include: xAI, OpenAI, Claude, Gemini, OpenAI-compatible, web search, GitHu
 
 ## Runtime
 
-**Ollama base URL** (usually Ollama’s local address). **Ping** and the **model list** go through the app. The list splits into **Normal models** and **Embedding models**. A model counts as an embedding when its name contains `embed`. An empty group shows **None**.
+**Ollama runtime:** In the **Own runtime** mode (default) the app copies the installed Ollama into its folder and starts the copy on its own port (usually 11435) with the same model folder. The card shows state, version, port and the version of the installed Ollama. The Ollama app downloads updates as usual. When the installed version is newer, Agentus says so in a notification and in the card. **Switch and restart** copies the new version, starts it once as a test, closes Agentus and opens it again. If the new version does not start afterwards, the app goes back to the old one. This is not possible while a run or a model download is active. If the app finds no installed Ollama or the copy does not start, it uses the address below. In the **External Ollama** mode the app only uses the address. A mode change applies after a restart.
 
-If the address is local and Ollama is installed but down, the app starts the service when the window opens and does not stop it. Without reachable Ollama, local LLM nodes and default help stall. You install models with Ollama itself or during setup; the app does **not** silently pull at runtime. An OpenAI-compatible base URL is no longer offered here.
+**Ollama base URL** (the address of an external Ollama, otherwise the fallback). **Ping** and the **model list** go through the app. The list splits into **Normal models** and **Embedding models**. A model counts as an embedding when its name contains `embed`. An empty group shows **None**.
+
+Without reachable Ollama, local LLM nodes and default help stall. You install models with Ollama itself or during setup; the app does **not** silently pull at runtime. An OpenAI-compatible base URL is no longer offered here.
 
 ## Help chatbot
 

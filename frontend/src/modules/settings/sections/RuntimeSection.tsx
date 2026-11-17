@@ -18,6 +18,7 @@ import { formatBytes } from '@/lib/format';
 import { notify } from '@/lib/notifications';
 import { patchSettings, pingRuntime, useRuntimeModelsQuery, useSettingsQuery } from '@/modules/settings/api';
 import { isEmbeddingModelName, type RuntimeModel } from '@/modules/settings/model';
+import { OllamaRuntimeCard } from '@/modules/settings/sections/OllamaRuntimeCard';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useSettingsDraft } from '@/modules/settings/store';
 
@@ -100,6 +101,7 @@ export function RuntimeSection() {
   return (
     <div className="max-w-2xl space-y-6">
       <SectionHeader title={t('settings.nav.runtime')} description={t('settings.runtime.lead')} />
+      <OllamaRuntimeCard />
       <div className="grid gap-4">
         <div className="grid gap-1.5">
           <Label htmlFor="ollama-url">{t('settings.runtime.ollamaUrl')}</Label>
@@ -109,6 +111,9 @@ export function RuntimeSection() {
             value={runtime?.ollamaBaseUrl ?? ''}
             onChange={(event) => setRuntime({ ollamaBaseUrl: event.target.value })}
           />
+          {(settings?.ollamaRuntime ?? 'own') === 'own' ? (
+            <p className="text-xs text-muted-foreground">{t('settings.runtime.own.urlHint')}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" onClick={() => void save()} disabled={!dirty || saving} loading={saving}>

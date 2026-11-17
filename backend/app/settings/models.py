@@ -34,6 +34,8 @@ class HelpChatSettings(ApiModel):
 
 class AppSettings(ApiModel):
     ollama_base_url: str = Field(alias="ollamaBaseUrl")
+    # "own": Agentus runs its private Ollama copy; "external": the address above.
+    ollama_runtime: Literal["own", "external"] = Field(default="own", alias="ollamaRuntime")
     openai_compat_base_url: str | None = Field(default=None, alias="openaiCompatBaseUrl")
     help_chat_fab_visible: bool = Field(default=True, alias="helpChatFabVisible")
     help_chat: HelpChatSettings = Field(default_factory=HelpChatSettings, alias="helpChat")
@@ -53,6 +55,7 @@ class AppSettingsPatch(ApiModel):
     )
 
     ollama_base_url: str | None = Field(default=None, alias="ollamaBaseUrl")
+    ollama_runtime: Literal["own", "external"] | None = Field(default=None, alias="ollamaRuntime")
     openai_compat_base_url: str | None = Field(default=None, alias="openaiCompatBaseUrl")
     help_chat_fab_visible: bool | None = Field(default=None, alias="helpChatFabVisible")
     help_chat: dict[str, Any] | None = Field(default=None, alias="helpChat")

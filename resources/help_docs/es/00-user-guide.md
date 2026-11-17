@@ -2,7 +2,7 @@
 
 Agentus Network es una **aplicación de escritorio local**. En este PC construyes redes de agentes, modelos de idioma y herramientas, inicias **una** ejecución y la ves en vivo. La interfaz pertenece a la propia app (su ventana), no a Chrome ni a una página `file://`.
 
-Ollama es un **servicio aparte**. Cerrar o desinstalar Agentus Network no detiene Ollama ni borra modelos. Si Ollama está instalado en este PC, la dirección en Ajustes es local y el servicio está parado, la app lo arranca al abrir la ventana.
+Agentus ejecuta una **copia propia** de Ollama en su propio puerto, con la misma carpeta de modelos que el Ollama instalado. La copia se cierra con la app. El Ollama instalado y sus modelos no se tocan, tampoco al desinstalar. Cuando la app de Ollama se actualiza, Agentus sigue funcionando: la app avisa de la versión nueva y la adopta con un botón; para ello se reinicia. En el modo **Ollama externo** la app usa la dirección de Ajustes; si es local y el servicio está parado, arranca un Ollama instalado como antes.
 
 ## Ventana y navegación
 
@@ -22,7 +22,7 @@ Arrastra el logotipo o el encabezado vacío para mover la ventana. Iniciar, Dete
 
 ## Primer recorrido
 
-1. Ollama debe ser alcanzable. La app arranca sola un servicio local si está instalado pero parado. El setup puede crear Ollama, iniciarlo un momento en segundo plano y traer los modelos pequeños `nomic-embed-text` y `llama3.2:1b`, solo si Ollama responde. Un setup silencioso sin el interruptor de modelos no descarga nada. Una descarga fallida termina el setup igual con éxito.
+1. Ollama debe estar instalado. En el primer inicio la app lo copia una vez en su carpeta (entre unos 130 MB y 1,2 GB según la tarjeta gráfica) y arranca la copia ella misma. El setup puede crear Ollama, iniciarlo un momento en segundo plano y traer los modelos pequeños `nomic-embed-text` y `llama3.2:1b`, solo si Ollama responde. Un setup silencioso sin el interruptor de modelos no descarga nada. Una descarga fallida termina el setup igual con éxito.
 2. En **Ajustes → Runtime** comprueba la conexión; la lista de modelos no debe estar vacía.
 3. En **Ajustes → Chat de ayuda** elige proveedor y modelo de chat (predeterminado: Ollama + `llama3.2:1b`). Los embeddings son **otro** modelo (`nomic-embed-text`).
 4. En la **Biblioteca** o en el editor crea una red, guárdala y **actívala** en la selección rápida.
@@ -61,7 +61,7 @@ Sin red activa no arranca nada. Una red inválida (error de validación, modelo 
 
 Mientras corre la red activa, **ese** documento del editor es de solo lectura. Puedes seguir viendo otras redes; borrar la red en ejecución en la biblioteca está bloqueado.
 
-Cerrar la ventana termina la ejecución y la app. Ollama sigue vivo.
+Cerrar la ventana termina la ejecución, la app y su copia de Ollama. El Ollama instalado sigue vivo.
 
 ## El chat de ayuda no es el chat de la red
 

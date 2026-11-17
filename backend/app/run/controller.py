@@ -652,6 +652,10 @@ class RunController:
         with self._cleanup_lock:
             # M2: the last run's model cleanup is done (or skipped) before this one loads.
             pass
+        from app.runtime.ollama_own import wait_own_ollama
+
+        # Right after the app start the own Ollama copy may still be starting.
+        wait_own_ollama(timeout_sec=60)
         try:
             installed = {item.name for item in list_ollama_models()}
         except RuntimeApiError as exc:

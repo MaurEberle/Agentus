@@ -186,6 +186,15 @@ def spawn_env(
 
 def llama_server_exe() -> Path | None:
     candidates: list[Path] = []
+    try:
+        from app.runtime.ollama_own import own_lib_dir
+
+        own = own_lib_dir()
+    except Exception:
+        own = None
+    if own is not None:
+        # The copy, not the installation: an Ollama update must not end this runner.
+        candidates.append(own / "llama-server.exe")
     local = os.environ.get("LOCALAPPDATA")
     if local:
         candidates.append(Path(local) / "Programs" / "Ollama" / "lib" / "ollama" / "llama-server.exe")

@@ -136,12 +136,26 @@ def models_url(
     )
 
 
+def _own_root() -> str | None:
+    try:
+        from app.runtime.ollama_own import own_root_url
+
+        return own_root_url()
+    except Exception:
+        return None
+
+
 def settings_roots() -> tuple[str, str | None]:
-    """``(ollama_root, openai_compat_base_url_or_none)`` from settings, with defaults."""
+    """``(ollama_root, openai_compat_base_url_or_none)`` from settings, with defaults.
+
+    While Agentus runs its own Ollama copy, that copy is the Ollama root; the
+    configured address is the fallback when the copy is off or failed.
+    """
+    own = _own_root()
     try:
         from app.settings.service import load_settings
 
         settings = load_settings()
-        return ollama_native_root(settings.ollama_base_url), settings.openai_compat_base_url
+        return own or ollama_native_root(settings.ollama_base_url), settings.openai_compat_base_url
     except Exception:
-        return ollama_native_root(None), None
+        return own or ollama_native_root(None), None

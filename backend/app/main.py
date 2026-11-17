@@ -71,13 +71,15 @@ def _bootstrap() -> None:
 
 
 def _maybe_start_ollama() -> None:
-    """Installed Ollama that is stopped: start it. Never stop it later."""
+    """Own Ollama copy (default), or start the installed Ollama as before."""
     try:
-        from app.runtime.ollama_daemon import start_local_ollama_background
+        from app.runtime.ollama_own import boot_ollama_runtime
 
-        start_local_ollama_background()
+        boot_ollama_runtime()
     except Exception:
-        pass
+        import logging
+
+        logging.getLogger("agentus").exception("starting the Ollama runtime failed")
 
 
 def _run() -> None:
@@ -86,6 +88,10 @@ def _run() -> None:
 
         multiprocessing.freeze_support()
     ensure_stdio()
+    # A restart: the old instance still closes; wait before lock and port.
+    from app.host.restart import wait_for_previous
+
+    wait_for_previous()
     host = os.environ.get("AGENTUS_NETWORK_API_HOST", "127.0.0.1")
     port = _port()
     assert_loopback(host)

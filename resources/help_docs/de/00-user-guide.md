@@ -2,7 +2,7 @@
 
 Agentus Network ist eine **lokale Desktop-App**. Du baust auf diesem PC Netze aus Agenten, Sprachmodellen und Werkzeugen, startest **einen** Lauf und siehst ihn live. Die Oberfläche gehört zur App selbst (eigenes Fenster), nicht zu Chrome und nicht zu einer `file://`-Seite.
 
-Ollama ist ein **eigener Dienst** neben der App. Schließen oder Deinstallieren von Agentus Network beendet Ollama nicht und löscht keine Modelle. Ist Ollama auf diesem PC installiert, die Adresse in den Einstellungen lokal und der Dienst aus, startet die App ihn beim Öffnen.
+Agentus startet eine **eigene Kopie** von Ollama auf eigenem Port, mit demselben Modellordner wie das installierte Ollama. Die Kopie endet mit der App. Das installierte Ollama und seine Modelle bleiben unberührt, auch beim Deinstallieren. Aktualisiert sich die Ollama-App, läuft Agentus weiter: Die App meldet die neuere Version und übernimmt sie auf Knopfdruck; dafür startet sie neu. Im Betrieb **Externes Ollama** nutzt die App die Adresse aus den Einstellungen; ist sie lokal und der Dienst aus, startet die App ein installiertes Ollama wie früher.
 
 ## Fenster und Navigation
 
@@ -22,7 +22,7 @@ Ziehen am Logo oder an leerem Header-Bereich verschiebt das Fenster. Start, Stop
 
 ## Erster Durchgang
 
-1. Ollama muss erreichbar sein. Die App startet einen lokalen Dienst selbst, wenn er installiert, aber aus ist. Das Setup kann Ollama anlegen, ihn kurz im Hintergrund starten und die kleinen Modelle `nomic-embed-text` und `llama3.2:1b` holen — nur, wenn Ollama antwortet. Ein stilles Setup ohne Modell-Schalter lädt keine Modelle. Ein fehlgeschlagener Download beendet das Setup trotzdem erfolgreich.
+1. Ollama muss installiert sein. Beim ersten Start kopiert die App es einmalig in ihren Ordner (je nach Grafikkarte etwa 130 MB bis 1,2 GB) und startet die Kopie selbst. Das Setup kann Ollama anlegen, ihn kurz im Hintergrund starten und die kleinen Modelle `nomic-embed-text` und `llama3.2:1b` holen — nur, wenn Ollama antwortet. Ein stilles Setup ohne Modell-Schalter lädt keine Modelle. Ein fehlgeschlagener Download beendet das Setup trotzdem erfolgreich.
 2. Unter **Einstellungen → Runtime** Verbindung prüfen; die Modellliste darf nicht leer sein.
 3. Unter **Einstellungen → Hilfe-Chatbot** Provider und Chat-Modell setzen (Default: Ollama + `llama3.2:1b`). Embeddings bleiben ein **anderes** Modell (`nomic-embed-text`).
 4. In der **Verwaltung** oder im Editor ein Netz anlegen, speichern, in der Schnellwahl **als aktiv** setzen.
@@ -61,7 +61,7 @@ Ohne aktives Netz startet nichts. Ein ungültiges Netz (Validierungsfehler, fehl
 
 Während das aktive Netz läuft, ist **dieses** Dokument im Editor schreibgeschützt. Andere Netze kannst du weiter ansehen; Löschen des laufenden Netzes in der Verwaltung ist gesperrt.
 
-Schließen des Fensters beendet den Lauf und die App. Ollama lebt weiter.
+Schließen des Fensters beendet den Lauf, die App und ihre Ollama-Kopie. Das installierte Ollama lebt weiter.
 
 ## Hilfe-Chatbot ist nicht der Netz-Chat
 

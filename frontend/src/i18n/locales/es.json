@@ -231,6 +231,11 @@
     }
   },
   "notify": {
+    "ollamaUpdate": {
+      "title": "Ollama {{version}} está disponible",
+      "desc": "Agentus usa {{current}}. Cámbialo en Ajustes → Runtime; Agentus se reinicia para ello.",
+      "action": "Abrir"
+    },
     "welcome": {
       "title": "Bienvenido a Agentus Network",
       "desc": "Elige una red e inicia una ejecución desde la cabecera."
@@ -422,6 +427,63 @@
       "openModels": "Abrir la biblioteca de modelos",
       "modelName": "Modelo",
       "modelSize": "Tamaño",
+      "own": {
+        "title": "Entorno de Ollama",
+        "lead": "Agentus ejecuta su propia copia de Ollama. Las actualizaciones de la app de Ollama ya no interrumpen Agentus.",
+        "modeLabel": "Modo",
+        "modeOwn": "Entorno propio (recomendado)",
+        "modeOwnHint": "Agentus copia el Ollama instalado en su carpeta y lo inicia en su propio puerto con la misma carpeta de modelos. La copia se cierra con Agentus.",
+        "modeExternal": "Ollama externo",
+        "modeExternalHint": "Agentus usa la dirección de abajo, por ejemplo un Ollama en otro equipo.",
+        "stateLabel": "Estado",
+        "state": {
+          "disabled": "Desactivado",
+          "preparing": "Preparando",
+          "starting": "Iniciando",
+          "running": "En marcha",
+          "failed": "Error",
+          "unavailable": "No disponible",
+          "stopped": "Detenido"
+        },
+        "version": "Versión {{version}}",
+        "port": "Puerto {{port}}",
+        "installedLabel": "Ollama instalado",
+        "installed": "Ollama instalado: {{version}}",
+        "installedNone": "No se encontró ningún Ollama instalado.",
+        "checkedAt": "comprobado {{time}}",
+        "check": "Buscar actualizaciones",
+        "checkNone": "No hay una versión más reciente de Ollama instalada.",
+        "updateTitle": "Ollama {{version}} está disponible",
+        "updateDesc": "Agentus usa {{current}}. Para cambiar, Agentus se cierra y se vuelve a abrir solo.",
+        "updateButton": "Cambiar y reiniciar",
+        "confirmTitle": "¿Cambiar a Ollama {{version}}?",
+        "confirmDesc": "Agentus copia la nueva versión, la inicia una vez como prueba y luego se reinicia. Si después no funciona, Agentus vuelve a {{current}}.",
+        "confirmOk": "Cambiar",
+        "restarting": "Agentus se está reiniciando …",
+        "staged": "Ollama {{version}} está lista y se usará tras el próximo reinicio de Agentus.",
+        "restartTitle": "Hace falta reiniciar",
+        "restartModeDesc": "El nuevo modo se aplica cuando Agentus se reinicia.",
+        "restartButton": "Reiniciar Agentus",
+        "restartManual": "Reinicia Agentus manualmente.",
+        "urlHint": "Con el entorno propio, esta es la dirección de reserva si la copia no arranca.",
+        "logPath": "Registro: {{path}}",
+        "messages": {
+          "noSource": "No se encontró ningún Ollama instalado. Agentus usa la dirección de abajo.",
+          "copyFailed": "No se pudo copiar Ollama en la carpeta de Agentus. Agentus usa la dirección de abajo.",
+          "diskFull": "No hay espacio suficiente para la copia de Ollama.",
+          "probeFailed": "La nueva versión de Ollama no arrancó en la prueba. Agentus mantiene la actual.",
+          "sourceChanged": "Ollama se está actualizando ahora mismo. Inténtalo de nuevo en un minuto.",
+          "versionUnknown": "No se puede leer la versión del Ollama instalado.",
+          "startFailed": "La copia propia de Ollama no arrancó. Agentus usa la dirección de abajo.",
+          "crashed": "La copia propia de Ollama falló varias veces. Agentus usa la dirección de abajo.",
+          "rolledBack": "Ollama {{failed}} no arrancó. Agentus vuelve a usar {{version}}.",
+          "busy": "No es posible mientras haya una ejecución activa.",
+          "downloadRunning": "Espera a que termine la descarga del modelo.",
+          "notActive": "Agentus no está usando ahora su propia copia de Ollama.",
+          "noUpdate": "No hay una versión más reciente de Ollama instalada.",
+          "restartBusy": "Agentus no se reinicia mientras haya una ejecución activa."
+        }
+      },
       "status": {
         "unknown": "Desconocido",
         "ok": "OK",

@@ -10,6 +10,7 @@ DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 def default_settings() -> AppSettings:
     return AppSettings(
         ollama_base_url=DEFAULT_OLLAMA_BASE_URL,
+        ollama_runtime="own",
         openai_compat_base_url=None,
         help_chat_fab_visible=True,
         help_chat=HelpChatSettings(

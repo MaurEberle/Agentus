@@ -6,6 +6,7 @@ import { HelpChatHost } from '@/components/help-chat/HelpChatHost';
 import { BootScreen } from '@/components/layout/BootScreen';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { OllamaRuntimeWatcher } from '@/components/layout/OllamaRuntimeWatcher';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { useHydrateSession, useSessionQuery } from '@/api/session';
@@ -82,6 +83,7 @@ export function AppShell() {
       <FolderPickerHost />
       <HelpChatHost />
       <WaitAskHost />
+      <OllamaRuntimeWatcher />
     </div>
   );
 }

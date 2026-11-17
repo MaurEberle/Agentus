@@ -231,6 +231,11 @@
     }
   },
   "notify": {
+    "ollamaUpdate": {
+      "title": "Ollama {{version}} is available",
+      "desc": "Agentus uses {{current}}. Switch in Settings → Runtime; Agentus restarts for it.",
+      "action": "Open"
+    },
     "welcome": {
       "title": "Welcome to Agentus Network",
       "desc": "Select a network and start a run from the header."
@@ -422,6 +427,63 @@
       "openModels": "Open model library",
       "modelName": "Model",
       "modelSize": "Size",
+      "own": {
+        "title": "Ollama runtime",
+        "lead": "Agentus runs its own copy of Ollama. Updates of the Ollama app no longer interrupt Agentus.",
+        "modeLabel": "Mode",
+        "modeOwn": "Own runtime (recommended)",
+        "modeOwnHint": "Agentus copies the installed Ollama into its folder and starts it on its own port with the same model folder. The copy ends with Agentus.",
+        "modeExternal": "External Ollama",
+        "modeExternalHint": "Agentus uses the address below, for example an Ollama on another computer.",
+        "stateLabel": "State",
+        "state": {
+          "disabled": "Off",
+          "preparing": "Setting up",
+          "starting": "Starting",
+          "running": "Running",
+          "failed": "Error",
+          "unavailable": "Not available",
+          "stopped": "Stopped"
+        },
+        "version": "Version {{version}}",
+        "port": "Port {{port}}",
+        "installedLabel": "Installed Ollama",
+        "installed": "Installed Ollama: {{version}}",
+        "installedNone": "No installed Ollama found.",
+        "checkedAt": "checked {{time}}",
+        "check": "Check for updates",
+        "checkNone": "No newer Ollama version is installed.",
+        "updateTitle": "Ollama {{version}} is available",
+        "updateDesc": "Agentus uses {{current}}. To switch, Agentus closes and opens again on its own.",
+        "updateButton": "Switch and restart",
+        "confirmTitle": "Switch to Ollama {{version}}?",
+        "confirmDesc": "Agentus copies the new version, starts it once as a test and then restarts. If it does not run afterwards, Agentus goes back to {{current}}.",
+        "confirmOk": "Switch",
+        "restarting": "Agentus is restarting …",
+        "staged": "Ollama {{version}} is ready and will be used after the next restart of Agentus.",
+        "restartTitle": "Restart needed",
+        "restartModeDesc": "The new mode applies after Agentus restarts.",
+        "restartButton": "Restart Agentus",
+        "restartManual": "Please restart Agentus yourself.",
+        "urlHint": "With the own runtime, this is the fallback address if the copy does not start.",
+        "logPath": "Log: {{path}}",
+        "messages": {
+          "noSource": "No installed Ollama found. Agentus uses the address below.",
+          "copyFailed": "Ollama could not be copied into the Agentus folder. Agentus uses the address below.",
+          "diskFull": "Not enough disk space for the Ollama copy.",
+          "probeFailed": "The new Ollama version did not start in the test. Agentus keeps the current one.",
+          "sourceChanged": "Ollama is being updated right now. Try again in a minute.",
+          "versionUnknown": "The version of the installed Ollama cannot be read.",
+          "startFailed": "The own Ollama copy did not start. Agentus uses the address below.",
+          "crashed": "The own Ollama copy crashed several times. Agentus uses the address below.",
+          "rolledBack": "Ollama {{failed}} did not start. Agentus uses {{version}} again.",
+          "busy": "Not possible while a run is active.",
+          "downloadRunning": "Wait until the model download has finished.",
+          "notActive": "Agentus is not using its own Ollama copy right now.",
+          "noUpdate": "No newer Ollama version is installed.",
+          "restartBusy": "Agentus does not restart while a run is active."
+        }
+      },
       "status": {
         "unknown": "Unknown",
         "ok": "OK",

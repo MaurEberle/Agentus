@@ -18,6 +18,7 @@ from app.host.native_frame import (
     set_window_icon,
 )
 from app.host.navigation import guard_navigation, is_allowed_url
+from app.host import restart
 from app.host.server import start_uvicorn, stop_uvicorn, wait_health
 from app.host.single_instance import WINDOW_TITLE, acquire, release
 
@@ -121,6 +122,7 @@ def run_host(host: str, port: int) -> None:
             shadow=True,
         )
         api._window = win
+        restart.set_window(win)
 
         def _shown() -> None:
             enable_frameless_resize(win)
@@ -161,6 +163,16 @@ def run_host(host: str, port: int) -> None:
         except Exception as exc:
             raise SystemExit("host.webview2.missing") from exc
     finally:
+        restart.set_window(None)
+        try:
+            from app.runtime.ollama_own import shutdown_ollama_runtime
+
+            shutdown_ollama_runtime()
+        except Exception:
+            log.debug("stopping own Ollama failed", exc_info=True)
         release()
         if server is not None:
             stop_uvicorn(server)
+        if restart.pending():
+            # The next instance waits for this process to end.
+            restart.exit_now()
