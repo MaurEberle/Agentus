@@ -2,12 +2,10 @@ import type {
   ChatInputConfig,
   ChatMessage,
   LogEvent,
-  LogLevel,
   NodeRuntime,
   RunGraph,
   RunSnapshot,
 } from '@/modules/monitoring/model/types';
-import { logLevelRank } from '@/modules/monitoring/model/format';
 
 export function hasChatInput(graph: RunGraph | undefined | null): boolean {
   return Boolean(graph?.nodes.some((node) => node.type === 'chat_input'));
@@ -193,33 +191,6 @@ export function logHasExtra(event: LogEvent): boolean {
   if (Array.isArray(event.payload)) return event.payload.length > 0;
   if (typeof event.payload === 'object') return Object.keys(event.payload).length > 0;
   return true;
-}
-
-// Lines older runs still hold but the app no longer writes or shows (VRAM/expert split per model call).
-const RETIRED_LOG_MESSAGES = new Set(['run.llm.vram']);
-
-export function filterLogs(
-  logs: LogEvent[],
-  opts: {
-    levelMin: LogLevel;
-    query: string;
-    nodeId: string | null;
-    errorsOnly: boolean;
-  },
-): LogEvent[] {
-  const q = opts.query.trim().toLowerCase();
-  const min = logLevelRank(opts.levelMin);
-  return logs.filter((event) => {
-    if (RETIRED_LOG_MESSAGES.has(event.message)) return false;
-    if (logLevelRank(event.level) < min) return false;
-    if (opts.errorsOnly && event.level !== 'error' && event.level !== 'warn') return false;
-    if (opts.nodeId && event.nodeId !== opts.nodeId) return false;
-    if (q) {
-      const hay = `${event.message} ${event.nodeName ?? ''} ${event.nodeId ?? ''}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
 }
 
 export function parseMockScenario(value: string | null | undefined): import('./types').MockScenario | null {

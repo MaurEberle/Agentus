@@ -62,7 +62,8 @@ def _terminal_hint(key: str, config: dict[str, Any]) -> str | None:
     if leaf == "shellSyntax":
         return (
             "There is no shell. Send one program with its arguments, without &&, ;, |, >, 2> or cd. "
-            f"The working directory is already the project root {root}."
+            f"The working directory is already the project root {root}, and stdout and stderr "
+            "both come back, so cd to the root, 2>&1 and a trailing | head or | tail are not needed."
         )
     if leaf == "notGranted":
         programs = ", ".join(_programs(config)) or "none"
@@ -71,7 +72,11 @@ def _terminal_hint(key: str, config: dict[str, Any]) -> str | None:
             "use the file_access tool to list and read files."
         )
     if leaf == "inlineCode":
-        return "Inline code (-c, -e, --eval) is not allowed. Write a script file with file_access and run that file."
+        return (
+            "Inline code (-c, -e, --eval) is not allowed. Read and check files with the file_access tool, "
+            "and build or test with the project's own scripts (for example npm run build or npm test). "
+            "Do not add helper scripts to the project; if one is unavoidable, delete it when you are done."
+        )
     if leaf == "outsideRoot":
         return f"A directory option must point inside the project root {root}. Leave it out; the command already runs there."
     if leaf == "timeout":

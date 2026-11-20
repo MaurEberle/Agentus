@@ -206,7 +206,9 @@ def test_a_tool_without_its_folder_is_switched_off_for_the_run(monkeypatch, api_
     assert "does not exist" in seen[0]["hint"] and "switched off for the rest of this run" in seen[0]["hint"]
     assert seen[1]["error"] == "tool.disabled"
     assert offered[0] == ["terminal"] and offered[1] == []
-    assert _payloads(stored, "run.tool.disabled") == [{"name": "terminal", "error": "tools.terminal.rootNotDir"}]
+    assert _payloads(stored, "run.tool.disabled") == [
+        {"name": "terminal", "error": "tools.terminal.rootNotDir", "caller": "ag", "callerName": "agent"}
+    ]
 
 
 def test_a_missing_tool_folder_fails_validation(monkeypatch, tmp_path: Path) -> None:

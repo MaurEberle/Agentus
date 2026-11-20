@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 
 from app.db.engine import utc_now
@@ -188,8 +189,44 @@ def _orchestrator_call(
     record = memory.begin_call(agent_id, name, task, has_tools)
     record.retry = is_text_retry
     memory.allow_own_tools = False
+    call_no = len(memory.records)
+    call_started = time.perf_counter()
+    emit_log(
+        "info",
+        "run.agent.start",
+        node_id=agent_id,
+        payload=agent_turn._start_payload(
+            compiled, agent_id, task, name=name, call=call_no, retry=is_text_retry
+        ),
+    )
+
+    def _log_done(outcome: str | None = None) -> None:
+        # B3: once per call, also when the call continued after an error.
+        if outcome is None:
+            outcome = "anomaly" if record.error else ("textOnly" if record.text_only else "done")
+        files = [fact.path for fact in record.files if fact.ok and fact.action in _FILE_MUTATIONS and fact.path]
+        emit_log(
+            "info" if outcome in {"done", "textOnly"} else "warn",
+            "run.agent.done",
+            node_id=agent_id,
+            payload=agent_turn.done_payload(
+                compiled,
+                agent_id,
+                name=name,
+                call=call_no,
+                duration_ms=int((time.perf_counter() - call_started) * 1000),
+                tools=len(record.tools),
+                tools_failed=sum(1 for event in record.tools if not event.ok),
+                files=files,
+                outcome=outcome,
+                text=record.text or "",
+                reason="" if outcome in {"stopped", "cancelled"} else record.error,
+                capped=record.capped,
+            ),
+        )
 
     def _ran() -> str:
+        _log_done()
         _count_file_attempt(compiled, memory, agent, record)
         if is_text_retry:
             _review_text_retry(compiled, memory, agent, record)
@@ -216,9 +253,11 @@ def _orchestrator_call(
         )
         if text is None:
             if ctrl.stop_event.is_set():
+                _log_done("cancelled")
                 return "cancelled"
             if record.error == turn_runtime.USER_STOPPED:
                 # M6: the user stopped it; the loop waits for the next message.
+                _log_done("stopped")
                 return "ran"
             # O17: the agent turn gave up without a result; tell the orchestrator why.
             record.error = record.error or "agent stopped"
@@ -283,6 +322,7 @@ def _orchestrator_call(
             _publish_progress(ctrl, name, record)
             memory.add_note(f"Status already shown to the user: {name} finished.")
         return _ran()
+    _log_done("cancelled")
     return "cancelled"
 
 def _publish_progress(ctrl: RunController, name: str, record: AgentRecord) -> None:

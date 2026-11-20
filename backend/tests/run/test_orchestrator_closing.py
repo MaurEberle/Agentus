@@ -123,7 +123,7 @@ def test_tool_markup_as_text_never_reaches_the_chat(monkeypatch, api_env) -> Non
     stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
     assert stored["outcome"] == "succeeded", stored.get("error_message")
     assert state["decide_note"] is True
-    assert len(executed) == 10
+    assert len(executed) == 15
     assert not any("<tool_call>" in text for text in _chat(stored))
 
 

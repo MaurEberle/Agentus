@@ -93,6 +93,8 @@ export type OrchestratorNodeData = {
   agentMissLimit?: number;
   /** Own tool calls per decision (1–1000). Unset: 50. */
   maxToolCalls?: number;
+  /** Reads per decision while the orchestrator may only read, before a failed agent call (1–1000). Unset: 15. */
+  maxReadCalls?: number;
   /** Model calls per run, orchestrator and agents together (10–10000). Unset: 1000. */
   maxLlmCalls?: number;
   /** Agent calls per run (1–500). At the limit the orchestrator writes a summary, then the run ends. Unset: 50. */

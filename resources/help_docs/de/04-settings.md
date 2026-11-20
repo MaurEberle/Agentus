@@ -84,3 +84,5 @@ Ordner **wechseln** nur, wenn kein Netz startet, läuft oder stoppt. Laufwerks- 
 ## Über
 
 UI- und API-Version, grober Ollama-Status, ob Stores erreichbar sind. Keine Geheimnisse, keine internen Dateipfade mit Benutzername in der Fläche, die du teilen würdest.
+
+**App-Log:** Die App schreibt Fehler und Meldungen außerhalb eines Laufs in `agentus.log` (zum Beispiel ein nicht gespeichertes Laufgedächtnis, abgestürzte Werkzeuge, die eigene Ollama-Kopie, MCP-Fehler). Die Datei wechselt bei 5 MB, drei ältere bleiben. Geheimnisse werden maskiert. **Ordner öffnen** zeigt den Ordner im Explorer, ohne den Pfad hier anzuzeigen.

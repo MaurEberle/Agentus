@@ -53,6 +53,8 @@ class CompiledOrchestrator:
     max_tool_calls: int | None = None
     max_llm_calls: int | None = None
     max_agent_calls: int | None = None
+    # Reads per decision while the orchestrator may only read (MAX_READ_DECISION_CALLS).
+    max_read_calls: int | None = None
 
 
 @dataclass
@@ -315,6 +317,7 @@ def _compile_orchestrator(
         max_tool_calls=_node_count(node.data, "maxToolCalls", NODE_TOOL_CALLS_MIN, NODE_TOOL_CALLS_MAX),
         max_llm_calls=_node_count(node.data, "maxLlmCalls", NODE_LLM_CALLS_MIN, NODE_LLM_CALLS_MAX),
         max_agent_calls=_node_count(node.data, "maxAgentCalls", NODE_AGENT_CALLS_MIN, NODE_AGENT_CALLS_MAX),
+        max_read_calls=_node_count(node.data, "maxReadCalls", NODE_TOOL_CALLS_MIN, NODE_TOOL_CALLS_MAX),
     )
 
 

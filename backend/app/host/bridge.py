@@ -9,10 +9,11 @@ _SAVE_FILTERS = {
     "json": "JSON (*.json)",
     "jsonl": "JSON Lines (*.jsonl)",
     "zip": "ZIP (*.zip)",
+    "md": "Markdown (*.md)",
 }
 # Kinds whose content arrives as text; the others come base64 encoded.
-_TEXT_KINDS = frozenset({"json", "jsonl"})
-_DEFAULT_NAMES = {"json": "network.json", "jsonl": "logs.jsonl", "zip": "networks.zip"}
+_TEXT_KINDS = frozenset({"json", "jsonl", "md"})
+_DEFAULT_NAMES = {"json": "network.json", "jsonl": "logs.jsonl", "zip": "networks.zip", "md": "log.md"}
 
 
 class ChromeHostApi:

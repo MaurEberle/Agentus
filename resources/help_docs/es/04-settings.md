@@ -62,3 +62,5 @@ Muestra la **carpeta de datos** y el estado de los almacenes: Ajustes, Ayuda, Es
 ## Acerca de
 
 Versión de UI y API, estado aproximado de Ollama, si los almacenes responden. Sin secretos ni rutas internas con nombre de usuario en una superficie que compartirías.
+
+**Registro de la app:** La app escribe errores y mensajes fuera de una ejecución en `agentus.log` (por ejemplo una memoria de ejecución no guardada, herramientas que fallaron, la copia propia de Ollama, errores de MCP). El archivo rota a los 5 MB y guarda tres anteriores. Los secretos se enmascaran. **Abrir carpeta** muestra la carpeta en el Explorador sin mostrar aquí su ruta.

@@ -222,6 +222,11 @@ export async function restartApp(): Promise<{ restart: boolean }> {
   return apiFetch<{ restart: boolean }>('/app/restart', { method: 'POST' });
 }
 
+/** Open the folder with agentus.log in the file manager. The path stays on the backend. */
+export async function openLogFolder(): Promise<{ opened: boolean }> {
+  return apiFetch<{ opened: boolean }>('/app/open-logs', { method: 'POST' });
+}
+
 const OLLAMA_SETTLING = new Set(['preparing', 'starting']);
 
 /** Fast while the copy starts, then every five minutes (the backend checks hourly). */

@@ -85,3 +85,5 @@ Shows the **data folder** and store health: settings, help, workspace, history â
 ## About
 
 UI and API version, coarse Ollama status, whether stores are reachable. No secrets, no internal file paths with a username that you would share.
+
+**App log:** The app writes errors and messages outside a run to `agentus.log` (for example run memory that was not stored, tools that crashed, the own Ollama copy, MCP errors). The file rolls over at 5 MB and keeps three older ones. Secrets are masked. **Open folder** shows the folder in Explorer without showing its path here.

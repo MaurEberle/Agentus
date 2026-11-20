@@ -1178,6 +1178,16 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
       />
       <CountField
         node={node}
+        field="maxReadCalls"
+        fallback={15}
+        min={1}
+        max={1000}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxReadCalls')}
+        hint={t('network.inspector.orchestrator.maxReadCallsHint')}
+      />
+      <CountField
+        node={node}
         field="maxLlmCalls"
         fallback={1000}
         min={10}

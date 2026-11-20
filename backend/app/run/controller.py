@@ -35,6 +35,7 @@ from app.run.models import (
     WaitAsk,
 )
 from app.run.resources import start_resources, stop_resources
+from app.run.run_stats import RunStats
 from app.run.sse import publish
 from app.run.validate import validate_document
 from app.settings.service import RunSlice, load_settings, set_run_slice_provider
@@ -94,6 +95,8 @@ class RunController:
         # Tool nodes switched off for this run after a configuration error (node id -> error key).
         self.broken_tools: dict[str, str] = {}
         self.tool_refused: set[str] = set()
+        # B7: tally of the log lines of this run, for run.summary.
+        self.stats = RunStats()
         set_run_slice_provider(self.slice)
 
     def reset(self) -> None:
@@ -209,6 +212,7 @@ class RunController:
             self.llm_calls = 0
             self.llm_budget = None
             self.broken_tools = {}
+            self.stats = RunStats()
         publish("service", {"serviceStatus": "starting"})
         try:
             settings = load_settings()
@@ -838,6 +842,12 @@ def emit_log(
                 default=str,
             )
         )
+    stats = getattr(ctrl, "stats", None)
+    if stats is not None and run_id:
+        try:
+            stats.observe(level, message, payload)
+        except Exception:
+            log.exception("run stats failed key=%s", message)
     event = LogEvent(
         id=str(uuid.uuid4()),
         ts=utc_now(),

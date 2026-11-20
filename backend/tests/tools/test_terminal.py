@@ -221,3 +221,55 @@ def test_powershell_output_keeps_umlauts(tmp_path: Path) -> None:
     )
     assert result.ok is True
     assert "Größe" in result.result["stdout"]
+
+
+def _python_root(tmp_path: Path) -> tuple[dict, str]:
+    program = Path(sys.executable).stem
+    return {"rootPath": str(tmp_path), "terminalMode": "restricted", "terminalPrograms": [program]}, program
+
+
+def test_harmless_shell_habits_are_taken_off(tmp_path: Path) -> None:
+    """Dev Team run, 2026-11-17: 26 of 35 rejected commands were cd to the root, 2>&1 or | head."""
+    cfg, program = _python_root(tmp_path)
+    (tmp_path / "lines.py").write_text("for i in range(5):\n    print(i)\n", encoding="utf-8")
+    result = execute_first_party(
+        "terminal",
+        config=cfg,
+        args={"command": f"cd {tmp_path} && {program} lines.py 2>&1 | head -2"},
+    )
+    assert result.ok is True, result.error_key
+    assert result.result["exitCode"] == 0
+    assert result.result["stdout"].split() == ["0", "1"]
+    assert result.result["truncated"] is True
+    assert result.result["ran"] == f"{program} lines.py"
+    assert "2>&1" in result.result["note"] and "| head -2" in result.result["note"]
+
+
+def test_tail_keeps_the_last_lines(tmp_path: Path) -> None:
+    cfg, program = _python_root(tmp_path)
+    (tmp_path / "lines.py").write_text("for i in range(5):\n    print(i)\n", encoding="utf-8")
+    result = execute_first_party("terminal", config=cfg, args={"command": f"{program} lines.py | tail -n 2"})
+    assert result.ok is True, result.error_key
+    assert result.result["stdout"].split() == ["3", "4"]
+
+
+def test_real_shell_syntax_is_still_rejected(tmp_path: Path) -> None:
+    cfg, program = _python_root(tmp_path)
+    (tmp_path / "sub").mkdir()
+    for command in (
+        f"cd sub && {program} -V",
+        f"{program} -V | more",
+        f"{program} -V && {program} -V",
+        f"{program} -V > out.txt",
+    ):
+        result = execute_first_party("terminal", config=cfg, args={"command": command})
+        assert result.error_key == "tools.terminal.shellSyntax", command
+    assert not (tmp_path / "out.txt").exists()
+
+
+def test_quoted_text_is_not_touched(tmp_path: Path) -> None:
+    from app.tools.terminal_tool import strip_shell_habits
+
+    command = 'git commit -m "fix 2>&1 | head -3"'
+    assert strip_shell_habits(command, tmp_path)[0] == command
+    assert strip_shell_habits(f'cd "{tmp_path}" && git status', tmp_path)[0] == "git status"

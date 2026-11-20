@@ -39,7 +39,23 @@ This is **not** the help bubble. History and tools belong to the network.
 
 ## Log (monitoring)
 
-**Log** tab: lines with level (debug, info, warn, error), node, time. Newest first. Pause stops follow-the-tail; “Jump to latest” resumes. Filters: search, minimum level, one node, errors only. Export visible lines.
+**Log** tab: one line per event as a sentence, newest first. In front: time, icon (decision, agent, tool, model, limit) and status (✓ succeeded, ✗ failed, ⚠ warning); the duration is on the right. Examples: “Senior: reads src/App.tsx · 41 lines”, “Senior: runs: npm run build · exit code 1: …”, “Chief: calls Senior: fix RTL”. Pause stops follow-the-tail; “Jump to latest” resumes.
+
+**View:**
+
+- **Important** (default): orchestrator decisions, tasks, results, limits, warnings and errors.
+- **All**: also every tool and model call.
+- **Debug**: also debug lines, for example model starts.
+
+**Groups:** Every agent task is a group. Its header names agent, task and result (tool calls, changed files, duration); the arrow shows the lines below. A running task is expanded.
+
+**Filters:** Search finds the shown text, task, result, path and command. The node filter also shows tool and model calls this agent made. Plus “errors only”.
+
+**Detail:** click a line. Tools show path or command, result, error and the hint for the model; agents show task and result; model calls show tokens, duration, answer and reasoning. The raw data (JSON) can be expanded.
+
+**Summary:** At the end of a run a card at the top shows outcome, duration, agent calls per agent, model calls and tokens, tool calls, changed files and limits reached.
+
+**Export:** “Export as text” saves the shown lines as Markdown, “JSON” as JSON Lines. File contents are clipped to 2 KB in the log, model answers to 8 KB.
 
 Payloads and messages **mask** secrets (for example `Bearer`, key prefixes). Do not paste them unfiltered.
 
@@ -65,6 +81,6 @@ The chart and error list, and the run list and detail, can be resized by draggin
 
 ## Run detail
 
-Side panel or dedicated view: meta, mini graph, tabs **Log**, **Steps**, **Chat**. Steps: node, role, status, error. Chat: transcript, read-only. Export a single log.
+Side panel or dedicated view: meta, mini graph, tabs **Log**, **Steps**, **Chat**. The log looks like the one in monitoring: views, groups, summary, export as text. Older runs carry less detail (no task, no caller). Steps: node, role, status, error. Chat: transcript, read-only. Export a single log.
 
 Deleting history rows does not change saved networks.

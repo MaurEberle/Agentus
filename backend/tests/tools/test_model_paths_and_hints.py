@@ -68,5 +68,8 @@ def test_hints_name_the_root_actions_and_programs() -> None:
     term = {"rootPath": "C:/dev/app", "terminalPrograms": ["npm", "git"]}
     assert "git, npm" in failure_hint("terminal", "tools.terminal.notGranted", term)
     assert "no shell" in failure_hint("terminal", "tools.terminal.shellSyntax", term)
+    assert "2>&1" in failure_hint("terminal", "tools.terminal.shellSyntax", term)
+    inline = failure_hint("terminal", "tools.terminal.inlineCode", term)
+    assert "npm run build" in inline and "Do not add helper scripts" in inline
     assert failure_hint("terminal", "tools.terminal.unknown", term) is None
     assert failure_hint("web_search", "tools.webSearch.failed", {}) is None

@@ -61,6 +61,14 @@ def app_restart() -> dict[str, Any]:
     return {"restart": request_restart()}
 
 
+@router.post("/app/open-logs")
+def app_open_logs() -> dict[str, Any]:
+    """Open the folder with agentus.log in the file manager. The path itself is not sent."""
+    from app.applog import open_log_dir
+
+    return {"opened": open_log_dir()}
+
+
 @router.get("/about")
 def about() -> dict[str, Any]:
     from app.http.app import api_version

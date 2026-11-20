@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -48,7 +49,150 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
     programs = _programs(cfg)
     if not programs:
         return _fail("tools.terminal.notGranted")
-    return _run_program(root, command, programs, timeout)
+    command, habits = strip_shell_habits(command, root)
+    if not command:
+        return _fail("tools.terminal.missingCommand")
+    result = _run_program(root, command, programs, timeout)
+    if habits.removed:
+        _apply_habits(result, habits, command)
+    return result
+
+
+# Shell parts models add out of habit that change nothing here (Dev Team run, 2026-11-17:
+# 26 of 35 rejected commands). "cd <root> &&": the command runs there anyway. "2>&1":
+# stderr comes back on its own. A trailing "| head -N" or "| tail -N" is done on the output.
+_CD_PREFIX = re.compile(r"""^\s*cd\s+(?:/d\s+)?(?P<dir>"[^"]*"|'[^']*'|[^\s&|;"']+)\s*&&\s*""", re.IGNORECASE)
+_PIPE_LINES = re.compile(
+    r"\s*\|\s*(?P<kind>head|tail)(?:\s+-n)?(?:\s+-?(?P<count>\d+))?\s*$", re.IGNORECASE
+)
+_MERGE_STDERR = "2>&1"
+_DEFAULT_LINES = 10
+
+
+class ShellHabits:
+    def __init__(self) -> None:
+        self.removed: list[str] = []
+        self.lines: tuple[str, int] | None = None
+
+
+def strip_shell_habits(command: str, root: Path) -> tuple[str, ShellHabits]:
+    """The command without cd to the root, 2>&1 and a trailing head/tail, and what was taken off."""
+    habits = ShellHabits()
+    text = command.strip()
+    changed = True
+    while changed:
+        changed = False
+        match = _CD_PREFIX.match(text)
+        if match and _is_root(match.group("dir"), root):
+            habits.removed.append(match.group(0).strip())
+            text = text[match.end():].strip()
+            changed = True
+        pipe = _PIPE_LINES.search(text)
+        if pipe and habits.lines is None and _outside_quotes(text, pipe.start()):
+            count = int(pipe.group("count") or _DEFAULT_LINES)
+            habits.lines = (pipe.group("kind").lower(), max(1, count))
+            habits.removed.append(pipe.group(0).strip())
+            text = text[: pipe.start()].rstrip()
+            changed = True
+    without = _drop_token(text, _MERGE_STDERR)
+    if without != text:
+        habits.removed.append(_MERGE_STDERR)
+        text = without
+    return text, habits
+
+
+def _is_root(raw: str, root: Path) -> bool:
+    from app.tools.file_access_tool import path_candidates
+
+    value = raw.strip().strip('"').strip("'")
+    if value in {".", "./", ".\\"}:
+        return True
+    try:
+        target = root.resolve()
+    except OSError:
+        return False
+    for option in path_candidates(value):
+        path = Path(option)
+        try:
+            resolved = (path if path.is_absolute() else root / path).resolve()
+        except OSError:
+            continue
+        if resolved == target:
+            return True
+    return False
+
+
+def _outside_quotes(text: str, index: int) -> bool:
+    quote: str | None = None
+    for char in text[:index]:
+        if quote:
+            if char == quote:
+                quote = None
+        elif char in {'"', "'"}:
+            quote = char
+    return quote is None
+
+
+def _drop_token(text: str, token: str) -> str:
+    """``text`` without ``token`` where it stands alone outside quotes."""
+    out: list[str] = []
+    quote: str | None = None
+    index = 0
+    size = len(text)
+    while index < size:
+        char = text[index]
+        if quote:
+            out.append(char)
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {'"', "'"}:
+            quote = char
+            out.append(char)
+            index += 1
+            continue
+        end = index + len(token)
+        if (
+            text.startswith(token, index)
+            and (index == 0 or text[index - 1].isspace())
+            and (end == size or text[end].isspace())
+        ):
+            index = end
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out).strip()
+
+
+def _keep_lines(text: object, kind: str, count: int) -> tuple[object, bool]:
+    if not isinstance(text, str):
+        return text, False
+    lines = text.splitlines()
+    if len(lines) <= count:
+        return text, False
+    kept = lines[:count] if kind == "head" else lines[-count:]
+    return "\n".join(kept) + "\n", True
+
+
+def _apply_habits(result: ExecuteResult, habits: ShellHabits, ran: str) -> None:
+    """Do the head/tail on the output and tell the model what was not needed."""
+    payload = result.result if isinstance(result.result, dict) else {}
+    if habits.lines is not None:
+        kind, count = habits.lines
+        cut = False
+        for key in ("stdout", "stderr"):
+            if key in payload:
+                payload[key], clipped = _keep_lines(payload[key], kind, count)
+                cut = cut or clipped
+        if cut:
+            payload["truncated"] = True
+    payload["ran"] = ran
+    payload["note"] = (
+        "Not needed here and taken off: " + ", ".join(habits.removed) + ". "
+        f"Next time send only: {ran}"
+    )
+    result.result = payload
 
 
 def _timeout(cfg: dict[str, Any]) -> float:

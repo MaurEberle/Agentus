@@ -39,7 +39,23 @@ Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 
 ## Log (Monitoring)
 
-Tab **Log**: Zeilen mit Level (Debug, Info, Warnung, Fehler), Knoten, Zeit. Neueste oben. Pause hält das Nachziehen; „Zu neuesten“ springt wieder ans Ende. Filter: Suche, Level ab, ein Knoten, nur Fehler. Export der sichtbaren Zeilen.
+Tab **Log**: eine Zeile pro Ereignis als Satz, neueste oben. Vorn stehen Zeit, Symbol (Entscheidung, Agent, Werkzeug, Modell, Grenze) und Status (✓ erfolgreich, ✗ fehlgeschlagen, ⚠ Warnung), rechts die Dauer. Beispiele: „Senior: liest src/App.tsx · 41 Zeilen“, „Senior: führt aus: npm run build · Exit-Code 1: …“, „Chef: ruft Senior: RTL korrigieren“. Pause hält das Nachziehen; „Zu neuesten“ springt wieder ans Ende.
+
+**Ansicht:**
+
+- **Wichtig** (Standard): Entscheidungen des Orchestrators, Aufträge, Ergebnisse, Grenzen, Warnungen und Fehler.
+- **Alles**: zusätzlich jeder Werkzeug- und Modellaufruf.
+- **Debug**: zusätzlich Debug-Zeilen, zum Beispiel Modellstarts.
+
+**Gruppen:** Jeder Agentenauftrag ist eine Gruppe. Die Kopfzeile nennt Agent, Auftrag und Ergebnis (Werkzeugaufrufe, geänderte Dateien, Dauer); ein Klick auf den Pfeil zeigt die Zeilen darunter. Ein laufender Auftrag ist aufgeklappt.
+
+**Filter:** Die Suche findet den angezeigten Text, Auftrag, Ergebnis, Pfad und Befehl. Der Knotenfilter zeigt auch Werkzeug- und Modellaufrufe, die dieser Agent gemacht hat. Dazu „nur Fehler“.
+
+**Detail:** Klick auf eine Zeile. Werkzeuge zeigen Pfad oder Befehl, Ergebnis, Fehler und den Hinweis an das Modell; Agenten Auftrag und Ergebnis; Modellaufrufe Token, Dauer, Antwort und Denktext. Die Rohdaten (JSON) sind aufklappbar.
+
+**Zusammenfassung:** Am Ende eines Laufs steht oben eine Karte: Ausgang, Dauer, Agentenaufrufe je Agent, Modellaufrufe und Token, Werkzeugaufrufe, geänderte Dateien, erreichte Grenzen.
+
+**Export:** „Als Text exportieren“ speichert die angezeigten Zeilen als Markdown, „JSON“ als JSON Lines. Dateiinhalte stehen im Log nur gekürzt (2 KB), Modellantworten bis 8 KB.
 
 Payloads und Meldungen **maskieren** Geheimnisse (zum Beispiel `Bearer`, Schlüsselpräfixe). Nicht ungefiltert weitergeben.
 
@@ -65,6 +81,6 @@ Diagramm und Fehlerliste sowie Lauf-Liste und Detail lassen sich wie im Monitori
 
 ## Lauf-Detail
 
-Rechte Seite oder eigene Ansicht: Meta, Mini-Graph, Tabs **Log**, **Schritte**, **Chat**. Schritte: Knoten, Rolle, Status, Fehler. Chat: Transkript, read-only. Einzelnes Log exportieren.
+Rechte Seite oder eigene Ansicht: Meta, Mini-Graph, Tabs **Log**, **Schritte**, **Chat**. Das Log sieht aus wie im Monitoring: Ansichten, Gruppen, Zusammenfassung, Export als Text. Ältere Läufe haben weniger Angaben (kein Auftrag, kein Aufrufer). Schritte: Knoten, Rolle, Status, Fehler. Chat: Transkript, read-only. Einzelnes Log exportieren.
 
 Löschen von Historieneinträgen ändert die gespeicherten Netze nicht.

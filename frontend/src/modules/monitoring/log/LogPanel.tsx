@@ -1,13 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import {
-  AlertTriangle,
-  Bug,
-  Download,
-  Info,
-  OctagonAlert,
-  Pause,
-  Play,
-} from 'lucide-react';
+import { Download, FileText, Pause, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,48 +15,30 @@ import {
 } from '@/components/ui/select';
 import { notify } from '@/lib/notifications';
 import { saveExportFile } from '@/lib/saveFile';
-import { cn } from '@/lib/utils';
-import { clipPreview, fileStamp, formatTime, safeFilePart, shortId } from '@/modules/monitoring/model/format';
-import { filterLogs, logHasExtra, nodeDisplayName } from '@/modules/monitoring/model/graph';
-import { formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
+import { fileStamp, safeFilePart, shortId } from '@/modules/monitoring/model/format';
+import { logHasExtra, nodeDisplayName } from '@/modules/monitoring/model/graph';
+import { entryEvents, logsToMarkdown } from '@/modules/monitoring/model/logView';
 import { maskSecrets, maskText } from '@/modules/monitoring/model/mask';
-import type { LogEvent, LogLevel, RunSnapshot } from '@/modules/monitoring/model/types';
-import { LOG_LEVELS } from '@/modules/monitoring/model/types';
+import type { RunSnapshot } from '@/modules/monitoring/model/types';
+import { LogDetailBody } from '@/modules/monitoring/log/LogDetailBody';
+import { LogViewSwitch } from '@/modules/monitoring/log/LogViewSwitch';
+import { RunLogList } from '@/modules/monitoring/log/RunLogList';
+import { RunSummaryCard } from '@/modules/monitoring/log/RunSummaryCard';
+import { useRunLog } from '@/modules/monitoring/log/useRunLog';
 import { DetailOverlay } from '@/modules/monitoring/overlay/DetailOverlay';
 import { useMonitoringStore } from '@/modules/monitoring/store';
-
-const LEVEL_ICON = {
-  debug: Bug,
-  info: Info,
-  warn: AlertTriangle,
-  error: OctagonAlert,
-};
-
-const LEVEL_ROW: Record<LogLevel, string> = {
-  debug: 'border-l-2 border-l-muted-foreground/50 bg-muted/40 text-muted-foreground',
-  info: 'border-l-2 border-l-primary/60 bg-card',
-  warn: 'border-l-2 border-l-warning bg-warning/20',
-  error: 'border-l-2 border-l-destructive bg-destructive/15',
-};
-
-const LEVEL_BADGE: Record<LogLevel, string> = {
-  debug: 'bg-muted text-muted-foreground',
-  info: 'bg-primary/15 text-primary',
-  warn: 'bg-warning text-warning-foreground',
-  error: 'bg-destructive text-destructive-foreground',
-};
 
 export function LogPanel({ run }: { run: RunSnapshot | null }) {
   const { t, i18n } = useTranslation();
   const logs = useMonitoringStore((state) => state.logs);
-  const levelMin = useMonitoringStore((state) => state.logLevelMin);
+  const view = useMonitoringStore((state) => state.logView);
   const query = useMonitoringStore((state) => state.logQuery);
   const nodeId = useMonitoringStore((state) => state.logNodeId);
   const errorsOnly = useMonitoringStore((state) => state.logErrorsOnly);
   const autoscroll = useMonitoringStore((state) => state.autoscroll);
   const unseen = useMonitoringStore((state) => state.unseenCount);
   const selectedLogId = useMonitoringStore((state) => state.selectedLogId);
-  const setLogLevelMin = useMonitoringStore((state) => state.setLogLevelMin);
+  const setLogView = useMonitoringStore((state) => state.setLogView);
   const setLogQuery = useMonitoringStore((state) => state.setLogQuery);
   const setLogNodeId = useMonitoringStore((state) => state.setLogNodeId);
   const setLogErrorsOnly = useMonitoringStore((state) => state.setLogErrorsOnly);
@@ -72,21 +46,23 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
   const setSelectedLogId = useMonitoringStore((state) => state.setSelectedLogId);
   const clearLogFilter = useMonitoringStore((state) => state.clearLogFilter);
 
-  const scroller = useRef<HTMLDivElement>(null);
-  const filtered = useMemo(
-    () => filterLogs(logs, { levelMin, query, nodeId, errorsOnly }),
-    [errorsOnly, levelMin, logs, nodeId, query],
+  const graphNodes = run?.graph.nodes;
+  const names = useMemo(
+    () => new Map((graphNodes ?? []).map((node) => [node.id, nodeDisplayName(node)] as const)),
+    [graphNodes],
   );
-  const visible = useMemo(() => filtered.slice().reverse(), [filtered]);
+  const { ctx, entries, lineOf, summary } = useRunLog(logs, names, { view, query, nodeId, errorsOnly });
+  const scroller = useRef<HTMLDivElement>(null);
   const selected = logs.find((item) => item.id === selectedLogId) ?? null;
   const filterNode = run?.graph.nodes.find((item) => item.id === nodeId);
+  const live = Boolean(run && run.serviceStatus === 'running' && (!run.outcome || run.outcome === 'running'));
 
   useEffect(() => {
     if (!autoscroll) return;
     const el = scroller.current;
     if (!el) return;
     el.scrollTop = 0;
-  }, [autoscroll, visible]);
+  }, [autoscroll, entries]);
 
   function onScroll() {
     const el = scroller.current;
@@ -102,10 +78,24 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
     if (el) el.scrollTop = 0;
   }
 
-  async function exportVisible() {
+  function exportName(extension: string) {
     const name = run?.networkName ?? 'network';
     const id = run?.runId ?? 'run';
-    const lines = filtered.map((event) =>
+    return `${safeFilePart(name)}-${shortId(id)}-${fileStamp()}.${extension}`;
+  }
+
+  async function save(filename: string, blob: Blob) {
+    // M17: through the host save dialog; the desktop app drops blob downloads.
+    try {
+      const saved = await saveExportFile(filename, blob);
+      if (saved) notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
+    } catch {
+      notify({ titleKey: 'history.notify.exportError', variant: 'error' });
+    }
+  }
+
+  async function exportJson() {
+    const lines = entryEvents(entries).map((event) =>
       JSON.stringify({
         ts: event.ts,
         level: event.level,
@@ -117,34 +107,19 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
         stack: event.stack ? maskText(event.stack) : undefined,
       }),
     );
-    const blob = new Blob([`${lines.join('\n')}\n`], { type: 'application/x-ndjson' });
-    // M17: through the host save dialog; the desktop app drops blob downloads.
-    try {
-      const saved = await saveExportFile(`${safeFilePart(name)}-${shortId(id)}-${fileStamp()}.jsonl`, blob);
-      if (saved) notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
-    } catch {
-      notify({ titleKey: 'history.notify.exportError', variant: 'error' });
-    }
+    await save(exportName('jsonl'), new Blob([`${lines.join('\n')}\n`], { type: 'application/x-ndjson' }));
+  }
+
+  async function exportText() {
+    const title = `${run?.networkName ?? t('monitoring.log.exportTitle')} · ${shortId(run?.runId ?? 'run')}`;
+    const text = maskText(logsToMarkdown(entries, ctx, { title, summary }));
+    await save(exportName('md'), new Blob([text], { type: 'text/markdown' }));
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">
-        <div className="w-36">
-          <Label className="text-xs">{t('monitoring.log.level')}</Label>
-          <Select value={levelMin} onValueChange={(value) => setLogLevelMin(value as LogLevel)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LOG_LEVELS.map((level) => (
-                <SelectItem key={level} value={level}>
-                  {t('monitoring.log.levelFrom', { level: t(`monitoring.level.${level}`) })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <LogViewSwitch value={view} onChange={setLogView} />
         <div className="min-w-[10rem] flex-1">
           <Label className="text-xs" htmlFor="monitoring-log-q">
             {t('monitoring.log.search')}
@@ -153,7 +128,7 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
             id="monitoring-log-q"
             value={query}
             onChange={(event) => setLogQuery(event.target.value)}
-            placeholder={t('monitoring.log.search')}
+            placeholder={t('runLog.views.searchHint')}
           />
         </div>
         <div className="w-44">
@@ -184,7 +159,11 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
           {!autoscroll && unseen > 0 ? (
             <Badge variant="secondary">{t('monitoring.log.newCount', { count: unseen })}</Badge>
           ) : null}
-          <Button type="button" size="sm" variant="outline" onClick={() => void exportVisible()} disabled={filtered.length === 0}>
+          <Button type="button" size="sm" variant="outline" onClick={() => void exportText()} disabled={entries.length === 0}>
+            <FileText className="size-3.5" />
+            {t('monitoring.log.exportText')}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => void exportJson()} disabled={entries.length === 0}>
             <Download className="size-3.5" />
             {t('monitoring.log.export')}
           </Button>
@@ -200,167 +179,31 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
           </Button>
         </div>
       ) : null}
+      {summary ? <RunSummaryCard event={summary} locale={i18n.language} /> : null}
       <div
         ref={scroller}
         onScroll={onScroll}
         className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20 font-log text-xs"
       >
-        {visible.length === 0 ? (
-          <p className="p-3 font-sans text-sm text-muted-foreground">{t('monitoring.log.empty')}</p>
-        ) : (
-          <ul>
-            {visible.map((event) => (
-              <LogRow
-                key={event.id}
-                event={event}
-                locale={i18n.language}
-                onOpen={() => setSelectedLogId(event.id)}
-              />
-            ))}
-          </ul>
-        )}
+        <RunLogList
+          entries={entries}
+          lineOf={lineOf}
+          locale={i18n.language}
+          onOpen={setSelectedLogId}
+          live={live}
+          expandAll={query.trim().length > 0 || nodeId !== null}
+          emptyText={t('monitoring.log.empty')}
+        />
       </div>
-      <LogDetail event={selected} onClose={() => setSelectedLogId(null)} locale={i18n.language} />
-    </div>
-  );
-}
-
-function LogRow({
-  event,
-  locale,
-  onOpen,
-}: {
-  event: LogEvent;
-  locale: string;
-  onOpen: () => void;
-}) {
-  const { t } = useTranslation();
-  const extra = logHasExtra(event);
-  const Icon = LEVEL_ICON[event.level];
-  return (
-    <li>
-      <div
-        role={extra ? 'button' : undefined}
-        tabIndex={extra ? 0 : undefined}
-        onClick={extra ? onOpen : undefined}
-        onKeyDown={
-          extra
-            ? (evt) => {
-                if (evt.key === 'Enter' || evt.key === ' ') {
-                  evt.preventDefault();
-                  onOpen();
-                }
-              }
-            : undefined
-        }
-        className={cn(
-          'grid grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-x-2 border-b border-border/60 px-2 py-1.5 last:border-0',
-          LEVEL_ROW[event.level],
-          extra && 'cursor-pointer hover:brightness-[0.97] dark:hover:brightness-110',
-        )}
+      <DetailOverlay
+        open={Boolean(selected && logHasExtra(selected))}
+        onOpenChange={(open) => {
+          if (!open) setSelectedLogId(null);
+        }}
+        title={t('monitoring.log.detailTitle')}
       >
-        <span className="tabular-nums text-muted-foreground">{formatTime(event.ts, locale)}</span>
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-            LEVEL_BADGE[event.level],
-          )}
-        >
-          <Icon className="size-3" />
-          {event.level}
-        </span>
-        <span className="min-w-0">
-          {event.nodeName || event.nodeId ? (
-            <span className="mr-2 text-muted-foreground">{event.nodeName ?? event.nodeId}</span>
-          ) : null}
-          <span
-            className={cn(
-              'whitespace-pre-wrap break-words',
-              event.level === 'error' && 'font-medium text-destructive',
-              event.level === 'warn' && 'font-medium',
-            )}
-          >
-            {clipPreview(formatRunLogMessage(event.message, t, event.payload))}
-          </span>
-        </span>
-      </div>
-    </li>
-  );
-}
-
-function LogDetail({
-  event,
-  onClose,
-  locale,
-}: {
-  event: LogEvent | null;
-  onClose: () => void;
-  locale: string;
-}) {
-  const { t } = useTranslation();
-  const extra = event ? logHasExtra(event) : false;
-
-  async function copy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const payloadText =
-    event?.payload === undefined
-      ? ''
-      : typeof event.payload === 'string'
-        ? maskText(event.payload)
-        : JSON.stringify(maskSecrets(event.payload), null, 2);
-
-  return (
-    <DetailOverlay
-      open={Boolean(event && extra)}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      title={t('monitoring.log.detailTitle')}
-    >
-      {event ? (
-        <div className="space-y-3 font-log text-sm">
-          <p className="text-xs text-muted-foreground">
-            {formatTime(event.ts, locale)} · {event.level} · {event.runId}
-            {event.nodeId ? ` · ${event.nodeId}` : ''}
-          </p>
-          <div>
-            <p className="text-xs text-muted-foreground">{t('monitoring.log.message')}</p>
-            <p className="whitespace-pre-wrap break-words font-log text-xs">
-              {formatRunLogMessage(event.message, t, event.payload)}
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="mt-1 h-7 px-2"
-              onClick={() => void copy(formatRunLogMessage(event.message, t, event.payload))}
-            >
-              {t('monitoring.log.copyLine')}
-            </Button>
-          </div>
-          {payloadText ? (
-            <div>
-              <p className="text-xs text-muted-foreground">{t('monitoring.log.payload')}</p>
-              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-log text-xs">{payloadText}</pre>
-              <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2" onClick={() => void copy(payloadText)}>
-                {t('monitoring.log.copyPayload')}
-              </Button>
-            </div>
-          ) : null}
-          {event.stack ? (
-            <div>
-              <p className="text-xs text-muted-foreground">{t('monitoring.log.stack')}</p>
-              <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-log text-xs">{event.stack}</pre>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </DetailOverlay>
+        {selected ? <LogDetailBody event={selected} ctx={ctx} /> : null}
+      </DetailOverlay>
+    </div>
   );
 }

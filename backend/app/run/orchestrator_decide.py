@@ -206,7 +206,10 @@ def _orchestrator_action(
     llm_node_id = orch.llm.node_id or orch.node_id
     action: dict[str, str] | None = None
     own_calls = 0
+    own_failed = 0
     slow_retries = 0
+    decision_started = time.perf_counter()
+    via = "json"
     try:
         while not ctrl.stop_event.is_set():
             offered = turn_runtime._available_tools(ctrl, compiled, orch.node_id, offered)
@@ -252,7 +255,7 @@ def _orchestrator_action(
             output_cap, auto_cap = turn_runtime._output_cap(llm, choice, context_est)
             turn_runtime._prepare_resident(compiled, llm)
             emit_log(
-                "info",
+                "debug",
                 "run.llm.start",
                 node_id=llm_node_id,
                 payload={
@@ -262,6 +265,7 @@ def _orchestrator_action(
                     "contextMax": context_max,
                     "maxTokens": output_cap,
                     "maxTokensAuto": auto_cap,
+                    **turn_runtime._caller(compiled, orch.node_id),
                 },
             )
             from app.runtime import completions as runtime_completions
@@ -363,17 +367,18 @@ def _orchestrator_action(
                 tokens_out=out_final,
             )
             emit_log(
-                "debug",
+                "info",
                 "run.llm.done",
                 node_id=llm_node_id,
-                payload=turn_runtime._completion_log_payload(
+                payload=turn_runtime._llm_done_payload(
+                    compiled,
+                    orch.node_id,
+                    llm,
                     result,
-                    {
-                        "model": llm.model,
-                        "durationMs": duration_ms,
-                        "tokensIn": in_final,
-                        "tokensOut": out_final,
-                    },
+                    duration_ms=duration_ms,
+                    tokens_in=in_final,
+                    tokens_out=out_final,
+                    per_second=rate_final,
                 ),
             )
             # Decision tools written as text are read even when no tool is offered.
@@ -388,6 +393,7 @@ def _orchestrator_action(
                     payload={"name": decided[0], "dropped": len(result.tool_calls) - 1},
                 )
                 result = result.model_copy(update={"tool_calls": [], "content": decided[1], "reasoning": ""})
+                via = "tool"
             if result.tool_calls and offered:
                 model_retries = 0
                 # Write access stays open until the next agent call (dispatch resets it).
@@ -492,6 +498,7 @@ def _orchestrator_action(
                         fail_streak.pop(call.name or "", None)
                         answered.add(key)
                         continue
+                    own_failed += 1
                     if turn_runtime._call_refused(ctrl, compiled, orch.node_id, call.name):
                         # A maxCalls refusal is the network's choice, not a broken tool.
                         continue
@@ -583,7 +590,11 @@ def _orchestrator_action(
                 if repairs <= MAX_CONTROL_REPAIRS:
                     messages.append(LlmMessage(role="user", content=_DECIDE_NOW_NOTE))
                     continue
-                action = _give_up(block_reply)
+                # Not unreadable: the model clearly wants more tool steps than this decision
+                # had (run 4f895701 ended here after a green build). The loop gives the next
+                # decision a new budget; the idle guard still stops endless re-reading.
+                action = _tool_request(invented_tool_action(raw) or "read", result, out_final)
+                action["_overBudget"] = str(own_calls)
                 return action
             reason = reject_reason(raw)
             if reason:
@@ -670,10 +681,27 @@ def _orchestrator_action(
             if kind in {"call", "ask", "reply", "finish"}:
                 memory.orch_failed_tools = 0
                 memory.orch_failed_thinks = 0
+            parsed["_via"] = via
             action = parsed
             return _tag_tokens(action, result, out_final)
         return None
     finally:
         if not (action and action.get("action") in {"think", "defer"}):
             turn_runtime._set_llm(ctrl, compiled, llm_node_id, busy=False)
+        if own_calls:
+            # B8: a decision that used tools, in one line: how many, how long, how it ended.
+            emit_log(
+                "info",
+                "run.orchestrator.step",
+                node_id=orch.node_id,
+                payload={
+                    "calls": own_calls,
+                    "failed": own_failed,
+                    "durationMs": int((time.perf_counter() - decision_started) * 1000),
+                    "end": (action or {}).get("action") or ("stopped" if ctrl.stop_event.is_set() else "none"),
+                    "capped": own_calls >= cap,
+                    "withdrawn": sorted(withdrawn),
+                    "orientation": orientation,
+                },
+            )
 

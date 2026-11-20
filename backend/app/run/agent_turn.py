@@ -61,7 +61,10 @@ _AGENT_THINK = (
 _AGENT_THINK_TOOLS = (
     "You may think first in a think block. A think is not the result and is not shown. "
     "After it, call a tool or write the visible result. "
-    "Do not put a think in a JSON object while tools are connected."
+    "Do not put a think in a JSON object while tools are connected. "
+    # Run 4f895701: an agent wrote its summary into a file named "done".
+    "Your result is your reply text, not a file: do not write a report, status or summary "
+    "into a file (such as done or result.md) unless the task asks for that file."
 )
 
 _TOOL_USE_NOTE = (
@@ -157,6 +160,75 @@ def _agent_empty_stops_stop(
     ctrl.last_error_node_id = agent_id
     return False
 
+def _start_payload(
+    compiled: CompiledGraph,
+    agent_id: str,
+    task: str,
+    *,
+    name: str | None = None,
+    call: int | None = None,
+    retry: bool = False,
+) -> dict:
+    """B2: which agent starts with which task (clipped)."""
+    from app.run.limits import LOG_TASK_MAX
+    from app.run.log_payloads import clip
+
+    payload: dict = {
+        "agentId": agent_id,
+        "agentName": name or node_label(compiled, agent_id) or agent_id,
+        "task": clip((task or "").strip(), LOG_TASK_MAX),
+    }
+    if call is not None:
+        payload["call"] = call
+    if retry:
+        payload["retry"] = True
+    return payload
+
+def done_payload(
+    compiled: CompiledGraph,
+    agent_id: str,
+    *,
+    duration_ms: int,
+    tools: int,
+    tools_failed: int,
+    files: list[str],
+    outcome: str,
+    text: str,
+    name: str | None = None,
+    call: int | None = None,
+    reason: str = "",
+    capped: bool = False,
+) -> dict:
+    """B3: how an agent call ended: time, tools, changed files, outcome, start of the result."""
+    from app.run.limits import LOG_RESULT_PREVIEW
+    from app.run.log_payloads import clip
+
+    unique: list[str] = []
+    for path in files:
+        if path and path not in unique:
+            unique.append(path)
+    visible = visible_text(text or "").strip()
+    payload: dict = {
+        "agentId": agent_id,
+        "agentName": name or node_label(compiled, agent_id) or agent_id,
+        "durationMs": duration_ms,
+        "tools": tools,
+        "toolsOk": max(0, tools - tools_failed),
+        "toolsFailed": tools_failed,
+        "files": unique[:20],
+        "filesCount": len(unique),
+        "outcome": outcome,
+        "result": clip(visible, LOG_RESULT_PREVIEW),
+        "resultChars": len(visible),
+    }
+    if call is not None:
+        payload["call"] = call
+    if reason:
+        payload["reason"] = reason
+    if capped:
+        payload["capped"] = True
+    return payload
+
 def _agent_turn(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -171,7 +243,15 @@ def _agent_turn(
 ) -> str | None:
     agent = compiled.agents[agent_id]
     turn_runtime._set_node(ctrl, agent_id, "running", wait="llm", message=user_text)
-    emit_log("info", "run.agent.start", node_id=agent_id)
+    turn_started = time.perf_counter()
+    if record is None:
+        # Orchestrated calls log start and result once per call in dispatch (B2/B3).
+        emit_log(
+            "info",
+            "run.agent.start",
+            node_id=agent_id,
+            payload=_start_payload(compiled, agent_id, user_text),
+        )
     snippets: list[str] = []
     for kid in agent.knowledge_node_ids:
         kn = compiled.by_id.get(kid)
@@ -222,6 +302,7 @@ def _agent_turn(
     from app.runtime import completions as runtime_completions
 
     failed_tools = 0
+    failed_total = 0
     tool_calls_used = 0
     tool_cap = agent.max_tool_calls or MAX_AGENT_TOOL_CALLS
     json_attempts = 0
@@ -277,7 +358,7 @@ def _agent_turn(
             turn_runtime._prepare_resident(compiled, agent.llm)
             started = time.perf_counter()
             emit_log(
-                "info",
+                "debug",
                 "run.llm.start",
                 node_id=llm_node_id,
                 payload={
@@ -287,6 +368,7 @@ def _agent_turn(
                     "contextMax": context_max,
                     "maxTokens": output_cap,
                     "maxTokensAuto": auto_cap,
+                    **turn_runtime._caller(compiled, agent_id),
                 },
             )
             repaired = turn_runtime._close_open_tool_calls(messages)
@@ -469,17 +551,18 @@ def _agent_turn(
                 tokens_out=out_final,
             )
             emit_log(
-                "debug",
+                "info",
                 "run.llm.done",
                 node_id=llm_node_id,
-                payload=turn_runtime._completion_log_payload(
+                payload=turn_runtime._llm_done_payload(
+                    compiled,
+                    agent_id,
+                    agent.llm,
                     result,
-                    {
-                        "model": agent.llm.model,
-                        "durationMs": duration_ms,
-                        "tokensIn": usage.prompt_tokens if usage else None,
-                        "tokensOut": usage.completion_tokens if usage else None,
-                    },
+                    duration_ms=duration_ms,
+                    tokens_in=in_final,
+                    tokens_out=out_final,
+                    per_second=rate_final,
                 ),
             )
             if usage is not None and usage.prompt_tokens:
@@ -516,6 +599,8 @@ def _agent_turn(
                         record=record,
                         reuse=reuse,
                     )
+                    if not ok_call:
+                        failed_total += 1
                     if ok_call:
                         failed_tools = 0
                         tool_ok = True
@@ -679,7 +764,22 @@ def _agent_turn(
                 content = best_visible
             break
         turn_runtime._set_node(ctrl, agent_id, "done")
-        emit_log("info", "run.agent.done", node_id=agent_id)
+        if record is None:
+            emit_log(
+                "info",
+                "run.agent.done",
+                node_id=agent_id,
+                payload=done_payload(
+                    compiled,
+                    agent_id,
+                    duration_ms=int((time.perf_counter() - turn_started) * 1000),
+                    tools=tool_calls_used,
+                    tools_failed=failed_total,
+                    files=wrote_paths,
+                    outcome="done",
+                    text=content or "",
+                ),
+            )
         if publish_chat and compiled.chat_input:
             text = (content or "").strip()
             if not text and record is not None:

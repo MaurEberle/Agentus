@@ -34,6 +34,7 @@ function saveKind(filename: string): SaveKind {
   const lower = filename.toLowerCase();
   if (lower.endsWith('.zip')) return 'zip';
   if (lower.endsWith('.jsonl')) return 'jsonl';
+  if (lower.endsWith('.md')) return 'md';
   return 'json';
 }
 
@@ -41,6 +42,7 @@ const PICKER_TYPES: Record<SaveKind, { description: string; accept: Record<strin
   json: { description: 'JSON', accept: { 'application/json': ['.json'] } },
   jsonl: { description: 'JSON Lines', accept: { 'application/x-ndjson': ['.jsonl'] } },
   zip: { description: 'ZIP', accept: { 'application/zip': ['.zip'] } },
+  md: { description: 'Markdown', accept: { 'text/markdown': ['.md'] } },
 };
 
 /**

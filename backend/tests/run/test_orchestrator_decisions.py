@@ -1,7 +1,7 @@
 """Dev Team run, 2026-11-17 (19:52): the orchestrator read one file 43 times while writing "now I call the Junior".
 
 Decision tools next to own tools, repeated calls that do not run, the note for an
-announcement without a decision, and the read budget of ten per decision.
+announcement without a decision, and the read budget per decision (15 since run 4f895701).
 """
 
 from __future__ import annotations
@@ -136,7 +136,7 @@ def test_an_announcement_without_a_decision_is_answered(monkeypatch, api_env) ->
     assert state["read"] == 1
 
 
-def test_reading_only_allows_ten_calls_per_decision(monkeypatch, api_env) -> None:
+def test_reading_only_allows_fifteen_calls_per_decision(monkeypatch, api_env) -> None:
     executed = _record_execute(monkeypatch)
     state = {"read": 0}
 
@@ -154,8 +154,32 @@ def test_reading_only_allows_ten_calls_per_decision(monkeypatch, api_env) -> Non
 
     stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
     assert stored["outcome"] == "succeeded", stored.get("error_message")
-    assert len(executed) == 10
-    assert _payloads(stored, "run.orchestrator.toolCap") == [{"calls": 10, "max": 10}]
+    assert len(executed) == 15
+    assert _payloads(stored, "run.orchestrator.toolCap") == [{"calls": 15, "max": 15}]
+
+
+def test_the_read_budget_comes_from_the_node(monkeypatch, api_env) -> None:
+    executed = _record_execute(monkeypatch)
+    state = {"read": 0}
+
+    def _complete(req, should_abort=None, on_progress=None):
+        if not _is_orch(req):
+            return _ok("Teil fertig.")
+        blob = _blob(req)
+        if "characters:" not in blob:
+            return _ok('{"action":"call","agent":"Schreiber","task":"teil 1"}')
+        if req.tools:
+            first = state["read"]
+            state["read"] += 4
+            return _calls(*[("file_access", f'{{"action":"read","path":"f{first + i}.txt"}}') for i in range(4)])
+        return _ok('{"action":"finish","text":"Fertig."}')
+
+    doc = _orch_files_doc()
+    next(node for node in doc["nodes"] if node["id"] == "orch")["data"]["maxReadCalls"] = 6
+    stored = _drive(monkeypatch, _complete, doc=doc)
+    assert stored["outcome"] == "succeeded", stored.get("error_message")
+    assert len(executed) == 6
+    assert _payloads(stored, "run.orchestrator.toolCap") == [{"calls": 6, "max": 6}]
 
 
 def test_decision_tools_are_mentioned_only_with_tools() -> None:

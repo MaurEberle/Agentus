@@ -88,6 +88,10 @@ def _run() -> None:
 
         multiprocessing.freeze_support()
     ensure_stdio()
+    from app.applog import setup_app_log
+
+    # B1: stdout and stderr go nowhere in the desktop app; the app log goes to a file.
+    setup_app_log()
     # A restart: the old instance still closes; wait before lock and port.
     from app.host.restart import wait_for_previous
 

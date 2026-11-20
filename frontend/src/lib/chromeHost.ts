@@ -1,5 +1,5 @@
 /** Text kinds travel as text, zip as base64. */
-export type SaveKind = 'json' | 'jsonl' | 'zip';
+export type SaveKind = 'json' | 'jsonl' | 'zip' | 'md';
 
 export interface ChromeHost {
   minimize: () => void;

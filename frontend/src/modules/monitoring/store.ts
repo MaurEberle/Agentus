@@ -10,11 +10,11 @@ import {
   mergeRunSnapshot,
   upsertChat,
 } from '@/modules/monitoring/model/graph';
+import type { LogView } from '@/modules/monitoring/model/logView';
 import { maskLog } from '@/modules/monitoring/model/mask';
 import type {
   ChatMessage,
   LogEvent,
-  LogLevel,
   MonitoringEvent,
   ResourceSnapshot,
   RunSnapshot,
@@ -32,7 +32,7 @@ type MonitoringState = {
   adapterErrorKey: string | null;
   lastErrorMessage: string | null;
   tab: MonitoringTab;
-  logLevelMin: LogLevel;
+  logView: LogView;
   logQuery: string;
   logNodeId: string | null;
   logErrorsOnly: boolean;
@@ -44,7 +44,7 @@ type MonitoringState = {
   pendingChatFocus: boolean;
   setTab: (tab: MonitoringTab) => void;
   setPendingChatFocus: (value: boolean) => void;
-  setLogLevelMin: (level: LogLevel) => void;
+  setLogView: (view: LogView) => void;
   setLogQuery: (query: string) => void;
   setLogNodeId: (id: string | null) => void;
   setLogErrorsOnly: (value: boolean) => void;
@@ -130,7 +130,7 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   adapterErrorKey: null,
   lastErrorMessage: null,
   tab: 'chat',
-  logLevelMin: 'info',
+  logView: 'important',
   logQuery: '',
   logNodeId: null,
   logErrorsOnly: false,
@@ -145,7 +145,7 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
     set({ tab });
   },
   setPendingChatFocus: (pendingChatFocus) => set({ pendingChatFocus }),
-  setLogLevelMin: (logLevelMin) => set({ logLevelMin }),
+  setLogView: (logView) => set({ logView }),
   setLogQuery: (logQuery) => set({ logQuery }),
   setLogNodeId: (logNodeId) => set({ logNodeId }),
   setLogErrorsOnly: (logErrorsOnly) => set({ logErrorsOnly }),

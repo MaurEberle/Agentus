@@ -297,12 +297,13 @@ def test_node_limits_are_clamped() -> None:
 
     doc = _orch_files_doc()
     orch = next(node for node in doc["nodes"] if node["id"] == "orch")
-    orch["data"].update({"maxToolCalls": 0, "maxLlmCalls": "99999", "agentMissLimit": None})
+    orch["data"].update({"maxToolCalls": 0, "maxLlmCalls": "99999", "agentMissLimit": None, "maxReadCalls": "5000"})
     agent = next(node for node in doc["nodes"] if node["id"] == "ag")
     agent["data"]["maxToolCalls"] = "abc"
     compiled = compile_document(AgentNetworkDocument.model_validate(doc), network_id="n", network_name="n")
     assert compiled.orchestrator.max_tool_calls == 1
     assert compiled.orchestrator.max_llm_calls == 10000
+    assert compiled.orchestrator.max_read_calls == 1000
     assert compiled.orchestrator.agent_miss_limit == 2
     assert compiled.agents["ag"].max_tool_calls is None
 

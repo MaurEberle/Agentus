@@ -76,8 +76,9 @@ MAX_SAME_TOOL_ERRORS = 3
 # the second repeat withdraws the tool for the rest of the decision.
 MAX_REPEATED_CALLS = 2
 # Own tool calls per decision while the orchestrator may only read (no failure yet).
-# MAX_ORCHESTRATOR_TOOL_CALLS applies after a failure or in a takeover. Raise when runs are steadier.
-MAX_READ_DECISION_CALLS = 10
+# MAX_ORCHESTRATOR_TOOL_CALLS applies after a failure or in a takeover.
+# Orchestrator node setting maxReadCalls overrides it (NODE_TOOL_CALLS_MIN..MAX).
+MAX_READ_DECISION_CALLS = 15
 # Extra attempts after an unreadable orchestrator decision. Not part of the step cap.
 MAX_CONTROL_REPAIRS = 2
 # One same-prompt retry when the model died before any tool succeeded.
@@ -91,6 +92,14 @@ SSE_QUEUE_MAX = 1000
 SUBSTANTIAL_RESULT_CHARS = 400
 # Per-string cap for run log payloads. Payloads stay valid JSON; the UI clips previews.
 LOG_PAYLOAD_MAX = 1_000_000
+# Strings in tool arguments (file contents) in the log; the tool gets the full text (B5).
+LOG_ARG_MAX = 2048
+# Model answer and reasoning per run.llm.done line (B6).
+LOG_TEXT_MAX = 8000
+# Task of an agent call in run.orchestrator.action and run.agent.start (B2).
+LOG_TASK_MAX = 500
+# Result preview in run.agent.done (B3).
+LOG_RESULT_PREVIEW = 300
 # Snapshot lastMessage cap. Activity/log lists clip further in the UI.
 LAST_MESSAGE_MAX = 8000
 KNOWLEDGE_CHUNK_CHARS = 800

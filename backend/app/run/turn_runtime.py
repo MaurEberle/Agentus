@@ -56,14 +56,49 @@ _FILE_PREP_ACTIONS = frozenset({"read", "list", "stat", "mkdir", "search", "tree
 
 
 def _completion_log_payload(result: CompletionResult, extra: dict | None = None) -> dict:
+    from app.run.limits import LOG_TEXT_MAX
+    from app.run.log_payloads import clip
+
+    # B6: up to 8 KB of answer and reasoning per line; the model saw all of it.
     payload: dict = {
         "finishReason": result.finish_reason or "",
-        "content": result.content or "",
-        "reasoning": result.reasoning or "",
+        "content": clip(result.content or "", LOG_TEXT_MAX),
+        "reasoning": clip(result.reasoning or "", LOG_TEXT_MAX),
     }
+    if result.tool_calls:
+        payload["toolCalls"] = [call.name or "" for call in result.tool_calls][:20]
     if extra:
         payload.update(extra)
     return payload
+
+def _caller(compiled: CompiledGraph, node_id: str) -> dict:
+    """B4: who made a tool or model call. The row stays at the tool or LLM node."""
+    return {"caller": node_id, "callerName": node_label(compiled, node_id) or node_id}
+
+def _llm_done_payload(
+    compiled: CompiledGraph,
+    caller_id: str,
+    llm,
+    result: CompletionResult,
+    *,
+    duration_ms: int,
+    tokens_in: int | None,
+    tokens_out: int | None,
+    per_second: float | None,
+) -> dict:
+    """B6: one readable line per model call, with the texts for the debug view."""
+    return _completion_log_payload(
+        result,
+        {
+            "provider": llm.provider,
+            "model": llm.model,
+            "durationMs": duration_ms,
+            "tokensIn": tokens_in,
+            "tokensOut": tokens_out,
+            "perSecond": round(per_second, 1) if per_second is not None else None,
+            **_caller(compiled, caller_id),
+        },
+    )
 
 def _result_truncated(result: CompletionResult) -> bool:
     reason = (result.finish_reason or "").strip().lower()
@@ -259,6 +294,7 @@ def _dispatch_tool(
     reuse: bool,
 ) -> tuple[str, FileFact | None, bool]:
     tool_node_id = owner_id
+    tool_started = time.perf_counter()
     args, bad_args = _parse_args(call_arguments)
     mapped = map_openai_tool_name(call_name)
     leaf = mapped[1] if mapped else call_name
@@ -310,7 +346,7 @@ def _dispatch_tool(
             "warn",
             "run.tool.limitReached",
             node_id=tool_node_id,
-            payload={"name": call_name, "limit": refused_at},
+            payload={"name": call_name, "limit": refused_at, **_caller(compiled, owner_id)},
         )
     elif mapped and mcp:
         from app.run.graph_models import is_mcp_node
@@ -372,7 +408,7 @@ def _dispatch_tool(
                                 "warn",
                                 "run.tool.disabled",
                                 node_id=tool_node.id,
-                                payload={"name": call_name, "error": out.error_key},
+                                payload={"name": call_name, "error": out.error_key, **_caller(compiled, owner_id)},
                             )
                         if hint:
                             tool_result["hint"] = hint
@@ -383,24 +419,44 @@ def _dispatch_tool(
     else:
         tool_result = {"ok": False, "error": f"unknown tool {call_name}"}
     ok_tool = not (isinstance(tool_result, dict) and tool_result.get("ok") is False)
-    payload: dict = {"name": call_name, "waitReason": "tool", "ok": ok_tool}
+    fact = None if reused is not None else file_fact(leaf, args, tool_result, ok=ok_tool)
+    payload: dict = {
+        "name": call_name,
+        "waitReason": "tool",
+        "ok": ok_tool,
+        "durationMs": int((time.perf_counter() - tool_started) * 1000),
+        **_caller(compiled, owner_id),
+    }
     if isinstance(args, dict):
         import json as _json
 
-        payload["arguments"] = _json.dumps(mask_obj(args), ensure_ascii=False)
+        from app.run.log_payloads import clip_strings
+
+        # B5: a written file is in the tool, not in the log; 2 KB per string are enough to follow.
+        payload["arguments"] = _json.dumps(clip_strings(mask_obj(args)), ensure_ascii=False)
+    if reused is not None:
+        payload["reused"] = True
     if isinstance(tool_result, dict) and not ok_tool:
         if tool_result.get("errorKey"):
             payload["errorKey"] = tool_result["errorKey"]
         err = tool_result.get("error") or tool_result.get("result")
         if err:
-            payload["error"] = str(err)
+            payload["error"] = str(err)[:2000]
+        if tool_result.get("hint"):
+            payload["hint"] = str(tool_result["hint"])[:500]
+    from app.run.log_payloads import tool_result_summary
+
+    summary = tool_result_summary(tool_result)
+    if summary:
+        payload["result"] = summary
+    if fact is not None and fact.ok and fact.action in _FILE_MUTATIONS and fact.path:
+        payload["changed"] = fact.path
     emit_log(
         "info" if ok_tool else "warn",
         "run.tool.call",
         node_id=tool_node_id,
         payload=payload,
     )
-    fact = None if reused is not None else file_fact(leaf, args, tool_result, ok=ok_tool)
     # Narrow mask (H5): the model works with this text and may write it back.
     masked = format_tool_result(mask_content_obj(tool_result))
     if record is not None:

@@ -168,6 +168,7 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
                 emit_log("warn", "run.cancelled")
             else:
                 emit_log("error", "run.failed")
+            _emit_summary(ctrl, outcome, fail_exc)
             if outcome == "failed" and fail_exc is not None:
                 extra["error_message"] = str(fail_exc)[:500]
                 extra["error_class"] = _run_error_class(fail_exc)
@@ -186,6 +187,46 @@ def run_harness(ctrl: RunController, compiled: CompiledGraph) -> None:
             log.exception("run end log failed run=%s", getattr(ctrl, "run_id", None))
         finally:
             ctrl.finish(outcome, **extra)
+
+def _emit_summary(ctrl: RunController, outcome: str, fail_exc: BaseException | None) -> None:
+    """B7: one line at the end with what the run did, for the log card and analyses."""
+    stats = getattr(ctrl, "stats", None)
+    if stats is None:
+        return
+    error = None
+    if outcome == "failed":
+        error = str(fail_exc) if fail_exc is not None else (ctrl.fail_message or None)
+    emit_log("info", "run.summary", payload=stats.summary(outcome, error))
+
+def _action_payload(
+    compiled: CompiledGraph,
+    names: list[tuple[str, str]],
+    action: dict[str, str],
+    kind: str,
+    text: str,
+    via: str,
+) -> dict:
+    """B2: what the orchestrator decided, readable without the memory."""
+    from app.run.limits import LOG_TASK_MAX
+    from app.run.log_payloads import clip
+
+    payload: dict = {
+        "action": kind,
+        "agent": action.get("agent") or "",
+        "requested": action.get("agentToken") or "",
+        "via": via,
+    }
+    if kind == "call":
+        agent_id = action.get("agent") or ""
+        payload["agentName"] = dict(names).get(agent_id) or node_label(compiled, agent_id) or agent_id
+        payload["task"] = clip((action.get("task") or "").strip(), LOG_TASK_MAX)
+        if action.get("source"):
+            payload["source"] = action.get("source") or ""
+        if action.get("retry") == "1":
+            payload["retry"] = True
+    elif text.strip():
+        payload["text"] = clip(text.strip(), LOG_TASK_MAX)
+    return payload
 
 def _wait_user(ctrl: RunController, compiled: CompiledGraph) -> str | None:
     chat = compiled.chat_input
@@ -275,6 +316,12 @@ _TOOL_AS_TEXT_NOTE = (
     "the tools open on this turn are listed under Connected tools."
 )
 
+
+_OVER_BUDGET_NOTE = (
+    "The tool steps you wrote as text did not run: the last decision had used all {n} tool calls. "
+    "This decision has a new budget. Read only what is still missing, as tool calls, then decide: "
+    "call an agent, ask, reply or finish."
+)
 
 def _tool_request_note(
     verb: str,
@@ -422,6 +469,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     full_names = turn_runtime._function_names(full_tools)
     later = orch_tools.later_labels(orch, read_tools, full_tools)
     tool_cap = orch.max_tool_calls or MAX_ORCHESTRATOR_TOOL_CALLS
+    read_cap = orch.max_read_calls or MAX_READ_DECISION_CALLS
     step_cap = orch.max_agent_calls or MAX_ORCHESTRATOR_STEPS
     # At the step limit: decisions left for the closing summary (None until then).
     closing: int | None = None
@@ -465,7 +513,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             offered = []
         # Reading only (no failure yet): a small budget per decision. After a failure or
         # in a takeover the full per-decision cap applies.
-        decision_cap = tool_cap if write_open else min(tool_cap, MAX_READ_DECISION_CALLS)
+        decision_cap = tool_cap if write_open else min(tool_cap, read_cap)
         orientation_left: int | None = None
         if not memory.records:
             # Looking around before the first agent call is short; then it must delegate.
@@ -559,14 +607,17 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             continue
         if action.get("action") == "tool-request":
             verb = (action.get("verb") or "").strip().lower()
+            over_budget = action.pop("_overBudget", None)
             note, granted = _tool_request_note(
                 verb, memory, full_names, write_open, turn_runtime._function_names(offered)
             )
+            if over_budget is not None:
+                note = _OVER_BUDGET_NOTE.format(n=over_budget) + " " + note
             emit_log(
                 "warn",
                 "run.orchestrator.toolRequest",
                 node_id=orch.node_id,
-                payload={"verb": verb, "granted": granted},
+                payload={"verb": verb, "granted": granted, **({"overBudget": True} if over_budget is not None else {})},
             )
             if granted:
                 emit_log("info", "run.orchestrator.selfTakeover", node_id=orch.node_id, payload={"verb": verb})
@@ -617,6 +668,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         kind = action.get("action") or "reply"
         text = action.get("text") or ""
         action.pop("_blocked", None)
+        via = action.pop("_via", None) or "json"
         if closing is not None:
             # The step limit was reached: a text is the summary, then the run ends as stepLimit.
             if kind in {"finish", "reply", "ask"} and text.strip():
@@ -635,11 +687,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             "info",
             "run.orchestrator.action",
             node_id=orch.node_id,
-            payload={
-                "action": kind,
-                "agent": action.get("agent") or "",
-                "requested": action.get("agentToken") or "",
-            },
+            payload=_action_payload(compiled, names, action, kind, text, via),
         )
         if kind == "ask":
             spoke = False
