@@ -259,8 +259,11 @@ def _agent_turn(
             turn_runtime._set_node(ctrl, kid, "running", wait="knowledge")
         try:
             node = kn
-            top_k = int(node.data.get("topK") or DEFAULT_TOP_K) if node else DEFAULT_TOP_K
-            score_min = float(node.data.get("scoreThreshold") or DEFAULT_SCORE_MIN) if node else DEFAULT_SCORE_MIN
+            from app.run.node_values import knowledge_score, knowledge_top_k
+
+            # Clamped: a negative topK cut from the end of the hits; text raised ValueError.
+            top_k = knowledge_top_k(node.data, DEFAULT_TOP_K) if node else DEFAULT_TOP_K
+            score_min = knowledge_score(node.data, DEFAULT_SCORE_MIN) if node else DEFAULT_SCORE_MIN
             for snip in retrieve(
                 compiled.network_id,
                 kid,

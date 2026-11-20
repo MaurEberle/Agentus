@@ -109,14 +109,17 @@ def test_reading_the_same_files_again_and_again_still_stops(monkeypatch, api_env
                 content=None,
                 tool_calls=[
                     ToolCall(id=f"r{i}", name="file_access", arguments=f'{{"action":"read","path":"f{i}"}}')
-                    for i in range(MAX_READ_DECISION_CALLS)
+                    for i in range(3)
                 ],
                 model="m",
                 finish_reason="tool_calls",
             )
         return _ok(_XML)
 
-    stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
+    doc = _orch_files_doc()
+    # Three reads per decision keep the test short; the rule is the same at 15.
+    next(node for node in doc["nodes"] if node["id"] == "orch")["data"]["maxReadCalls"] = 3
+    stored = _drive(monkeypatch, _complete, doc=doc)
     assert stored["outcome"] == "failed"
     assert stored["error_message"] == "run.orchestrator.stuck"
 

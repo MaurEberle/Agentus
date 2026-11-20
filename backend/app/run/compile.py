@@ -88,6 +88,8 @@ class CompiledGraph:
 
 
 def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id: str) -> CompiledLlm:
+    from app.run.node_values import clamped_max_tokens, clamped_temperature
+
     llm_edges = [e for e in doc.edges if e.target == node_id and e.target_handle == "llm"]
     llm_node = by_id[llm_edges[0].source] if llm_edges else None
     data = llm_node.data if llm_node else {}
@@ -96,8 +98,9 @@ def _compile_llm(doc: AgentNetworkDocument, by_id: dict[str, GraphNode], node_id
         model=str(data.get("model") or ""),
         base_url=data.get("baseUrl"),
         credential_id=data.get("credentialId"),
-        temperature=data.get("temperature"),
-        max_tokens=data.get("maxTokens"),
+        # Clamped: a network imported with temperature 7 or maxTokens -1 must not break a call.
+        temperature=clamped_temperature(data),
+        max_tokens=clamped_max_tokens(data),
         num_ctx=_positive_int(data, "numCtx"),
         num_thread=_positive_int(data, "numThread"),
         kv_cache_type=_kv_cache_type(data),

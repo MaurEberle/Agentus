@@ -14,6 +14,7 @@ from app.run.graph_models import (
     normalize_mcp_nodes,
 )
 from app.run.models import ValidationError
+from app.run.node_values import knowledge_issues, llm_issues
 from app.run.router_rules import branch_match, branch_pattern, branch_rows, pattern_error
 from app.tools.file_access_tool import is_forbidden_root
 from app.tools.kinds import FIRST_PARTY_KINDS
@@ -342,6 +343,7 @@ def validate_document(
                 errors.append(_err("graph.llm.credential", node.id))
             if provider in NEEDS_CREDENTIAL and not str(node.data.get("credentialId") or "").strip():
                 errors.append(_err("graph.llm.credential", node.id))
+            errors.extend(_err(key, node.id) for key in llm_issues(node.data))
         if (node.type in {"tool", "mcp"} or is_mcp_node(node)) and not _max_calls_ok(node.data):
             errors.append(_err("graph.tool.maxCalls", node.id))
         if node.type == "mcp" or is_mcp_node(node):
@@ -413,6 +415,7 @@ def validate_document(
                 errors.append(_err("graph.knowledge.dataDir", node.id))
             elif reason:
                 errors.append(_err("graph.knowledge.path", node.id))
+            errors.extend(_err(key, node.id) for key in knowledge_issues(node.data))
     return errors
 
 

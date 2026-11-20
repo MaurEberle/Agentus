@@ -1,3 +1,4 @@
+import { knowledgeRangeIssues, llmRangeIssues } from '@/modules/network/model/ranges';
 import { embeddingNeedsCredential, isForbiddenDataRoot } from '@/modules/settings/model';
 import type { McpRecipe, McpServerListItem } from '@/modules/settings/model';
 import { connectionAllowed, portKind, type PortContext } from '@/modules/network/schema/ports';
@@ -316,6 +317,12 @@ function validateNode(
     if (provider !== 'ollama' && !asString(node.data.credentialId)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.credentialRequired' });
     }
+    // Mirrors graph.llm.temperature, graph.llm.maxTokens and graph.llm.maxTokensContext.
+    for (const messageKey of llmRangeIssues(node.data)) issues.push({ nodeId: node.id, messageKey });
+  }
+  if (node.type === 'knowledge') {
+    // Mirrors graph.knowledge.topK and graph.knowledge.score.
+    for (const messageKey of knowledgeRangeIssues(node.data)) issues.push({ nodeId: node.id, messageKey });
   }
   if (node.type === 'mcp' || isMcpNode(node)) {
     const serverId = asString(node.data.mcpServerId);
