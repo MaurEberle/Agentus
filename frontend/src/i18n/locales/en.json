@@ -1856,6 +1856,7 @@
         "tree": "shows the tree of {{path}}",
         "stat": "checks {{path}}",
         "search": "searches {{pattern}} in {{path}}",
+        "searchText": "searches for “{{text}}” in {{path}}",
         "mkdir": "creates the folder {{path}}",
         "exists": "checks whether {{path}} exists",
         "other": "file access {{action}} {{path}}"
@@ -1952,7 +1953,8 @@
         "notText": "not a text file",
         "missingContent": "content missing",
         "editMiss": "text to replace not found",
-        "editAmbiguous": "text to replace occurs more than once"
+        "editAmbiguous": "text to replace occurs more than once",
+        "invalidText": "search text too long or on several lines"
       },
       "terminal": {
         "notFound": "program not found",
@@ -2178,6 +2180,7 @@
         "selfTakeover": "An agent failed: the orchestrator may now change files itself.",
         "toolLocked": "Tool call {{name}} not run: not open in this step.",
         "stuck": "The orchestrator got stuck: {{decisions}} decisions without a new step.",
+        "stuckClose": "{{decisions}} decisions without a new step. The orchestrator sums up, then the run ends.",
         "orientationCap": "Orchestrator: {{calls}} tool calls before the first agent call, limit reached.",
         "toolWithdrawn": "Tool {{name}} is withdrawn for this step: the same error or the same call again and again ({{error}}).",
         "stepClose": "Limit of {{calls}} agent calls reached. The orchestrator sums up, then the run ends.",

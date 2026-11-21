@@ -128,7 +128,18 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
         },
         "pattern": {
             "type": "string",
-            "description": "search: glob matched against the relative path and the file name",
+            "description": (
+                "search: glob matched against the relative path and the file name. "
+                "With text it picks which files are searched, for example *.css"
+            ),
+        },
+        "text": {
+            "type": "string",
+            "description": (
+                "search: exact text (case-sensitive) to find inside the file at path, or inside the files "
+                "below the folder at path (node_modules and .git are skipped). "
+                "Returns path, line number and line of each hit"
+            ),
         },
         "oldText": {"type": "string", "description": "edit: text to replace, must occur once"},
         "newText": {"type": "string", "description": "edit: replacement text"},
@@ -198,7 +209,7 @@ _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
     "file_access": (
         "Read and write files under the configured root. Actions: list, stat, read, read_many, "
         "write (creates missing parent folders), mkdir, delete, edit (oldText/newText or edits), "
-        "move (destination), search (pattern), tree. "
+        "move (destination), search (pattern for file names, text for text inside files), tree. "
         "read returns one page of a file: content with the exact text of the lines startLine to endLine, "
         "and lines with the size of the file. When the result has nextOffset, more lines follow: "
         "read again with offset set to nextOffset. Optional offset and limit pick a line range, "
@@ -324,6 +335,8 @@ def _file_access_parameters(actions: list[str] | None) -> tuple[dict[str, Any], 
                 " read returns one page (lines startLine to endLine of lines); "
                 "when the result has nextOffset, read again with offset set to nextOffset."
             )
+        if "search" in chosen:
+            description += " search finds file names with pattern, or text inside files with text."
     return schema, description
 
 

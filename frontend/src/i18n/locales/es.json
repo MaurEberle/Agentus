@@ -1789,6 +1789,7 @@
         "tree": "muestra el árbol de {{path}}",
         "stat": "comprueba {{path}}",
         "search": "busca {{pattern}} en {{path}}",
+        "searchText": "busca «{{text}}» en {{path}}",
         "mkdir": "crea la carpeta {{path}}",
         "exists": "comprueba si existe {{path}}",
         "other": "acceso a archivos {{action}} {{path}}"
@@ -1885,7 +1886,8 @@
         "notText": "no es un archivo de texto",
         "missingContent": "falta el contenido",
         "editMiss": "texto a reemplazar no encontrado",
-        "editAmbiguous": "el texto a reemplazar aparece varias veces"
+        "editAmbiguous": "el texto a reemplazar aparece varias veces",
+        "invalidText": "texto de búsqueda demasiado largo o de varias líneas"
       },
       "terminal": {
         "notFound": "programa no encontrado",
@@ -2111,6 +2113,7 @@
         "selfTakeover": "Un agente falló: el orquestador puede cambiar archivos él mismo.",
         "toolLocked": "Llamada {{name}} no ejecutada: no está habilitada en este paso.",
         "stuck": "El orquestador se atascó: {{decisions}} decisiones sin un paso nuevo.",
+        "stuckClose": "{{decisions}} decisiones sin un paso nuevo. El orquestador resume y la ejecución termina.",
         "orientationCap": "Orquestador: {{calls}} llamadas a herramientas antes del primer encargo, límite alcanzado.",
         "toolWithdrawn": "La herramienta {{name}} se retira en este paso: el mismo error o la misma llamada una y otra vez ({{error}}).",
         "stepClose": "Límite de {{calls}} encargos alcanzado. El orquestador resume y la ejecución termina.",

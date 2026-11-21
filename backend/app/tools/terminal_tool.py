@@ -53,7 +53,9 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
     if not command:
         return _fail("tools.terminal.missingCommand")
     result = _run_program(root, command, programs, timeout)
-    if habits.removed:
+    # Only a command that ran gets "ran" and the note. A rejected rest kept them and the
+    # note recommended a command that is rejected again (Coder_Team run, 2026-11-20: 44 times).
+    if habits.removed and (result.ok or result.error_key == "tools.terminal.timeout"):
         _apply_habits(result, habits, command)
     return result
 

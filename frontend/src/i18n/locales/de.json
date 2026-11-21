@@ -1856,6 +1856,7 @@
         "tree": "zeigt den Baum von {{path}}",
         "stat": "prüft {{path}}",
         "search": "sucht {{pattern}} in {{path}}",
+        "searchText": "sucht „{{text}}“ in {{path}}",
         "mkdir": "legt den Ordner {{path}} an",
         "exists": "prüft, ob {{path}} existiert",
         "other": "Dateizugriff {{action}} {{path}}"
@@ -1952,7 +1953,8 @@
         "notText": "keine Textdatei",
         "missingContent": "Inhalt fehlt",
         "editMiss": "Text zum Ersetzen nicht gefunden",
-        "editAmbiguous": "Text zum Ersetzen kommt mehrfach vor"
+        "editAmbiguous": "Text zum Ersetzen kommt mehrfach vor",
+        "invalidText": "Suchtext zu lang oder mehrzeilig"
       },
       "terminal": {
         "notFound": "Programm nicht gefunden",
@@ -2178,6 +2180,7 @@
         "selfTakeover": "Ein Agent ist gescheitert: Der Orchestrator darf Dateien jetzt selbst ändern.",
         "toolLocked": "Werkzeugaufruf {{name}} nicht ausgeführt: in diesem Schritt nicht freigegeben.",
         "stuck": "Der Orchestrator kam nicht weiter: {{decisions}} Entscheidungen ohne neuen Schritt.",
+        "stuckClose": "{{decisions}} Entscheidungen ohne neuen Schritt. Der Orchestrator fasst zusammen, dann endet der Lauf.",
         "orientationCap": "Orchestrator: {{calls}} Werkzeugaufrufe vor dem ersten Agentenauftrag, Grenze erreicht.",
         "toolWithdrawn": "Werkzeug {{name}} ist für diesen Schritt zurückgezogen: wiederholt derselbe Fehler oder derselbe Aufruf ({{error}}).",
         "stepClose": "Grenze von {{calls}} Agentenaufrufen erreicht. Der Orchestrator fasst zusammen, dann endet der Lauf.",

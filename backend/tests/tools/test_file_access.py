@@ -438,3 +438,70 @@ def test_edit_crlf_text_in_lf_file(tmp_path) -> None:
     )
     assert result.ok is True, result.error_key
     assert target.read_bytes() == b"alpha\ngamma\n"
+
+
+def _search(root, **args):
+    return execute_first_party("file_access", config={"rootPath": str(root)}, args={"action": "search", **args})
+
+
+def test_search_with_text_finds_lines_in_a_folder(tmp_path) -> None:
+    """Coder_Team run, 2026-11-20: 106 failed calls tried to find text with grep and the like."""
+    root = tmp_path / "root"
+    (root / "src" / "modules").mkdir(parents=True)
+    (root / "node_modules" / "lib").mkdir(parents=True)
+    (root / "src" / "modules" / "_cards.scss").write_bytes(b".grid {}\n.language-card { color: red; }\n")
+    (root / "src" / "Card.tsx").write_bytes(b'<article className="language-card">\n')
+    (root / "node_modules" / "lib" / "x.css").write_bytes(b".language-card {}\n")
+    found = _search(root, path=".", text="language-card")
+    assert found.ok is True, found.error_key
+    hits = {(item["path"], item["line"]) for item in found.result["matches"]}
+    # node_modules is skipped below the start folder.
+    assert hits == {("src/modules/_cards.scss", 2), ("src/Card.tsx", 1)}
+    assert found.result["occurrences"] == 2 and found.result["files"] == 2
+    only_scss = _search(root, path="src", text="language-card", pattern="*.scss")
+    assert [item["path"] for item in only_scss.result["matches"]] == ["src/modules/_cards.scss"]
+    inside = _search(root, path="node_modules/lib", text="language-card")
+    assert [item["path"] for item in inside.result["matches"]] == ["node_modules/lib/x.css"]
+
+
+def test_search_with_text_in_one_minified_file(tmp_path) -> None:
+    root = tmp_path / "root"
+    (root / "dist").mkdir(parents=True)
+    css = ".a{color:red}" * 40 + ".rotate-animation{animation:20s linear infinite rotate}" + ".b{}" * 40
+    (root / "dist" / "index.css").write_text(css, encoding="utf-8")
+    found = _search(root, path="dist/index.css", text="rotate-animation")
+    assert found.ok is True, found.error_key
+    [hit] = found.result["matches"]
+    assert hit["line"] == 1
+    assert "rotate-animation" in hit["text"] and len(hit["text"]) <= 162
+    assert hit["text"].startswith("…") and hit["text"].endswith("…")
+    missing = _search(root, path="dist/index.css", text="--color-accent")
+    assert missing.ok is True and missing.result["matches"] == [] and missing.result["occurrences"] == 0
+
+
+def test_a_pattern_on_a_file_is_searched_as_text(tmp_path) -> None:
+    """The run sent {"action":"search","path":"dist/assets/x.css","pattern":"--color-accent"} ten times."""
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "x.css").write_bytes(b":root{--color-accent:#3182ce}\n")
+    found = _search(root, path="x.css", pattern="--color-accent")
+    assert found.ok is True, found.error_key
+    assert found.result["matches"][0]["line"] == 1
+    assert "as text" in found.result["note"]
+
+
+def test_search_text_limits(tmp_path) -> None:
+    from app.tools.file_access_tool import MAX_TEXT_HITS
+
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "many.txt").write_bytes(b"hit\n" * (MAX_TEXT_HITS + 5))
+    (root / "blob.bin").write_bytes(b"\x00\x01hit")
+    found = _search(root, path=".", text="hit")
+    assert len(found.result["matches"]) == MAX_TEXT_HITS
+    assert found.result["truncated"] is True
+    assert found.result["occurrences"] == MAX_TEXT_HITS + 5
+    assert {item["path"] for item in found.result["matches"]} == {"many.txt"}
+    assert _search(root, path=".", text="a\nb").error_key == "tools.fileAccess.invalidText"
+    assert _search(root, path=".", text="x" * 201).error_key == "tools.fileAccess.invalidText"
+    assert _search(root, path="gone", text="hit").error_key == "tools.fileAccess.notFound"

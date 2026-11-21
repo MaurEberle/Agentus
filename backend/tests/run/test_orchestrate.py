@@ -181,12 +181,41 @@ def test_instructions_have_fixed_sections_in_order() -> None:
     assert text.rstrip().endswith("Write ask, reply, think, and finish text in the user's language.")
 
 
-def test_instructions_mention_tools_only_when_the_orchestrator_has_them() -> None:
+def test_instructions_say_when_the_orchestrator_has_no_tools() -> None:
+    """Coder_Team run, 2026-11-20: nothing said so, and it planned to check the files itself."""
     plain = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
-    assert "# Your tools" not in plain
-    assert "terminal" not in plain.lower()
+    assert "# Your tools\nYou have no tools of your own." in plain
+    assert "cannot read, search or change files" in plain
+    assert "call an agent that has the tool" in plain
+    # No tool names: nothing to invent a call from.
+    assert "terminal" not in plain.lower() and "file_access" not in plain
     withheld = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], [], tools_connected=True)
     assert "# Your tools\nNot available on this turn. Call an agent or ask." in withheld
+
+
+def test_instructions_carry_the_overview_and_the_agent_tools() -> None:
+    overview = "Files: you have no file access.\nOther tools connected to you:\n- Websuche (web_search): searches"
+    text = orchestrator_instructions(
+        "leite",
+        [("ag", "Schreiber", "schreibe")],
+        [],
+        tools_connected=True,
+        overview=overview,
+        agent_tools={"ag": "file access (read and change) in C:/p, terminal (npm)"},
+    )
+    assert "Not available on this turn. Call an agent or ask.\nFiles: you have no file access." in text
+    assert "- id: ag\n  name: Schreiber\n  tools: file access (read and change) in C:/p, terminal (npm)\n" in text
+    # The overview replaces the shorter line about tools that open later.
+    reading = orchestrator_instructions(
+        "leite",
+        [("ag", "Schreiber", "schreibe")],
+        ["file_access"],
+        write_open=False,
+        later=["the terminal"],
+        overview="Files: you can read files in C:/p yourself.",
+    )
+    assert "Files: you can read files in C:/p yourself." in reading
+    assert "After an agent call failed you also get" not in reading
 
 
 def test_instructions_for_repair_after_a_failure() -> None:

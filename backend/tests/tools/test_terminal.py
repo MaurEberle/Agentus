@@ -267,6 +267,21 @@ def test_real_shell_syntax_is_still_rejected(tmp_path: Path) -> None:
     assert not (tmp_path / "out.txt").exists()
 
 
+def test_a_rejected_rest_gets_no_note(tmp_path: Path) -> None:
+    """Coder_Team run, 2026-11-20: 'grep … | head -5' lost '| head -5', grep was still not
+    granted, and the note said 'Next time send only: grep …'."""
+    cfg, program = _python_root(tmp_path)
+    for command, key in (
+        ("grep -n x style.css | head -5", "tools.terminal.notGranted"),
+        (f"{program} -V 2>&1 | more", "tools.terminal.shellSyntax"),
+        (f'{program} -c "print(1)" 2>&1', "tools.terminal.inlineCode"),
+    ):
+        result = execute_first_party("terminal", config=cfg, args={"command": command})
+        assert result.error_key == key, command
+        payload = result.result or {}
+        assert "note" not in payload and "ran" not in payload, command
+
+
 def test_quoted_text_is_not_touched(tmp_path: Path) -> None:
     from app.tools.terminal_tool import strip_shell_habits
 

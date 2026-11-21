@@ -23,6 +23,7 @@ LIMIT_KEYS = frozenset(
         "run.llmBudget",
         "run.orchestrator.orientationCap",
         "run.orchestrator.stepClose",
+        "run.orchestrator.stuckClose",
         "run.orchestrator.stuck",
         "run.orchestrator.thinkLimit",
         "run.orchestrator.thinkLoop",

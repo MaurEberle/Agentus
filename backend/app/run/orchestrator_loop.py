@@ -10,7 +10,7 @@ from collections import deque
 
 from app.db.engine import utc_now
 from app.run import agent_turn, dispatch, orch_tools, orchestrator_decide, turn_runtime
-from app.run.capabilities import orchestrator_capabilities
+from app.run.capabilities import orchestrator_capabilities, orchestrator_tool_overview, tool_summary
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
 from app.run.limits import (
@@ -102,7 +102,25 @@ _STEP_CLOSE_NOTE = (
 
 _IDLE_NOTE = (
     "You made {n} decisions in a row without progress: no agent call, no new tool result, no new user message. "
-    "Act now: call an agent, ask the user, or finish. The run stops after {max} such decisions."
+    "Act now: call an agent, ask the user, or finish. At {max} such decisions the run ends; "
+    "you then get one last turn for a summary."
+)
+
+_STUCK_CLOSE_NOTE = (
+    "You made {n} decisions in a row without progress, so the run ends now. No more agent calls and no tools. "
+    "Close with finish: a short summary for the user of what was done, what was found and what is still open."
+)
+
+# Added to the think and idle notes when the orchestrator cannot read files on this turn.
+# Without tools it planned to "check the files myself" eight times, then the run ended
+# stuck (Coder_Team run, 2026-11-20).
+_NO_FILES_NOTE = (
+    " You have no file access of your own, so you cannot read or check files yourself. "
+    "To check something, call an agent with file access and say in the task what it should look for."
+)
+_FILES_CLOSED_NOTE = (
+    " Your file access is not open on this turn, so you cannot read files yourself now. "
+    "To check something, call an agent with file access and say in the task what it should look for."
 )
 
 _FINISH_FILES_NOTE = (
@@ -463,6 +481,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             name = str(node.data.get("displayName") or node.data.get("role") or agent_id).strip() or agent_id
             instructions = str(node.data.get("systemPrompt") or "")
         roster.append((agent_id, name, instructions))
+    agent_tools = {agent_id: tool_summary(compiled, agent_id) for agent_id in orch.agents}
     # Reading and checking always; changing files after a failed agent call or in a takeover.
     full_tools = orch_tools.schemas(orch, write_open=True)
     read_tools = orch_tools.schemas(orch, write_open=False)
@@ -471,8 +490,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     tool_cap = orch.max_tool_calls or MAX_ORCHESTRATOR_TOOL_CALLS
     read_cap = orch.max_read_calls or MAX_READ_DECISION_CALLS
     step_cap = orch.max_agent_calls or MAX_ORCHESTRATOR_STEPS
-    # At the step limit: decisions left for the closing summary (None until then).
+    # At the step limit or when stuck: decisions left for the closing summary (None until then).
     closing: int | None = None
+    closing_reason = "stepLimit"
     names = [(agent_id, name) for agent_id, name, _ in roster]
     steps = 0
     thinks = 0
@@ -483,15 +503,40 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     idle = 0
     unreadable = 0
 
+    def _reach(note: str) -> str:
+        """The note, plus that it cannot read files itself when that is so on this turn."""
+        if "file_access" in turn_runtime._function_names(offered):
+            return note
+        return note + (_FILES_CLOSED_NOTE if "file_access" in full_names else _NO_FILES_NOTE)
+
+    def _close_note() -> str:
+        if closing_reason == "stuck":
+            return _STUCK_CLOSE_NOTE.format(n=idle)
+        return _STEP_CLOSE_NOTE.format(n=steps)
+
+    def _close_end() -> str:
+        if closing_reason == "stuck":
+            return _fail_stuck(ctrl, orch.node_id, idle)
+        return _fail_step_limit(ctrl, orch.node_id)
+
     def _no_progress() -> str | None:
-        nonlocal idle
+        nonlocal idle, closing, closing_reason
         idle += 1
         if idle >= MAX_IDLE_DECISIONS:
+            if closing is None:
+                # One closing turn for a summary: the run ended without a word after
+                # 84 minutes and 25 agent calls (Coder_Team run, 2026-11-20).
+                closing = 2
+                closing_reason = "stuck"
+                emit_log("warn", "run.orchestrator.stuckClose", node_id=orch.node_id, payload={"decisions": idle})
+                memory.set_nudge(_close_note())
+                _store_memory(ctrl, memory)
+                return None
             _store_memory(ctrl, memory)
             turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
-            return _fail_stuck(ctrl, orch.node_id, idle)
+            return _close_end()
         if idle == IDLE_NUDGE_DECISIONS:
-            memory.set_nudge(_IDLE_NOTE.format(n=idle, max=MAX_IDLE_DECISIONS))
+            memory.set_nudge(_reach(_IDLE_NOTE.format(n=idle, max=MAX_IDLE_DECISIONS)))
         return None
     while not ctrl.stop_event.is_set():
         if turn_runtime._user_aborted(ctrl):
@@ -533,6 +578,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             later=later,
             orientation_left=orientation_left,
             capabilities=orchestrator_capabilities(compiled, orch.node_id, offered),
+            overview=orchestrator_tool_overview(compiled, orch.node_id, turn_runtime._function_names(offered)),
+            agent_tools=agent_tools,
         )
         own_start = len(memory.own_tools)
         action = orchestrator_decide._orchestrator_action(
@@ -542,7 +589,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             memory,
             offered,
             names,
-            block_reply=spoke,
+            # In the closing turn any text is the summary, also a second reply.
+            block_reply=spoke and closing is None,
             write_open=write_open,
             tool_cap=decision_cap,
             orientation=orientation_left is not None,
@@ -602,8 +650,8 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             if closing <= 0:
                 _store_memory(ctrl, memory)
                 turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
-                return _fail_step_limit(ctrl, orch.node_id)
-            memory.set_nudge(_STEP_CLOSE_NOTE.format(n=steps))
+                return _close_end()
+            memory.set_nudge(_close_note())
             continue
         if action.get("action") == "tool-request":
             verb = (action.get("verb") or "").strip().lower()
@@ -635,7 +683,7 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             if blocked:
                 memory.set_nudge(_BLOCKED_REPLY_NOTE)
             elif repeated:
-                memory.set_nudge(_REPEAT_THINK_NOTE)
+                memory.set_nudge(_reach(_REPEAT_THINK_NOTE))
             emit_log(
                 "info",
                 "run.orchestrator.think",
@@ -670,17 +718,19 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
         action.pop("_blocked", None)
         via = action.pop("_via", None) or "json"
         if closing is not None:
-            # The step limit was reached: a text is the summary, then the run ends as stepLimit.
+            # Step limit or stuck: a text is the summary, then the run ends as stepLimit or stuck.
             if kind in {"finish", "reply", "ask"} and text.strip():
                 _publish_assistant(ctrl, text.strip())
                 memory.add_spoken("finish", text.strip())
                 _store_memory(ctrl, memory)
-                return _fail_step_limit(ctrl, orch.node_id)
+                turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _close_end()
             closing -= 1
             if closing <= 0:
                 _store_memory(ctrl, memory)
-                return _fail_step_limit(ctrl, orch.node_id)
-            memory.set_nudge(_STEP_CLOSE_NOTE.format(n=steps))
+                turn_runtime._set_llm(ctrl, compiled, orch.llm.node_id or orch.node_id, busy=False)
+                return _close_end()
+            memory.set_nudge(_close_note())
             continue
         memory.clear_nudge()
         emit_log(

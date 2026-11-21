@@ -93,7 +93,7 @@ def orchestrator_capabilities(compiled: CompiledGraph, owner_id: str, offered: l
         elif kind == "terminal":
             blocks.append(_terminal_block(title, node.data))
         else:
-            blocks.append(f"## {title}\nTool name: {kind}.")
+            blocks.append(_simple_block(title, kind))
     if not blocks:
         return ""
     head = (
@@ -102,6 +102,174 @@ def orchestrator_capabilities(compiled: CompiledGraph, owner_id: str, offered: l
         "or a path outside the stated root. A file_access call without action is rejected."
     )
     return head + "\n\n" + "\n\n".join(blocks)
+
+
+# What each simple tool is for, in the orchestrator overview and the agent roster.
+_KIND_USE = {
+    "web_search": "searches the web and returns titles, links and snippets",
+    "http": "fetches an http or https URL",
+    "zip": "lists or extracts .zip files",
+    "datetime": "tells the current time and does date arithmetic",
+    "calculator": "evaluates arithmetic",
+}
+_KIND_LABEL = {
+    "web_search": "web search",
+    "http": "HTTP",
+    "zip": "zip",
+    "datetime": "date and time",
+    "calculator": "calculator",
+}
+_OPENS_LATER = "opens only after an agent call failed or during a takeover"
+
+
+def _tool_nodes(compiled: CompiledGraph, owner_id: str) -> list:
+    by_id = {node.id: node for node in compiled.doc.nodes}
+    nodes = []
+    for edge in compiled.doc.edges:
+        if edge.target != owner_id or edge.target_handle != "tool":
+            continue
+        node = by_id.get(edge.source)
+        if node is not None:
+            nodes.append(node)
+    return nodes
+
+
+def _file_actions_of(data: dict) -> list[str]:
+    chosen = data.get("fileActions")
+    if isinstance(chosen, list) and chosen:
+        return [name for name in FILE_ACTION_ORDER if name in {str(item) for item in chosen}]
+    return list(FILE_ACTION_ORDER)
+
+
+def _file_changes_allowed(data: dict) -> bool:
+    actions = _file_actions_of(data)
+    writes = data.get("allowWrite") is not False and any(name in _FILE_WRITES for name in actions)
+    deletes = data.get("allowDelete") is not False and "delete" in actions
+    return writes or deletes
+
+
+def _programs_of(data: dict) -> list[str]:
+    from app.tools.terminal_tool import DEFAULT_PROGRAMS
+
+    raw = data.get("terminalPrograms")
+    if not (isinstance(raw, list) and raw):
+        return list(DEFAULT_PROGRAMS)
+    programs = []
+    for item in raw:
+        name = str(item).strip()
+        if name.lower().endswith(".exe"):
+            name = name[:-4]
+        if name:
+            programs.append(name)
+    return programs
+
+
+def _unrestricted(data: dict) -> bool:
+    return str(data.get("terminalMode") or "restricted").strip().lower() == "unrestricted"
+
+
+def _root_of(data: dict) -> str:
+    return str(data.get("rootPath") or "").strip() or "(no root)"
+
+
+def _mcp_title(data: dict) -> tuple[str, str]:
+    server_id = str(data.get("mcpServerId") or "").strip()
+    server_name, _root = _server_facts(server_id)
+    title = str(data.get("displayName") or "").strip() or server_name or server_id or "MCP"
+    return title, server_id
+
+
+def _mcp_tool_names(data: dict, server_id: str) -> list[str]:
+    allow = data.get("mcpToolNames")
+    if isinstance(allow, list) and allow:
+        return [str(item) for item in allow]
+    return [name for name, _ in _live_tools(server_id)]
+
+
+def tool_summary(compiled: CompiledGraph, owner_id: str) -> str:
+    """The tools wired to one node in a few words, for the orchestrator's roster.
+
+    The orchestrator could not tell which agent can read files; it planned to read
+    them itself instead (Coder_Team run, 2026-11-20).
+    """
+    parts: list[str] = []
+    for node in _tool_nodes(compiled, owner_id):
+        data = node.data
+        if is_mcp_node(node):
+            title, _server = _mcp_title(data)
+            parts.append(f"MCP server {title}")
+            continue
+        kind = str(data.get("kind") or "")
+        if kind == "file_access":
+            mode = "read and change" if _file_changes_allowed(data) else "read only"
+            parts.append(f"file access ({mode}) in {_root_of(data)}")
+        elif kind == "terminal":
+            if _unrestricted(data):
+                parts.append("terminal (PowerShell)")
+            else:
+                parts.append("terminal (" + ", ".join(_programs_of(data)) + ")")
+        elif kind:
+            parts.append(_KIND_LABEL.get(kind, kind))
+    return ", ".join(parts) if parts else "none"
+
+
+def orchestrator_tool_overview(compiled: CompiledGraph, owner_id: str, open_names: list[str]) -> str:
+    """Every tool wired to the orchestrator: what it does and whether it is open on this turn.
+
+    The prompt used to mention only the tools open on a turn. Without file access the
+    orchestrator still planned to "check the files myself", eight decisions in a row, and
+    the run ended stuck (Coder_Team run, 2026-11-20). Now it reads what it can reach.
+    """
+    from app.run.mcp_bridge import map_openai_tool_name
+
+    opened = set(open_names)
+    open_servers = {mapped[0] for mapped in (map_openai_tool_name(name) for name in open_names) if mapped}
+    files: list[str] = []
+    others: list[str] = []
+    for node in _tool_nodes(compiled, owner_id):
+        data = node.data
+        if is_mcp_node(node):
+            title, server_id = _mcp_title(data)
+            names = _mcp_tool_names(data, server_id)
+            tools = (", ".join(names[:6]) + (", ..." if len(names) > 6 else "")) if names else "its published tools"
+            status = "open now" if server_id in open_servers else _OPENS_LATER
+            others.append(f"- {title} (MCP server): {tools}; {status}.")
+            continue
+        kind = str(data.get("kind") or "")
+        title = str(data.get("displayName") or kind or node.id)
+        if kind == "file_access":
+            root = _root_of(data)
+            if "file_access" not in opened:
+                files.append(f"Files: your file access in {root} is not open on this turn.")
+            elif not _file_changes_allowed(data):
+                files.append(f"Files: you can read files in {root} yourself; changing them is switched off.")
+            else:
+                files.append(
+                    f"Files: you can read files in {root} yourself (search with text finds text inside files); "
+                    f"changing them {_OPENS_LATER}."
+                )
+            continue
+        if kind == "terminal":
+            use = (
+                f"runs one PowerShell command in {_root_of(data)}"
+                if _unrestricted(data)
+                else f"runs one allowed program ({', '.join(_programs_of(data))}) in {_root_of(data)}"
+            )
+        elif kind:
+            use = _KIND_USE.get(kind, "a connected tool")
+        else:
+            continue
+        status = "open now" if kind in opened else _OPENS_LATER
+        others.append(f"- {title} ({kind}): {use}; {status}.")
+    if not files:
+        files.append(
+            "Files: you have no file access. To read or check a file, call an agent with file access "
+            "(see tools in the roster) and say what it should look for."
+        )
+    lines = files
+    if others:
+        lines = lines + ["Other tools connected to you:"] + others
+    return "\n".join(lines)
 
 
 def _blocks(compiled: CompiledGraph, owner_id: str) -> list[str]:
@@ -123,8 +291,13 @@ def _blocks(compiled: CompiledGraph, owner_id: str) -> list[str]:
         elif kind == "terminal":
             blocks.append(_terminal_block(title, node.data))
         elif kind:
-            blocks.append(f"## {title}\nTool name: {kind}.")
+            blocks.append(_simple_block(title, kind))
     return blocks
+
+
+def _simple_block(title: str, kind: str) -> str:
+    use = _KIND_USE.get(kind)
+    return f"## {title}\nTool name: {kind}." + (f"\nUse: {use}." if use else "")
 
 
 def _file_block(title: str, data: dict, *, only: list[str] | None = None) -> str:
@@ -159,6 +332,12 @@ def _file_block(title: str, data: dict, *, only: list[str] | None = None) -> str
         lines.append(
             "read returns one page of a file. When the result has nextOffset, more lines follow: "
             "read again with offset set to nextOffset."
+        )
+    if "search" in actions:
+        lines.append(
+            "search with text finds text inside a file or the files of a folder, like grep: "
+            '{"action":"search","path":"src","text":"language-card","pattern":"*.scss"}. '
+            "search with only pattern finds file names."
         )
     return "\n".join(lines)
 

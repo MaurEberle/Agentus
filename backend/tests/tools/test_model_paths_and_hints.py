@@ -73,3 +73,13 @@ def test_hints_name_the_root_actions_and_programs() -> None:
     assert "npm run build" in inline and "Do not add helper scripts" in inline
     assert failure_hint("terminal", "tools.terminal.unknown", term) is None
     assert failure_hint("web_search", "tools.webSearch.failed", {}) is None
+
+
+def test_hints_point_to_the_text_search() -> None:
+    """Coder_Team run, 2026-11-20: grep, cat | grep and node -e were how the agent looked for text."""
+    term = {"rootPath": "C:/dev/app", "terminalPrograms": ["npm"]}
+    for key in ("tools.terminal.notGranted", "tools.terminal.inlineCode", "tools.terminal.shellSyntax"):
+        assert "search with text" in failure_hint("terminal", key, term), key
+    assert "grep" in failure_hint("terminal", "tools.terminal.notGranted", term)
+    not_dir = failure_hint("file_access", "tools.fileAccess.notDir", {"rootPath": "C:/dev/app"})
+    assert '"text"' in not_dir

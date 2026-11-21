@@ -180,17 +180,66 @@ def test_decisions_without_progress_stop_the_run(monkeypatch, api_env) -> None:
         if not _is_orch(req):
             return _ok("ok")
         rounds["n"] += 1
-        if "decisions in a row without progress" in _blob(req):
+        blob = _blob(req)
+        if "so the run ends now" in blob:
+            closing["tools"] = list(req.tools or [])
+            return _ok('{"action":"finish","text":"Zusammenfassung: Teil 1 bis 8 geplant, nichts umgesetzt."}')
+        if "decisions in a row without progress" in blob:
             nudged["v"] = True
         if rounds["n"] % 2:
             return _ok(f'{{"action":"reply","text":"Zwischenstand {rounds["n"]}: ich arbeite an Teil {rounds["n"]}."}}')
         return _ok(f'{{"action":"think","text":"Plan {rounds["n"]}: {"x" * rounds["n"]} {rounds["n"] * 7}"}}')
 
+    closing: dict = {}
     stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
     assert stored["outcome"] == "failed"
     assert stored["error_message"] == "run.orchestrator.stuck"
-    assert rounds["n"] == 8
     assert nudged["v"] is True
+    # Coder_Team run, 2026-11-20: after 8 such decisions one closing turn without tools,
+    # and its summary reaches the chat before the run ends as stuck.
+    assert rounds["n"] == 9
+    assert closing["tools"] == []
+    assert _payloads(stored, "run.orchestrator.stuckClose") == [{"decisions": 8}]
+    texts = [item["content"] for item in (stored["chat"] or []) if item["role"] == "assistant"]
+    assert texts[-1] == "Zusammenfassung: Teil 1 bis 8 geplant, nichts umgesetzt."
+
+
+def test_a_stuck_run_without_a_summary_still_ends(monkeypatch, api_env) -> None:
+    rounds = {"n": 0}
+
+    def _complete(req, should_abort=None, on_progress=None):
+        if not _is_orch(req):
+            return _ok("ok")
+        rounds["n"] += 1
+        return _ok(f'{{"action":"think","text":"Gedanke {rounds["n"]}: {"y" * rounds["n"]} {rounds["n"] * 13}"}}')
+
+    stored = _drive(monkeypatch, _complete, doc=_orch_files_doc())
+    assert stored["outcome"] == "failed"
+    assert stored["error_message"] == "run.orchestrator.stuck"
+    # 8 decisions without progress, then two closing decisions that bring no text.
+    assert rounds["n"] == 10
+
+
+def test_a_think_without_file_access_says_so(monkeypatch, api_env) -> None:
+    """Coder_Team run, 2026-11-20: a chief without tools thought 'I must check the files myself'."""
+    from tests.run.test_validate import _orchestrator_doc
+
+    notes: list[str] = []
+
+    def _complete(req, should_abort=None, on_progress=None):
+        if not _is_orch(req):
+            return _ok("ok")
+        blob = _blob(req)
+        if "no file access of your own" in blob:
+            notes.append(blob)
+            return _ok('{"action":"finish","text":"Fertig."}')
+        return _ok('{"action":"think","text":"Ich muss selbst die Dateien prüfen."}')
+
+    stored = _drive(monkeypatch, _complete, doc=_orchestrator_doc())
+    assert stored["outcome"] == "succeeded", stored.get("error_message")
+    assert notes, "the repeated plan got no note about missing file access"
+    assert "call an agent with file access" in notes[0]
+    assert "You have no tools of your own." in notes[0]
 
 
 def test_similar_thoughts_count_as_a_repeated_plan(monkeypatch, api_env) -> None:

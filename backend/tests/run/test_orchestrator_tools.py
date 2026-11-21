@@ -96,7 +96,10 @@ def test_before_a_failure_the_orchestrator_reads_files_and_has_no_terminal(monke
     system = first["system"]
     assert "# Your tools: reading files only" in system
     assert "Tool name: terminal." not in system and "Write (" not in system
-    assert "After an agent call failed you also get file changes and the terminal" in system
+    # The overview names each connected tool and when it opens.
+    assert "Files: you can read files in C:/stories yourself" in system
+    assert "changing them opens only after an agent call failed or during a takeover" in system
+    assert "(terminal): runs one allowed program" in system
     # The terminal call never ran; the tree did.
     assert [item["kind"] for item in executed] == ["file_access"]
     locked = _payloads(stored, "run.orchestrator.toolLocked")

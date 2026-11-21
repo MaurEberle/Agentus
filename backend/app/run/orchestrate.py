@@ -79,6 +79,15 @@ _TOOL_RULES = (
 )
 
 
+# Without any connected tool. The prompt used to say nothing; the orchestrator then planned
+# to "check the files myself" until the run ended stuck (Coder_Team run, 2026-11-20).
+_NO_TOOLS = """# Your tools
+You have no tools of your own. You cannot read, search or change files, run commands or search the web, and no MCP server is connected to you.
+Everything that needs files, commands or the web is a task for an agent. The roster shows the tools of each agent.
+To check something, call an agent that has the tool and say in the task what it should look for and report.
+"""
+
+
 def _joined(items: list[str]) -> str:
     if len(items) <= 1:
         return "".join(items)
@@ -95,18 +104,25 @@ def _tools_section(
     tool_cap: int,
     orientation_left: int | None,
     capabilities: str,
+    overview: str = "",
 ) -> str:
-    """Only what the orchestrator has: no tool, no tool text (and no word about tools it lacks)."""
+    """What the orchestrator can reach on this turn, per connected tool.
+
+    ``overview`` lists every connected tool with its use and whether it is open now
+    (capabilities.orchestrator_tool_overview). Details and call rules only for the
+    tools that are open. Without any connected tool the section says so.
+    """
+    reach = (overview.strip() + "\n") if overview.strip() else ""
     if not names:
         if not connected:
-            return ""
+            return _NO_TOOLS
         if orientation_left is not None:
             return (
                 "# Your tools\n"
                 "Not available now: you used your tool calls for looking around before the first agent call. "
-                "Call an agent or ask.\n"
+                "Call an agent or ask.\n" + reach
             )
-        return "# Your tools\nNot available on this turn. Call an agent or ask.\n"
+        return "# Your tools\nNot available on this turn. Call an agent or ask.\n" + reach
     rules = _TOOL_RULES.format(cap=tool_cap)
     listed = ", ".join(names)
     if takeover:
@@ -133,9 +149,9 @@ def _tools_section(
             "Do not change files, create projects, install packages, build or run anything: "
             "that is the agents' work.\n"
         )
-        if later:
+        if later and not reach:
             head += f"After an agent call failed you also get {_joined(later)} to repair that step.\n"
-    section = head + rules
+    section = head + reach + rules
     if capabilities.strip():
         section += "\n" + capabilities.strip() + "\n"
     return section
@@ -153,6 +169,8 @@ def orchestrator_instructions(
     later: list[str] | None = None,
     orientation_left: int | None = None,
     capabilities: str = "",
+    overview: str = "",
+    agent_tools: dict[str, str] | None = None,
 ) -> str:
     """The orchestrator's system prompt in fixed sections.
 
@@ -164,7 +182,9 @@ def orchestrator_instructions(
     lines: list[str] = []
     for agent_id, name, instructions in agents:
         brief = " ".join(instructions.split())[:400]
-        lines.append(f"- id: {agent_id}\n  name: {name}\n  instructions: {brief or '(none)'}")
+        tools = (agent_tools or {}).get(agent_id)
+        tool_line = f"\n  tools: {tools}" if tools else ""
+        lines.append(f"- id: {agent_id}\n  name: {name}{tool_line}\n  instructions: {brief or '(none)'}")
     roster = "\n".join(lines) if lines else "(no agents connected)"
     names = [name for name in (tool_names or []) if name]
     connected = bool(names) if tools_connected is None else tools_connected
@@ -180,6 +200,7 @@ def orchestrator_instructions(
         tool_cap=tool_cap,
         orientation_left=orientation_left,
         capabilities=capabilities,
+        overview=overview,
     )
     if tools:
         parts.append(tools)

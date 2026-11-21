@@ -61,6 +61,7 @@ export const LIMIT_KEYS = new Set([
   'run.llmBudget',
   'run.orchestrator.orientationCap',
   'run.orchestrator.stepClose',
+  'run.orchestrator.stuckClose',
   'run.orchestrator.stuck',
   'run.orchestrator.thinkLimit',
   'run.orchestrator.thinkLoop',
@@ -208,6 +209,10 @@ function toolAction(name: string, args: Payload, ctx: LogContext): string {
     const paths = Array.isArray(args.paths) ? args.paths.filter((item): item is string => typeof item === 'string') : [];
     const path = str(args.path) || paths.slice(0, 3).join(', ') || '.';
     const vars = { path: clip(path, 120), to: clip(str(args.to) || str(args.destination), 120), pattern: clip(str(args.pattern), 60) };
+    const text = str(args.text);
+    if (action === 'search' && text) {
+      return tr(t, 'runLog.view.file.searchText', { ...vars, text: clip(text, 80) }, `search "${text}" ${path}`);
+    }
     if (FILE_ACTIONS.has(action)) return tr(t, `runLog.view.file.${action}`, vars, `${action} ${path}`);
     return tr(t, 'runLog.view.file.other', { ...vars, action }, `file_access ${action} ${path}`);
   }

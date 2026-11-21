@@ -46,6 +46,13 @@ def _file_hint(key: str, config: dict[str, Any]) -> str | None:
         return "Nothing exists at this path. List or tree the folder first, then use a path from that result."
     if leaf == "notFile":
         return "This path is a folder. Use list or tree for a folder, read for a file."
+    if leaf == "notDir":
+        return (
+            "This path is a file, not a folder. Use read for a file; "
+            'to find text in it, use search with text: {"action": "search", "path": "<file>", "text": "<text>"}.'
+        )
+    if leaf == "invalidText":
+        return "search text is one line of at most 200 characters. Send a shorter piece of the text."
     if leaf == "editMiss":
         return (
             "oldText was not found exactly. Read the file again and copy the exact lines, "
@@ -63,18 +70,21 @@ def _terminal_hint(key: str, config: dict[str, Any]) -> str | None:
         return (
             "There is no shell. Send one program with its arguments, without &&, ;, |, >, 2> or cd. "
             f"The working directory is already the project root {root}, and stdout and stderr "
-            "both come back, so cd to the root, 2>&1 and a trailing | head or | tail are not needed."
+            "both come back, so cd to the root, 2>&1 and a trailing | head or | tail are not needed. "
+            "To find text in files, use file_access search with text instead of | grep."
         )
     if leaf == "notGranted":
         programs = ", ".join(_programs(config)) or "none"
         return (
-            f"Allowed programs: {programs}. Commands like ls, pwd, cd, echo, cat and find do not exist here; "
-            "use the file_access tool to list and read files."
+            f"Allowed programs: {programs}. Commands like ls, pwd, cd, echo, cat, grep, findstr and find "
+            "do not exist here; use the file_access tool to list and read files, and its search with text "
+            "to find text in files."
         )
     if leaf == "inlineCode":
         return (
-            "Inline code (-c, -e, --eval) is not allowed. Read and check files with the file_access tool, "
-            "and build or test with the project's own scripts (for example npm run build or npm test). "
+            "Inline code (-c, -e, --eval) is not allowed. Read and check files with the file_access tool; "
+            "its search with text finds text in files. "
+            "Build or test with the project's own scripts (for example npm run build or npm test). "
             "Do not add helper scripts to the project; if one is unavoidable, delete it when you are done."
         )
     if leaf == "outsideRoot":

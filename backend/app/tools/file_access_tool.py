@@ -33,6 +33,13 @@ MAX_READ_BYTES = 1_048_576
 MAX_WRITE_BYTES = 1_048_576
 MAX_LIST_ENTRIES = 500
 MAX_SEARCH = 200
+# Text search (search with text): hits per call, files looked at, length of the text,
+# and characters of one hit line. 20 hits of 160 characters fit in one tool result.
+MAX_TEXT_HITS = 20
+MAX_TEXT_SEARCH_FILES = 2000
+MAX_TEXT_SEARCH_CHARS = 200
+TEXT_HIT_CHARS = 160
+TEXT_SEARCH_SKIP_DIRS = frozenset({"node_modules", ".git", ".hg", ".svn", "__pycache__", ".venv", "venv"})
 MAX_TREE_NODES = 200
 MAX_TREE_DEPTH = 4
 MAX_READ_MANY = 8
@@ -106,7 +113,7 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
         if action == "move":
             return _move(root, target, str(raw_args.get("destination") or ""))
         if action == "search":
-            return _search(root, target, str(raw_args.get("pattern") or ""))
+            return _search(root, target, str(raw_args.get("pattern") or ""), raw_args.get("text"))
         if action == "tree":
             return _tree(root, target)
         return _delete(root, target)
@@ -541,7 +548,14 @@ def _move(root: Path, source: Path, destination: str) -> ExecuteResult:
     )
 
 
-def _search(root: Path, target: Path, pattern: str) -> ExecuteResult:
+def _search(root: Path, target: Path, pattern: str, text: object = None) -> ExecuteResult:
+    needle = text if isinstance(text, str) else ""
+    if not needle and target.is_file() and pattern.strip():
+        # A pattern on one file can only mean text in it: ten such calls failed with
+        # notDir in the Coder_Team run, 2026-11-20 (pattern "--color-accent" on a .css file).
+        return _search_text(root, target, pattern.strip(), "", from_pattern=True)
+    if needle:
+        return _search_text(root, target, needle, pattern.strip())
     if not target.is_dir():
         return _fail("tools.fileAccess.notDir")
     glob = pattern.strip()
@@ -567,6 +581,107 @@ def _search(root: Path, target: Path, pattern: str) -> ExecuteResult:
         ok=True,
         result={"path": _rel(target, root), "pattern": glob, "matches": matches, "truncated": truncated},
     )
+
+
+def _text_files(root: Path, target: Path, glob: str):
+    """Files a text search looks at: the file itself, or the files below a folder.
+
+    node_modules, .git and similar folders are skipped below the start folder; a path
+    inside one of them is searched as asked.
+    """
+    if target.is_file():
+        yield target
+        return
+    for folder, dirs, files in os.walk(target):
+        dirs[:] = sorted(name for name in dirs if name not in TEXT_SEARCH_SKIP_DIRS)
+        base = Path(folder)
+        for name in sorted(files):
+            path = base / name
+            try:
+                if not path.resolve().is_relative_to(root):
+                    continue
+            except OSError:
+                continue
+            if glob:
+                rel = path.relative_to(target).as_posix()
+                if not (fnmatch.fnmatch(rel, glob) or fnmatch.fnmatch(name, glob)):
+                    continue
+            yield path
+
+
+def _hit_text(line: str, start: int, length: int) -> str:
+    """The line with the hit, around the hit when the line is long (minified CSS is one line)."""
+    clean = line.strip()
+    if len(clean) <= TEXT_HIT_CHARS:
+        return clean
+    side = max(0, (TEXT_HIT_CHARS - length) // 2)
+    begin = max(0, start - side)
+    end = min(len(line), start + length + side)
+    return ("…" if begin > 0 else "") + line[begin:end] + ("…" if end < len(line) else "")
+
+
+def _search_text(root: Path, target: Path, needle: str, glob: str, *, from_pattern: bool = False) -> ExecuteResult:
+    """Exact text in a file or in the files below a folder: path, line number and the line
+    of each hit under ``matches`` (the log counts them like the matches of a name search).
+
+    The tool had no text search. In the Coder_Team run (2026-11-20) 106 of 198 failed
+    tool calls tried to find text in a file with grep, cat | grep, node -e or python -c,
+    and the agent wrote eight helper scripts for it.
+    """
+    if not target.exists():
+        return _fail("tools.fileAccess.notFound")
+    if "\x00" in needle or "\n" in needle or len(needle) > MAX_TEXT_SEARCH_CHARS:
+        return _fail("tools.fileAccess.invalidText")
+    hits: list[dict[str, object]] = []
+    occurrences = 0
+    files_hit = 0
+    scanned = 0
+    truncated = False
+    skipped = 0
+    for path in _text_files(root, target, glob):
+        if scanned >= MAX_TEXT_SEARCH_FILES:
+            truncated = True
+            break
+        try:
+            if path.stat().st_size > MAX_READ_BYTES:
+                skipped += 1
+                continue
+            data = path.read_bytes()
+        except OSError:
+            skipped += 1
+            continue
+        scanned += 1
+        if b"\x00" in data[:8192]:
+            continue
+        hit_here = False
+        for number, line in enumerate(data.decode("utf-8", errors="replace").splitlines(), start=1):
+            start = line.find(needle)
+            if start < 0:
+                continue
+            occurrences += line.count(needle)
+            hit_here = True
+            if len(hits) >= MAX_TEXT_HITS:
+                truncated = True
+                continue
+            hits.append({"path": _rel(path, root), "line": number, "text": _hit_text(line, start, len(needle))})
+        if hit_here:
+            files_hit += 1
+    result: dict[str, object] = {
+        "path": _rel(target, root),
+        "text": needle,
+        "matches": hits,
+        "occurrences": occurrences,
+        "files": files_hit,
+        "scanned": scanned,
+        "truncated": truncated,
+    }
+    if glob:
+        result["pattern"] = glob
+    if skipped:
+        result["skipped"] = skipped
+    if from_pattern:
+        result["note"] = "path is a file, so pattern was searched as text in it. Next time send it as text."
+    return ExecuteResult(ok=True, result=result)
 
 
 def _tree(root: Path, target: Path) -> ExecuteResult:
