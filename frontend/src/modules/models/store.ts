@@ -4,10 +4,13 @@ import type { HubFiles, HubHit, ModelKind } from '@/modules/models/model';
 
 export type ModelsTab = 'installed' | 'hub';
 export type InstalledSortKey = 'name' | 'size' | 'modified';
-export type HubSort = 'downloads' | 'likes' | 'trending' | 'modified' | 'name';
+/** What the Hub sorts by; it sorts descending only. */
+export type HubSort = 'downloads' | 'likes' | 'trending' | 'modified';
 export type HubPipeline = 'text' | 'embed' | 'vision' | 'moe';
-export type HubSize = 'any' | '3' | '8' | '14' | '32' | '70' | 'xl' | 'custom';
 export type HubCapability = 'tools' | 'thinking' | 'vision';
+/** A capability the model must have, or must not have; absent means either is fine. */
+export type HubCapabilityRule = 'must' | 'never';
+export type HubCapabilities = Partial<Record<HubCapability, HubCapabilityRule>>;
 
 type InstalledUi = {
   search: string;
@@ -49,6 +52,7 @@ export type HubSnapshot = {
   hasNext: boolean;
   nextCursor?: string;
   errorKey?: string;
+  retryAfter?: number;
 };
 
 export type HubFilesSnapshot = {
@@ -62,14 +66,13 @@ type HubUi = {
   search: string;
   debounced: string;
   pipelines: HubPipeline[];
-  size: HubSize;
+  /** Parameter bounds in billions as typed; empty is open. `bounds` is what was searched. */
   minB: string;
   maxB: string;
   bounds: { min: string; max: string };
   sort: HubSort;
-  sortDir: 'asc' | 'desc';
   pageSize: HubPageSize;
-  capabilities: HubCapability[];
+  capabilities: HubCapabilities;
   page: number;
   cursors: (string | null)[];
   picked: string | null;
@@ -103,17 +106,15 @@ const installedDefaults: InstalledUi = {
   share: 0.62,
 };
 
-export const hubFilterDefaults: Pick<HubUi, 'search' | 'debounced' | 'pipelines' | 'size' | 'minB' | 'maxB' | 'bounds' | 'sort' | 'sortDir' | 'capabilities'> = {
+export const hubFilterDefaults: Pick<HubUi, 'search' | 'debounced' | 'pipelines' | 'minB' | 'maxB' | 'bounds' | 'sort' | 'capabilities'> = {
   search: '',
   debounced: '',
   pipelines: [],
-  size: 'any',
   minB: '',
   maxB: '',
   bounds: { min: '', max: '' },
   sort: 'downloads',
-  sortDir: 'desc',
-  capabilities: [],
+  capabilities: {},
 };
 
 export const useModelsUi = create<ModelsUiStore>((set) => ({

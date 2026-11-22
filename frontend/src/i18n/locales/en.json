@@ -97,14 +97,34 @@
       "search": "Search by name",
       "type": "Type",
       "size": "Size",
+      "range": {
+        "upTo": "up to {{max}}B",
+        "from": "from {{min}}B",
+        "between": "{{min}}–{{max}}B"
+      },
       "sort": "Sort",
       "types": { "text": "Text", "embed": "Embedding", "vision": "Vision", "moe": "MoE" },
-      "sizes": { "any": "All", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "custom": "Range", "from": "from", "to": "to" },
-      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated", "name": "Name" },
+      "sizes": { "any": "All", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "from": "from", "to": "to" },
+      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated" },
       "capabilities": "Capabilities",
+      "rule": {
+        "must": "Must",
+        "any": "Any",
+        "never": "Not"
+      },
+      "ruleHint": {
+        "must": "Must have",
+        "any": "May have",
+        "never": "Must not have"
+      },
       "reset": "Reset filters",
       "empty": "No matching models.",
       "failed": "The search failed.",
+      "timeout": "Hugging Face is not responding right now.",
+      "unreachable": "Hugging Face cannot be reached. Check the internet connection.",
+      "rateLimited": "Hugging Face is not taking more requests right now (limit without sign-in).",
+      "retryIn": "Possible again in about {{seconds}} s.",
+      "retry": "Try again",
       "downloads": "{{count}} downloads",
       "likes": "{{count}} likes",
       "pick": "Select a model.",

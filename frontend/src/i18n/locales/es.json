@@ -97,14 +97,34 @@
       "search": "Buscar por nombre",
       "type": "Tipo",
       "size": "Tamaño",
+      "range": {
+        "upTo": "hasta {{max}}B",
+        "from": "desde {{min}}B",
+        "between": "{{min}}–{{max}}B"
+      },
       "sort": "Orden",
       "types": { "text": "Texto", "embed": "Embedding", "vision": "Visión", "moe": "MoE" },
-      "sizes": { "any": "Todo", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "custom": "Rango", "from": "desde", "to": "hasta" },
-      "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado", "name": "Nombre" },
+      "sizes": { "any": "Todo", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "from": "desde", "to": "hasta" },
+      "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado" },
       "capabilities": "Capacidades",
+      "rule": {
+        "must": "Sí",
+        "any": "Igual",
+        "never": "No"
+      },
+      "ruleHint": {
+        "must": "Debe tenerla",
+        "any": "Puede tenerla",
+        "never": "No debe tenerla"
+      },
       "reset": "Restablecer filtros",
       "empty": "Ningún modelo coincide.",
       "failed": "La búsqueda falló.",
+      "timeout": "Hugging Face no responde en este momento.",
+      "unreachable": "No se puede acceder a Hugging Face. Comprueba la conexión a internet.",
+      "rateLimited": "Hugging Face no acepta más solicitudes por ahora (límite sin iniciar sesión).",
+      "retryIn": "Se podrá de nuevo en unos {{seconds}} s.",
+      "retry": "Reintentar",
       "downloads": "{{count}} descargas",
       "likes": "{{count}} me gusta",
       "pick": "Elige un modelo.",

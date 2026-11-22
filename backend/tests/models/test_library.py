@@ -11,7 +11,6 @@ from app.llm.hub import (
     format_parameter_count,
     keep_hub_row,
     keep_weight_file,
-    order_hits,
     parameter_label,
     hf_sort_key,
     parameter_query,
@@ -37,32 +36,6 @@ def test_kind_uses_name_and_ollama_metadata() -> None:
     assert model_kind("painter", ["image"], moe=False) == "image"
     assert model_kind("embed-painter", ["image"], moe=False) == "image"
     assert model_kind("nomic-embed-text", [], moe=False) == "embedding"
-
-
-def test_name_sort_orders_the_page() -> None:
-    hits = [
-        HubHit(id="hf.co/zzz/Alpha:Q8_0", url="https://huggingface.co/zzz/Alpha"),
-        HubHit(id="hf.co/aaa/beta", url="https://huggingface.co/aaa/beta"),
-        HubHit(id="nomic-embed-text:latest", url="https://ollama.com/library/nomic-embed-text"),
-    ]
-    order_hits(hits, "name", ascending=True)
-    assert [item.id for item in hits] == [
-        "hf.co/zzz/Alpha:Q8_0",
-        "hf.co/aaa/beta",
-        "nomic-embed-text:latest",
-    ]
-    order_hits(hits, "name", ascending=False)
-    assert [item.id for item in hits] == [
-        "nomic-embed-text:latest",
-        "hf.co/aaa/beta",
-        "hf.co/zzz/Alpha:Q8_0",
-    ]
-    order_hits(hits, "downloads", ascending=True)
-    assert [item.id for item in hits] == [
-        "hf.co/zzz/Alpha:Q8_0",
-        "hf.co/aaa/beta",
-        "nomic-embed-text:latest",
-    ]
 
 
 def test_parameter_label_uses_the_weight_count() -> None:
@@ -115,16 +88,31 @@ def test_quant_token_and_pull_name() -> None:
 
 
 def test_capability_filter_parses_known_names() -> None:
-    from app.llm.hub import HubHit, _matches, parse_capabilities
+    from app.llm.hub import HubHit, _matches, capability_filter, parse_capabilities
 
     assert parse_capabilities("tools, thinking, nope") == ("tools", "thinking")
     hit = HubHit(id="a/b", url="https://huggingface.co/a/b", tools=True, thinking=False, vision=False)
     assert _matches(hit, ("tools",))
     assert not _matches(hit, ("tools", "thinking"))
+    assert _matches(hit, ("tools",), ("thinking",))
+    assert not _matches(hit, (), ("tools",))
+    # Asked for both ways, "must not" wins.
+    assert capability_filter("tools,thinking", "thinking") == (("tools",), ("thinking",))
+
+
+def test_vision_is_filtered_by_task() -> None:
+    from app.llm.hub import narrow_pipelines
+
+    every = pipeline_tags("all")
+    assert narrow_pipelines(every, ("vision", "tools"), ()) == (("image-text-to-text",), ("tools",), ())
+    pipes, must, never = narrow_pipelines(every, (), ("vision",))
+    assert "image-text-to-text" not in pipes and len(pipes) == 3
+    assert (must, never) == ((), ())
+    assert narrow_pipelines(pipeline_tags("text"), ("vision",), ())[0] == ()
 
 
 def test_page_marks_and_cursor_link() -> None:
-    from app.llm.hub import cursor_from_link, pack_cursors, page_limit, unpack_cursors
+    from app.llm.hub import cursor_from_link, pack_scan, page_limit, unpack_scan
 
     assert page_limit(30) == 30
     assert page_limit(1) == 10
@@ -133,10 +121,152 @@ def test_page_marks_and_cursor_link() -> None:
     header = '<https://huggingface.co/api/models?limit=10&cursor=abc%2Bdef>; rel="next"'
     assert cursor_from_link(header) == "abc+def"
     assert cursor_from_link(None) is None
-    packed = pack_cursors(["one", None])
-    assert packed is not None and packed.startswith("v1.")
-    assert unpack_cursors(packed, 2) == ["one", None]
-    assert unpack_cursors(None, 2) is None
+    states = [{"hf": "one", "n": 3, "done": False}, {"hf": None, "n": 0, "done": True}]
+    packed = pack_scan(states)
+    assert packed is not None and packed.startswith("m1.")
+    assert unpack_scan(packed, 2) == states
+    assert unpack_scan(packed, 3) is None
+    assert unpack_scan(None, 2) is None
+    assert pack_scan([{"hf": None, "n": 0, "done": True}]) is None
+
+
+def _fake_hub(
+    monkeypatch, feeds: dict[str, list[dict]], page_rows: int = 3, flags: dict | None = None, broken: set | None = None
+) -> list:
+    """Hub pages per task: `page_rows` rows each, cursors "1", "2", ... like the Link header."""
+    from app.runtime.errors import RuntimeApiError
+
+    calls: list = []
+
+    def search_one(pipe, *, search, size, sort, limit, cursor, deadline=None):
+        calls.append((pipe, cursor))
+        if broken and pipe in broken:
+            raise RuntimeApiError("runtime.timeout")
+        start = int(cursor or 0) * page_rows
+        rows = [
+            {**row, "flags": (flags or {}).get(row["id"], (False, False, False, False))}
+            for row in feeds.get(pipe, [])[start : start + page_rows]
+        ]
+        more = start + page_rows < len(feeds.get(pipe, []))
+        return rows, (str(int(cursor or 0) + 1) if more else None)
+
+    monkeypatch.setattr("app.llm.hub._search_one", search_one)
+    return calls
+
+
+def _rows(pipe: str, *likes: int) -> list[dict]:
+    return [{"id": f"{pipe[:4]}/m{value}", "pipeline_tag": pipe, "likes": value, "downloads": 1} for value in likes]
+
+
+def test_every_task_merges_by_the_sort_value(monkeypatch) -> None:
+    from app.llm.hub import search_hub
+
+    _fake_hub(
+        monkeypatch,
+        {
+            "text-generation": _rows("text-generation", 90, 50, 40, 10),
+            "image-text-to-text": _rows("image-text-to-text", 80, 60, 5),
+        },
+    )
+    first = search_hub(search="", pipeline="text,vision", size="any", sort="likes", limit=10)
+    assert [item.likes for item in first.items] == [90, 80, 60, 50, 40, 10, 5]
+    assert first.has_next is False
+
+
+def test_next_page_continues_without_gaps_or_repeats(monkeypatch) -> None:
+    from app.llm import hub
+
+    monkeypatch.setattr(hub, "page_limit", lambda value: value)
+    _fake_hub(
+        monkeypatch,
+        {
+            "text-generation": _rows("text-generation", 90, 50, 40, 10),
+            "image-text-to-text": _rows("image-text-to-text", 80, 60, 5),
+        },
+    )
+    seen: list[int] = []
+    cursor = None
+    for _ in range(5):
+        result = hub.search_hub(search="", pipeline="text,vision", size="any", sort="likes", limit=2, cursor=cursor)
+        seen.extend(item.likes for item in result.items)
+        cursor = result.next_cursor
+        if not result.has_next:
+            break
+    assert seen == [90, 80, 60, 50, 40, 10, 5]
+
+
+def test_must_and_must_not_filter_while_scanning(monkeypatch) -> None:
+    from app.llm.hub import search_hub
+
+    rows = _rows("text-generation", 9, 8, 7, 6, 5, 4)
+    flags = {
+        "text/m9": (True, True, False, False),
+        "text/m8": (True, False, False, False),
+        "text/m7": (False, True, False, False),
+        "text/m5": (True, False, False, False),
+    }
+    _fake_hub(monkeypatch, {"text-generation": rows}, flags=flags)
+    result = search_hub(
+        search="", pipeline="text", size="any", sort="likes", limit=10, capabilities="tools", without="thinking"
+    )
+    assert [item.id for item in result.items] == ["text/m8", "text/m5"]
+
+
+def test_flags_come_from_the_listing_and_the_template_is_dropped() -> None:
+    from app.llm.hub import _row_hit, slim_row
+
+    row = {
+        "id": "a/b-GGUF",
+        "pipeline_tag": "text-generation",
+        "likes": 3,
+        "tags": ["gguf", "reasoning"],
+        "gguf": {"architecture": "qwen3moe", "chat_template": "{% if tools %}<tool_call>{% endif %}"},
+    }
+    slim = slim_row(row)
+    assert "gguf" not in slim and "tags" not in slim
+    hit = _row_hit(slim)
+    assert hit is not None and (hit.tools, hit.thinking, hit.vision, hit.moe) == (True, True, False, True)
+
+
+def test_a_failing_task_is_left_out_and_tried_on_the_next_page(monkeypatch) -> None:
+    from app.llm.hub import search_hub, unpack_scan
+
+    calls = _fake_hub(
+        monkeypatch,
+        {"text-generation": _rows("text-generation", 9, 8), "image-text-to-text": _rows("image-text-to-text", 7)},
+        broken={"image-text-to-text"},
+    )
+    result = search_hub(search="", pipeline="text,vision", size="any", sort="likes", limit=10)
+    assert [item.likes for item in result.items] == [9, 8]
+    assert result.message_key is None and result.has_next
+    states = unpack_scan(result.next_cursor, 2)
+    assert states is not None and states[1] == {"hf": None, "n": 0, "done": False}
+    assert ("image-text-to-text", None) in calls
+
+
+def test_rate_limit_stops_calling_the_hub_until_the_window_resets(monkeypatch) -> None:
+    import httpx
+
+    from app.llm import hub
+
+    monkeypatch.setitem(hub._COOLDOWN, "until", 0.0)
+    monkeypatch.setattr(hub, "_CACHE", {})
+    sent: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(str(request.url))
+        return httpx.Response(429, headers={"ratelimit": '"api";r=0;t=120'}, json={"error": "rate limited"})
+
+    monkeypatch.setattr(hub, "client", lambda **_: httpx.Client(transport=httpx.MockTransport(handler)))
+    first = hub.search_hub(search="", pipeline="text", size="any", sort="likes", limit=10)
+    assert first.message_key == "models.hub.rateLimited"
+    assert first.retry_after is not None and 100 <= first.retry_after <= 120
+    assert len(sent) == 1  # a 429 is not retried
+    again = hub.search_hub(search="x", pipeline="all", size="any", sort="likes", limit=10)
+    assert again.message_key == "models.hub.rateLimited"
+    assert len(sent) == 1  # nothing sent during the cooldown
+    files = hub.repo_files("a/b")
+    assert files.message_key == "models.hub.rateLimited" and len(sent) == 1
 
 
 def test_parameter_query_accepts_decimal_billions() -> None:
