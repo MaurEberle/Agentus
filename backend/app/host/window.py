@@ -11,6 +11,7 @@ from app.db.paths import webview_storage_dir
 from app.http.paths import static_dir
 from app.host.bridge import ChromeHostApi, inject_chrome_host
 from app.host.geometry import MIN_H, MIN_W, start_placement
+from app.host.maximize import fit_maximize, keep_off_taskbar
 from app.host.native_frame import (
     configure_webview,
     enable_frameless_resize,
@@ -128,6 +129,7 @@ def run_host(host: str, port: int) -> None:
             enable_frameless_resize(win)
             set_window_icon(win, icon_path)
             guard_navigation(win, port)
+            fit_maximize(win)
             if maximized:
                 win.maximize()
 
@@ -135,9 +137,11 @@ def run_host(host: str, port: int) -> None:
             return on_closing(server, port)
 
         def _moved() -> None:
+            keep_off_taskbar(win)
             _save_geom(win)
 
         def _resized() -> None:
+            keep_off_taskbar(win)
             _save_geom(win)
 
         def _loaded() -> None:

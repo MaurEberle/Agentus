@@ -26,11 +26,16 @@ class ChromeHostApi:
 
     def maximize(self) -> None:
         if self._window is not None:
+            from app.host.maximize import fit_maximize
+
+            fit_maximize(self._window)
             self._window.maximize()
 
     def restore(self) -> None:
         if self._window is not None:
-            self._window.restore()
+            from app.host.maximize import restore_window
+
+            restore_window(self._window)
 
     def close(self) -> None:
         if self._window is not None:
