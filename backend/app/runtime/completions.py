@@ -13,6 +13,7 @@ from typing import Any
 from app.common.http import client
 from app.common.types import Provider
 from app.runtime.errors import (
+    RATE_LIMIT_RETRIES,
     RuntimeApiError,
     clip_error_detail,
     is_timeout_error,
@@ -20,7 +21,9 @@ from app.runtime.errors import (
     map_http_status,
     raise_for_status,
     raise_transport,
+    rate_limit_wait,
     response_json,
+    retry_after_seconds,
     transport_error_key,
 )
 from app.runtime.models import (
@@ -109,12 +112,28 @@ def _endpoint(
     )
 
 
-def _openai_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
+def with_thinking(message: ChatMessage) -> str | None:
+    """The content of an assistant message with its reasoning in front, as <think>…</think>.
+
+    Ollama 0.40 ignores the thinking and reasoning_content fields of earlier messages for
+    these models; inside the content the model sees it (test 2026-11-21: +366 tokens for
+    a 400-token thought with Nemotron and GLM, +0 with either field). Jinja templates of
+    llama.cpp, LM Studio and vLLM split it off again as reasoning_content.
+    """
+    reasoning = (message.reasoning or "").strip()
+    if message.role != "assistant" or not reasoning:
+        return message.content
+    body = (message.content or "").strip()
+    return f"<think>\n{reasoning}\n</think>" + (f"\n\n{body}" if body else "")
+
+
+def _openai_messages(messages: list[ChatMessage], *, with_reasoning: bool = False) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for message in messages:
         item: dict[str, Any] = {"role": message.role}
-        if message.content is not None:
-            item["content"] = message.content
+        content = with_thinking(message) if with_reasoning else message.content
+        if content is not None:
+            item["content"] = content
         if message.name:
             item["name"] = message.name
         if message.tool_call_id:
@@ -294,8 +313,9 @@ def _ollama_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
     used: set[int] = set()
     for message in messages:
         item: dict[str, Any] = {"role": message.role}
-        if message.content is not None:
-            item["content"] = message.content
+        content = with_thinking(message)
+        if content is not None:
+            item["content"] = content
         elif message.tool_calls or message.role == "tool":
             item["content"] = ""
         if message.tool_calls:
@@ -356,7 +376,8 @@ def _payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
         return _responses_payload(req, stream=stream)
     body: dict[str, Any] = {
         "model": req.model,
-        "messages": _openai_messages(req.messages),
+        # Only a local OpenAI-compatible server gets earlier reasoning; cloud APIs reject or misread it.
+        "messages": _openai_messages(req.messages, with_reasoning=req.provider == "openai_compat"),
         "stream": stream,
     }
     if req.temperature is not None:
@@ -492,7 +513,7 @@ def _parse_usage(raw: object) -> CompletionUsage | None:
     completion = _int_field(raw, "completion_tokens", "output_tokens", "eval_count")
     if prompt is None and completion is None:
         return None
-    return CompletionUsage(prompt_tokens=prompt or 0, completion_tokens=completion or 0)
+    return CompletionUsage(prompt_tokens=prompt, completion_tokens=completion or 0)
 
 
 def _usage_nonzero(usage: CompletionUsage | None) -> bool:
@@ -680,6 +701,30 @@ def complete(req: CompletionRequest) -> CompletionResult:
     )
 
 
+def _tool_slot(acc: dict[int, dict[str, str]], item: dict[str, Any], fn: dict[str, Any]) -> int:
+    """Which accumulated call one streamed tool-call item belongs to (H9).
+
+    OpenAI deltas carry ``index`` on the item. Native Ollama carries it, if at all,
+    in ``function.index`` and omits it for the first call. Reading only the item
+    put two parallel native calls into slot 0, and the last one won.
+    """
+    for holder in (item, fn):
+        raw = holder.get("index")
+        if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0:
+            return raw
+    call_id = str(item.get("id") or "")
+    if call_id:
+        for index, slot in acc.items():
+            if slot["id"] == call_id:
+                return index
+        return (max(acc) + 1) if acc else 0
+    if isinstance(fn.get("arguments"), dict) or not acc:
+        # A complete native call without id or index: a call of its own.
+        return (max(acc) + 1) if acc else 0
+    # A text fragment without id or index continues the call that is being written.
+    return max(acc)
+
+
 def _accumulate_tool_delta(
     acc: dict[int, dict[str, str]], raw: object
 ) -> list[ToolCall]:
@@ -688,11 +733,11 @@ def _accumulate_tool_delta(
     for item in raw:
         if not isinstance(item, dict):
             continue
-        index = int(item.get("index") or 0)
+        fn = item.get("function") if isinstance(item.get("function"), dict) else {}
+        index = _tool_slot(acc, item, fn)
         slot = acc.setdefault(index, {"id": "", "name": "", "arguments": ""})
         if item.get("id"):
             slot["id"] = str(item["id"])
-        fn = item.get("function") if isinstance(item.get("function"), dict) else {}
         if fn.get("name"):
             slot["name"] = str(fn["name"])
         if "arguments" in fn and fn["arguments"] is not None:
@@ -850,8 +895,11 @@ def complete_stream(
         yield StreamEvent(kind="error", error_key=exc.error_key)
         return
     current = req
-    for attempt in range(2):
+    gpu_retried = False
+    rate_waits = 0
+    while True:
         payload = _payload(current, stream=True)
+        info: dict[str, Any] = {}
         outcome = yield from _stream_once(
             url,
             headers,
@@ -859,12 +907,43 @@ def complete_stream(
             current,
             on_tokens=on_tokens,
             should_abort=should_abort,
+            info=info,
         )
-        if outcome == "retry" and attempt == 0:
+        if outcome == "retry" and not gpu_retried:
+            gpu_retried = True
             log.info("ollama gpu max failed, retrying with auto model=%s", req.model)
             current = _retry_gpu_auto(current)
             continue
+        if outcome == "rate":
+            # H11: the provider throttles. Wait as asked (or back off) and call again.
+            wait = rate_limit_wait(info.get("retry_after"), rate_waits)
+            if rate_waits < RATE_LIMIT_RETRIES and wait is not None:
+                rate_waits += 1
+                log.info(
+                    "rate limited, retry %s/%s in %.1f s model=%s",
+                    rate_waits,
+                    RATE_LIMIT_RETRIES,
+                    wait,
+                    req.model,
+                )
+                if _wait_abortable(wait, should_abort):
+                    return
+                continue
+            yield _stream_error("runtime.rateLimited", info.get("detail"))
+            return
         return
+
+
+def _wait_abortable(seconds: float, should_abort: Callable[[], bool] | None) -> bool:
+    """Sleep in short steps. True when the caller asked to stop meanwhile."""
+    deadline = time.monotonic() + max(0.0, seconds)
+    while True:
+        if should_abort is not None and should_abort():
+            return True
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return False
+        time.sleep(min(0.2, left))
 
 
 def _stream_once(
@@ -875,11 +954,13 @@ def _stream_once(
     *,
     on_tokens: Callable[[int, float | None], None] | None = None,
     should_abort: Callable[[], bool] | None = None,
+    info: dict[str, Any] | None = None,
 ) -> Generator[StreamEvent, None, str]:
     acc: dict[int, dict[str, str]] = {}
     usage: CompletionUsage | None = None
     finish: str | None = None
     emitted = False
+    ended = False
     # The body read has no socket deadline. A quiet tool-call argument still
     # produces runner tokens; the watch below closes the client only when
     # neither the socket nor those tokens move.
@@ -888,10 +969,13 @@ def _stream_once(
         "activity": time.monotonic(),
         "http": None,
         "timed_out": False,
+        "over_time": False,
         "aborted": False,
     }
     state_lock = threading.Lock()
     limit = req.timeout_sec if req.timeout_sec and req.timeout_sec > 0 else 180.0
+    total_limit = req.max_duration_sec if req.max_duration_sec and req.max_duration_sec > 0 else None
+    began = time.monotonic()
 
     def touch() -> None:
         with state_lock:
@@ -912,13 +996,38 @@ def _stream_once(
                         on_tokens(tail.tokens, tail.rate)
             except Exception:
                 log.exception("runner token tail failed model=%s", req.model)
+            now = time.monotonic()
             with state_lock:
-                quiet = time.monotonic() - float(state["activity"])
+                quiet = now - float(state["activity"])
+            if total_limit is not None and now - began >= total_limit:
+                with state_lock:
+                    state["over_time"] = True
+                _close_stream(state)
+                return
             if quiet >= limit:
                 with state_lock:
                     state["timed_out"] = True
                 _close_stream(state)
                 return
+
+    def closed_by_watch() -> tuple[bool, StreamEvent | None]:
+        """(aborted, error) when the watchdog closed the stream."""
+        with state_lock:
+            aborted = bool(state["aborted"])
+            timed_out = bool(state["timed_out"])
+            over_time = bool(state["over_time"])
+        if aborted:
+            return True, None
+        minutes = (time.monotonic() - began) / 60.0
+        if over_time:
+            return False, _stream_error(
+                "runtime.generationLimit",
+                f"stopped after {minutes:.0f} min (limit {total_limit / 60:.0f} min)",
+            )
+        if timed_out:
+            # R8: our own watchdog closed the socket; say so instead of the raw socket error.
+            return False, _stream_error("runtime.timeout", f"no progress for {limit:.0f} s after {minutes:.0f} min")
+        return False, None
 
     thread = threading.Thread(target=watch, name="llm-stream-idle", daemon=True)
     try:
@@ -931,6 +1040,10 @@ def _stream_once(
                     err_text = _read_body(response)
                     if _can_retry_gpu(payload, response.status_code, err_text):
                         return "retry"
+                    if response.status_code == 429 and info is not None:
+                        info["retry_after"] = retry_after_seconds(response.headers)
+                        info["detail"] = err_text
+                        return "rate"
                     yield _stream_error(map_http_status(response.status_code), err_text)
                     return "done"
                 for line in response.iter_lines():
@@ -946,6 +1059,7 @@ def _stream_once(
                     else:
                         continue
                     if data == "[DONE]":
+                        ended = True
                         break
                     try:
                         chunk = json.loads(data)
@@ -995,12 +1109,13 @@ def _stream_once(
         yield _stream_error(exc.error_key, exc.detail)
         return "done"
     except Exception as exc:
-        with state_lock:
-            aborted = bool(state["aborted"])
-            timed_out = bool(state["timed_out"])
+        aborted, watch_error = closed_by_watch()
         if aborted:
             return "done"
-        if timed_out or is_timeout_error(exc):
+        if watch_error is not None:
+            yield watch_error
+            return "done"
+        if is_timeout_error(exc):
             yield _stream_error("runtime.timeout", f"{type(exc).__name__}: {exc}")
             return "done"
         if is_transport_error(exc):
@@ -1012,6 +1127,14 @@ def _stream_once(
         stop.set()
         if thread.ident is not None:
             thread.join(timeout=1.0)
+    if not ended and finish is None:
+        # N3: no [DONE], no done:true and no finish reason. The body stopped early
+        # (server quit, proxy cut, watchdog close); a partial answer is not an answer.
+        aborted, watch_error = closed_by_watch()
+        if aborted:
+            return "done"
+        yield watch_error or _stream_error("runtime.upstream", "the stream ended before the model finished")
+        return "done"
     yield StreamEvent(
         kind="done",
         finish_reason=finish,
@@ -1109,7 +1232,7 @@ def complete_live(
     estimated_out = _estimate()
     if usage is None or (usage.completion_tokens == 0 and (estimated_out or seen)):
         usage = CompletionUsage(
-            prompt_tokens=usage.prompt_tokens if usage else 0,
+            prompt_tokens=usage.prompt_tokens if usage else None,
             completion_tokens=max(estimated_out, seen),
         )
     out = usage.completion_tokens if usage and usage.completion_tokens else estimated_out

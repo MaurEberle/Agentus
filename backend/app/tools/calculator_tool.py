@@ -10,6 +10,8 @@ from app.tools.models import ExecuteResult
 _MAX_EXPONENT = 20
 _MAX_FACTORIAL = 20
 _MAX_ROUND_DIGITS = 12
+# Integers beyond float range are useless as results; the cap also stops nested-power CPU bombs.
+_MAX_INT_BITS = 1100
 
 _BIN_OPS: dict[type[ast.operator], Any] = {
     ast.Add: operator.add,
@@ -129,9 +131,15 @@ def _eval(node: ast.AST) -> int | float:
     if isinstance(node, ast.BinOp) and type(node.op) in _BIN_OPS:
         left = _eval(node.left)
         right = _eval(node.right)
-        if isinstance(node.op, ast.Pow) and abs(right) > _MAX_EXPONENT:
-            raise ValueError("pow")
-        return _BIN_OPS[type(node.op)](left, right)
+        if isinstance(node.op, ast.Pow):
+            if abs(right) > _MAX_EXPONENT:
+                raise ValueError("pow")
+            if isinstance(left, int) and isinstance(right, int) and left.bit_length() * right > _MAX_INT_BITS:
+                raise ValueError("pow")
+        result = _BIN_OPS[type(node.op)](left, right)
+        if isinstance(result, int) and result.bit_length() > _MAX_INT_BITS:
+            raise ValueError("int")
+        return result
     if isinstance(node, ast.Name):
         if node.id == "pi":
             return math.pi

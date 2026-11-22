@@ -307,3 +307,22 @@ def test_clip_log_strings_keeps_valid_json() -> None:
     nested = _clip_log_strings({"body": {"text": long_text}}, limit=8)
     assert nested["body"]["text"].endswith("...")
     assert len(nested["body"]["text"]) == 11
+
+
+def test_start_refuses_while_old_harness_alive(client: TestClient) -> None:
+    import threading
+
+    _save_mini()
+    release = threading.Event()
+    lingering = threading.Thread(target=release.wait, daemon=True)
+    lingering.start()
+    ctrl = get_controller()
+    ctrl.thread = lingering
+    try:
+        response = client.post("/api/run/start")
+        assert response.status_code == 409
+        assert response.json()["messageKey"] == "run.busy"
+    finally:
+        release.set()
+        lingering.join(timeout=2)
+        ctrl.thread = None

@@ -24,7 +24,7 @@ def test_assert_loopback_allows_local() -> None:
 
 def test_cors_dev_allows_vite(api_env, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENTUS_NETWORK_DEV", "1")
-    client = TestClient(create_app())
+    client = TestClient(create_app(), base_url="http://127.0.0.1")
     response = client.options(
         "/api/health",
         headers={
@@ -36,7 +36,7 @@ def test_cors_dev_allows_vite(api_env, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_cors_prod_rejects_foreign_origin(api_env) -> None:
-    client = TestClient(create_app())
+    client = TestClient(create_app(), base_url="http://127.0.0.1")
     response = client.options(
         "/api/health",
         headers={

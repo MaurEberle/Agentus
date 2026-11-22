@@ -17,6 +17,8 @@ router = APIRouter(tags=["run"])
 
 class ChatBody(ApiModel):
     text: str
+    # The earlier run to continue from; only with the first message.
+    previous_run_id: str | None = Field(default=None, alias="previousRunId")
 
 
 class StartResponse(ApiModel):
@@ -42,6 +44,9 @@ def run_get() -> Any:
     return snap.model_dump(by_alias=True)
 
 
+SSE_LOG_REPLAY = 1_000
+
+
 @router.get("/run/stream")
 def run_stream():
     ctrl = get_controller()
@@ -60,7 +65,8 @@ def run_stream():
                 from app.http.routers.runs import _camel_log
                 from app.db.runs import list_logs
 
-                for row in list_logs(run_id):
+                # M16: a reconnect replays the tail, not every line of a long run.
+                for row in list_logs(run_id, limit=SSE_LOG_REPLAY):
                     yield sse_event("log", _camel_log(row))
                 for msg in list(ctrl.conversation):
                     yield sse_event(
@@ -84,8 +90,17 @@ def run_chat(body: ChatBody):
     text = body.text.strip()
     if not text:
         raise AppError("help.empty", status_code=400)
-    get_controller().send_chat(text)
+    get_controller().send_chat(text, previous_run_id=(body.previous_run_id or "").strip() or None)
     return None
+
+
+@router.get("/run/previous")
+def run_previous() -> dict:
+    """Earlier runs of the running network to continue from, newest first."""
+    from app.run.previous_run import list_previous
+
+    ctrl = get_controller()
+    return {"items": list_previous(ctrl.network_id, ctrl.run_id)}
 
 
 @router.post("/run/chat/abort", status_code=204)

@@ -13,6 +13,8 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AGENTUS_NETWORK_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("AGENTUS_NETWORK_VAULT", "memory")
     monkeypatch.delenv("AGENTUS_NETWORK_DEV", raising=False)
+    # Hermetic: enqueue asks Ollama whether the model exists (M19).
+    monkeypatch.setattr("app.llm.downloads._installed_before", lambda model: False)
     reset()
     use_memory()
     reset_memory()
@@ -24,4 +26,4 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture
 def client(api_env) -> TestClient:
     init()
-    return TestClient(create_app())
+    return TestClient(create_app(), base_url="http://127.0.0.1")

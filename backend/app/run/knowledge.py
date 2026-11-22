@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import dataclasses
 import hashlib
+import logging
+import math
+import operator
 import os
+import threading
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +20,7 @@ from app.db.paths import RAG_DIR_NAME
 from app.db.network_rag import (
     CollectionMeta,
     RagChunk,
+    chunk_stamp,
     get_collection,
     list_chunks,
     list_collection_states,
@@ -30,6 +36,21 @@ from app.run.limits import DEFAULT_EMBED_MODEL, DEFAULT_SCORE_MIN, DEFAULT_TOP_K
 from app.runtime.models import EmbedRequest
 
 _EMBED_PROVIDERS = frozenset({"ollama", "openai", "gemini", "openai_compat"})
+
+log = logging.getLogger("agentus.knowledge")
+
+# M22: a folder with more files than this is cut (sorted by path) and says so.
+MAX_INDEX_FILES = 5_000
+
+# M22: vectors per collection, keyed by a cheap change marker. retrieve() used to
+# load every vector from SQLite on each agent turn.
+_VECTORS: dict[tuple[str, str], tuple[tuple, list[tuple[RagChunk, float]]]] = {}
+_VECTORS_LOCK = threading.Lock()
+
+
+def reset_vector_cache() -> None:
+    with _VECTORS_LOCK:
+        _VECTORS.clear()
 
 
 def _embed_args(node: GraphNode) -> tuple[str, str, str | None]:
@@ -52,10 +73,12 @@ class Snippet:
 
 
 def drop_node(network_id: str, node_id: str) -> None:
+    reset_vector_cache()
     db_drop_node(network_id, node_id)
 
 
 def drop_network(network_id: str) -> None:
+    reset_vector_cache()
     db_drop_network(network_id)
 
 
@@ -148,18 +171,39 @@ def _safe_files(root: Path, data_dir: str) -> list[Path]:
 
 
 def _fingerprint(root: Path, files: list[Path]) -> str:
-    """Hash of relative path plus file bytes. Any add, delete, edit, or rename changes it."""
+    """Relative path, size and modification time. Any add, delete, edit, or rename changes it.
+
+    M22: no file is read for it; the bytes are hashed once per changed file below.
+    """
     rows: list[str] = []
     for path in files:
         try:
             resolved = path.resolve()
             rel = resolved.relative_to(root).as_posix()
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            stat = path.stat()
         except (OSError, ValueError):
             return ""
-        rows.append(f"{rel}\t{digest}")
+        rows.append(f"{rel}\t{stat.st_size}\t{stat.st_mtime_ns}")
     rows.sort()
     return hashlib.sha256("\n".join(rows).encode("utf-8")).hexdigest()
+
+
+def _reusable(network_id: str, node_id: str, model: str) -> dict[str, list[RagChunk]]:
+    """M22: chunks of the last index by file hash; unchanged files keep their vectors."""
+    found: dict[str, list[RagChunk]] = {}
+    try:
+        chunks = list_chunks(network_id, node_id)
+    except Exception:
+        return found
+    for chunk in chunks:
+        if chunk.file_hash and chunk.embedding_model_id == model and chunk.embedding:
+            found.setdefault(chunk.file_hash, []).append(chunk)
+    return found
+
+
+def _error_key(exc: BaseException) -> str:
+    key = getattr(exc, "error_key", None)
+    return key if isinstance(key, str) and key else "runtime.upstream"
 
 
 def _read(path: Path) -> str:
@@ -200,7 +244,11 @@ def index_node(
         _mark_index_error(network_id, node.id, source, model)
         return "error"
     root = Path(os.path.realpath(source))
-    files = _safe_files(root, data_dir)
+    files = sorted(_safe_files(root, data_dir), key=lambda item: item.as_posix())
+    if len(files) > MAX_INDEX_FILES:
+        log.warning("knowledge folder %s has %s files; indexing %s", source, len(files), MAX_INDEX_FILES)
+        tell("limit", files=len(files), max=MAX_INDEX_FILES)
+        files = files[:MAX_INDEX_FILES]
     fingerprint = _fingerprint(root, files)
     if not fingerprint and files:
         _mark_index_error(network_id, node.id, source, model)
@@ -221,7 +269,10 @@ def index_node(
         tell("cached")
         return "ready"
     tell("read")
+    # A forced reindex rebuilds everything; otherwise unchanged files reuse their vectors.
+    previous = {} if force else _reusable(network_id, node.id, model)
     texts: list[tuple[str, str | None, str, str]] = []
+    reused: list[RagChunk] = []
     saw_oversized = False
     saw_readable = False
     for path in files:
@@ -229,15 +280,42 @@ def index_node(
             saw_oversized = True
             continue
         saw_readable = True
+        try:
+            file_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            continue
+        title = path.stem
+        old = previous.get(file_hash)
+        if old:
+            reused.extend(
+                dataclasses.replace(chunk, id=str(uuid.uuid4()), source=title) for chunk in old
+            )
+            continue
         raw = _read(path)
         if not raw.strip():
             continue
-        file_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-        title = path.stem
         for piece in chunk_markdown(raw, title, file_hash):
             texts.append((piece.title, piece.section, piece.text, piece.file_hash))
+    if not texts and reused:
+        upsert_collection(
+            CollectionMeta(
+                network_id=network_id,
+                node_id=node.id,
+                source_path=source,
+                embedding_model_id=model,
+                dimension=reused[0].dimension,
+                state="ready",
+                updated_at=utc_now(),
+                content_fingerprint=fingerprint,
+            )
+        )
+        replace_chunks(network_id, node.id, reused)
+        reset_vector_cache()
+        tell("ready", chunks=len(reused), reused=len(reused))
+        return "ready"
     if not texts:
         if saw_oversized and not saw_readable:
+            tell("error", error="knowledge.tooLarge")
             _mark_index_error(network_id, node.id, source, model)
             return "error"
         upsert_collection(
@@ -253,9 +331,10 @@ def index_node(
             )
         )
         replace_chunks(network_id, node.id, [])
+        reset_vector_cache()
         tell("ready", chunks=0)
         return "ready"
-    tell("embed", chunks=len(texts), model=model)
+    tell("embed", chunks=len(texts), model=model, reused=len(reused))
     try:
         result = embed(
             EmbedRequest(
@@ -265,12 +344,20 @@ def index_node(
                 credential_id=credential_id,
             )
         )
-    except Exception:
+    except Exception as exc:
+        # M22: the reason used to be lost; the run log only said "failed".
+        key = _error_key(exc)
+        log.warning("knowledge embedding failed node=%s model=%s key=%s", node.id, model, key, exc_info=True)
+        tell("error", error=key, detail=str(getattr(exc, "detail", "") or "")[:200])
         _mark_index_error(network_id, node.id, source, model)
         return "error"
     if len(result.vectors) != len(texts):
+        tell("error", error="runtime.embedMismatch")
         _mark_index_error(network_id, node.id, source, model)
         return "error"
+    if reused and reused[0].dimension and result.dimension != reused[0].dimension:
+        # Same model, other vector size (model replaced under the same name): no mixing.
+        return index_node(network_id, node, data_dir=data_dir, force=True, on_progress=on_progress)
     chunks = [
         RagChunk(
             id=str(uuid.uuid4()),
@@ -286,6 +373,7 @@ def index_node(
         )
         for (title, section, text, file_hash), vector in zip(texts, result.vectors, strict=True)
     ]
+    chunks.extend(reused)
     upsert_collection(
         CollectionMeta(
             network_id=network_id,
@@ -299,7 +387,8 @@ def index_node(
         )
     )
     replace_chunks(network_id, node.id, chunks)
-    tell("ready", chunks=len(chunks))
+    reset_vector_cache()
+    tell("ready", chunks=len(chunks), reused=len(reused))
     return "ready"
 
 
@@ -318,6 +407,35 @@ def _mark_index_error(network_id: str, node_id: str, source: str, model: str) ->
     )
 
 
+def _norm(vector: list[float]) -> float:
+    return math.sqrt(sum(map(operator.mul, vector, vector)))
+
+
+def _cosine_prepared(query: list[float], q_norm: float, vector: list[float], norm: float) -> float:
+    if len(query) != len(vector) or q_norm <= 0 or norm <= 0:
+        return cosine(query, vector) if len(query) == len(vector) else 0.0
+    return sum(map(operator.mul, query, vector)) / (q_norm * norm)
+
+
+def _prepared_chunks(network_id: str, node_id: str) -> list[tuple[RagChunk, float]]:
+    """M22: chunks with their vector norms, loaded once per index state."""
+    meta = get_collection(network_id, node_id)
+    stamp = (
+        meta.updated_at if meta else None,
+        meta.content_fingerprint if meta else None,
+        *chunk_stamp(network_id, node_id),
+    )
+    key = (network_id, node_id)
+    with _VECTORS_LOCK:
+        hit = _VECTORS.get(key)
+        if hit is not None and hit[0] == stamp:
+            return hit[1]
+    prepared = [(chunk, _norm(chunk.embedding)) for chunk in list_chunks(network_id, node_id)]
+    with _VECTORS_LOCK:
+        _VECTORS[key] = (stamp, prepared)
+    return prepared
+
+
 def retrieve(
     network_id: str,
     node_id: str,
@@ -329,9 +447,10 @@ def retrieve(
 ) -> list[Snippet]:
     from app.runtime.embeddings import embed
 
-    chunks = list_chunks(network_id, node_id)
-    if not chunks:
+    prepared = _prepared_chunks(network_id, node_id)
+    if not prepared:
         return []
+    chunks = [chunk for chunk, _norm in prepared]
     if node is not None:
         provider, model, credential_id = _embed_args(node)
     else:
@@ -350,9 +469,10 @@ def retrieve(
     if not result.vectors:
         return []
     qv = result.vectors[0]
+    q_norm = _norm(qv)
     scored: list[Snippet] = []
-    for chunk in chunks:
-        score = cosine(qv, chunk.embedding)
+    for chunk, norm in prepared:
+        score = _cosine_prepared(qv, q_norm, chunk.embedding, norm)
         if score < score_min:
             continue
         scored.append(

@@ -10,6 +10,8 @@ import type { NetworkListItem } from '@/modules/dashboard/model';
 import { validationBadgeVariant } from '@/modules/dashboard/model';
 import { formatStamp } from '@/modules/networks/model/format';
 import { rangeIds } from '@/modules/networks/model/filter';
+import { KindBadge } from '@/modules/networks/list/KindBadge';
+import { TagClamp } from '@/modules/networks/list/TagClamp';
 import {
   clampColumnWidth,
   columnMax,
@@ -346,14 +348,26 @@ function ColumnHead({
 }
 
 function NetworkCell({ id, item, locale }: { id: NetworkColumnId; item: NetworkListItem; locale: string }) {
-  const { t } = useTranslation();
   if (id === 'name') {
     return (
       <div className="min-w-0 overflow-hidden px-3 py-2">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-medium" title={item.name}>{item.name}</span>
-          <TagRow tags={item.tags} />
         </div>
+      </div>
+    );
+  }
+  if (id === 'tags') {
+    return (
+      <div className="min-w-0 overflow-hidden px-3 py-2">
+        {item.tags?.length ? <TagClamp tags={item.tags} /> : <span className="text-muted-foreground">—</span>}
+      </div>
+    );
+  }
+  if (id === 'kind') {
+    return (
+      <div className="min-w-0 overflow-hidden px-3 py-2">
+        <KindBadge kind={item.kind} />
       </div>
     );
   }
@@ -369,13 +383,6 @@ function NetworkCell({ id, item, locale }: { id: NetworkColumnId; item: NetworkL
     return (
       <div className="min-w-0 overflow-hidden px-3 py-2">
         <StatusBadges item={item} />
-      </div>
-    );
-  }
-  if (id === 'graph') {
-    return (
-      <div className="min-w-0 truncate px-3 py-2 text-muted-foreground">
-        {t('networks.list.counts', { nodes: item.nodeCount, edges: item.edgeCount })}
       </div>
     );
   }
@@ -426,9 +433,8 @@ function MobileCards({ items, onOpen }: { items: NetworkListItem[]; onOpen: (id:
               <div className="mt-2">
                 <StatusBadges item={item} />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('networks.list.counts', { nodes: item.nodeCount, edges: item.edgeCount })}
-                {' · '}
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <KindBadge kind={item.kind} />
                 {formatRelative(Date.parse(item.updatedAt), i18n.language)}
               </p>
               <TagRow tags={item.tags} />

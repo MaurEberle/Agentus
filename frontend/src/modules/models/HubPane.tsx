@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownAZ, ArrowDownZA, ChevronDown, RotateCcw } from 'lucide-react';
+import { Check, ChevronDown, Download, RotateCcw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,16 +15,35 @@ import { BrandMark } from '@/components/BrandMark';
 import { ModelName } from '@/components/ModelName';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { queryClient } from '@/api/client';
+import { ApiError, queryClient } from '@/api/client';
 import { formatBytes, formatDateTime } from '@/lib/format';
-import { enqueueDownload, hubFiles, searchHub } from '@/modules/models/api';
-import { modelLabel } from '@/lib/modelName';
-import type { HubFiles, QuantFile } from '@/modules/models/model';
+import { enqueueDownload, hubFiles, listDownloads, listInstalled, searchHub } from '@/modules/models/api';
+import { formatParameters, modelLabel } from '@/lib/modelName';
+import { cn } from '@/lib/utils';
+import { DetailHero, DetailSection, ExternalLink, FeatureBadge, KeyFacts } from '@/modules/models/ModelDetailParts';
+import { HubCapabilityFilter } from '@/modules/models/HubCapabilityFilter';
+import { HubContextFilter } from '@/modules/models/HubContextFilter';
+import { contextLabel, gpuFit, maxFitBillions, q4Bytes, type GpuFit } from '@/modules/models/hubFit';
+import { HubSizeFilter } from '@/modules/models/HubSizeFilter';
+import { sizeQuery } from '@/modules/models/hubSize';
+import { downloadLabel, hubLocalState, tagKey } from '@/modules/models/hubState';
+import type { QuantFile } from '@/modules/models/model';
 import { useHostResourcesQuery } from '@/modules/settings/api';
 import { inferenceVramBytes } from '@/modules/network/inspector/vram';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
-import { HUB_PAGE_SIZES, rememberHubPageSize, useModelsUi, type HubCapability, type HubPageSize, type HubPipeline, type HubSize, type HubSort } from '@/modules/models/store';
+import {
+  HUB_PAGE_SIZES,
+  rememberHubPageSize,
+  useModelsUi,
+  type HubCapabilities,
+  type HubCapability,
+  type HubCapabilityRule,
+  type HubPageSize,
+  type HubPipeline,
+  type HubSort,
+} from '@/modules/models/store';
 
 function clampShare(value: number): number {
   if (!Number.isFinite(value)) return 0.68;
@@ -41,6 +62,10 @@ function useWideLayout(): boolean {
   return wide;
 }
 
+function compactNumber(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+
 function yesNo(t: (key: string) => string, value: boolean): string {
   return t(value ? 'models.detail.loadedYes' : 'models.detail.loadedNo');
 }
@@ -48,73 +73,32 @@ function yesNo(t: (key: string) => string, value: boolean): string {
 function pipelineLabel(t: (key: string) => string, pipeline?: string): string | null {
   if (pipeline === 'text-generation') return t('models.hub.types.text');
   if (pipeline === 'feature-extraction' || pipeline === 'sentence-similarity') return t('models.hub.types.embed');
-  if (pipeline === 'image-text-to-text') return t('models.hub.types.vision');
+  // A chat model that also sees: the Sehen badge says so.
+  if (pipeline === 'image-text-to-text') return t('models.hub.types.text');
   return pipeline ?? null;
 }
 
-function HubFacts({ data }: { data: HubFiles }) {
-  const { t, i18n } = useTranslation();
-  const rows: [string, string][] = [
-    [t('models.hub.detail.author'), data.author ?? ''],
-    [t('models.hub.detail.pipeline'), pipelineLabel(t, data.pipeline) ?? ''],
-    [t('models.hub.detail.downloads'), data.downloads ? data.downloads.toLocaleString(i18n.language) : ''],
-    [t('models.hub.detail.likes'), data.likes ? data.likes.toLocaleString(i18n.language) : ''],
-    [t('models.hub.detail.updated'), data.updatedAt ? formatDateTime(data.updatedAt, i18n.language) : ''],
-    [t('models.hub.detail.architecture'), data.architecture ?? ''],
-    [t('models.hub.detail.parameters'), data.parameters ?? ''],
-    [t('models.hub.detail.context'), data.contextLength ? String(data.contextLength) : ''],
-    [t('models.hub.detail.repo'), data.repoBytes ? formatBytes(data.repoBytes, i18n.language) : ''],
-    [t('models.hub.detail.languages'), data.languages?.length ? data.languages.join(', ') : ''],
-    [t('models.hub.detail.tools'), yesNo(t, data.tools)],
-    [t('models.hub.detail.thinking'), yesNo(t, data.thinking)],
-    [t('models.hub.detail.vision'), yesNo(t, data.vision)],
-    [t('models.hub.detail.moe'), yesNo(t, data.moe)],
-    [t('models.hub.detail.template'), yesNo(t, data.hasTemplate)],
-  ].filter(([, value]) => value !== '') as [string, string][];
-  return (
-    <dl className="grid gap-2 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd className="min-w-0 break-words">{value}</dd>
-        </div>
-      ))}
-      {data.license ? (
-        <div className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-          <dt className="text-muted-foreground">{t('models.hub.detail.license')}</dt>
-          <dd className="min-w-0 break-words">
-            {data.licenseUrl ? (
-              <a className="text-primary underline" href={data.licenseUrl} target="_blank" rel="noreferrer">{data.license}</a>
-            ) : data.license}
-          </dd>
-        </div>
-      ) : null}
-      {data.baseModel ? (
-        <div className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-          <dt className="text-muted-foreground">{t('models.hub.detail.base')}</dt>
-          <dd className="min-w-0 break-words">
-            {data.baseUrl ? (
-              <a className="text-primary underline" href={data.baseUrl} target="_blank" rel="noreferrer">{data.baseModel}</a>
-            ) : data.baseModel}
-          </dd>
-        </div>
-      ) : null}
-    </dl>
-  );
-}
-
-const PIPELINES = ['text', 'embed', 'vision', 'moe'] as const satisfies readonly HubPipeline[];
+const PIPELINES = ['text', 'embed', 'moe'] as const satisfies readonly HubPipeline[];
 type Pipeline = HubPipeline;
-const SIZES = ['any', '3', '8', '14', '32', '70', 'xl', 'custom'] as const;
-const SORTS = ['downloads', 'likes', 'trending', 'modified', 'name'] as const;
-const CAPABILITIES = ['tools', 'thinking', 'vision'] as const satisfies readonly HubCapability[];
-type Capability = HubCapability;
-const HUB_CACHE = { staleTime: Number.POSITIVE_INFINITY, gcTime: Number.POSITIVE_INFINITY } as const;
+// The Hub sorts these only descending; a name is found with the search field.
+const SORTS = ['downloads', 'likes', 'trending', 'new', 'modified'] as const satisfies readonly HubSort[];
+const FIT_DOT: Record<GpuFit, string> = {
+  fits: 'bg-primary',
+  tight: 'bg-warning',
+  large: 'bg-muted-foreground/50',
+};
+function freshPage(): { page: number; cursors: (string | null)[] } {
+  return { page: 0, cursors: [null] };
+}
+let hubSearchGen = 0;
+// A search that hangs gives up, so it neither keeps the pane waiting nor holds one of the
+// few connections the browser opens to the app.
+const SEARCH_TIMEOUT_MS = 45_000;
+let hubFilesGen = 0;
 
-function billions(raw: string): string | null {
-  const text = raw.trim().replace(',', '.');
-  if (!text || !/^\d+(\.\d+)?$/.test(text)) return null;
-  return text;
+function failureKey(caught: unknown): string {
+  if (caught instanceof ApiError && caught.messageKey) return caught.messageKey;
+  return 'models.hub.failed';
 }
 
 function knownPages(current: number, loaded: number): number[] {
@@ -124,52 +108,84 @@ function knownPages(current: number, loaded: number): number[] {
   return [...pages].sort((left, right) => left - right);
 }
 
-function sizeQuery(size: string, minRaw: string, maxRaw: string): string {
-  if (size !== 'custom') return size;
-  let minimum = billions(minRaw);
-  let maximum = billions(maxRaw);
-  if (minimum && maximum && Number(minimum) > Number(maximum)) {
-    [minimum, maximum] = [maximum, minimum];
-  }
-  const parts = [minimum ? `min:${minimum}B` : '', maximum ? `max:${maximum}B` : ''].filter(Boolean);
-  return parts.join(',') || 'any';
-}
-
 export function HubPane() {
   const { t, i18n } = useTranslation();
   const hub = useModelsUi((state) => state.hub);
   const patchHub = useModelsUi((state) => state.patchHub);
   const resetHubFilters = useModelsUi((state) => state.resetHubFilters);
   const {
-    search, debounced, pipelines, size, minB, maxB, bounds, sort, sortDir, capabilities, page, cursors, picked, quant, share,
+    search, debounced, pipelines, minB, maxB, bounds, sort, capabilities, minContext, hideInstalled, fitsGpu,
+    page, cursors, picked, quant, share,
+    snapshot, files, filesError, filesNonce,
   } = hub;
   const pageSize: HubPageSize = (HUB_PAGE_SIZES as readonly number[]).includes(hub.pageSize) ? hub.pageSize : 30;
   const setSearch = (value: string) => patchHub({ search: value });
-  const setDebounced = (value: string) => patchHub((current) => (current.debounced === value ? current : { debounced: value }));
+  const setDebounced = (value: string) => patchHub((current) => (
+    current.debounced === value ? current : { debounced: value, ...freshPage() }
+  ));
   const setPipelines = (value: Pipeline[] | ((current: Pipeline[]) => Pipeline[])) =>
-    patchHub((current) => ({ pipelines: typeof value === 'function' ? value(current.pipelines) : value }));
-  const setSize = (value: HubSize) => patchHub({ size: value });
-  const setMinB = (value: string) => patchHub({ minB: value });
-  const setMaxB = (value: string) => patchHub({ maxB: value });
+    patchHub((current) => ({ pipelines: typeof value === 'function' ? value(current.pipelines) : value, ...freshPage() }));
+  // Typing and dragging wait for the bounds to settle; a preset searches right away.
+  const setRange = (value: { min: string; max: string }, now: boolean) =>
+    patchHub((current) => ({
+      minB: value.min,
+      maxB: value.max,
+      ...(now && (current.bounds.min !== value.min || current.bounds.max !== value.max)
+        ? { bounds: value, ...freshPage() }
+        : {}),
+    }));
   const setBounds = (value: { min: string; max: string }) =>
-    patchHub((current) => (current.bounds.min === value.min && current.bounds.max === value.max ? current : { bounds: value }));
-  const setSort = (value: HubSort) => patchHub({ sort: value });
-  const setSortDir = (value: 'asc' | 'desc' | ((current: 'asc' | 'desc') => 'asc' | 'desc')) =>
-    patchHub((current) => ({ sortDir: typeof value === 'function' ? value(current.sortDir) : value }));
-  const setPageSize = (value: HubPageSize) => patchHub({ pageSize: value });
-  const setCapabilities = (value: Capability[] | ((current: Capability[]) => Capability[])) =>
-    patchHub((current) => ({ capabilities: typeof value === 'function' ? value(current.capabilities) : value }));
+    patchHub((current) => (
+      current.bounds.min === value.min && current.bounds.max === value.max ? current : { bounds: value, ...freshPage() }
+    ));
+  const setSort = (value: HubSort) => patchHub({ sort: value, ...freshPage() });
+  const setMinContext = (value: number) => patchHub({ minContext: value, ...freshPage() });
+  const setHideInstalled = (value: boolean) => patchHub({ hideInstalled: value, ...freshPage() });
+  const setFitsGpu = (value: boolean) => patchHub({ fitsGpu: value, ...freshPage() });
+  const setPageSize = (value: HubPageSize) => patchHub({ pageSize: value, ...freshPage() });
+  const setCapability = (key: HubCapability, choice: HubCapabilityRule | 'any') =>
+    patchHub((current) => {
+      const next: HubCapabilities = { ...current.capabilities };
+      if (choice === 'any') delete next[key];
+      else next[key] = choice;
+      return { capabilities: next, ...freshPage() };
+    });
   const setPage = (value: number | ((current: number) => number)) =>
     patchHub((current) => ({ page: typeof value === 'function' ? value(current.page) : value }));
-  const setCursors = (value: (string | null)[] | ((current: (string | null)[]) => (string | null)[])) =>
-    patchHub((current) => ({ cursors: typeof value === 'function' ? value(current.cursors) : value }));
-  const setPicked = (value: string | null) => patchHub({ picked: value });
+  // A new pick must not show the previous pick's error while it loads.
+  const setPicked = (value: string | null) =>
+    patchHub((current) => (current.picked === value ? current : { picked: value, filesError: null }));
   const setQuant = (value: string | null) => patchHub({ quant: value });
   const [queuing, setQueuing] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const wide = useWideLayout();
   const listShare = clampShare(share);
-  const seenFilter = useRef<string | null>(null);
-  const filterKey = JSON.stringify([debounced, pipelines, size, bounds.min, bounds.max, sort, sortDir, pageSize, capabilities]);
+  const cursor = cursors[page] ?? '';
+  const resources = useHostResourcesQuery({ live: false });
+  const vram = inferenceVramBytes(resources.data?.gpus ?? []);
+  const fitMax = maxFitBillions(vram);
+  const sizeCap = fitsGpu ? fitMax : null;
+  // Installed models and the download queue: same queries as the models list and the
+  // download header (which polls), so the marks follow a running download.
+  const installedQuery = useQuery({ queryKey: ['models'], queryFn: listInstalled, gcTime: Number.POSITIVE_INFINITY });
+  const downloadsQuery = useQuery({ queryKey: ['models', 'downloads'], queryFn: listDownloads });
+  const local = useMemo(
+    () => hubLocalState(installedQuery.data, downloadsQuery.data?.items),
+    [installedQuery.data, downloadsQuery.data],
+  );
+  // While installed repos are hidden, a finished download refreshes the list.
+  const installedKey = hideInstalled ? [...local.installedByRepo.keys()].sort().join(',') : '';
+  const requestKey = JSON.stringify([
+    debounced, pipelines, bounds.min, bounds.max, sort, pageSize, cursor, capabilities, page,
+    minContext, hideInstalled, sizeCap, installedKey,
+  ]);
+  const stored = snapshot?.key === requestKey ? snapshot : null;
+  const [searching, setSearching] = useState(() => !(stored && !stored.errorKey));
+  const requestKeyRef = useRef(requestKey);
+  if (requestKeyRef.current !== requestKey) {
+    requestKeyRef.current = requestKey;
+    if (searching !== true) setSearching(true);
+  }
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(search), 400);
     return () => window.clearTimeout(timer);
@@ -182,67 +198,107 @@ export function HubPane() {
     rememberHubPageSize(pageSize);
   }, [pageSize]);
   useEffect(() => {
-    if (seenFilter.current === filterKey) return;
-    const first = seenFilter.current === null;
-    seenFilter.current = filterKey;
-    if (first) return;
-    patchHub({ page: 0, cursors: [null] });
-  }, [filterKey, patchHub]);
-  const resources = useHostResourcesQuery({ live: false });
-  const vram = inferenceVramBytes(resources.data?.gpus ?? []);
-  const results = useQuery({
-    queryKey: ['models', 'hub', debounced, pipelines.join(','), size, bounds.min, bounds.max, sort, sortDir, pageSize, cursors[page] ?? '', capabilities.join(',')],
-    queryFn: async () => {
-      const data = await searchHub({
-        search: debounced,
-        pipeline: pipelines.length ? pipelines.join(',') : 'all',
-        size: sizeQuery(size, bounds.min, bounds.max),
-        sort,
-        direction: sortDir,
-        limit: pageSize,
-        cursor: cursors[page] ?? '',
-        caps: capabilities.join(','),
+    const current = useModelsUi.getState().hub.snapshot;
+    if (current?.key === requestKey && !current.errorKey) {
+      setSearching(false);
+      return;
+    }
+    const gen = ++hubSearchGen;
+    setSearching(true);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort('timeout'), SEARCH_TIMEOUT_MS);
+    const activeCursor = cursors[page] ?? '';
+    void searchHub({
+      search: debounced,
+      pipeline: pipelines.length ? pipelines.join(',') : 'all',
+      size: sizeQuery(bounds.min, bounds.max, sizeCap),
+      sort,
+      limit: pageSize,
+      cursor: activeCursor,
+      caps: Object.keys(capabilities).filter((key) => capabilities[key as keyof HubCapabilities] === 'must').join(','),
+      without: Object.keys(capabilities).filter((key) => capabilities[key as keyof HubCapabilities] === 'never').join(','),
+      context: minContext,
+      hideInstalled,
+    }, controller.signal).then((data) => {
+      if (gen !== hubSearchGen) return;
+      patchHub({
+        snapshot: {
+          key: requestKey,
+          items: data.messageKey ? [] : data.items,
+          hasNext: data.messageKey ? false : data.hasNext,
+          nextCursor: data.messageKey ? undefined : data.nextCursor,
+          errorKey: data.messageKey,
+          retryAfter: data.retryAfter,
+        },
       });
-      if (data.messageKey) throw new Error(data.messageKey);
-      return data;
-    },
-    retry: 1,
-    ...HUB_CACHE,
-  });
-  const files = useQuery({
-    queryKey: ['models', 'hub', 'files', picked],
-    queryFn: () => hubFiles(picked ?? ''),
-    enabled: Boolean(picked),
-    ...HUB_CACHE,
-  });
-  const preferred = useMemo(() => {
-    const rows = files.data?.quants ?? [];
-    return rows.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? rows[0] ?? null;
-  }, [files.data]);
+      setSearching(false);
+    }).catch((caught: unknown) => {
+      if (gen !== hubSearchGen) return;
+      const timedOut = controller.signal.reason === 'timeout';
+      // Replaced by a newer search or the pane closed: nothing to show.
+      if (controller.signal.aborted && !timedOut) return;
+      patchHub({
+        snapshot: {
+          key: requestKey,
+          items: [],
+          hasNext: false,
+          errorKey: timedOut ? 'models.hub.timeout' : failureKey(caught),
+        },
+      });
+      setSearching(false);
+    }).finally(() => window.clearTimeout(timer));
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort('superseded');
+    };
+  }, [requestKey, attempt]);
   useEffect(() => {
-    const tags = files.data?.quants ?? [];
+    if (!picked) return;
+    const current = useModelsUi.getState().hub;
+    if (current.files?.id === picked && current.files.nonce === filesNonce && !current.filesError) return;
+    const gen = ++hubFilesGen;
+    void hubFiles(picked).then((data) => {
+      if (gen !== hubFilesGen) return;
+      if (data.messageKey) {
+        patchHub({ files: null, filesError: data.messageKey });
+        return;
+      }
+      patchHub({ files: { id: picked, data, nonce: filesNonce }, filesError: null });
+    }).catch((caught: unknown) => {
+      if (gen !== hubFilesGen) return;
+      patchHub({ files: null, filesError: failureKey(caught) });
+    });
+  }, [picked, filesNonce]);
+  const detail = files?.id === picked ? files.data : null;
+  const preferred = useMemo(() => {
+    const rows = detail?.quants ?? [];
+    return rows.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? rows[0] ?? null;
+  }, [detail]);
+  useEffect(() => {
+    const tags = detail?.quants ?? [];
     if (tags.length === 0) return;
     const current = useModelsUi.getState().hub.quant;
     if (current && tags.some((item) => item.tag === current)) return;
     const next = tags.find((item) => item.quant.toLowerCase() === 'q4_k_m') ?? tags[0];
     if (next) patchHub({ quant: next.tag });
-  }, [files.data, patchHub]);
-  const chosen = (files.data?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
-  function toggleCapability(key: Capability) {
-    setCapabilities((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
-  }
+  }, [detail, patchHub]);
+  const chosen = (detail?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
+  const isInstalled = (file: QuantFile) => (local.installedKeys ? local.installedKeys.has(tagKey(file.tag)) : file.installed);
+  const chosenInstalled = chosen ? isInstalled(chosen) : false;
+  const chosenJob = chosen ? local.downloadByKey.get(tagKey(chosen.tag)) : undefined;
   function togglePipeline(key: Pipeline) {
     setPipelines((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
   }
   const filtersDirty =
     search !== '' ||
     pipelines.length > 0 ||
-    capabilities.length > 0 ||
-    size !== 'any' ||
+    Object.keys(capabilities).length > 0 ||
     minB !== '' ||
     maxB !== '' ||
-    sort !== 'downloads' ||
-    sortDir !== 'desc';
+    minContext !== 0 ||
+    hideInstalled ||
+    fitsGpu ||
+    sort !== 'downloads';
   function resetFilters() {
     resetHubFilters();
   }
@@ -265,198 +321,188 @@ export function HubPane() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('models.hub.search')}
-          aria-label={t('models.hub.search')}
-          className="h-8 max-w-56"
-        />
-        <div className="flex items-center gap-1">
-          <Select value={sort} onValueChange={(value) => { setSort(value as typeof sort); setPage(0); setCursors([null]); }}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-3 py-2">
+        <div className="flex items-center gap-2">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t('models.hub.search')}
+            aria-label={t('models.hub.search')}
+            className="h-8 w-56"
+          />
+          <Select value={sort} onValueChange={(value) => setSort(value as HubSort)}>
             <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.sort')}><SelectValue /></SelectTrigger>
             <SelectContent>
               {SORTS.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sorts.${key}`)}</SelectItem>)}
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 w-auto shrink-0 gap-1.5 px-2.5 text-sm font-normal shadow-sm"
+                aria-label={
+                  pipelines.length > 0
+                    ? `${t('models.hub.type')}: ${pipelines.length}`
+                    : t('models.hub.type')
+                }
+              >
+                <span>{t('models.hub.type')}</span>
+                {pipelines.length > 0 ? (
+                  <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium leading-none text-primary-foreground">
+                    {pipelines.length}
+                  </span>
+                ) : null}
+                <ChevronDown className="size-4 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {PIPELINES.map((key) => (
+                <DropdownMenuCheckboxItem
+                  key={key}
+                  checked={pipelines.includes(key)}
+                  onCheckedChange={() => togglePipeline(key)}
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  {t(`models.hub.types.${key}`)}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <HubCapabilityFilter value={capabilities} onChoose={setCapability} />
+          <HubSizeFilter
+            min={minB}
+            max={maxB}
+            onChange={setRange}
+            gpu={{ maxB: fitMax, vram: formatBytes(vram, i18n.language), on: fitsGpu, onChange: setFitsGpu }}
+          />
+          <HubContextFilter value={minContext} onChange={setMinContext} />
+          <label className="flex h-8 shrink-0 items-center gap-2 px-1 text-xs">
+            <Switch checked={hideInstalled} onCheckedChange={(value) => setHideInstalled(value === true)} />
+            <span>{t('models.hub.hideInstalled')}</span>
+          </label>
           <Button
             type="button"
             size="icon"
             variant="outline"
             className="size-8"
-            aria-label={t('networks.filter.direction')}
-            onClick={() => { setSortDir((current) => (current === 'asc' ? 'desc' : 'asc')); setPage(0); setCursors([null]); }}
+            aria-label={t('models.hub.reset')}
+            title={t('models.hub.reset')}
+            disabled={!filtersDirty}
+            onClick={resetFilters}
           >
-            {sortDir === 'asc' ? <ArrowDownAZ className="size-4" /> : <ArrowDownZA className="size-4" />}
+            <RotateCcw className="size-4" />
           </Button>
         </div>
-        <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 w-auto shrink-0 gap-1.5 px-2.5 text-sm font-normal shadow-sm"
-              aria-label={
-                pipelines.length > 0
-                  ? `${t('models.hub.type')}: ${pipelines.length}`
-                  : t('models.hub.type')
-              }
-            >
-              <span>{t('models.hub.type')}</span>
-              {pipelines.length > 0 ? (
-                <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium leading-none text-primary-foreground">
-                  {pipelines.length}
-                </span>
-              ) : null}
-              <ChevronDown className="size-4 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {PIPELINES.map((key) => (
-              <DropdownMenuCheckboxItem
-                key={key}
-                checked={pipelines.includes(key)}
-                onCheckedChange={() => togglePipeline(key)}
-                onSelect={(event) => event.preventDefault()}
-              >
-                {t(`models.hub.types.${key}`)}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 w-auto shrink-0 gap-1.5 px-2.5 text-sm font-normal shadow-sm"
-              aria-label={
-                capabilities.length > 0
-                  ? `${t('models.hub.capabilities')}: ${capabilities.length}`
-                  : t('models.hub.capabilities')
-              }
-            >
-              <span>{t('models.hub.capabilities')}</span>
-              {capabilities.length > 0 ? (
-                <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium leading-none text-primary-foreground">
-                  {capabilities.length}
-                </span>
-              ) : null}
-              <ChevronDown className="size-4 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {CAPABILITIES.map((key) => (
-              <DropdownMenuCheckboxItem
-                key={key}
-                checked={capabilities.includes(key)}
-                onCheckedChange={() => toggleCapability(key)}
-                onSelect={(event) => event.preventDefault()}
-              >
-                {t(`models.badges.${key}`)}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Select value={size} onValueChange={(value) => setSize(value as typeof size)}>
-          <SelectTrigger className="h-8 w-fit shrink-0 gap-1.5 [&>span]:flex-none" aria-label={t('models.hub.size')}>
-            <SelectValue>{size === 'any' ? t('models.hub.size') : t(`models.hub.sizes.${size}`)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {SIZES.map((key) => <SelectItem key={key} value={key}>{t(`models.hub.sizes.${key}`)}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {size === 'custom' ? (
-          <div className="flex items-center gap-1">
-            <Input
-              value={minB}
-              onChange={(event) => setMinB(event.target.value)}
-              inputMode="decimal"
-              placeholder={t('models.hub.sizes.from')}
-              aria-label={t('models.hub.sizes.from')}
-              aria-invalid={minB.trim() !== '' && billions(minB) == null}
-              className="h-8 w-16"
-            />
-            <span className="text-sm text-muted-foreground">B</span>
-            <span className="text-sm text-muted-foreground" aria-hidden>–</span>
-            <Input
-              value={maxB}
-              onChange={(event) => setMaxB(event.target.value)}
-              inputMode="decimal"
-              placeholder={t('models.hub.sizes.to')}
-              aria-label={t('models.hub.sizes.to')}
-              aria-invalid={maxB.trim() !== '' && billions(maxB) == null}
-              className="h-8 w-16"
-            />
-            <span className="text-sm text-muted-foreground">B</span>
-          </div>
-        ) : null}
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          className="size-8"
-          aria-label={t('models.hub.reset')}
-          title={t('models.hub.reset')}
-          disabled={!filtersDirty}
-          onClick={resetFilters}
-        >
-          <RotateCcw className="size-4" />
-        </Button>
       </div>
       <div data-split-row className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div
           className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b md:border-b-0"
           style={wide ? { width: `${listShare * 100}%`, flex: 'none', minWidth: '60%' } : undefined}
         >
-          {results.data && results.data.items.length > 0 ? (
+          {stored && !stored.errorKey && stored.items.length > 0 ? (
             <ul className="min-h-0 flex-1 overflow-auto">
-              {results.data.items.map((item) => (
+              {stored.items.map((item) => {
+                const repo = item.id.toLowerCase();
+                const installedTags = local.installedByRepo.get(repo) ?? [];
+                const job = local.downloadByRepo.get(repo);
+                const fit = gpuFit(item.parameterCount, vram);
+                return (
                 <li key={item.id}>
                   <button
                     type="button"
                     onClick={() => setPicked(item.id)}
                     className={`flex w-full flex-col gap-0.5 border-b px-3 py-2 text-left ${picked === item.id ? 'bg-accent' : ''}`}
                   >
-                    <ModelName value={item.id} variant="tag" className="text-sm font-medium" />
-                    <span className="truncate text-xs text-muted-foreground">
-                      {[
-                        t('models.hub.downloads', { count: item.downloads.toLocaleString(i18n.language) }),
-                        t('models.hub.likes', { count: item.likes.toLocaleString(i18n.language) }),
-                        item.vision ? t('models.badges.vision') : '',
-                        item.tools ? t('models.badges.tools') : '',
-                        item.thinking ? t('models.badges.thinking') : '',
-                        item.moe ? t('models.badges.moe') : '',
-                      ].filter(Boolean).join(' · ')}
+                    <span className="flex min-w-0 max-w-full items-center gap-1.5">
+                      <ModelName value={item.id} variant="tag" className="text-sm font-medium" />
+                      {installedTags.length > 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 gap-1 border-primary/40 bg-primary/10 px-1.5 py-0 text-[11px] text-primary"
+                          title={installedTags.join('\n')}
+                        >
+                          <Check className="size-3" aria-hidden />
+                          {installedTags.length > 1
+                            ? t('models.hub.state.installedMany', { count: installedTags.length })
+                            : t('models.hub.state.installed')}
+                        </Badge>
+                      ) : null}
+                      {job ? (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 gap-1 border-warning/50 bg-warning/10 px-1.5 py-0 text-[11px] text-foreground"
+                          title={job.model}
+                        >
+                          <Download className="size-3" aria-hidden />
+                          {downloadLabel(t, job)}
+                        </Badge>
+                      ) : null}
+                    </span>
+                    <span className="flex min-w-0 max-w-full items-center gap-1.5 text-xs text-muted-foreground">
+                      {fit ? (
+                        <span
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 text-[11px] leading-4 text-foreground"
+                          title={t('models.hub.fit.hint', {
+                            size: formatBytes(q4Bytes(item.parameterCount ?? 0), i18n.language),
+                            vram: formatBytes(vram, i18n.language),
+                          })}
+                        >
+                          <span className={cn('size-1.5 rounded-full', FIT_DOT[fit])} aria-hidden />
+                          {t(`models.hub.fit.${fit}`)}
+                        </span>
+                      ) : null}
+                      <span className="truncate">
+                        {[
+                          formatParameters(item.parameters) ?? '',
+                          item.contextLength ? contextLabel(item.contextLength) : '',
+                          t('models.hub.downloads', { count: compactNumber(item.downloads, i18n.language) }),
+                          t('models.hub.likes', { count: item.likes.toLocaleString(i18n.language) }),
+                          item.vision ? t('models.badges.vision') : '',
+                          item.tools ? t('models.badges.tools') : '',
+                          item.thinking ? t('models.badges.thinking') : '',
+                          item.moe ? t('models.badges.moe') : '',
+                        ].filter(Boolean).join(' · ')}
+                      </span>
                     </span>
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
-          ) : results.isFetching ? (
+          ) : searching ? (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4" role="status" aria-label={t('app.loading')}>
               <BrandMark spinning className="size-24" alt="" />
               <p className="text-sm text-muted-foreground">{t('app.loading')}</p>
             </div>
-          ) : results.isError || results.data?.messageKey ? (
-            <p className="p-4 text-sm text-muted-foreground">{t('models.hub.failed')}</p>
+          ) : stored?.errorKey ? (
+            <div className="flex flex-col items-start gap-2 p-4">
+              <p className="text-sm text-muted-foreground">{t(stored.errorKey, { defaultValue: t('models.hub.failed') })}</p>
+              {stored.retryAfter ? (
+                <p className="text-xs text-muted-foreground">{t('models.hub.retryIn', { seconds: stored.retryAfter })}</p>
+              ) : null}
+              <Button type="button" size="sm" variant="outline" onClick={() => setAttempt((value) => value + 1)}>
+                <RotateCcw className="size-4" aria-hidden />
+                {t('models.hub.retry')}
+              </Button>
+            </div>
           ) : (
             <p className="p-4 text-sm text-muted-foreground">{t('models.hub.empty')}</p>
           )}
           <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 border-t px-3 py-2">
             <div className="flex min-w-0 flex-nowrap items-center gap-1">
-              <Button type="button" size="sm" variant="outline" disabled={page === 0 || results.isFetching} onClick={() => setPage(0)}>
+              <Button type="button" size="sm" variant="outline" disabled={page === 0 || searching} onClick={() => setPage(0)}>
                 {t('models.hub.first')}
               </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={page === 0 || results.isFetching}
+                disabled={page === 0 || searching}
                 onClick={() => setPage((current) => Math.max(0, current - 1))}
               >
                 {t('models.hub.previous')}
@@ -469,7 +515,7 @@ export function HubPane() {
                     size="sm"
                     variant={index === page ? 'secondary' : 'outline'}
                     className="min-w-8 px-2"
-                    disabled={results.isFetching}
+                    disabled={searching}
                     aria-current={index === page ? 'page' : undefined}
                     onClick={() => setPage(index)}
                   >
@@ -481,16 +527,15 @@ export function HubPane() {
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={!results.data?.hasNext || results.isFetching}
+                disabled={!stored?.hasNext || searching}
                 onClick={() => {
-                  const token = results.data?.nextCursor;
+                  const token = stored?.nextCursor;
                   if (!token) return;
-                  setCursors((current) => {
-                    const copy = current.slice(0, page + 1);
+                  patchHub((current) => {
+                    const copy = current.cursors.slice(0, current.page + 1);
                     copy.push(token);
-                    return copy;
+                    return { cursors: copy, page: current.page + 1 };
                   });
-                  setPage((current) => current + 1);
                 }}
               >
                 {t('models.hub.next')}
@@ -509,49 +554,145 @@ export function HubPane() {
           </div>
         </div>
         <WidthGrip label={t('models.split')} share={listShare} onChange={(next) => patchHub({ share: clampShare(next) })} />
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-3 md:border-l">
-          {!picked ? <p className="text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
-          {picked && files.isFetching && !files.data ? (
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto md:border-l">
+          {!picked ? <p className="p-4 text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
+          {picked && !detail && !filesError ? (
             <div className="flex justify-center py-10">
               <Spinner size="lg" label={t('app.loading')} />
             </div>
           ) : null}
-          {picked && files.isFetching && files.data ? (
-            <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <Spinner size="sm" label={t('app.loading')} />
-              <span>{t('app.loading')}</span>
-            </div>
+          {filesError && picked && !detail ? (
+            <p className="p-4 text-sm text-muted-foreground">{t(filesError, { defaultValue: t('models.hub.failed') })}</p>
           ) : null}
-          {files.data?.reason === 'gated' ? <p className="text-sm text-destructive">{t('models.hub.gated')}</p> : null}
-          {files.data?.reason === 'no-gguf' ? <p className="text-sm text-muted-foreground">{t('models.hub.noGguf')}</p> : null}
-          {files.data ? (
-            <div className="grid gap-3">
-              <HubFacts data={files.data} />
-              <label className="grid gap-1 text-sm">
-                {t('models.hub.quants')}
-                <Select value={quant ?? ''} onValueChange={setQuant} disabled={!files.data.quants.length}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {files.data.quants.map((item) => (
-                      <SelectItem key={item.tag} value={item.tag}>
-                        {item.quant}{item.sizeBytes ? ` · ${formatBytes(item.sizeBytes, i18n.language)}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-              {chosen?.sizeBytes && vram > 0 && chosen.sizeBytes > vram ? (
-                <p className="text-xs text-muted-foreground">{t('models.hub.vramHint')}</p>
-              ) : null}
-              <Button
-                type="button"
-                disabled={!chosen || chosen.installed || !files.data.installable || queuing}
-                loading={queuing}
-                onClick={() => chosen && void install(chosen)}
+          {detail ? (
+            <div className="flex min-h-full flex-col">
+              <DetailHero
+                title={modelLabel(detail.id).name}
+                publisher={detail.author ?? modelLabel(detail.id).publisher}
+                badges={
+                  <>
+                    {pipelineLabel(t, detail.pipeline) ? (
+                      <FeatureBadge
+                        kind={detail.moe ? 'moe' : undefined}
+                        label={[pipelineLabel(t, detail.pipeline), detail.moe ? t('models.badges.moe') : '']
+                          .filter(Boolean)
+                          .join(' · ')}
+                        strong
+                      />
+                    ) : detail.moe ? (
+                      <FeatureBadge kind="moe" label={t('models.badges.moe')} strong />
+                    ) : null}
+                    {(local.installedByRepo.get(detail.id.toLowerCase()) ?? []).length > 0 ? (
+                      <FeatureBadge live label={t('models.hub.state.installed')} />
+                    ) : null}
+                    {detail.tools ? <FeatureBadge kind="tools" label={t('models.badges.tools')} /> : null}
+                    {detail.thinking ? <FeatureBadge kind="thinking" label={t('models.badges.thinking')} /> : null}
+                    {detail.vision ? <FeatureBadge kind="vision" label={t('models.badges.vision')} /> : null}
+                  </>
+                }
               >
-                {chosen?.installed ? t('models.hub.installed') : t('models.hub.install')}
-              </Button>
-              <a className="text-sm text-primary underline" href={files.data.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
+                <KeyFacts
+                  items={[
+                    { label: t('models.hub.detail.parameters'), value: formatParameters(detail.parameters) },
+                    {
+                      label: t('models.hub.detail.context'),
+                      value: detail.contextLength ? new Intl.NumberFormat(i18n.language).format(detail.contextLength) : null,
+                    },
+                    {
+                      label: t('models.hub.detail.downloads'),
+                      value: detail.downloads ? compactNumber(detail.downloads, i18n.language) : null,
+                      hint: detail.downloads ? detail.downloads.toLocaleString(i18n.language) : undefined,
+                    },
+                    {
+                      label: t('models.hub.detail.likes'),
+                      value: detail.likes ? compactNumber(detail.likes, i18n.language) : null,
+                      hint: detail.likes ? detail.likes.toLocaleString(i18n.language) : undefined,
+                    },
+                  ]}
+                />
+              </DetailHero>
+              <div className="grid gap-4 p-4">
+                {/* Installing is the action of this pane: right after the figures. */}
+                <section className="space-y-2 rounded-md border bg-muted/20 p-3">
+                  <h3 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {t('models.hub.install')}
+                  </h3>
+                  {detail.reason === 'gated' ? <p className="text-sm text-destructive">{t('models.hub.gated')}</p> : null}
+                  {detail.reason === 'no-gguf' ? (
+                    <p className="text-sm text-muted-foreground">{t('models.hub.noGguf')}</p>
+                  ) : null}
+                  <label className="grid gap-1 text-sm">
+                    <span className="text-muted-foreground">{t('models.hub.quants')}</span>
+                    <Select value={quant ?? ''} onValueChange={setQuant} disabled={!detail.quants.length}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {detail.quants.map((item) => {
+                          const job = local.downloadByKey.get(tagKey(item.tag));
+                          const state = isInstalled(item) ? t('models.hub.state.installed') : job ? downloadLabel(t, job) : '';
+                          return (
+                            <SelectItem key={item.tag} value={item.tag}>
+                              {item.quant}
+                              {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes, i18n.language)}` : ''}
+                              {state ? ` · ${state}` : ''}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  {chosen?.sizeBytes && vram > 0 && chosen.sizeBytes > vram ? (
+                    <p className="text-xs text-muted-foreground">{t('models.hub.vramHint')}</p>
+                  ) : null}
+                  {/* Locked while this quant is installed or in the download queue (queued, running, paused). */}
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={!chosen || chosenInstalled || Boolean(chosenJob) || !detail.installable || queuing}
+                    loading={queuing}
+                    onClick={() => chosen && !chosenInstalled && !chosenJob && void install(chosen)}
+                  >
+                    {chosenInstalled
+                      ? t('models.hub.installed')
+                      : chosenJob
+                        ? downloadLabel(t, chosenJob)
+                        : t('models.hub.install')}
+                  </Button>
+                  {chosenJob && !chosenInstalled ? (
+                    <p className="text-xs text-muted-foreground">
+                      {t('models.hub.state.busy')}{' '}
+                      <Link to="/downloads" className="text-primary underline">{t('models.downloads.title')}</Link>
+                    </p>
+                  ) : null}
+                </section>
+                <DetailSection
+                  title={t('models.hub.detail.groupDetails')}
+                  rows={[
+                    [t('models.hub.detail.architecture'), detail.architecture],
+                    [t('models.hub.detail.updated'), detail.updatedAt ? formatDateTime(detail.updatedAt, i18n.language) : null],
+                    [t('models.hub.detail.repo'), detail.repoBytes ? formatBytes(detail.repoBytes, i18n.language) : null],
+                    [t('models.hub.detail.languages'), detail.languages?.length ? detail.languages.join(', ') : null],
+                    [t('models.hub.detail.template'), yesNo(t, detail.hasTemplate)],
+                  ]}
+                />
+                <DetailSection
+                  title={t('models.hub.detail.groupSource')}
+                  rows={[
+                    [
+                      t('models.hub.detail.base'),
+                      detail.baseModel ? (
+                        detail.baseUrl ? <ExternalLink href={detail.baseUrl}>{detail.baseModel}</ExternalLink> : detail.baseModel
+                      ) : null,
+                    ],
+                    [
+                      t('models.hub.detail.license'),
+                      detail.license ? (
+                        detail.licenseUrl ? <ExternalLink href={detail.licenseUrl}>{detail.license}</ExternalLink> : detail.license
+                      ) : null,
+                    ],
+                    [t('models.detail.hf'), <ExternalLink key="hf" href={detail.url} />],
+                  ]}
+                />
+              </div>
             </div>
           ) : null}
         </div>

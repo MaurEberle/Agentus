@@ -1,4 +1,4 @@
-"""Include API routers. Missing domain modules are skipped."""
+"""Include API routers. Every router is required; an import error stops the app (N8)."""
 
 from __future__ import annotations
 
@@ -26,8 +26,5 @@ MODULES = [
 
 def include_all(app: FastAPI) -> None:
     for path in MODULES:
-        try:
-            mod = importlib.import_module(path)
-        except ImportError:
-            continue
+        mod = importlib.import_module(path)
         app.include_router(mod.router, prefix="/api")

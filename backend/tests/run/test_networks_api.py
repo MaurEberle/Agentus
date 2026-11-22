@@ -61,6 +61,16 @@ def test_list_last_run_is_the_newest_run_that_still_exists(client: TestClient) -
     assert item["lastRunId"] is None
 
 
+def test_the_list_says_whether_a_network_has_an_orchestrator(client: TestClient) -> None:
+    """The management list shows and filters "orchestrator" or "linear" instead of node counts."""
+    from tests.run.test_validate import _orchestrator_doc
+
+    linear = client.post("/api/networks", json=mini_doc()).json()["id"]
+    chief = client.post("/api/networks", json={**_orchestrator_doc(), "name": "chief"}).json()["id"]
+    kinds = {row["id"]: row["kind"] for row in client.get("/api/networks").json()["items"]}
+    assert kinds[linear] == "linear" and kinds[chief] == "orchestrator"
+
+
 def test_delete_running_network_409(client: TestClient) -> None:
     created = client.post("/api/networks", json=mini_doc(requireInput=True))
     network_id = created.json()["id"]
@@ -70,3 +80,17 @@ def test_delete_running_network_409(client: TestClient) -> None:
     response = client.delete(f"/api/networks/{network_id}")
     assert response.status_code == 409
     client.post("/api/run/stop")
+
+
+def test_validate_an_unsaved_network(client: TestClient) -> None:
+    """M24: "Validate" on a network without an id hit a route that did not exist."""
+    ok = client.post("/api/networks/validate", json=mini_doc())
+    assert ok.status_code == 200
+    assert ok.json()["valid"] is True
+    broken = mini_doc()
+    broken["nodes"] = [node for node in broken["nodes"] if node["type"] != "end"]
+    response = client.post("/api/networks/validate", json=broken)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["valid"] is False
+    assert body["errors"]

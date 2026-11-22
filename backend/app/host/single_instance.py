@@ -14,6 +14,8 @@ def acquire() -> bool:
     import ctypes
 
     global _handle
+    if _handle is not None:
+        return True  # already owned by this process (main acquires before bootstrap)
     kernel32 = ctypes.windll.kernel32
     handle = kernel32.CreateMutexW(None, False, MUTEX_NAME)
     already = kernel32.GetLastError() == 183  # ERROR_ALREADY_EXISTS

@@ -66,3 +66,34 @@ def test_only_shipped_recipes_are_available() -> None:
     recipes = load_recipes()
     available = {r.id for r in recipes if r.available}
     assert available == {"github", "git", "excel"}
+
+
+def test_recipes_are_parsed_again_only_after_a_change(tmp_path, monkeypatch) -> None:
+    """N9: every MCP node in every listed network re-read all recipe files."""
+    import json as _json
+
+    from app.mcp import recipe_loader
+
+    folder = tmp_path / "recipes"
+    folder.mkdir()
+    recipe = next(r for r in load_recipes() if r.id == "git")
+    source = recipe_loader.RECIPES_DIR / "git.json"
+    (folder / "git.json").write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    monkeypatch.setattr(recipe_loader, "RECIPES_DIR", folder)
+    reads = {"n": 0}
+    real = recipe_loader._read_recipes
+
+    def _counting(path):
+        reads["n"] += 1
+        return real(path)
+
+    monkeypatch.setattr(recipe_loader, "_read_recipes", _counting)
+    first = load_recipes()
+    second = load_recipes()
+    assert [r.id for r in first] == ["git"] == [r.id for r in second]
+    assert reads["n"] == 1
+    raw = _json.loads((folder / "git.json").read_text(encoding="utf-8"))
+    raw["id"] = "git2"
+    (folder / "git.json").write_text(_json.dumps(raw), encoding="utf-8")
+    assert [r.id for r in load_recipes()] == ["git2"]
+    assert reads["n"] == 2

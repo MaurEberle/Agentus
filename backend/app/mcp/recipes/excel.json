@@ -8,6 +8,7 @@
   "needsRoot": true,
   "rootOnNode": true,
   "appendRoot": false,
+  "pathKeys": ["fileAbsolutePath"],
   "listedTools": [
     "excel_describe_sheets",
     "excel_read_sheet",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,12 @@ from typing import Any
 log = logging.getLogger("agentus.mcp")
 
 RECIPES_DIR = Path(__file__).resolve().parent / "recipes"
+
+# N9: validation looked up the recipe of every MCP node and re-read every file
+# each time. Parsed records are kept until a file in the folder changes.
+# Callers treat the records as read-only.
+_CACHE_LOCK = threading.Lock()
+_cache: tuple[tuple, list["RecipeRecord"]] | None = None
 
 
 @dataclass
@@ -29,6 +36,9 @@ class RecipeRecord:
     notes: str | None = None
     available: bool = True
     tool_schemas: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # M12: argument names that hold paths. None = generic list.
+    path_keys: list[str] | None = None
+    path_check_keys: list[str] = field(default_factory=list)
 
 
 def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
@@ -59,6 +69,10 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
         for name, schema in raw_schemas.items()
         if isinstance(name, str) and isinstance(schema, dict)
     }
+    raw_keys = raw.get("pathKeys")
+    path_keys = [str(key) for key in raw_keys if str(key).strip()] if isinstance(raw_keys, list) else None
+    raw_check = raw.get("pathCheckKeys")
+    path_check = [str(key) for key in raw_check if str(key).strip()] if isinstance(raw_check, list) else []
     return RecipeRecord(
         id=recipe_id,
         title_key=title,
@@ -76,14 +90,40 @@ def _parse(raw: dict[str, Any], filename: str) -> RecipeRecord | None:
         notes=str(raw["notes"]) if raw.get("notes") else None,
         available=available,
         tool_schemas=tool_schemas,
+        path_keys=path_keys,
+        path_check_keys=path_check,
     )
 
 
+def _signature(folder: Path) -> tuple:
+    items = []
+    for path in sorted(folder.glob("*.json")):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        items.append((path.name, stat.st_mtime_ns, stat.st_size))
+    return (str(folder), tuple(items))
+
+
 def load_recipes() -> list[RecipeRecord]:
-    if not RECIPES_DIR.is_dir():
+    global _cache
+    folder = RECIPES_DIR
+    if not folder.is_dir():
         return []
+    signature = _signature(folder)
+    with _CACHE_LOCK:
+        if _cache is not None and _cache[0] == signature:
+            return list(_cache[1])
+    records = _read_recipes(folder)
+    with _CACHE_LOCK:
+        _cache = (signature, records)
+    return list(records)
+
+
+def _read_recipes(folder: Path) -> list[RecipeRecord]:
     found: dict[str, RecipeRecord] = {}
-    for path in sorted(RECIPES_DIR.glob("*.json")):
+    for path in sorted(folder.glob("*.json")):
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:

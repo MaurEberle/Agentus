@@ -38,6 +38,20 @@ def list_messages() -> list[HelpMessageRow]:
         return [_from_row(row) for row in rows]
 
 
+def list_recent_messages(limit: int) -> list[HelpMessageRow]:
+    """The newest ``limit`` messages, oldest first."""
+    with locked("help") as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM (
+                SELECT * FROM help_messages ORDER BY created_at DESC, id DESC LIMIT ?
+            ) ORDER BY created_at ASC, id ASC
+            """,
+            (max(0, int(limit)),),
+        ).fetchall()
+        return [_from_row(row) for row in rows]
+
+
 def insert_message(row: HelpMessageRow) -> None:
     sources = json_dumps(row.sources) if row.sources is not None else None
     with transaction("help") as conn:

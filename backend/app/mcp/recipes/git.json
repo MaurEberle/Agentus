@@ -6,5 +6,7 @@
   "command": "uvx",
   "args": ["mcp-server-git", "--repository"],
   "needsRoot": true,
-  "appendRoot": true
+  "appendRoot": true,
+  "pathKeys": ["repo_path"],
+  "pathCheckKeys": ["files"]
 }

@@ -4,7 +4,10 @@ import { TagCloud } from '@/components/tags/TagCloud';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { useNetworksUi, type NetworksSortKey } from '@/modules/networks/store';
+import { cn } from '@/lib/utils';
+import { useNetworksUi, type NetworksKindFilter, type NetworksSortKey } from '@/modules/networks/store';
+
+const KINDS: NetworksKindFilter[] = ['orchestrator', 'all', 'linear'];
 
 export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly (readonly string[])[] }) {
   const { t } = useTranslation();
@@ -14,7 +17,7 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
   const tagFilter = useNetworksUi((state) => state.tagFilter);
   const tagMode = useNetworksUi((state) => state.tagMode);
   const onlyValid = useNetworksUi((state) => state.onlyValid);
-  const onlyActive = useNetworksUi((state) => state.onlyActive);
+  const kind = useNetworksUi((state) => state.kind);
   const setQuery = useNetworksUi((state) => state.setQuery);
   const setSortKey = useNetworksUi((state) => state.setSortKey);
   const toggleSortDir = useNetworksUi((state) => state.toggleSortDir);
@@ -22,7 +25,7 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
   const clearTags = useNetworksUi((state) => state.clearTags);
   const setTagMode = useNetworksUi((state) => state.setTagMode);
   const setOnlyValid = useNetworksUi((state) => state.setOnlyValid);
-  const setOnlyActive = useNetworksUi((state) => state.setOnlyActive);
+  const setKind = useNetworksUi((state) => state.setKind);
 
   const sorts: NetworksSortKey[] = ['name', 'updatedAt', 'lastUsedAt'];
 
@@ -67,10 +70,28 @@ export function FilterBar({ tags, tagSets }: { tags: string[]; tagSets: readonly
         <Switch checked={onlyValid} onCheckedChange={(value) => setOnlyValid(value === true)} />
         <span>{t('networks.filter.onlyValid')}</span>
       </label>
-      <label className="flex items-center gap-2 text-xs">
-        <Switch checked={onlyActive} onCheckedChange={(value) => setOnlyActive(value === true)} />
-        <span>{t('networks.filter.onlyActive')}</span>
-      </label>
+      {/* Orchestrator – all – linear: "all" in the middle, the default. */}
+      <div
+        role="radiogroup"
+        aria-label={t('networks.filter.kind')}
+        className="inline-flex h-8 items-stretch rounded-md border border-input p-0.5 shadow-sm"
+      >
+        {KINDS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={kind === value}
+            onClick={() => setKind(value)}
+            className={cn(
+              'flex items-center rounded px-2.5 text-xs transition-colors',
+              kind === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+            )}
+          >
+            {t(`networks.filter.kinds.${value}`)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

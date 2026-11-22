@@ -1,4 +1,8 @@
-"""POST /runtime/ping, GET /runtime/models, POST /runtime/test-llm, GET /runtime/resources."""
+"""POST /runtime/ping, GET /runtime/models, POST /runtime/test-llm, GET /runtime/resources.
+
+GET /runtime/ollama, POST /runtime/ollama/check and POST /runtime/ollama/update
+report and update Agentus' own Ollama copy.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,8 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from app.common.types import Provider
+from app.http.app import ApiModel
+from app.http.errors import AppError
 from app.runtime.catalog import list_openai_compat_models
 from app.runtime.completions import test_llm
 from app.runtime.errors import RuntimeApiError
@@ -22,6 +28,13 @@ from app.runtime.models import (
 from app.run.models import ResourceSnapshot
 from app.run.resources import latest as latest_resources
 from app.runtime.ollama import list_ollama_models, model_block_count, ping_ollama
+from app.runtime.ollama_own import (
+    OwnOllamaStatus,
+    OwnRuntimeError,
+    build_status,
+    download_running,
+    get_own,
+)
 from app.runtime.vram_est import vram_profile
 
 router = APIRouter()
@@ -45,6 +58,37 @@ def _kv_layer_models(profile: object) -> list[KvLayerOut] | None:
         if bpt or fixed:
             saw = True
     return out if saw else None
+
+
+class OllamaUpdateResult(ApiModel):
+    version: str
+    restart: bool
+
+
+@router.get("/runtime/ollama", response_model=OwnOllamaStatus)
+def runtime_ollama() -> OwnOllamaStatus:
+    return build_status()
+
+
+@router.post("/runtime/ollama/check", response_model=OwnOllamaStatus)
+def runtime_ollama_check() -> OwnOllamaStatus:
+    own = get_own()
+    if own.mode == "own":
+        own.check_update()
+    return build_status()
+
+
+@router.post("/runtime/ollama/update", response_model=OllamaUpdateResult)
+def runtime_ollama_update() -> OllamaUpdateResult:
+    """Take over the installed Ollama version, then restart Agentus (desktop window)."""
+    from app.host.restart import request_restart
+    from app.settings.service import is_run_busy
+
+    try:
+        version = get_own().apply_update(run_busy=is_run_busy(), download_running=download_running())
+    except OwnRuntimeError as exc:
+        raise AppError(exc.key, status_code=exc.status_code) from None
+    return OllamaUpdateResult(version=version, restart=request_restart())
 
 
 @router.post("/runtime/ping", response_model=PingResult, response_model_exclude_none=True)
@@ -71,7 +115,14 @@ def runtime_models(
         return RuntimeModelsResponse(items=[], message_key=exc.error_key)
     return RuntimeModelsResponse(
         items=[
-            RuntimeModelOut(name=item.name, size_bytes=item.size_bytes, moe=item.moe) for item in models
+            RuntimeModelOut(
+                name=item.name,
+                size_bytes=item.size_bytes,
+                moe=item.moe,
+                parameter_size=item.parameter_size,
+                quantization=item.quantization,
+            )
+            for item in models
         ]
     )
 
@@ -112,7 +163,7 @@ def runtime_model_stats(
         routed_expert_bytes=getattr(profile, "routed_expert_bytes", None) if profile else None,
         non_expert_bytes=getattr(profile, "non_expert_bytes", None) if profile else None,
         leading_dense_blocks=getattr(profile, "leading_dense_blocks", None) if profile else None,
-        projector_bytes=(profile.projector_bytes or None) if profile else None,
+        projector_bytes=(getattr(profile, "projector_bytes", 0) or None) if profile else None,
     )
 
 

@@ -281,12 +281,17 @@ def list_ollama_models(*, base_url: str | None = None) -> list[OllamaModel]:
         size_bytes = int(size) if isinstance(size, int) else None
         digest = item.get("digest")
         modified = item.get("modified_at")
+        details = item.get("details") if isinstance(item.get("details"), dict) else {}
+        parameters = details.get("parameter_size")
+        quantization = details.get("quantization_level")
         out.append(
             OllamaModel(
                 name=name,
                 size_bytes=size_bytes,
                 digest=digest if isinstance(digest, str) else None,
                 modified_at=modified if isinstance(modified, str) else None,
+                parameter_size=parameters.strip() if isinstance(parameters, str) and parameters.strip() else None,
+                quantization=quantization.strip() if isinstance(quantization, str) and quantization.strip() else None,
             )
         )
     if not out:

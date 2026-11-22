@@ -15,7 +15,8 @@ export type MonitoringPanes = {
 export const DEFAULT_PANES: MonitoringPanes = {
   chatH: 400,
   graphH: 320,
-  activityH: 280,
+  // Same as the graph beside it; the task needs the room (activity card, 2026-11-22).
+  activityH: 320,
   graphShare: 0.58,
 };
 

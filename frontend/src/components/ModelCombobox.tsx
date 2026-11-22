@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
+import { ModelHoverCard } from '@/components/ModelHoverCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { modelHover, modelLabel } from '@/lib/modelName';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { modelLabel, type ModelFacts } from '@/lib/modelName';
 import { cn } from '@/lib/utils';
+
+// A card, not the dark one-line tooltip; above the open list (z-[80]).
+const HOVER_CARD = 'z-[90] max-w-80 border bg-popover p-2 text-xs text-popover-foreground shadow-md';
 
 export function ModelCombobox({
   id,
@@ -14,9 +19,10 @@ export function ModelCombobox({
   onChange,
   placeholder,
   noModelsLabel,
-  useValueLabel,
+  customValueLabel,
   emptyLabel,
   restrictToOptions,
+  facts,
 }: {
   id?: string;
   value: string;
@@ -25,12 +31,18 @@ export function ModelCombobox({
   onChange: (value: string) => void;
   placeholder?: string;
   noModelsLabel?: string;
-  useValueLabel?: (name: string) => string;
+  customValueLabel?: (name: string) => string;
   emptyLabel?: string;
   restrictToOptions?: boolean;
+  /** Parameters, quantization and size per model name, for the hover card. */
+  facts?: ReadonlyMap<string, ModelFacts>;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  // The card on the closed field; never while the list is open, and not when the list
+  // hands focus back to the field after a pick (focus opens a tooltip too).
+  const [hint, setHint] = useState(false);
+  const closedAt = useRef(0);
 
   const names =
     restrictToOptions || !value || options.includes(value) ? options : [value, ...options];
@@ -46,6 +58,7 @@ export function ModelCombobox({
   function commit(next: string) {
     if (restrictToOptions && next && !options.includes(next)) return;
     onChange(next);
+    closedAt.current = Date.now();
     setOpen(false);
     setSearch('');
   }
@@ -56,27 +69,39 @@ export function ModelCombobox({
     <Popover
       open={open}
       onOpenChange={(next) => {
+        if (!next) closedAt.current = Date.now();
         setOpen(next);
         if (next) setSearch('');
       }}
     >
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          title={shown ? modelHover(shown) : undefined}
-          className="h-8 w-full min-w-0 max-w-full justify-between overflow-hidden px-2.5 text-left font-normal"
-        >
-          <span className={cn('min-w-0 flex-1 truncate text-left', !value && 'text-muted-foreground')}>
-            {shown?.name || placeholder}
-          </span>
-          <ChevronDown className="size-4 shrink-0 opacity-60" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip
+        open={hint && !open && Boolean(value)}
+        onOpenChange={(next) => setHint(next && Date.now() - closedAt.current > 400)}
+      >
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              id={id}
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              disabled={disabled}
+              className="h-8 w-full min-w-0 max-w-full justify-between overflow-hidden px-2.5 text-left font-normal"
+            >
+              <span className={cn('min-w-0 flex-1 truncate text-left', !value && 'text-muted-foreground')}>
+                {shown?.name || placeholder}
+              </span>
+              <ChevronDown className="size-4 shrink-0 opacity-60" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        {value ? (
+          <TooltipContent side="left" align="start" className={HOVER_CARD}>
+            <ModelHoverCard name={value} facts={facts?.get(value)} />
+          </TooltipContent>
+        ) : null}
+      </Tooltip>
       <PopoverContent align="start" sideOffset={4} className="z-[80] w-[var(--radix-popover-trigger-width)] p-1">
         <Input
           value={search}
@@ -116,25 +141,31 @@ export function ModelCombobox({
           ) : null}
           {filtered.map((item) => (
             <li key={item}>
-              <button
-                type="button"
-                className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                title={modelHover(modelLabel(item))}
-                onClick={() => commit(item)}
-              >
-                <Check className={cn('size-3.5 shrink-0', item === value ? 'opacity-100' : 'opacity-0')} />
-                <span className="min-w-0 flex-1 truncate">{modelLabel(item).name}</span>
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                    onClick={() => commit(item)}
+                  >
+                    <Check className={cn('size-3.5 shrink-0', item === value ? 'opacity-100' : 'opacity-0')} />
+                    <span className="min-w-0 flex-1 truncate">{modelLabel(item).name}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" align="start" className={HOVER_CARD}>
+                  <ModelHoverCard name={item} facts={facts?.get(item)} />
+                </TooltipContent>
+              </Tooltip>
             </li>
           ))}
-          {query && !exact && !restrictToOptions && useValueLabel ? (
+          {query && !exact && !restrictToOptions && customValueLabel ? (
             <li>
               <button
                 type="button"
                 className="flex w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
                 onClick={() => commit(search.trim())}
               >
-                {useValueLabel(search.trim())}
+                {customValueLabel(search.trim())}
               </button>
             </li>
           ) : null}

@@ -116,8 +116,41 @@ export type HelpChatSettings = {
 
 export type HistoryRetentionDays = 30 | 90 | 365 | null;
 
+export type OllamaRuntimeMode = 'own' | 'external';
+
+export type OllamaRuntimeState =
+  | 'disabled'
+  | 'preparing'
+  | 'starting'
+  | 'running'
+  | 'failed'
+  | 'unavailable'
+  | 'stopped';
+
+/** Agentus' own Ollama copy (``GET /api/runtime/ollama``). */
+export type OllamaRuntimeStatus = {
+  mode: OllamaRuntimeMode;
+  configuredMode: OllamaRuntimeMode;
+  restartRequired: boolean;
+  state: OllamaRuntimeState;
+  version?: string | null;
+  port?: number | null;
+  baseUrl?: string | null;
+  installedVersion?: string | null;
+  updateVersion?: string | null;
+  stagedVersion?: string | null;
+  checkedAt?: string | null;
+  messageKey?: string | null;
+  messageParams?: Record<string, string>;
+  canRestart: boolean;
+  runBusy: boolean;
+  downloadRunning: boolean;
+  logPath?: string | null;
+};
+
 export type AppSettings = {
   ollamaBaseUrl: string;
+  ollamaRuntime?: OllamaRuntimeMode;
   openaiCompatBaseUrl?: string;
   helpChatFabVisible: boolean;
   helpChat: HelpChatSettings;
@@ -174,7 +207,14 @@ export type McpServerListItem = {
 };
 
 export type RuntimePing = { ok: boolean; messageKey?: string };
-export type RuntimeModel = { name: string; sizeBytes?: number; moe?: boolean };
+export type RuntimeModel = {
+  name: string;
+  sizeBytes?: number;
+  moe?: boolean;
+  /** Ollama details: "32.8B", "Q4_K_M". */
+  parameterSize?: string;
+  quantization?: string;
+};
 
 export type KvLayer = {
   bytesPerToken?: number;

@@ -59,6 +59,33 @@ def _run_dict(row: Any) -> dict[str, Any]:
     }
 
 
+# M16: the run list carries only these columns. Graph, chat and memory of up to 500
+# runs made /runs several megabytes; the detail view loads them per run.
+_SUMMARY_COLUMNS = (
+    "id, network_id, network_name, started_at, ended_at, outcome, error_message, "
+    "error_class, error_node_id, error_node_name, models"
+)
+
+
+def _run_summary_dict(row: Any) -> dict[str, Any]:
+    models = json_loads(row["models"], default=[])
+    if not isinstance(models, list):
+        models = []
+    return {
+        "id": row["id"],
+        "network_id": row["network_id"],
+        "network_name": row["network_name"],
+        "started_at": row["started_at"],
+        "ended_at": row["ended_at"],
+        "outcome": row["outcome"],
+        "error_message": row["error_message"],
+        "error_class": row["error_class"],
+        "error_node_id": row["error_node_id"],
+        "error_node_name": row["error_node_name"],
+        "models": models,
+    }
+
+
 def _optional_json(row: Any, key: str) -> Any:
     try:
         raw = row[key]
@@ -113,6 +140,10 @@ def _step_dict(row: Any) -> dict[str, Any]:
     }
 
 
+# Value of the error filter for failed runs without an error key.
+NO_ERROR_KEY = "none"
+
+
 def _run_filters(
     *,
     since: str | None,
@@ -122,6 +153,7 @@ def _run_filters(
     outcome: list[str] | None,
     model: str | None,
     q: str | None,
+    error: str | None = None,
     alias: str = "runs",
 ) -> tuple[str, list[object]]:
     clauses: list[str] = []
@@ -169,6 +201,15 @@ def _run_filters(
             """
         )
         params.extend([like, like, like])
+    if error == NO_ERROR_KEY:
+        # Failed runs that stored no error key (their own tile in the error map).
+        clauses.append(
+            f"IFNULL({alias}.error_message, '') = '' AND {alias}.outcome IN ('failed', 'timeout')"
+        )
+    elif error:
+        # Exact error key of a failed run ("run.orchestrator.stuck"): a tile of the error map.
+        clauses.append(f"{alias}.error_message = ?")
+        params.append(error)
     sql = (" AND " + " AND ".join(clauses)) if clauses else ""
     return sql, params
 
@@ -376,6 +417,7 @@ def list_runs(
     outcome: list[str] | None = None,
     model: str | None = None,
     q: str | None = None,
+    error: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     where, params = _run_filters(
         since=since,
@@ -385,6 +427,7 @@ def list_runs(
         outcome=outcome,
         model=model,
         q=q,
+        error=error,
     )
     with locked("history") as conn:
         total_row = conn.execute(
@@ -393,13 +436,38 @@ def list_runs(
         total = int(total_row["n"]) if total_row else 0
         rows = conn.execute(
             f"""
-            SELECT * FROM runs WHERE 1=1{where}
+            SELECT {_SUMMARY_COLUMNS} FROM runs WHERE 1=1{where}
             ORDER BY started_at DESC
             LIMIT ? OFFSET ?
             """,
             [*params, limit, offset],
         ).fetchall()
-    return [_run_dict(row) for row in rows], total
+    return [_run_summary_dict(row) for row in rows], total
+
+
+def list_previous_runs(network_id: str, *, exclude_id: str | None, limit: int) -> list[dict[str, Any]]:
+    """Finished runs of one network, newest first, with their chat (for the request preview)."""
+    with locked("history") as conn:
+        rows = conn.execute(
+            """
+            SELECT id, started_at, ended_at, outcome, error_message, chat FROM runs
+            WHERE network_id = ? AND outcome != 'running' AND id != ?
+            ORDER BY started_at DESC
+            LIMIT ?
+            """,
+            (network_id, exclude_id or "", limit),
+        ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "started_at": row["started_at"],
+            "ended_at": row["ended_at"],
+            "outcome": row["outcome"],
+            "error_message": row["error_message"],
+            "chat": json_loads(row["chat"], default=None) if row["chat"] else None,
+        }
+        for row in rows
+    ]
 
 
 def latest_run_id_by_network() -> dict[str, str]:
@@ -479,7 +547,45 @@ def list_logs(
     level: str | None = None,
     q: str | None = None,
     node_id: str | None = None,
+    limit: int | None = None,
 ) -> list[dict[str, Any]]:
+    """Logs oldest first. ``limit`` keeps the newest N (M16)."""
+    where, params = _log_filters(run_id, level=level, q=q, node_id=node_id)
+    with locked("history") as conn:
+        if limit is None:
+            rows = conn.execute(
+                f"SELECT * FROM run_logs WHERE {where} ORDER BY ts ASC, rowid ASC",
+                params,
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                f"SELECT * FROM run_logs WHERE {where} ORDER BY ts DESC, rowid DESC LIMIT ?",
+                [*params, max(0, int(limit))],
+            ).fetchall()
+            rows = list(reversed(rows))
+    return [_log_dict(row) for row in rows]
+
+
+def count_logs(
+    run_id: str,
+    *,
+    level: str | None = None,
+    q: str | None = None,
+    node_id: str | None = None,
+) -> int:
+    where, params = _log_filters(run_id, level=level, q=q, node_id=node_id)
+    with locked("history") as conn:
+        row = conn.execute(f"SELECT COUNT(*) AS n FROM run_logs WHERE {where}", params).fetchone()
+    return int(row["n"]) if row else 0
+
+
+def _log_filters(
+    run_id: str,
+    *,
+    level: str | None,
+    q: str | None,
+    node_id: str | None,
+) -> tuple[str, list[object]]:
     clauses = ["run_id = ?"]
     params: list[object] = [run_id]
     if level:
@@ -491,13 +597,7 @@ def list_logs(
     if q:
         clauses.append("message LIKE ?")
         params.append(f"%{q}%")
-    where = " AND ".join(clauses)
-    with locked("history") as conn:
-        rows = conn.execute(
-            f"SELECT * FROM run_logs WHERE {where} ORDER BY ts ASC, id ASC",
-            params,
-        ).fetchall()
-    return [_log_dict(row) for row in rows]
+    return " AND ".join(clauses), params
 
 
 def insert_call(
@@ -550,7 +650,52 @@ def list_calls(
     outcome: list[str] | None = None,
     model: str | None = None,
     q: str | None = None,
+    error: str | None = None,
+    newest_first: bool = False,
 ) -> list[dict[str, Any]]:
+    """Calls of one run in the order they happened, or a page across runs.
+
+    ``newest_first`` is for the page across runs: with the default order a limit
+    returned the oldest calls ever made, whatever the time range (H10).
+    """
+    where, params = _call_filters(
+        run_id,
+        since=since,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        network_id=network_id,
+        outcome=outcome,
+        model=model,
+        q=q,
+        error=error,
+    )
+    order = "DESC" if newest_first else "ASC"
+    with locked("history") as conn:
+        rows = conn.execute(
+            f"""
+            SELECT llm_calls.* FROM llm_calls
+            JOIN runs ON runs.id = llm_calls.run_id
+            {where}
+            ORDER BY llm_calls.rowid {order}
+            LIMIT ? OFFSET ?
+            """,
+            [*params, limit, offset],
+        ).fetchall()
+    return [_call_dict(row) for row in rows]
+
+
+def _call_filters(
+    run_id: str | None,
+    *,
+    since: str | None,
+    from_ts: str | None,
+    to_ts: str | None,
+    network_id: str | None,
+    outcome: list[str] | None,
+    model: str | None,
+    q: str | None,
+    error: str | None = None,
+) -> tuple[str, list[object]]:
     clauses: list[str] = []
     params: list[object] = []
     if run_id:
@@ -564,6 +709,7 @@ def list_calls(
         outcome=outcome,
         model=model,
         q=q,
+        error=error,
         alias="runs",
     )
     params.extend(extra_params)
@@ -573,18 +719,89 @@ def list_calls(
         if extra:
             parts.append(extra.removeprefix(" AND "))
         where = " WHERE " + " AND ".join(p for p in parts if p)
+    return where, params
+
+
+def _median(values: list[int]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return float(ordered[mid])
+    return (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def call_stats_by_model(
+    *,
+    since: str | None = None,
+    from_ts: str | None = None,
+    to_ts: str | None = None,
+    network_id: str | None = None,
+    outcome: list[str] | None = None,
+    model: str | None = None,
+    q: str | None = None,
+    error: str | None = None,
+) -> list[dict[str, Any]]:
+    """Per provider and model over every call of the filtered runs, not over one page (H10)."""
+    where, params = _call_filters(
+        None,
+        since=since,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        network_id=network_id,
+        outcome=outcome,
+        model=model,
+        q=q,
+        error=error,
+    )
     with locked("history") as conn:
         rows = conn.execute(
             f"""
-            SELECT llm_calls.* FROM llm_calls
+            SELECT llm_calls.provider AS provider, llm_calls.model AS model,
+                   COUNT(*) AS calls,
+                   SUM(CASE WHEN llm_calls.ok THEN 1 ELSE 0 END) AS ok,
+                   SUM(llm_calls.tokens_in) AS tokens_in,
+                   SUM(llm_calls.tokens_out) AS tokens_out
+            FROM llm_calls
             JOIN runs ON runs.id = llm_calls.run_id
             {where}
-            ORDER BY llm_calls.id
-            LIMIT ? OFFSET ?
+            GROUP BY llm_calls.provider, llm_calls.model
             """,
-            [*params, limit, offset],
+            params,
         ).fetchall()
-    return [_call_dict(row) for row in rows]
+        durations = conn.execute(
+            f"""
+            SELECT llm_calls.provider AS provider, llm_calls.model AS model,
+                   llm_calls.duration_ms AS duration_ms
+            FROM llm_calls
+            JOIN runs ON runs.id = llm_calls.run_id
+            {where}{" AND" if where else " WHERE"} llm_calls.duration_ms IS NOT NULL
+            """,
+            params,
+        ).fetchall()
+    spans: dict[tuple[str, str], list[int]] = {}
+    for row in durations:
+        spans.setdefault((row["provider"], row["model"]), []).append(int(row["duration_ms"]))
+    stats: list[dict[str, Any]] = []
+    for row in rows:
+        calls = int(row["calls"] or 0)
+        ok = int(row["ok"] or 0)
+        stats.append(
+            {
+                "provider": row["provider"],
+                "model": row["model"],
+                "calls": calls,
+                "ok": ok,
+                "error": calls - ok,
+                "median_ms": _median(spans.get((row["provider"], row["model"]), [])),
+                # SUM over no value is NULL: "not reported" stays apart from zero.
+                "tokens_in": row["tokens_in"],
+                "tokens_out": row["tokens_out"],
+            }
+        )
+    stats.sort(key=lambda item: item["calls"], reverse=True)
+    return stats
 
 
 def upsert_step(

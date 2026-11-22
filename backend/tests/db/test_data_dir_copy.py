@@ -60,3 +60,47 @@ def test_set_data_dir_rejects_drive_root(root: Path) -> None:
     with pytest.raises(ConfigError) as err:
         set_data_dir(root)
     assert err.value.message_key == "dataDir.invalidPath"
+
+
+def test_copy_never_overwrites_stores_in_the_target(tmp_path: Path) -> None:
+    """M20: copying used to replace stores that already lived in the target."""
+    init()
+    put_settings({"ollamaBaseUrl": "http://127.0.0.1:11434"})
+    src_dir = Path(get_data_location()["dataDir"])
+    dest = tmp_path / "taken"
+    dest.mkdir()
+    (dest / "settings.sqlite").write_bytes(b"other data")
+    with pytest.raises(ConfigError) as err:
+        set_data_dir(dest, copy=True)
+    assert err.value.message_key == "dataDir.targetHasData"
+    assert (dest / "settings.sqlite").read_bytes() == b"other data"
+    assert Path(get_data_location()["dataDir"]) == src_dir
+    assert get_settings() == {"ollamaBaseUrl": "http://127.0.0.1:11434"}
+
+
+def test_failed_switch_goes_back_to_the_old_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """M20: an OSError during the copy left every store closed."""
+    init()
+    put_settings({"ollamaBaseUrl": "http://127.0.0.1:11434"})
+    src_dir = Path(get_data_location()["dataDir"])
+
+    def _broken(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("app.db.bootstrap.shutil.copy2", _broken)
+    with pytest.raises(ConfigError) as err:
+        set_data_dir(tmp_path / "new", copy=True)
+    assert err.value.message_key == "dataDir.switchFailed"
+    loc = get_data_location()
+    assert Path(loc["dataDir"]) == src_dir
+    assert all(item["state"] == "ok" for item in loc["stores"])
+    assert get_settings() == {"ollamaBaseUrl": "http://127.0.0.1:11434"}
+
+
+def test_switch_to_the_same_folder_is_a_no_op() -> None:
+    init()
+    put_settings({"ollamaBaseUrl": "http://127.0.0.1:11434"})
+    src_dir = Path(get_data_location()["dataDir"])
+    loc = set_data_dir(src_dir, copy=True)
+    assert Path(loc["dataDir"]) == src_dir
+    assert get_settings() == {"ollamaBaseUrl": "http://127.0.0.1:11434"}

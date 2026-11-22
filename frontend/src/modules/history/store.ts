@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import type { DetailTab, LogLevel } from '@/modules/history/model/types';
+import type { DetailTab } from '@/modules/history/model/types';
+import type { LogView } from '@/modules/monitoring/model/logView';
 
 type HistoryUi = {
   selectedIds: string[];
   anchorId: string | null;
   detailTab: DetailTab;
-  logLevelMin: LogLevel;
+  logView: LogView;
   logQuery: string;
   logNodeId: string | null;
   logErrorsOnly: boolean;
@@ -14,7 +15,7 @@ type HistoryUi = {
   clearSelection: () => void;
   pruneSelection: (existingIds: string[]) => void;
   setDetailTab: (tab: DetailTab) => void;
-  setLogLevelMin: (level: LogLevel) => void;
+  setLogView: (view: LogView) => void;
   setLogQuery: (query: string) => void;
   setLogNodeId: (id: string | null) => void;
   setLogErrorsOnly: (value: boolean) => void;
@@ -29,7 +30,7 @@ export const useHistoryUi = create<HistoryUi>((set, get) => ({
   selectedIds: [],
   anchorId: null,
   detailTab: 'log',
-  logLevelMin: 'info',
+  logView: 'important',
   logQuery: '',
   logNodeId: null,
   logErrorsOnly: false,
@@ -55,7 +56,7 @@ export const useHistoryUi = create<HistoryUi>((set, get) => ({
     set({ selectedIds, anchorId });
   },
   setDetailTab: (detailTab) => set({ detailTab }),
-  setLogLevelMin: (logLevelMin) => set({ logLevelMin }),
+  setLogView: (logView) => set({ logView }),
   setLogQuery: (logQuery) => set({ logQuery }),
   setLogNodeId: (logNodeId) => set({ logNodeId }),
   setLogErrorsOnly: (logErrorsOnly) => set({ logErrorsOnly }),

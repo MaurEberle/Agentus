@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 
 from app.db.engine import utc_now
 from app.run import agent_turn, turn_runtime
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log
-from app.run.limits import MAX_SAME_RETRIES
-from app.run.memory import AgentRecord, RunMemory, visible_text
+from app.run.limits import MAX_SAME_RETRIES, MAX_TEXT_RETRIES
+from app.run.memory import AgentRecord, RunMemory, Takeover, visible_text
 from app.run.models import ChatMessage
 from app.run.orchestrate import match_agent
 from app.run.turn_runtime import _FILE_MUTATIONS, _SAME_RETRY
@@ -27,7 +28,29 @@ def _source_repair_note(source, memory: RunMemory) -> str:
         if rec.finished and rec.text:
             last = rec.agent_id
     hint = f" Last stored text is from {last}." if last else ""
-    return f"Unknown source: {source.missing}.{hint} Omit source to send only the task."
+    return f'Unknown source: {source.missing}.{hint} Set source to "none" to send only the task.'
+
+def unresolved_file_failures(files) -> list:
+    """M8: failed file steps the call did not fix later.
+
+    Only the last state of a path counts: a failed write followed by a good one is
+    fixed. A failed read or listing is a probe (does the file exist?), not a failed
+    task, so only changes count. A failure without a path counts until a later step
+    of the same action succeeds.
+    """
+    open_items = []
+    for index, fact in enumerate(files):
+        if fact.ok or fact.action not in _FILE_MUTATIONS:
+            continue
+        later = files[index + 1 :]
+        if fact.path:
+            fixed = any(item.ok and item.path == fact.path for item in later)
+        else:
+            fixed = any(item.ok and item.action == fact.action for item in later)
+        if not fixed:
+            open_items.append(fact)
+    return open_items
+
 
 def _count_file_attempt(
     compiled: CompiledGraph,
@@ -38,6 +61,11 @@ def _count_file_attempt(
     if "file_access" not in (agent.tool_kinds or []):
         return
     wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
+    # M8: a finished text answer that never tried to change a file is the result,
+    # not a missed write; reading files for it does not make it one.
+    tried_write = any(fact.action in _FILE_MUTATIONS for fact in record.files)
+    if record.finished and record.text and not tried_write:
+        return
     opened = memory.note_file_attempt(
         agent_id=agent.node_id,
         name=record.name,
@@ -61,6 +89,69 @@ def _count_file_attempt(
         },
     )
 
+def _review_text_retry(compiled: CompiledGraph, memory: RunMemory, agent, record: AgentRecord) -> None:
+    """Count a retry that again came back as text only; open a tools takeover at the limit."""
+    agent_id = agent.node_id
+    if not record.text_only:
+        memory.text_retry_fails[agent_id] = 0
+        return
+    fails = memory.text_retry_fails.get(agent_id, 0) + 1
+    memory.text_retry_fails[agent_id] = fails
+    emit_log(
+        "warn",
+        "run.orchestrator.textRetry",
+        node_id=agent_id,
+        payload={"name": record.name, "fails": fails, "max": MAX_TEXT_RETRIES},
+    )
+    if fails < MAX_TEXT_RETRIES or memory.takeover is not None:
+        return
+    orch = compiled.orchestrator
+    if orch is None or not (orch.tool_kinds or orch.mcp):
+        # No takeover possible: the loop reports an anomaly; the next round counts afresh.
+        memory.takeover_unarmed = True
+        memory.text_retry_fails[agent_id] = 0
+        return
+    memory.takeover = Takeover(agent_id=agent_id, name=record.name, task=record.task, kind="tools")
+    memory.takeover_rejects = 0
+    emit_log(
+        "info",
+        "run.orchestrator.takeoverStart",
+        node_id=orch.node_id,
+        payload={"agent": record.name, "misses": fails, "task": (record.task or "")[:300], "kind": "tools"},
+    )
+
+def _review_failed_call(compiled: CompiledGraph, memory: RunMemory, agent, record: AgentRecord) -> None:
+    """Open a takeover after ``miss_limit`` failed calls of one agent in a row (default 2).
+
+    The miss rule counts only file calls without a write; an agent that failed on
+    the terminal, then wrote something, never reached it (Dev Team run, 2026-11-16).
+    """
+    agent_id = agent.node_id
+    count = memory.note_failed_call(agent_id, bool(record.error))
+    if count < max(1, memory.miss_limit) or memory.takeover is not None:
+        return
+    orch = compiled.orchestrator
+    if orch is None or not (orch.tool_kinds or orch.mcp):
+        # No takeover possible: the loop reports an anomaly; the next round counts afresh.
+        memory.takeover_unarmed = True
+        memory.failed_calls[agent_id] = 0
+        return
+    memory.takeover = Takeover(
+        agent_id=agent_id, name=record.name, task=record.task, kind="failed", reason=record.error
+    )
+    memory.takeover_rejects = 0
+    emit_log(
+        "info",
+        "run.orchestrator.takeoverFailures",
+        node_id=orch.node_id,
+        payload={
+            "agent": record.name,
+            "failed": count,
+            "reason": record.error,
+            "task": (record.task or "")[:300],
+        },
+    )
+
 def _orchestrator_call(
     ctrl: RunController,
     compiled: CompiledGraph,
@@ -71,10 +162,14 @@ def _orchestrator_call(
 ) -> str:
     token = action.get("agent") or ""
     agent_id = match_agent(token, names)
-    task = (action.get("task") or "").strip() or memory.last_user() or user_text
+    given_task = (action.get("task") or "").strip()
+    task = given_task or memory.last_user() or user_text
     if agent_id is None or agent_id not in compiled.agents:
         memory.add_note(_unknown_agent_note(token, names))
         return "skipped"
+    if not given_task:
+        # O17: an empty task falls back to the last user message; make that visible.
+        emit_log("warn", "run.orchestrator.emptyTask", node_id=agent_id)
     agent = compiled.agents[agent_id]
     has_tools = bool(agent.tool_kinds or agent.mcp)
     source = memory.resolve_source(action.get("source") or "", names)
@@ -84,11 +179,59 @@ def _orchestrator_call(
     if source.auto:
         emit_log("info", "run.memory.source", node_id=agent_id)
     name = dict(names).get(agent_id, agent_id)
+    previous = next((rec for rec in reversed(memory.records) if rec.agent_id == agent_id), None)
+    # Text-only review (variant C): only an explicit retry of a text-only answer counts.
+    is_text_retry = action.get("retry") == "1" and previous is not None and previous.text_only
+    if action.get("retry") == "1" and not is_text_retry:
+        emit_log("info", "run.orchestrator.retryIgnored", node_id=agent_id)
+    if not is_text_retry:
+        memory.text_retry_fails[agent_id] = 0
     record = memory.begin_call(agent_id, name, task, has_tools)
-    memory.allow_own_tools = True
+    record.retry = is_text_retry
+    memory.allow_own_tools = False
+    call_no = len(memory.records)
+    call_started = time.perf_counter()
+    emit_log(
+        "info",
+        "run.agent.start",
+        node_id=agent_id,
+        payload=agent_turn._start_payload(
+            compiled, agent_id, task, name=name, call=call_no, retry=is_text_retry
+        ),
+    )
+
+    def _log_done(outcome: str | None = None) -> None:
+        # B3: once per call, also when the call continued after an error.
+        if outcome is None:
+            outcome = "anomaly" if record.error else ("textOnly" if record.text_only else "done")
+        files = [fact.path for fact in record.files if fact.ok and fact.action in _FILE_MUTATIONS and fact.path]
+        emit_log(
+            "info" if outcome in {"done", "textOnly"} else "warn",
+            "run.agent.done",
+            node_id=agent_id,
+            payload=agent_turn.done_payload(
+                compiled,
+                agent_id,
+                name=name,
+                call=call_no,
+                duration_ms=int((time.perf_counter() - call_started) * 1000),
+                tools=len(record.tools),
+                tools_failed=sum(1 for event in record.tools if not event.ok),
+                files=files,
+                outcome=outcome,
+                text=record.text or "",
+                reason="" if outcome in {"stopped", "cancelled"} else record.error,
+                capped=record.capped,
+                context=record.context,
+            ),
+        )
 
     def _ran() -> str:
+        _log_done()
         _count_file_attempt(compiled, memory, agent, record)
+        if is_text_retry:
+            _review_text_retry(compiled, memory, agent, record)
+        _review_failed_call(compiled, memory, agent, record)
         return "ran"
 
     orch = compiled.orchestrator
@@ -110,14 +253,28 @@ def _orchestrator_call(
             reuse=continued,
         )
         if text is None:
-            return "cancelled" if ctrl.stop_event.is_set() else "ran"
+            if ctrl.stop_event.is_set():
+                _log_done("cancelled")
+                return "cancelled"
+            if record.error == turn_runtime.USER_STOPPED:
+                # M6: the user stopped it; the loop waits for the next message.
+                _log_done("stopped")
+                return "ran"
+            # O17: the agent turn gave up without a result; tell the orchestrator why.
+            record.error = record.error or "agent stopped"
+            memory.allow_own_tools = True
+            memory.set_anomaly(record)
+            return _ran()
         if record.error == "prompt does not fit":
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error == "too many tool failures":
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
-        if record.error in {"too many thinks", "think loop", "empty stops"}:
+        if record.error in {"too many thinks", "think loop", "empty stops", "runtime.generationLimit", "output limit"}:
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         if record.error:
@@ -135,6 +292,7 @@ def _orchestrator_call(
                 attempt += 1
                 record.error = ""
                 continue
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         visible = visible_text(text or "")
@@ -143,26 +301,29 @@ def _orchestrator_call(
         wrote = any(fact.ok and fact.action in _FILE_MUTATIONS for fact in record.files)
         if not visible and not record.tool_ok:
             record.error = "empty result"
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         record.text = visible
-        if has_tools and not record.tool_ok:
-            record.error = "no tool used"
-            memory.set_anomaly(record)
-            return _ran()
         if not visible and not wrote:
             record.error = "empty result"
             emit_log("warn", "run.agent.empty", node_id=agent_id)
+            memory.allow_own_tools = True
             memory.set_anomaly(record)
             return _ran()
         record.finished = True
-        if any(not fact.ok for fact in record.files):
+        if has_tools and not record.tools and visible:
+            # Allowed: tools are optional. The orchestrator checks the text against the task.
+            record.text_only = True
+            emit_log("info", "run.agent.textOnly", node_id=agent_id)
+        if unresolved_file_failures(record.files):
             record.error = "tool failed"
             memory.set_anomaly(record)
         else:
             _publish_progress(ctrl, name, record)
             memory.add_note(f"Status already shown to the user: {name} finished.")
         return _ran()
+    _log_done("cancelled")
     return "cancelled"
 
 def _publish_progress(ctrl: RunController, name: str, record: AgentRecord) -> None:

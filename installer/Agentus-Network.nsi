@@ -298,6 +298,14 @@ Section "Anwendungsdateien" SecApp
   Push "install app ${PRODUCT_VERSION}"
   Call LogLine
   nsExec::ExecToLog 'taskkill /IM ${PRODUCT_EXE} /F'
+  ; _internal is the PyInstaller payload and nothing writes there at runtime. Overwriting
+  ; alone keeps files a newer build dropped (hashed frontend bundles, help docs, modules).
+  ; Only clear it when this really is our install dir (/D may point anywhere).
+  IfFileExists "$INSTDIR\${PRODUCT_EXE}" 0 +5
+    Sleep 500
+    RMDir /r "$INSTDIR\_internal"
+    Push "cleared previous _internal"
+    Call LogLine
   SetOutPath $INSTDIR
   SetOverwrite on
   File /r "..\dist\AgentusNetwork\*.*"
@@ -445,6 +453,9 @@ Section "Uninstall"
   Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
   DeleteRegKey HKCU "${REG_UNINSTALL}"
   RMDir /r "$INSTDIR"
+  ; Own Ollama copy (runtime\ollama): the job object ends it with the app; this is the safety net.
+  nsExec::ExecToLog `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "Get-Process ollama,llama-server -ErrorAction SilentlyContinue | Where-Object { $$_.Path -like '$LOCALAPPDATA\Agentus-Network\runtime\*' } | Stop-Process -Force"`
+  RMDir /r "$LOCALAPPDATA\Agentus-Network\runtime"
   ${If} $KeepData != "1"
     RMDir /r "$LOCALAPPDATA\Agentus-Network"
   ${EndIf}
@@ -455,7 +466,7 @@ Function un.onInit
   SetRegView 64
   StrCpy $KeepData "1"
   IfSilent keep_silent
-  MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON1 "Anwendungsdaten behalten? (Empfohlen: Ja)$\r$\n$\r$\nNein löscht config.yaml, data und Logs unter LocalAppData\Agentus-Network. Ollama und WebView2 bleiben." IDNO drop_data
+  MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON1 "Anwendungsdaten behalten? (Empfohlen: Ja)$\r$\n$\r$\nNein löscht config.yaml, data und Logs unter LocalAppData\Agentus-Network. Die Ollama-Kopie von Agentus wird immer entfernt; das installierte Ollama, seine Modelle und WebView2 bleiben." IDNO drop_data
   StrCpy $KeepData "1"
   Goto keep_silent
 drop_data:

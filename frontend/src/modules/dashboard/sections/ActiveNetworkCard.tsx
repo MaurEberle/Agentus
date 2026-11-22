@@ -8,6 +8,7 @@ import { formatRelative } from '@/lib/relativeTime';
 import { validationBadgeVariant, type NetworkListItem } from '@/modules/dashboard/model';
 import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
 import { useAppStore } from '@/store';
+import { validationTextKey } from '@/lib/validationText';
 
 export function ActiveNetworkCard({
   loading,
@@ -76,7 +77,7 @@ export function ActiveNetworkCard({
             {network.validationStatus === 'invalid' && errors.length > 0 ? (
               <ul className="list-disc space-y-1 pl-4 text-sm text-destructive">
                 {errors.slice(0, 3).map((error) => (
-                  <li key={`${error.nodeId ?? 'net'}-${error.messageKey}`}>{t(error.messageKey)}</li>
+                  <li key={`${error.nodeId ?? 'net'}-${error.messageKey}`}>{t(validationTextKey(error.messageKey))}</li>
                 ))}
               </ul>
             ) : null}

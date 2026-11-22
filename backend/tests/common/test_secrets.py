@@ -77,3 +77,68 @@ def test_mask_obj_depth_cap() -> None:
         assert isinstance(node, dict)
         node = node["wrap"]
     assert node == "***"
+
+
+def test_mask_text_provider_keys() -> None:
+    from app.common.secrets import mask_text
+
+    text = (
+        "gemini AIzaSyA1b2C3d4E5f6G7h8I9j0KlMnOpQrStUvW "
+        "xai xai-AbCdEfGhIjKlMnOpQrStUv "
+        "gh ghp_abcdefghijklmnopqrstuvwxyz0123 ok"
+    )
+    masked = mask_text(text)
+    assert "AIzaSyA1" not in masked and "AIza***" in masked
+    assert "xai-AbCd" not in masked and "xai-***" in masked
+    assert "ghp_abc" not in masked
+    assert masked.endswith(" ok")
+
+
+def test_mask_obj_header_style_keys() -> None:
+    from app.common.secrets import mask_obj
+
+    masked = mask_obj({"x-api-key": "plain", "accessToken": "plain", "model": "m"})
+    assert masked == {"x-api-key": "***", "accessToken": "***", "model": "m"}
+
+
+def test_mask_content_keeps_code_templates() -> None:
+    from app.common.secrets import mask_content
+
+    for sample in (
+        'headers = {"Authorization": f"Bearer {token}"}',
+        "Authorization: Bearer ${ACCESS_TOKEN}",
+        '"Bearer " + token',
+        "curl -H 'Authorization: Bearer <token>'",
+        "Bearer YOUR_API_KEY_HERE",
+    ):
+        assert mask_content(sample) == sample
+
+
+def test_mask_content_masks_real_tokens() -> None:
+    from app.common.secrets import mask_content
+
+    jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abc123DEF456"
+    assert mask_content(f"Authorization: Bearer {jwt}") == "Authorization: Bearer ***"
+    assert mask_content("key=sk-abcdefghijklmnop") == "key=sk-***"
+
+
+def test_known_secret_is_masked_everywhere() -> None:
+    from app.common.secrets import (
+        forget_secrets,
+        mask_content,
+        mask_content_obj,
+        mask_text,
+        remember_secret,
+    )
+
+    forget_secrets()
+    try:
+        remember_secret("tvly-PLAINVALUE-without-pattern")
+        remember_secret('{"token":"custom-token-value","headers":{"X-Api-Key":"header-key-value"}}')
+        remember_secret("short")  # too short to register
+        text = "a tvly-PLAINVALUE-without-pattern b custom-token-value c header-key-value d short"
+        assert mask_content(text) == "a *** b *** c *** d short"
+        assert mask_text(text) == "a *** b *** c *** d short"
+        assert mask_content_obj({"content": "x header-key-value y"}) == {"content": "x *** y"}
+    finally:
+        forget_secrets()

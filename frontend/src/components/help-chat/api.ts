@@ -33,6 +33,7 @@ async function readSse(response: Response, handlers: HelpSendHandlers) {
   const decoder = new TextDecoder();
   let buffer = '';
   let eventName = '';
+  let settled = false;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -51,13 +52,21 @@ async function readSse(response: Response, handlers: HelpSendHandlers) {
         };
         if (eventName === 'delta' && payload.chunk) handlers.onDelta(payload.chunk);
         if (eventName === 'sources' && payload.sources) handlers.onSources?.(payload.sources);
-        if (eventName === 'done' && payload.message) handlers.onDone(payload.message);
-        if (eventName === 'error') handlers.onError({ messageKey: payload.messageKey });
+        if (eventName === 'done' && payload.message) {
+          settled = true;
+          handlers.onDone(payload.message);
+        }
+        if (eventName === 'error') {
+          settled = true;
+          handlers.onError({ messageKey: payload.messageKey });
+        }
       } else if (line.trim() === '') {
         eventName = '';
       }
     }
   }
+  // Connection dropped without done/error: end the stream instead of spinning forever.
+  if (!settled) handlers.onError({ messageKey: 'helpChat.error.generic' });
 }
 
 export function sendHelpMessage(text: string, handlers: HelpSendHandlers): { abort: () => void } {

@@ -32,6 +32,8 @@
     "or": "Or",
     "mode": "Combine tags",
     "empty": "No tags",
+    "noMatch": "No matching tags",
+    "search": "Search tags",
     "clear": "Clear all tags"
   },
   "models": {
@@ -55,6 +57,7 @@
       "loadedYes": "Yes",
       "loadedNo": "No",
       "family": "Family",
+      "publisher": "Publisher",
       "parameters": "Parameters",
       "quant": "Quantization",
       "format": "Format",
@@ -68,7 +71,12 @@
       "template": "Chat template present",
       "size": "Size",
       "modified": "Updated",
-      "vramNow": "VRAM in use"
+      "vramNow": "VRAM in use",
+      "groupArchitecture": "Architecture",
+      "groupFile": "File and origin",
+      "loadedVram": "Loaded · {{size}} VRAM",
+      "digest": "Digest",
+      "licenseShow": "Show license text"
     },
     "delete": {
       "title": "Delete model",
@@ -89,14 +97,47 @@
       "search": "Search by name",
       "type": "Type",
       "size": "Size",
+      "range": {
+        "upTo": "up to {{max}}B",
+        "from": "from {{min}}B",
+        "between": "{{min}}–{{max}}B"
+      },
       "sort": "Sort",
-      "types": { "text": "Text", "embed": "Embedding", "vision": "Vision", "moe": "MoE" },
-      "sizes": { "any": "All", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "custom": "Range", "from": "from", "to": "to" },
-      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated", "name": "Name" },
+      "types": { "text": "Text", "embed": "Embedding", "moe": "MoE" },
+      "sizes": { "any": "All", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "from": "from", "to": "to" },
+      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated", "new": "Newest" },
       "capabilities": "Capabilities",
+      "rule": {
+        "must": "Must",
+        "any": "Any",
+        "never": "Not"
+      },
+      "ruleHint": {
+        "must": "Must have",
+        "any": "May have",
+        "never": "Must not have"
+      },
       "reset": "Reset filters",
+      "context": "Context",
+      "contextAny": "Any",
+      "hideInstalled": "Hide installed",
+      "fit": {
+        "fits": "fits",
+        "tight": "tight",
+        "large": "too big",
+        "pill": "GPU",
+        "hint": "≈ {{size}} at Q4_K_M · {{vram}} VRAM",
+        "only": "Only what fits the GPU",
+        "onlyHint": "up to ≈ {{max}}B at Q4_K_M ({{vram}} VRAM)",
+        "noGpu": "No GPU detected."
+      },
       "empty": "No matching models.",
       "failed": "The search failed.",
+      "timeout": "Hugging Face is not responding right now.",
+      "unreachable": "Hugging Face cannot be reached. Check the internet connection.",
+      "rateLimited": "Hugging Face is not taking more requests right now (limit without sign-in).",
+      "retryIn": "Possible again in about {{seconds}} s.",
+      "retry": "Try again",
       "downloads": "{{count}} downloads",
       "likes": "{{count}} likes",
       "pick": "Select a model.",
@@ -109,6 +150,12 @@
       "quants": "Quantization",
       "install": "Install",
       "installed": "Installed",
+      "state": {
+        "installed": "Installed",
+        "installedMany": "{{count}} installed",
+        "running": "Downloading {{percent}} %",
+        "busy": "This quantization is already in the download list."
+      },
       "gated": "This model needs approval on Hugging Face.",
       "noGguf": "No installable GGUF file.",
       "vramHint": "The file is larger than the graphics memory.",
@@ -132,7 +179,9 @@
         "tools": "Tools",
         "thinking": "Thinking",
         "vision": "Vision",
-        "moe": "MoE"
+        "moe": "MoE",
+        "groupDetails": "Details",
+        "groupSource": "Origin"
       }
     },
     "pull": { "failed": "The download failed.", "invalid": "This model name cannot be downloaded." },
@@ -229,6 +278,11 @@
     }
   },
   "notify": {
+    "ollamaUpdate": {
+      "title": "Ollama {{version}} is available",
+      "desc": "Agentus uses {{current}}. Switch in Settings → Runtime; Agentus restarts for it.",
+      "action": "Open"
+    },
     "welcome": {
       "title": "Welcome to Agentus Network",
       "desc": "Select a network and start a run from the header."
@@ -420,6 +474,63 @@
       "openModels": "Open model library",
       "modelName": "Model",
       "modelSize": "Size",
+      "own": {
+        "title": "Ollama runtime",
+        "lead": "Agentus runs its own copy of Ollama. Updates of the Ollama app no longer interrupt Agentus.",
+        "modeLabel": "Mode",
+        "modeOwn": "Own runtime (recommended)",
+        "modeOwnHint": "Agentus copies the installed Ollama into its folder and starts it on its own port with the same model folder. The copy ends with Agentus.",
+        "modeExternal": "External Ollama",
+        "modeExternalHint": "Agentus uses the address below, for example an Ollama on another computer.",
+        "stateLabel": "State",
+        "state": {
+          "disabled": "Off",
+          "preparing": "Setting up",
+          "starting": "Starting",
+          "running": "Running",
+          "failed": "Error",
+          "unavailable": "Not available",
+          "stopped": "Stopped"
+        },
+        "version": "Version {{version}}",
+        "port": "Port {{port}}",
+        "installedLabel": "Installed Ollama",
+        "installed": "Installed Ollama: {{version}}",
+        "installedNone": "No installed Ollama found.",
+        "checkedAt": "checked {{time}}",
+        "check": "Check for updates",
+        "checkNone": "No newer Ollama version is installed.",
+        "updateTitle": "Ollama {{version}} is available",
+        "updateDesc": "Agentus uses {{current}}. To switch, Agentus closes and opens again on its own.",
+        "updateButton": "Switch and restart",
+        "confirmTitle": "Switch to Ollama {{version}}?",
+        "confirmDesc": "Agentus copies the new version, starts it once as a test and then restarts. If it does not run afterwards, Agentus goes back to {{current}}.",
+        "confirmOk": "Switch",
+        "restarting": "Agentus is restarting …",
+        "staged": "Ollama {{version}} is ready and will be used after the next restart of Agentus.",
+        "restartTitle": "Restart needed",
+        "restartModeDesc": "The new mode applies after Agentus restarts.",
+        "restartButton": "Restart Agentus",
+        "restartManual": "Please restart Agentus yourself.",
+        "urlHint": "With the own runtime, this is the fallback address if the copy does not start.",
+        "logPath": "Log: {{path}}",
+        "messages": {
+          "noSource": "No installed Ollama found. Agentus uses the address below.",
+          "copyFailed": "Ollama could not be copied into the Agentus folder. Agentus uses the address below.",
+          "diskFull": "Not enough disk space for the Ollama copy.",
+          "probeFailed": "The new Ollama version did not start in the test. Agentus keeps the current one.",
+          "sourceChanged": "Ollama is being updated right now. Try again in a minute.",
+          "versionUnknown": "The version of the installed Ollama cannot be read.",
+          "startFailed": "The own Ollama copy did not start. Agentus uses the address below.",
+          "crashed": "The own Ollama copy crashed several times. Agentus uses the address below.",
+          "rolledBack": "Ollama {{failed}} did not start. Agentus uses {{version}} again.",
+          "busy": "Not possible while a run is active.",
+          "downloadRunning": "Wait until the model download has finished.",
+          "notActive": "Agentus is not using its own Ollama copy right now.",
+          "noUpdate": "No newer Ollama version is installed.",
+          "restartBusy": "Agentus does not restart while a run is active."
+        }
+      },
       "status": {
         "unknown": "Unknown",
         "ok": "OK",
@@ -546,6 +657,8 @@
       "pick": "Choose folder",
       "busy": "Changing the folder is blocked while a network is starting, running, or stopping.",
       "invalidRoot": "A drive or system root is not allowed.",
+      "targetHasData": "The target folder already holds data. Copying would overwrite it; pick an empty folder or switch without copying.",
+      "switchFailed": "The switch failed. The app keeps using the previous data folder.",
       "stores": "Stores",
       "storeName": "Store",
       "fileName": "File",
@@ -581,6 +694,10 @@
       "apiVersion": "API version",
       "runtime": "Ollama",
       "dataFolder": "Data folder",
+      "appLog": "App log",
+      "appLogHint": "Errors outside a run, 5 MB × 3",
+      "openLogs": "Open folder",
+      "openLogsFailed": "The log folder could not be opened.",
       "storesOk": "Stores reachable"
     },
     "notify": {
@@ -880,6 +997,8 @@
     },
     "inspector": {
       "title": "Inspector",
+      "range": "Allowed: {{min}} to {{max}}. The value is adjusted when you leave the field.",
+      "rangeInteger": "Allowed: a whole number from {{min}} to {{max}}. The value is adjusted when you leave the field.",
       "collapse": "Collapse inspector",
       "expand": "Expand inspector",
       "resize": "Resize inspector",
@@ -898,6 +1017,9 @@
         "noIssues": "No validation issues."
       },
       "llm": {
+        "maxTokensAuto": "empty = automatic {{count}}",
+        "maxTokensAutoMax": "empty = automatic, at most {{count}}",
+        "maxTokensProvider": "empty = provider default",
         "provider": "Provider",
         "openaiCompat": "OpenAI-compatible",
         "model": "Model",
@@ -916,9 +1038,13 @@
         "kindDense": "Standard models",
         "kindMoe": "MoE models",
         "noModels": "No models loaded.",
+        "modelUnavailable": "This model is not available right now. The choice stays saved.",
         "useModel": "Use “{{name}}”",
         "temperature": "Temperature",
         "maxTokens": "Max tokens",
+        "temperatureDefault": "empty = model default",
+        "temperatureHint": "0 to {{max}}. Low answers consistently and factually, high more varied. For code and tools 0 to 0.4 works well.",
+        "maxTokensHint": "A whole number from 64 to {{max}}, below the context.",
         "numCtx": "Context length",
         "numCtxHint": "Limits come from the selected model.",
         "numCtxLoading": "Loading model limits…",
@@ -966,13 +1092,25 @@
       "agent": {
         "hint": "LLM, tools, and knowledge come from edges. Without an orchestrator, the message starts the agent.",
         "channelHint": "This agent belongs to the orchestrator. Tasks arrive on the channel, and the result goes back there.",
-        "systemPrompt": "System prompt"
+        "systemPrompt": "System prompt",
+        "maxToolCalls": "Tool calls per task",
+        "maxToolCallsHint": "After that the agent answers with what it has and says what is still open. Empty: 100.",
+        "reasoningSteps": "Memory (steps)",
+        "reasoningStepsHint": "How many steps of a task give their thinking back to the model (local models). It is cut in one go: at twice as many, the older ones go at once, so the model does not read the whole transcript again at every step. Empty: 10."
       },
       "orchestrator": {
         "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end. It calls tools on the tool port.",
         "systemPrompt": "System prompt",
         "agentMissLimit": "Misses per agent",
-        "agentMissLimitHint": "How often an agent with file access may finish a task without writing, editing, or deleting a file. The orchestrator then does that task. The default is 3."
+        "agentMissLimitHint": "How often in a row an agent may fail, or finish a task with file access without writing, editing, or deleting a file. The orchestrator then does that task. The default is 2.",
+        "maxAgentCalls": "Agent calls per run",
+        "maxAgentCallsHint": "How often the orchestrator may give tasks to agents. At the limit it sums up in the chat what is done and what is still open, and the run ends. Every review round and every check counts. Empty: 50.",
+        "maxToolCalls": "Tool calls per decision",
+        "maxToolCallsHint": "How many of its own tool calls the orchestrator may make for one decision after an agent call failed or during a takeover. Before that it may only read files (reads per decision). Empty: 50.",
+        "maxReadCalls": "Reads per decision",
+        "maxReadCallsHint": "How many files the orchestrator may read in one decision while it may only read, that is until an agent call fails. If it wants to read on, it gets the next decision for it. Before the first agent call at most 10 in total apply. Empty: 15.",
+        "maxLlmCalls": "Model calls per run",
+        "maxLlmCallsHint": "Orchestrator and agents together. After that the run ends with an error. Empty: 1000."
       },
       "prompt": {
         "pick": "Prompt",
@@ -1025,8 +1163,13 @@
         "terminalUnrestricted": "Unrestricted",
         "terminalUnrestrictedHint": "PowerShell runs as the app user. The folder is only the start directory. No prompt during a run, and no elevation.",
         "terminalHint": "Only the checked programs, without pipes or redirection. The folder is the start directory.",
+        "terminalTimeout": "Time limit per command (seconds, 5–600)",
         "zipHint": "Lists a ZIP in the root folder and extracts it there. Paths stay inside the folder.",
         "terminalPrograms": "Programs",
+        "maxCalls": "Max. calls per run",
+        "maxCallsUnlimited": "Unlimited",
+        "maxCallsHint": "Counts every call of this tool in one run, from the orchestrator or any agent. After that it is no longer offered.",
+        "credentialUrlHint": "The credential is only sent to the scheme, host and port of the URL above, never to other addresses.",
         "terminalProgramPlaceholder": "Program name",
         "terminalProgramAdd": "Add",
         "dateHint": "Shows the current time in an IANA time zone, default UTC. An instant can be shifted by days, hours, and minutes, including backwards. The gap between two instants comes back in seconds, hours, and days. Parts are the date, the clock time, and the weekday; Monday is 1. The same instant can be shown in another time zone.",
@@ -1074,6 +1217,8 @@
         "embedModel": "Embedding model",
         "topK": "topK",
         "score": "Score threshold",
+        "topKHint": "How many passages the agent gets per request, 1 to 20. Empty: 4.",
+        "scoreHint": "Only passages with at least this similarity, 0 to 1. Empty: 0, that is all of them.",
         "reindex": "Rebuild index",
         "reindexOk": "Index rebuilt",
         "reindexFail": "Index failed",
@@ -1155,6 +1300,8 @@
       "routerTarget": "A router leads to an agent, a router, or an end.",
       "routerOrchestrator": "A router after the orchestrator leads only to ends.",
       "orchestratorLooseAgent": "With an orchestrator, every agent needs a channel from it.",
+      "orchestratorAgents": "The orchestrator needs a channel to at least one agent.",
+      "chainEnd": "Without an orchestrator, the chain must lead from its start (chat input or first agent) to an end node.",
       "agentMode": "An agent is either in the chain or on the orchestrator.",
       "agentChannel": "An agent has at most one channel.",
       "modelRequired": "Model is required.",
@@ -1166,7 +1313,17 @@
       "fileAccessRoot": "File access needs a folder that is not a drive root.",
       "terminalRoot": "The terminal needs a folder that is not a drive root.",
       "terminalPrograms": "Restricted mode needs at least one program.",
+      "toolMaxCalls": "Max. calls must be a whole number of at least 1.",
+      "llmTemperature": "Temperature must be between 0 and 2, for Anthropic between 0 and 1.",
+      "llmMaxTokens": "Max tokens must be a whole number from 64 to 262144.",
+      "llmMaxTokensContext": "Max tokens must be below the context of the LLM node.",
+      "knowledgeTopK": "topK must be a whole number from 1 to 20.",
+      "knowledgeScore": "The score threshold must be between 0 and 1.",
+      "httpCredentialUrl": "HTTP with a credential needs a full URL (http/https). The credential is only sent to that address.",
       "zipRoot": "ZIP needs a folder that is not a drive root.",
+      "fileAccessRootMissing": "The file access folder does not exist. Create it or choose another one.",
+      "terminalRootMissing": "The terminal's working folder does not exist. Create it or choose another one.",
+      "zipRootMissing": "The zip tool's folder does not exist. Create it or choose another one.",
       "knowledgePath": "Source folder is required.",
       "knowledgeRoot": "Drive or system root is not allowed.",
       "knowledgeSandbox": "Path must be under the data folder.",
@@ -1195,6 +1352,10 @@
     }
   },
   "networks": {
+    "kind": {
+      "orchestrator": "Orchestrator",
+      "linear": "Linear"
+    },
     "title": "Library",
     "copySuffix": "(Copy)",
     "ribbon": {
@@ -1225,17 +1386,26 @@
       "direction": "Sort direction",
       "tags": "Tags",
       "onlyValid": "Valid only",
-      "onlyActive": "Active only"
+      "onlyActive": "Active only",
+      "kind": "Kind of network",
+      "kinds": {
+        "orchestrator": "Orchestrator",
+        "all": "All",
+        "linear": "Linear"
+      }
     },
     "list": {
       "selectAll": "Select all visible",
       "name": "Name",
+      "tags": "Tags",
+      "kind": "Kind",
       "description": "Description",
       "status": "Status",
-      "graph": "Graph",
       "updated": "Updated",
       "lastUsed": "Last used",
-      "counts": "{{nodes}} nodes · {{edges}} edges",
+      "allTags": "All tags: {{tags}}",
+      "tagCount_one": "{{count}} tag",
+      "tagCount_other": "{{count}} tags",
       "move": "Move {{column}}",
       "resize": "Resize {{column}}"
     },
@@ -1253,6 +1423,9 @@
       "multi": "{{count}} selected",
       "noDescription": "No description.",
       "lastRun": "Last run",
+      "neverUsed": "Never used",
+      "moreErrors_one": "and {{count}} more error",
+      "moreErrors_other": "and {{count}} more errors",
       "resize": "Resize details",
       "graphLoading": "Loading graph…"
     },
@@ -1428,6 +1601,9 @@
       "current": "Current nodes",
       "now": "Now",
       "task": "Task",
+      "taskFor": "Task for {{name}}",
+      "noTask": "No task right now.",
+      "contextLabel": "Context",
       "agents": "Agents",
       "agentsDone": "{{completed}} of {{total}} done",
       "none": "No node active",
@@ -1438,7 +1614,9 @@
       "tokensOut": "Output",
       "perSecond": "{{value}} tokens/s",
       "rate": "Tokens/s",
-      "runTotal": "Run total",
+      "runTotal": "Output total",
+      "runTotalOut": "output tokens",
+      "runTotalIn": "input {{value}}",
       "context": "Context {{used}} / {{max}}"
     },
     "tabs": {
@@ -1452,6 +1630,7 @@
       "splitWidth": "Resize network and activity width"
     },
     "chat": {
+      "llmRetry": "The orchestrator model is not reachable right now. Send a message to try again.",
       "placeholder": "Message…",
       "send": "Send",
       "stop": "Stop generation",
@@ -1460,7 +1639,16 @@
       "empty": "No messages in this run yet.",
       "disabled": "Chat is available only while a run is active.",
       "agentDone": "{{name}} is done.",
-      "agentDoneFiles": "{{name}} is done. Files: {{files}}."
+      "agentDoneFiles": "{{name}} is done. Files: {{files}}.",
+      "aborted": "Stopped. Send a message to continue.",
+      "briefing": "**Background from the chosen earlier run** (for the orchestrator only):\n\n{{text}}",
+      "previous": {
+        "label": "Continue from an earlier run",
+        "none": "No earlier run",
+        "option": "{{when}} · {{outcome}} · {{request}}",
+        "noRequest": "no request",
+        "hint": "Before its first decision the orchestrator reads the chosen run and keeps its findings as background. The agents do not see them; it passes on what they need."
+      }
     },
     "log": {
       "pause": "Hold",
@@ -1473,7 +1661,9 @@
       "node": "Node",
       "allNodes": "All nodes",
       "errorsOnly": "Errors only",
-      "export": "Export",
+      "export": "JSON",
+      "exportText": "Export as text",
+      "exportTitle": "Log",
       "empty": "No log lines for this filter.",
       "detailTitle": "Log detail",
       "payload": "Payload",
@@ -1554,7 +1744,7 @@
       "refresh": "Refresh",
       "delete": "Delete",
       "export": "Export logs",
-      "purge": "Delete older than 90 days"
+      "purge": "Delete older than {{days}} days"
     },
     "filter": {
       "range": "Range",
@@ -1591,11 +1781,52 @@
     },
     "chart": {
       "title": "Runs by day",
-      "empty": "No completed runs in this range."
+      "empty": "No completed runs in this range.",
+      "viewLabel": "View",
+      "views": {
+        "timeline": "Timeline",
+        "share": "Shares",
+        "networks": "Networks",
+        "table": "Table"
+      },
+      "titles": {
+        "timeline": "Runs by day",
+        "share": "How runs ended",
+        "networks": "Runs by network",
+        "table": "Runs by day (table)",
+        "timelineHours": "Runs by hour",
+        "tableHours": "Runs by hour (table)"
+      },
+      "runs_one": "{{formatted}} run",
+      "runs_other": "{{formatted}} runs",
+      "gap": {
+        "days_one": "1 day without runs",
+        "days_other": "{{count}} days without runs",
+        "hours_one": "1 hour without runs",
+        "hours_other": "{{count}} hours without runs"
+      },
+      "moreNetworks_one": "{{count}} more network",
+      "moreNetworks_other": "{{count}} more networks",
+      "table": {
+        "outcome": "Outcome",
+        "runs": "Runs",
+        "share": "Share",
+        "total": "Total",
+        "day": "Day",
+        "hour": "Hour"
+      }
     },
     "errors": {
       "title": "Top errors",
-      "empty": "No errors in this filter."
+      "empty": "No errors in this filter.",
+      "total_one": "{{count}} failed run · click to filter",
+      "total_other": "{{count}} failed runs · click to filter",
+      "runs_one": "{{count}} run",
+      "runs_other": "{{count}} runs",
+      "last": "last {{date}}",
+      "filtered": "Filtered: {{name}}",
+      "noKey": "No error message",
+      "more": "{{count}} more error kinds"
     },
     "errorClass": {
       "timeout": "Timeout",
@@ -1604,7 +1835,8 @@
       "validation": "Validation",
       "service": "Service",
       "unknown": "Unknown",
-      "orchestrator": "Orchestrator"
+      "orchestrator": "Orchestrator",
+      "budget": "Budget"
     },
     "tab": {
       "history": "History",
@@ -1718,7 +1950,7 @@
     },
     "retention": {
       "title": "Delete older runs",
-      "body": "{{count}} runs older than 90 days will be deleted.",
+      "body": "{{count}} runs older than {{days}} days will be deleted.",
       "confirm": "Delete"
     },
     "notify": {
@@ -1732,29 +1964,287 @@
     }
   },
   "runLog": {
+    "limitShort": {
+      "run_llm_contextCut": "conversation probably cut"
+    },
+    "view": {
+      "file": {
+        "read": "reads {{path}}",
+        "read_many": "reads {{path}}",
+        "write": "writes {{path}}",
+        "edit": "edits {{path}}",
+        "delete": "deletes {{path}}",
+        "move": "moves {{path}} to {{to}}",
+        "list": "lists {{path}}",
+        "tree": "shows the tree of {{path}}",
+        "stat": "checks {{path}}",
+        "search": "searches {{pattern}} in {{path}}",
+        "searchText": "searches for “{{text}}” in {{path}}",
+        "mkdir": "creates the folder {{path}}",
+        "exists": "checks whether {{path}} exists",
+        "other": "file access {{action}} {{path}}"
+      },
+      "terminal": "runs: {{command}}",
+      "http": "{{method}} {{url}}",
+      "webSearch": "searches the web: {{query}}",
+      "calculator": "calculates {{expression}}",
+      "zip": "ZIP {{action}} {{path}}",
+      "toolGeneric": "tool {{name}}",
+      "exit": "exit code {{code}}",
+      "serverStopped": "stopped after {{seconds}} s (would keep running)",
+      "lines_one": "{{count}} line",
+      "lines_other": "{{count}} lines",
+      "count": {
+        "entries_one": "{{count}} entry",
+        "entries_other": "{{count}} entries",
+        "matches_one": "{{count}} match",
+        "matches_other": "{{count}} matches",
+        "files_one": "{{count}} file",
+        "files_other": "{{count}} files",
+        "children_one": "{{count}} entry",
+        "children_other": "{{count}} entries",
+        "results_one": "{{count}} result",
+        "results_other": "{{count}} results",
+        "items_one": "{{count}} item",
+        "items_other": "{{count}} items"
+      },
+      "replacements_one": "{{count}} replacement",
+      "replacements_other": "{{count}} replacements",
+      "chars_one": "{{count}} character",
+      "chars_other": "{{count}} characters",
+      "truncated": "truncated",
+      "reused": "from memory",
+      "llmStart": "model {{model}} starts",
+      "llm": "model {{model}}",
+      "tokens_one": "{{count}} token",
+      "tokens_other": "{{count}} tokens",
+      "llmTools": "calls {{names}}",
+      "llmCut": "cut off (output limit)",
+      "action": {
+        "call": "calls {{agent}}",
+        "retry": "retry",
+        "finish": "finishes the run",
+        "reply": "replies",
+        "ask": "asks"
+      },
+      "agentStart": "task {{call}}",
+      "agentStartPlain": "starts",
+      "outcome": {
+        "done": "done",
+        "textOnly": "done, text only without a tool",
+        "anomaly": "failed",
+        "stopped": "stopped by the user",
+        "cancelled": "cancelled"
+      },
+      "toolsCount_one": "{{count}} tool call",
+      "toolsCount_other": "{{count}} tool calls",
+      "toolsWithFailed_one": "{{count}} tool call, {{failed}} failed",
+      "toolsWithFailed_other": "{{count}} tool calls, {{failed}} failed",
+      "filesCount_one": "{{count}} file changed",
+      "filesCount_other": "{{count}} files changed",
+      "capped": "tool limit reached",
+      "agentContext": "largest request {{prompt}} of {{window}} tokens ({{share}} %)",
+      "agentContextCuts": "probably cut: {{count}}×",
+      "agentCompacted": "compacted: {{count}}×",
+      "step_one": "tool round: {{count}} call",
+      "step_other": "tool round: {{count}} calls",
+      "stepWithFailed_one": "tool round: {{count}} call, {{failed}} failed",
+      "stepWithFailed_other": "tool round: {{count}} calls, {{failed}} failed",
+      "stepEnd": {
+        "call": "ends with an agent call",
+        "finish": "ends with the finish",
+        "reply": "ends with a reply",
+        "ask": "ends with a question",
+        "think": "ends with thinking",
+        "tool-request": "ends with a tool request",
+        "failed-tools": "ends after too many tool errors",
+        "failed-window": "ends: context too small",
+        "llm-unavailable": "ends: model not reachable",
+        "unreadable": "ends: answer unreadable",
+        "stopped": "stopped",
+        "none": "without a decision"
+      },
+      "stepCapped": "tool limit reached",
+      "stepWithdrawn": "withdrawn: {{names}}"
+    },
+    "toolError": {
+      "fileAccess": {
+        "notFound": "file or folder not found",
+        "invalidAction": "invalid action",
+        "invalidPath": "invalid path",
+        "tooLarge": "file too large",
+        "notFile": "not a file",
+        "notDir": "not a folder",
+        "outsideRoot": "outside the shared folder",
+        "denied": "access denied",
+        "notText": "not a text file",
+        "missingContent": "content missing",
+        "editMiss": "text to replace not found",
+        "editAmbiguous": "text to replace occurs more than once",
+        "invalidText": "search text too long or on several lines"
+      },
+      "terminal": {
+        "notFound": "program not found",
+        "notGranted": "program not allowed",
+        "shellSyntax": "shell syntax not allowed",
+        "missingCommand": "command missing",
+        "timeout": "time limit exceeded",
+        "outsideRoot": "outside the working folder",
+        "missingRoot": "no working folder set",
+        "rootNotDir": "working folder does not exist",
+        "inlineCode": "inline code not allowed",
+        "commandTooLong": "command too long"
+      },
+      "http": {
+        "upstream": "server error",
+        "invalidUrl": "invalid URL"
+      },
+      "webSearch": {
+        "upstream": "search service error"
+      },
+      "badArguments": "invalid arguments",
+      "notOffered": "tool not connected",
+      "limitReached": "call limit reached",
+      "disabled": "switched off for this run",
+      "withdrawn": "withdrawn",
+      "repeated": "same call repeated",
+      "skipped": "skipped",
+      "stepLimit": "limit of this step reached",
+      "writeLocked": "writing still locked"
+    },
+    "kind": {
+      "decision": "Decision",
+      "agent": "Agent",
+      "tool": "Tool",
+      "llm": "Model",
+      "limit": "Limit",
+      "run": "Run",
+      "chat": "Chat",
+      "other": "Other"
+    },
+    "status": {
+      "running": "running",
+      "ok": "succeeded",
+      "fail": "failed",
+      "warn": "warning"
+    },
+    "group": {
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "running": "running …",
+      "noResult": "ended without a result",
+      "lines_one": "{{count}} line",
+      "lines_other": "{{count}} lines"
+    },
+    "views": {
+      "label": "View",
+      "important": "Important",
+      "all": "All",
+      "debug": "Debug",
+      "importantHint": "Decisions, tasks, results, limits, warnings and errors",
+      "allHint": "Also every tool and model call",
+      "debugHint": "Also debug lines, for example model starts and knowledge search",
+      "searchHint": "Text, task, path, command …"
+    },
+    "detail": {
+      "tool": "Tool",
+      "caller": "Caller",
+      "node": "Node",
+      "path": "Path",
+      "command": "Command",
+      "error": "Error",
+      "result": "Result",
+      "hint": "Hint for the model",
+      "changed": "Changed file",
+      "output": "Output",
+      "arguments": "Arguments",
+      "content": "File content (clipped)",
+      "model": "Model",
+      "provider": "Provider",
+      "tokens": "Tokens",
+      "duration": "Duration",
+      "context": "Context",
+      "finish": "Finish",
+      "answer": "Answer",
+      "reasoning": "Reasoning",
+      "agent": "Agent",
+      "call": "Task no.",
+      "tools": "Tool calls",
+      "toolsValue": "{{count}} ({{ok}} ok, {{failed}} failed)",
+      "reason": "Reason",
+      "files": "Changed files",
+      "task": "Task",
+      "resultStart": "Result (start, {{count}} characters)",
+      "resultText": "Result",
+      "action": "Action",
+      "via": "Way",
+      "viaValue": {
+        "tool": "decision tool",
+        "json": "JSON answer"
+      },
+      "source": "Source",
+      "text": "Text",
+      "raw": "Raw data (JSON)"
+    },
+    "summary": {
+      "title": "Run summary",
+      "outcome": "Outcome",
+      "outcomes": {
+        "succeeded": "Run succeeded",
+        "failed": "Run failed",
+        "cancelled": "Run cancelled"
+      },
+      "agentCalls": "Agent calls",
+      "llmCalls": "Model calls",
+      "tokens": "{{tokensIn}} tokens in, {{tokensOut}} out",
+      "toolCalls": "Tool calls",
+      "files": "Changed files",
+      "limits": "Limits",
+      "error": "Error",
+      "agent": "{{name}} ×{{count}}",
+      "agentFailed": "{{name}} ×{{count}} ({{failed}} failed)",
+      "contextShare": "context up to {{share}} %",
+      "fileList_one": "show {{count}} changed file",
+      "fileList_other": "show {{count}} changed files"
+    },
     "run": {
+      "briefing": {
+        "done": "Earlier run read: {{chars}} characters of background.",
+        "failed": "Earlier run not analyzed ({{error}}); the orchestrator gets the shortened run record.",
+        "window": "Run record does not fit the context window; the orchestrator gets it shortened.",
+        "missing": "Chosen earlier run not found."
+      },
+      "llmBudget": "Model call budget for this run used up.",
       "start": "Run started ({{networkName}})",
       "wait": {
         "human": "Waiting for input",
         "ask": "Follow-up from {{speaker}}"
       },
       "chat": {
-        "user": "User message"
+        "user": "User message",
+        "aborted": "Generation stopped from the chat"
       },
       "batch": {
         "start": "Batch run started"
       },
       "agent": {
+        "textOnly": "Text only, no tool used; the orchestrator reviews the answer.",
+        "outputLimit": "Cut off at the output limit twice; task ended.",
+        "window": "The prompt does not fit any context window.",
+        "toolCap": "Agent: {{calls}} tool calls for this task, limit reached.",
         "start": "Agent started",
         "done": "Agent finished",
         "toolFailures": "Agent stopped after {{failed}} failed tool calls in a row",
+        "terminalLesson": "Rejected terminal command noted ({{kind}}); it is now in this agent's system prompt ({{lessons}} in total).",
         "toolJson": "Discarded tool call {{name}}: incomplete JSON arguments (attempt {{attempt}}/{{max}}).",
         "think": "Agent is thinking (not a result).",
         "thinkLimit": "Too many think turns without a result.",
         "thinkLoop": "Stopped a 1-token think loop after {{thinks}} turns.",
         "emptyStop": "Discarded an empty reply ({{attempt}}/{{max}}). The task continues.",
         "emptyStops": "Task incomplete: five empty replies in a row.",
-        "truncated": "Reply was cut off; not a result."
+        "empty": "Agent returned an empty result",
+        "truncated": "Reply was cut off; not a result.",
+        "compact": "Context compacted so the answer fits the window."
       },
       "knowledge": "Knowledge search ({{count}} hits)",
       "knowledgeIndex": {
@@ -1762,21 +2252,28 @@
         "embed": "Indexing knowledge: {{name}} ({{chunks}} chunks, {{model}})",
         "ready": "Knowledge ready: {{name}}",
         "cached": "Knowledge is up to date: {{name}}",
-        "failed": "Knowledge indexing failed: {{name}}"
+        "failed": "Knowledge indexing failed: {{name}}",
+        "limit": "Knowledge {{name}}: {{files}} files, indexing the first {{max}}"
       },
       "llm": {
+        "toolCallsRepaired": "Added {{count}} missing tool answers.",
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)",
-        "vram": "VRAM {{model}}: estimate {{estimated}}, used {{used}}, {{delta}} ({{percent}}). Experts {{expertsOnGpu}}/{{expertLayers}}, attention {{attentionLayersOnGpu}}{{placement}}.",
+        "contextCut": "Conversation probably cut: the model processed {{reported, number}} input tokens, about {{expected, number}} were expected (window {{contextMax, number}}). It is likely missing the start of the conversation.",
+        "release": "Unloaded other models ({{dropped}}); {{keep}} stays loaded",
         "modelInfo": "Model data for {{model}} is missing. The run was stopped.",
         "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
       },
       "tool": {
+        "limitReached": "Tool {{name}}: limit of {{limit}} calls per run reached.",
+        "notOffered": "Tool {{name}} is not enabled on this node; the call was not run.",
+        "disabled": "Tool {{name}} is switched off for the rest of the run ({{error}}).",
         "call": "Tool {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
       "end": "End reached",
       "succeeded": "Run succeeded",
+      "summary": "Run summary",
       "failed": "Run failed",
       "cancelled": "Run cancelled",
       "interrupted": "Run interrupted (app closed)",
@@ -1784,7 +2281,25 @@
         "fallbackMissing": "Help fallback model is missing"
       },
       "stepLimit": "Step limit reached",
+      "noEnd": "The chain did not reach an end node",
+      "memory": {
+        "source": "Stored text of the only writer attached automatically"
+      },
       "orchestrator": {
+        "textRetry": "Retry of {{name}} again returned text only ({{fails}}/{{max}}).",
+        "retryIgnored": "retry without a previous text-only answer; not counted.",
+        "takeoverUnavailable": "Takeover not possible: the orchestrator lacks the tools ({{count}}/{{max}}).",
+        "toolCap": "Orchestrator: {{calls}} tool calls in this step, limit reached.",
+        "compact": "Orchestrator context condensed (level {{level}}).",
+        "trimmed": "Orchestrator prompt shortened to fit the window: {{results}} older results removed, {{starts}} cut to their start, {{other}} other cuts ({{total}} steps so far). Tasks and changed files stay.",
+        "privateReasoning": "Model's internal reasoning not shown in the chat.",
+        "replyAsAsk": "The reply contained a question for you and was sent as a question; the run waits for your answer.",
+        "llmPause": "Orchestrator model not reachable ({{error}}); waiting for a message.",
+        "emptyTask": "Empty task; using the last user message.",
+        "action": "Orchestrator: {{action}} {{agent}}",
+        "step": "Tool round: {{calls}} calls",
+        "unknownAgent": "Unknown agent \"{{token}}\" in the call",
+        "unknownSource": "Unknown source \"{{source}}\" in the call",
         "repair": "Control message was unreadable, trying again.",
         "unreadable": "The orchestrator did not produce a readable next step.",
         "defer": "The next step after the chat reply was unreadable; the run continues.",
@@ -1797,7 +2312,18 @@
         "takeoverStart": "{{agent}} used {{misses}} file attempts without a change. The orchestrator takes over.",
         "takeoverBlocked": "Call to {{agent}} was refused. The orchestrator must write the file.",
         "takeover": "{{agent}} reached the attempt limit. The orchestrator did not write a file.",
-        "takeoverNoTool": "{{agent}} reached the attempt limit. The orchestrator has no file tool."
+        "takeoverNoTool": "{{agent}} reached the attempt limit. The orchestrator has no file tool.",
+        "takeoverFailures": "{{agent}} failed {{failed}} times in a row ({{reason}}). The orchestrator takes over.",
+        "toolRequest": "The orchestrator wrote “{{verb}}” as an action instead of calling the tool.",
+        "selfTakeover": "An agent failed: the orchestrator may now change files itself.",
+        "toolLocked": "Tool call {{name}} not run: not open in this step.",
+        "stuck": "The orchestrator got stuck: {{decisions}} decisions without a new step.",
+        "stuckClose": "{{decisions}} decisions without a new step. The orchestrator sums up, then the run ends.",
+        "orientationCap": "Orchestrator: {{calls}} tool calls before the first agent call, limit reached.",
+        "toolWithdrawn": "Tool {{name}} is withdrawn for this step: the same error or the same call again and again ({{error}}).",
+        "stepClose": "Limit of {{calls}} agent calls reached. The orchestrator sums up, then the run ends.",
+        "toolRepeated": "Tool call {{name}} not run: the same call already ran in this step.",
+        "decisionTool": "The orchestrator decided through the tool {{name}}."
       }
     },
     "mcp": {
@@ -1811,8 +2337,16 @@
       }
     },
     "runtime": {
+      "generationLimit": "Answer stopped at the time limit.",
+      "rateLimited": "The provider is throttling requests (rate limit).",
       "timeout": "No progress from the model",
-      "unreachable": "Runtime unreachable"
+      "unreachable": "Runtime unreachable",
+      "upstream": "The model's answer was incomplete or rejected",
+      "badRequest": "The model rejected the request",
+      "modelNotFound": "Model not found",
+      "modelInfoFailed": "Could not read the model info",
+      "unauthorized": "Access denied (check the key)",
+      "missingCredential": "Credential missing"
     }
   },
   "help": {

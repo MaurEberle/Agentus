@@ -27,7 +27,7 @@ from app.db.vault import delete as vault_delete
 from app.db.vault import put as vault_put
 from app.http.errors import AppError
 from app.settings.defaults import default_settings
-from app.settings.in_use import usage_labels
+from app.settings.in_use import usage_index, usage_labels
 from app.settings.models import (
     AppSettings,
     AppSettingsPatch,
@@ -121,6 +121,20 @@ def _merge_help_chat(current: HelpChatSettings, patch: dict[str, Any]) -> HelpCh
     return HelpChatSettings.model_validate(data)
 
 
+def _initial_ollama_runtime(base_url: object) -> str:
+    """Settings from before the own runtime: a custom Ollama address stays in use."""
+    if not isinstance(base_url, str) or not base_url.strip():
+        return "own"
+    try:
+        normalized = normalize_ollama_base_url(base_url)
+    except ValueError:
+        return "own"
+    return "own" if normalized in _DEFAULT_OLLAMA_URLS else "external"
+
+
+_DEFAULT_OLLAMA_URLS = {"http://127.0.0.1:11434", "http://localhost:11434"}
+
+
 def load_settings() -> AppSettings:
     raw = db_get_settings()
     if not raw:
@@ -131,6 +145,8 @@ def load_settings() -> AppSettings:
     help_raw = raw.get("helpChat") if isinstance(raw.get("helpChat"), dict) else {}
     merged_help = {**defaults["helpChat"], **help_raw}
     merged = {**defaults, **raw, "helpChat": merged_help}
+    if "ollamaRuntime" not in raw:
+        merged["ollamaRuntime"] = _initial_ollama_runtime(raw.get("ollamaBaseUrl"))
     settings = AppSettings.model_validate(merged)
     if settings.history_retention_days not in _RETENTION:
         settings = settings.model_copy(update={"history_retention_days": 90})
@@ -152,6 +168,9 @@ def patch_settings(body: AppSettingsPatch) -> AppSettings:
             )
         except ValueError:
             raise AppError("settings.ollamaUrl.invalid", status_code=400) from None
+    if body.ollama_runtime is not None:
+        # Takes effect at the next start; the runtime section offers the restart.
+        updates["ollama_runtime"] = body.ollama_runtime
     if body.help_chat_fab_visible is not None:
         updates["help_chat_fab_visible"] = body.help_chat_fab_visible
     if body.help_chat is not None:
@@ -169,8 +188,9 @@ def patch_settings(body: AppSettingsPatch) -> AppSettings:
     return settings
 
 
-def _credential_item(row: dict[str, Any]) -> CredentialListItem:
-    used = usage_labels(row["id"])
+def _credential_item(row: dict[str, Any], used: list[str] | None = None) -> CredentialListItem:
+    if used is None:
+        used = usage_labels(row["id"])
     return CredentialListItem(
         id=row["id"],
         name=row["name"],
@@ -182,7 +202,9 @@ def _credential_item(row: dict[str, Any]) -> CredentialListItem:
 
 
 def list_credential_items() -> list[CredentialListItem]:
-    return [_credential_item(row) for row in list_credentials()]
+    rows = list_credentials()
+    index = usage_index([row["id"] for row in rows])
+    return [_credential_item(row, index[row["id"]]) for row in rows]
 
 
 def _prepare_secret(kind: str, secret: str) -> tuple[str, str]:

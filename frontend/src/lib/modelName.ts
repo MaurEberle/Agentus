@@ -26,6 +26,32 @@ export function modelLabel(raw: string): ModelLabel {
   return { raw: text, name, publisher };
 }
 
+/** What the runtime list knows about a model, for the hover card in model pickers. */
+export type ModelFacts = {
+  parameterSize?: string;
+  quantization?: string;
+  sizeBytes?: number;
+};
+
+export function modelFactsMap(
+  items: readonly { name: string; parameterSize?: string; quantization?: string; sizeBytes?: number }[],
+): Map<string, ModelFacts> {
+  return new Map(
+    items.map((item) => [item.name, { parameterSize: item.parameterSize, quantization: item.quantization, sizeBytes: item.sizeBytes }]),
+  );
+}
+
+/** Ollama's "32.0B", "30.5B", "566.70M" → "32B", "30.5B", "566.7M". Unknown shapes stay as they are. */
+export function formatParameters(raw: string | undefined): string | null {
+  const text = (raw ?? '').trim();
+  if (!text) return null;
+  const match = /^(\d+(?:\.\d+)?)\s*([KMBT])$/i.exec(text);
+  if (!match) return text;
+  const value = Number(match[1]);
+  const shown = Number.isInteger(value) ? String(value) : String(Number(value.toFixed(1)));
+  return `${shown}${match[2].toUpperCase()}`;
+}
+
 /** Publisher in dropdowns. The stored id, when the visible name dropped :latest. */
 export function modelHover(label: ModelLabel): string | undefined {
   if (label.publisher) return label.publisher;

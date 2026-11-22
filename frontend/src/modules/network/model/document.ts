@@ -82,13 +82,25 @@ export type LlmNodeData = {
 export type AgentNodeData = {
   displayName?: string;
   systemPrompt?: string;
+  /** Tool calls per task (1–1000). Unset: 100. */
+  maxToolCalls?: number;
+  /** Steps whose reasoning goes back to the model within a task (2–50). Unset: 10. */
+  reasoningSteps?: number;
 };
 
 export type OrchestratorNodeData = {
   displayName?: string;
   systemPrompt?: string;
-  /** File attempts without a write, edit, or delete before the orchestrator takes the task. */
+  /** Failed calls in a row, or file attempts without a change, before the orchestrator takes the task (1–8). Unset: 2. */
   agentMissLimit?: number;
+  /** Own tool calls per decision (1–1000). Unset: 50. */
+  maxToolCalls?: number;
+  /** Reads per decision while the orchestrator may only read, before a failed agent call (1–1000). Unset: 15. */
+  maxReadCalls?: number;
+  /** Model calls per run, orchestrator and agents together (10–10000). Unset: 1000. */
+  maxLlmCalls?: number;
+  /** Agent calls per run (1–500). At the limit the orchestrator writes a summary, then the run ends. Unset: 50. */
+  maxAgentCalls?: number;
 };
 
 export type ToolKind = 'http' | 'web_search' | 'datetime' | 'calculator' | 'file_access' | 'terminal' | 'zip';
@@ -111,6 +123,8 @@ export type ToolNodeData = {
   terminalMode?: 'restricted' | 'unrestricted';
   /** Unset in restricted mode means git, python, py, and dotnet. */
   terminalPrograms?: string[];
+  /** Tool and MCP nodes: calls allowed per run (>= 1). Absent or null = unlimited. */
+  maxCalls?: number | null;
 };
 
 export type McpNodeData = {

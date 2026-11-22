@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { memo, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { MessageCircleQuestion, Square, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { MarkdownView } from '@/components/MarkdownView';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { selectionInside, useCopySelection } from '@/lib/copySelection';
 import { abortRunChat, sendRunChat } from '@/modules/monitoring/live/adapter';
 import { chatInputConfig } from '@/modules/monitoring/model/graph';
 import { formatTime } from '@/modules/monitoring/model/format';
 import { formatChatBody } from '@/modules/monitoring/model/logMessage';
 import type { ChatMessage, RunSnapshot } from '@/modules/monitoring/model/types';
+import { PreviousRunPicker } from '@/modules/monitoring/chat/PreviousRunPicker';
 import { useMonitoringStore } from '@/modules/monitoring/store';
 import type { ServiceStatus } from '@/store/session';
 
@@ -24,6 +27,8 @@ export function NetworkChat({
   const messages = useMonitoringStore((state) => state.chatMessages);
   const generating = useMonitoringStore((state) => state.chatGenerating);
   const [text, setText] = useState('');
+  // Earlier run to continue from; sent with the first message only.
+  const [previousRunId, setPreviousRunId] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
@@ -34,11 +39,14 @@ export function NetworkChat({
   const waitingHuman =
     running && Object.values(run.nodesRuntime).some((node) => node.waitReason === 'human');
   const waitingInput = waitingHuman && messages.length === 0;
+  const hasOrchestrator = run.graph.nodes.some((node) => node.type === 'orchestrator');
   const lastContent = messages[messages.length - 1]?.content;
+
+  useCopySelection(listRef);
 
   useEffect(() => {
     const el = listRef.current;
-    if (!el || !stickToBottom.current) return;
+    if (!el || !stickToBottom.current || selectionInside(el)) return;
     el.scrollTop = el.scrollHeight;
   }, [generating, lastContent, messages.length]);
 
@@ -61,8 +69,12 @@ export function NetworkChat({
     const value = text.trim();
     if (!value || !running || generating) return;
     stickToBottom.current = true;
-    sendRunChat(value);
     setText('');
+    const previous = messages.length === 0 && hasOrchestrator && previousRunId ? previousRunId : undefined;
+    void sendRunChat(value, previous).then((accepted) => {
+      // Give the text back so a failed send does not lose what the user typed.
+      if (!accepted) setText((current) => current || value);
+    });
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -88,11 +100,14 @@ export function NetworkChat({
         )}
       </div>
       {waitingReply ? (
-        <Alert className="mb-2 border-warning/50 bg-warning/10 [&>svg]:text-warning [&>div]:pl-6">
+        <Alert className="mb-2 border-warning/50 bg-warning/10 pl-10 [&>svg]:text-warning">
           <MessageCircleQuestion className="size-4" />
           <AlertTitle>{t('shell.waitAsk')}</AlertTitle>
           <AlertDescription>{t('monitoring.chat.waitReply')}</AlertDescription>
         </Alert>
+      ) : null}
+      {waitingInput && hasOrchestrator ? (
+        <PreviousRunPicker runId={run.runId} value={previousRunId} onChange={setPreviousRunId} />
       ) : null}
       <form
         onSubmit={submit}
@@ -128,20 +143,22 @@ export function NetworkChat({
   );
 }
 
-function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
+// N12: the parent re-renders on every run update; a line that did not change keeps its bubble.
+const Bubble = memo(function Bubble({ message, locale }: { message: ChatMessage; locale: string }) {
   const { t } = useTranslation();
   const user = message.role === 'user';
   return (
     <article className={cn('flex flex-col gap-1', user ? 'items-end' : 'items-start')}>
       <div
         className={cn(
-          'max-w-[92%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm',
-          user ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+          'max-w-[92%] cursor-text select-text break-words rounded-lg px-3 py-2 text-sm',
+          user ? 'whitespace-pre-wrap bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         )}
       >
-        {formatChatBody(message, t)}
+        {/* N11: answers are Markdown; the user's own text stays as typed. */}
+        {user ? formatChatBody(message, t) : <MarkdownView text={formatChatBody(message, t)} bare />}
       </div>
       <time className="text-[11px] text-muted-foreground">{formatTime(message.createdAt, locale)}</time>
     </article>
   );
-}
+});

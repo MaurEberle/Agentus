@@ -32,6 +32,8 @@
     "or": "O",
     "mode": "Combinar etiquetas",
     "empty": "Sin etiquetas",
+    "noMatch": "Ninguna etiqueta coincide",
+    "search": "Buscar etiquetas",
     "clear": "Quitar todas las etiquetas"
   },
   "models": {
@@ -55,6 +57,7 @@
       "loadedYes": "Sí",
       "loadedNo": "No",
       "family": "Familia",
+      "publisher": "Editor",
       "parameters": "Parámetros",
       "quant": "Cuantización",
       "format": "Formato",
@@ -68,7 +71,12 @@
       "template": "Hay plantilla de chat",
       "size": "Tamaño",
       "modified": "Modificado",
-      "vramNow": "VRAM en uso"
+      "vramNow": "VRAM en uso",
+      "groupArchitecture": "Arquitectura",
+      "groupFile": "Archivo y origen",
+      "loadedVram": "Cargado · {{size}} VRAM",
+      "digest": "Suma de comprobación",
+      "licenseShow": "Mostrar el texto de la licencia"
     },
     "delete": {
       "title": "Borrar modelo",
@@ -89,14 +97,47 @@
       "search": "Buscar por nombre",
       "type": "Tipo",
       "size": "Tamaño",
+      "range": {
+        "upTo": "hasta {{max}}B",
+        "from": "desde {{min}}B",
+        "between": "{{min}}–{{max}}B"
+      },
       "sort": "Orden",
-      "types": { "text": "Texto", "embed": "Embedding", "vision": "Visión", "moe": "MoE" },
-      "sizes": { "any": "Todo", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "custom": "Rango", "from": "desde", "to": "hasta" },
-      "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado", "name": "Nombre" },
+      "types": { "text": "Texto", "embed": "Embedding", "moe": "MoE" },
+      "sizes": { "any": "Todo", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "from": "desde", "to": "hasta" },
+      "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado", "new": "Más nuevos" },
       "capabilities": "Capacidades",
+      "rule": {
+        "must": "Sí",
+        "any": "Igual",
+        "never": "No"
+      },
+      "ruleHint": {
+        "must": "Debe tenerla",
+        "any": "Puede tenerla",
+        "never": "No debe tenerla"
+      },
       "reset": "Restablecer filtros",
+      "context": "Contexto",
+      "contextAny": "Cualquiera",
+      "hideInstalled": "Ocultar instalados",
+      "fit": {
+        "fits": "cabe",
+        "tight": "justo",
+        "large": "demasiado grande",
+        "pill": "GPU",
+        "hint": "≈ {{size}} con Q4_K_M · {{vram}} de VRAM",
+        "only": "Solo lo que cabe en la GPU",
+        "onlyHint": "hasta ≈ {{max}}B con Q4_K_M ({{vram}} de VRAM)",
+        "noGpu": "No se detectó ninguna GPU."
+      },
       "empty": "Ningún modelo coincide.",
       "failed": "La búsqueda falló.",
+      "timeout": "Hugging Face no responde en este momento.",
+      "unreachable": "No se puede acceder a Hugging Face. Comprueba la conexión a internet.",
+      "rateLimited": "Hugging Face no acepta más solicitudes por ahora (límite sin iniciar sesión).",
+      "retryIn": "Se podrá de nuevo en unos {{seconds}} s.",
+      "retry": "Reintentar",
       "downloads": "{{count}} descargas",
       "likes": "{{count}} me gusta",
       "pick": "Elige un modelo.",
@@ -109,6 +150,12 @@
       "quants": "Cuantización",
       "install": "Instalar",
       "installed": "Instalado",
+      "state": {
+        "installed": "Instalado",
+        "installedMany": "{{count}} instalados",
+        "running": "Descargando {{percent}} %",
+        "busy": "Esta cuantización ya está en la lista de descargas."
+      },
       "gated": "Este modelo necesita aprobación en Hugging Face.",
       "noGguf": "No hay un GGUF instalable.",
       "vramHint": "El archivo es mayor que la memoria gráfica.",
@@ -132,7 +179,9 @@
         "tools": "Herramientas",
         "thinking": "Pensamiento",
         "vision": "Visión",
-        "moe": "MoE"
+        "moe": "MoE",
+        "groupDetails": "Detalles",
+        "groupSource": "Origen"
       }
     },
     "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." },
@@ -229,6 +278,11 @@
     }
   },
   "notify": {
+    "ollamaUpdate": {
+      "title": "Ollama {{version}} está disponible",
+      "desc": "Agentus usa {{current}}. Cámbialo en Ajustes → Runtime; Agentus se reinicia para ello.",
+      "action": "Abrir"
+    },
     "welcome": {
       "title": "Bienvenido a Agentus Network",
       "desc": "Elige una red e inicia una ejecución desde la cabecera."
@@ -420,6 +474,63 @@
       "openModels": "Abrir la biblioteca de modelos",
       "modelName": "Modelo",
       "modelSize": "Tamaño",
+      "own": {
+        "title": "Entorno de Ollama",
+        "lead": "Agentus ejecuta su propia copia de Ollama. Las actualizaciones de la app de Ollama ya no interrumpen Agentus.",
+        "modeLabel": "Modo",
+        "modeOwn": "Entorno propio (recomendado)",
+        "modeOwnHint": "Agentus copia el Ollama instalado en su carpeta y lo inicia en su propio puerto con la misma carpeta de modelos. La copia se cierra con Agentus.",
+        "modeExternal": "Ollama externo",
+        "modeExternalHint": "Agentus usa la dirección de abajo, por ejemplo un Ollama en otro equipo.",
+        "stateLabel": "Estado",
+        "state": {
+          "disabled": "Desactivado",
+          "preparing": "Preparando",
+          "starting": "Iniciando",
+          "running": "En marcha",
+          "failed": "Error",
+          "unavailable": "No disponible",
+          "stopped": "Detenido"
+        },
+        "version": "Versión {{version}}",
+        "port": "Puerto {{port}}",
+        "installedLabel": "Ollama instalado",
+        "installed": "Ollama instalado: {{version}}",
+        "installedNone": "No se encontró ningún Ollama instalado.",
+        "checkedAt": "comprobado {{time}}",
+        "check": "Buscar actualizaciones",
+        "checkNone": "No hay una versión más reciente de Ollama instalada.",
+        "updateTitle": "Ollama {{version}} está disponible",
+        "updateDesc": "Agentus usa {{current}}. Para cambiar, Agentus se cierra y se vuelve a abrir solo.",
+        "updateButton": "Cambiar y reiniciar",
+        "confirmTitle": "¿Cambiar a Ollama {{version}}?",
+        "confirmDesc": "Agentus copia la nueva versión, la inicia una vez como prueba y luego se reinicia. Si después no funciona, Agentus vuelve a {{current}}.",
+        "confirmOk": "Cambiar",
+        "restarting": "Agentus se está reiniciando …",
+        "staged": "Ollama {{version}} está lista y se usará tras el próximo reinicio de Agentus.",
+        "restartTitle": "Hace falta reiniciar",
+        "restartModeDesc": "El nuevo modo se aplica cuando Agentus se reinicia.",
+        "restartButton": "Reiniciar Agentus",
+        "restartManual": "Reinicia Agentus manualmente.",
+        "urlHint": "Con el entorno propio, esta es la dirección de reserva si la copia no arranca.",
+        "logPath": "Registro: {{path}}",
+        "messages": {
+          "noSource": "No se encontró ningún Ollama instalado. Agentus usa la dirección de abajo.",
+          "copyFailed": "No se pudo copiar Ollama en la carpeta de Agentus. Agentus usa la dirección de abajo.",
+          "diskFull": "No hay espacio suficiente para la copia de Ollama.",
+          "probeFailed": "La nueva versión de Ollama no arrancó en la prueba. Agentus mantiene la actual.",
+          "sourceChanged": "Ollama se está actualizando ahora mismo. Inténtalo de nuevo en un minuto.",
+          "versionUnknown": "No se puede leer la versión del Ollama instalado.",
+          "startFailed": "La copia propia de Ollama no arrancó. Agentus usa la dirección de abajo.",
+          "crashed": "La copia propia de Ollama falló varias veces. Agentus usa la dirección de abajo.",
+          "rolledBack": "Ollama {{failed}} no arrancó. Agentus vuelve a usar {{version}}.",
+          "busy": "No es posible mientras haya una ejecución activa.",
+          "downloadRunning": "Espera a que termine la descarga del modelo.",
+          "notActive": "Agentus no está usando ahora su propia copia de Ollama.",
+          "noUpdate": "No hay una versión más reciente de Ollama instalada.",
+          "restartBusy": "Agentus no se reinicia mientras haya una ejecución activa."
+        }
+      },
       "status": {
         "unknown": "Desconocido",
         "ok": "OK",
@@ -546,6 +657,8 @@
       "pick": "Elegir carpeta",
       "busy": "No se puede cambiar de carpeta mientras una red arranca, se ejecuta o se detiene.",
       "invalidRoot": "No se permite la raíz de una unidad o del sistema.",
+      "targetHasData": "La carpeta de destino ya contiene datos. Copiar los sobrescribiría; elige una carpeta vacía o cambia sin copiar.",
+      "switchFailed": "El cambio ha fallado. La aplicación sigue usando la carpeta de datos anterior.",
       "stores": "Almacenes",
       "storeName": "Almacén",
       "fileName": "Archivo",
@@ -581,6 +694,10 @@
       "apiVersion": "Versión de la API",
       "runtime": "Ollama",
       "dataFolder": "Carpeta de datos",
+      "appLog": "Registro de la app",
+      "appLogHint": "Errores fuera de una ejecución, 5 MB × 3",
+      "openLogs": "Abrir carpeta",
+      "openLogsFailed": "No se pudo abrir la carpeta de registros.",
       "storesOk": "Almacenes accesibles"
     },
     "notify": {
@@ -813,6 +930,8 @@
     },
     "inspector": {
       "title": "Inspector",
+      "range": "Permitido: de {{min}} a {{max}}. El valor se ajusta al salir del campo.",
+      "rangeInteger": "Permitido: un número entero de {{min}} a {{max}}. El valor se ajusta al salir del campo.",
       "collapse": "Contraer inspector",
       "resize": "Cambiar el ancho del inspector",
       "expand": "Expandir inspector",
@@ -831,6 +950,9 @@
         "noIssues": "Sin errores de validación."
       },
       "llm": {
+        "maxTokensAuto": "vacío = automático {{count}}",
+        "maxTokensAutoMax": "vacío = automático, como máximo {{count}}",
+        "maxTokensProvider": "vacío = valor por defecto del proveedor",
         "provider": "Proveedor",
         "openaiCompat": "Compatible con OpenAI",
         "model": "Modelo",
@@ -849,9 +971,13 @@
         "kindDense": "Modelos normales",
         "kindMoe": "Modelos MoE",
         "noModels": "No hay modelos cargados.",
+        "modelUnavailable": "Este modelo no está disponible ahora. La selección sigue guardada.",
         "useModel": "Usar «{{name}}»",
         "temperature": "Temperatura",
         "maxTokens": "Máx. tokens",
+        "temperatureDefault": "vacío = valor del modelo",
+        "temperatureHint": "De 0 a {{max}}. Bajo responde de forma constante y objetiva, alto con más variedad. Para código y herramientas va bien de 0 a 0,4.",
+        "maxTokensHint": "Un número entero de 64 a {{max}}, menor que el contexto.",
         "numCtx": "Longitud de contexto",
         "numCtxHint": "Los límites vienen del modelo elegido.",
         "numCtxLoading": "Cargando límites del modelo…",
@@ -899,13 +1025,25 @@
       "agent": {
         "hint": "LLM, herramientas y conocimiento llegan por aristas. Sin orquestador, el mensaje arranca el agente.",
         "channelHint": "Este agente pertenece al orquestador. Los encargos llegan por el canal y el resultado vuelve por él.",
-        "systemPrompt": "Prompt de sistema"
+        "systemPrompt": "Prompt de sistema",
+        "maxToolCalls": "Llamadas a herramientas por encargo",
+        "maxToolCallsHint": "Después el agente responde con lo que tiene y dice qué queda pendiente. Vacío: 100.",
+        "reasoningSteps": "Memoria (pasos)",
+        "reasoningStepsHint": "Cuántos pasos de un encargo devuelven su razonamiento al modelo (modelos locales). Se recorta de una vez: al llegar al doble, los más antiguos se quitan juntos, para que el modelo no vuelva a leer todo el historial en cada paso. Vacío: 10."
       },
       "orchestrator": {
         "hint": "Un LLM por una arista. El chat llega aquí. Cada agente tiene su canal. La salida de mensaje sigue siendo el fin. Llama él mismo las herramientas conectadas.",
         "systemPrompt": "Prompt de sistema",
         "agentMissLimit": "Intentos fallidos por agente",
-        "agentMissLimitHint": "Cuántas veces un agente con acceso a archivos puede terminar una tarea sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 3."
+        "agentMissLimitHint": "Cuántas veces seguidas un agente puede fallar o terminar una tarea con acceso a archivos sin escribir, editar o borrar. Después el orquestador hace esa tarea. El valor predeterminado es 2.",
+        "maxAgentCalls": "Encargos a agentes por ejecución",
+        "maxAgentCallsHint": "Cuántas veces el orquestador puede dar encargos a los agentes. Al llegar al límite resume en el chat lo que está hecho y lo que queda pendiente, y la ejecución termina. Cada ronda de revisión y cada comprobación cuentan. Vacío: 50.",
+        "maxToolCalls": "Llamadas a herramientas por decisión",
+        "maxToolCallsHint": "Cuántas llamadas propias a herramientas puede hacer el orquestador en una decisión después de que falle un agente o durante una toma de control. Antes solo puede leer archivos (lecturas por decisión). Vacío: 50.",
+        "maxReadCalls": "Lecturas por decisión",
+        "maxReadCallsHint": "Cuántos archivos puede leer el orquestador en una decisión mientras solo puede leer, es decir, hasta que falle un agente. Si quiere seguir leyendo, recibe para ello la siguiente decisión. Antes del primer encargo rigen como mucho 10 en total. Vacío: 15.",
+        "maxLlmCalls": "Llamadas al modelo por ejecución",
+        "maxLlmCallsHint": "Orquestador y agentes juntos. Después la ejecución termina con un error. Vacío: 1000."
       },
       "prompt": {
         "pick": "Prompt",
@@ -958,8 +1096,13 @@
         "terminalUnrestricted": "Sin restricción",
         "terminalUnrestrictedHint": "PowerShell se ejecuta como el usuario de la app. La carpeta solo es el directorio inicial. Sin pregunta durante la ejecución y sin elevación.",
         "terminalHint": "Solo los programas marcados, sin tuberías ni redirección. La carpeta es el directorio inicial.",
+        "terminalTimeout": "Límite de tiempo por comando (segundos, 5–600)",
         "zipHint": "Lista un ZIP en la carpeta raíz y lo extrae allí. Las rutas permanecen en la carpeta.",
         "terminalPrograms": "Programas",
+        "maxCalls": "Máx. llamadas por ejecución",
+        "maxCallsUnlimited": "Sin límite",
+        "maxCallsHint": "Cuenta todas las llamadas a esta herramienta en una ejecución, del orquestador o de cualquier agente. Después ya no se ofrece.",
+        "credentialUrlHint": "La credencial solo se envía al esquema, host y puerto de la URL de arriba, nunca a otras direcciones.",
         "terminalProgramPlaceholder": "Nombre del programa",
         "terminalProgramAdd": "Añadir",
         "dateHint": "Muestra la hora actual en una zona IANA; por defecto UTC. Un instante se puede desplazar días, horas y minutos, también hacia atrás. La diferencia entre dos instantes sale en segundos, horas y días. Las partes son fecha, hora y día de la semana; el lunes es 1. El mismo instante se puede ver en otra zona.",
@@ -993,6 +1136,8 @@
         "embedModel": "Modelo de embeddings",
         "topK": "topK",
         "score": "Umbral de puntuación",
+        "topKHint": "Cuántos fragmentos recibe el agente por consulta, de 1 a 20. Vacío: 4.",
+        "scoreHint": "Solo fragmentos con al menos esta similitud, de 0 a 1. Vacío: 0, es decir, todos.",
         "reindex": "Reconstruir índice",
         "reindexOk": "Índice reconstruido",
         "reindexFail": "El índice ha fallado",
@@ -1088,6 +1233,8 @@
       "routerTarget": "Un enrutador lleva a un agente, un enrutador o un fin.",
       "routerOrchestrator": "Un enrutador detrás del orquestador solo lleva a fines.",
       "orchestratorLooseAgent": "Con orquestador, cada agente necesita un canal desde él.",
+      "orchestratorAgents": "El orquestador necesita un canal hacia al menos un agente.",
+      "chainEnd": "Sin orquestador, la cadena debe llevar desde su inicio (entrada de chat o primer agente) hasta un nodo final.",
       "agentMode": "Un agente está en la cadena o en el orquestador.",
       "agentChannel": "Un agente tiene como máximo un canal.",
       "modelRequired": "El modelo es obligatorio.",
@@ -1098,7 +1245,17 @@
       "fileAccessRoot": "El acceso a archivos necesita una carpeta que no sea la raíz de una unidad.",
       "terminalRoot": "El terminal necesita una carpeta que no sea la raíz de una unidad.",
       "terminalPrograms": "El modo restringido necesita al menos un programa.",
+      "toolMaxCalls": "Máx. llamadas debe ser un número entero de al menos 1.",
+      "llmTemperature": "La temperatura debe estar entre 0 y 2; con Anthropic, entre 0 y 1.",
+      "llmMaxTokens": "Los tokens máx. deben ser un número entero de 64 a 262144.",
+      "llmMaxTokensContext": "Los tokens máx. deben ser menores que el contexto del nodo LLM.",
+      "knowledgeTopK": "topK debe ser un número entero de 1 a 20.",
+      "knowledgeScore": "El umbral de puntuación debe estar entre 0 y 1.",
+      "httpCredentialUrl": "HTTP con una credencial necesita una URL completa (http/https). La credencial solo se envía a esa dirección.",
       "zipRoot": "ZIP necesita una carpeta que no sea la raíz de una unidad.",
+      "fileAccessRootMissing": "La carpeta del acceso a archivos no existe. Créala o elige otra.",
+      "terminalRootMissing": "La carpeta de trabajo del terminal no existe. Créala o elige otra.",
+      "zipRootMissing": "La carpeta de la herramienta ZIP no existe. Créala o elige otra.",
       "knowledgePath": "La carpeta de origen es obligatoria.",
       "knowledgeRoot": "No se permite la raíz de una unidad o del sistema.",
       "knowledgeSandbox": "La ruta debe estar bajo la carpeta de datos.",
@@ -1128,6 +1285,10 @@
     }
   },
   "networks": {
+    "kind": {
+      "orchestrator": "Orquestador",
+      "linear": "Lineal"
+    },
     "title": "Biblioteca",
     "copySuffix": "(copia)",
     "ribbon": {
@@ -1158,17 +1319,26 @@
       "direction": "Orden",
       "tags": "Etiquetas",
       "onlyValid": "Solo válidas",
-      "onlyActive": "Solo activas"
+      "onlyActive": "Solo activas",
+      "kind": "Tipo de red",
+      "kinds": {
+        "orchestrator": "Orquestador",
+        "all": "Todas",
+        "linear": "Lineal"
+      }
     },
     "list": {
       "selectAll": "Seleccionar todas las visibles",
       "name": "Nombre",
+      "tags": "Etiquetas",
+      "kind": "Tipo",
       "description": "Descripción",
       "status": "Estado",
-      "graph": "Grafo",
       "updated": "Modificada",
       "lastUsed": "Último uso",
-      "counts": "{{nodes}} nodos · {{edges}} aristas",
+      "allTags": "Todas las etiquetas: {{tags}}",
+      "tagCount_one": "{{count}} etiqueta",
+      "tagCount_other": "{{count}} etiquetas",
       "move": "Mover {{column}}",
       "resize": "Cambiar el ancho de {{column}}"
     },
@@ -1186,6 +1356,9 @@
       "multi": "{{count}} seleccionadas",
       "noDescription": "Sin descripción.",
       "lastRun": "Última ejecución",
+      "neverUsed": "Nunca usada",
+      "moreErrors_one": "y {{count}} error más",
+      "moreErrors_other": "y {{count}} errores más",
       "resize": "Cambiar el ancho de los detalles",
       "graphLoading": "Cargando el grafo…"
     },
@@ -1361,6 +1534,9 @@
       "current": "Nodos actuales",
       "now": "Ahora",
       "task": "Encargo",
+      "taskFor": "Encargo para {{name}}",
+      "noTask": "Ahora no hay ningún encargo.",
+      "contextLabel": "Contexto",
       "agents": "Agentes",
       "agentsDone": "{{completed}} de {{total}} listos",
       "none": "Ningún nodo activo",
@@ -1371,7 +1547,9 @@
       "tokensOut": "Salida",
       "perSecond": "{{value}} tokens/s",
       "rate": "Tokens/s",
-      "runTotal": "Total de la ejecución",
+      "runTotal": "Salida total",
+      "runTotalOut": "tokens de salida",
+      "runTotalIn": "entrada {{value}}",
       "context": "Contexto {{used}} / {{max}}"
     },
     "tabs": {
@@ -1385,6 +1563,7 @@
       "splitWidth": "Cambiar el ancho de red y actividad"
     },
     "chat": {
+      "llmRetry": "El modelo del orquestador no está disponible ahora. Envía un mensaje para intentarlo de nuevo.",
       "placeholder": "Mensaje…",
       "send": "Enviar",
       "stop": "Detener generación",
@@ -1393,7 +1572,16 @@
       "empty": "Aún no hay mensajes en esta ejecución.",
       "disabled": "El chat solo está disponible durante una ejecución.",
       "agentDone": "{{name}} ha terminado.",
-      "agentDoneFiles": "{{name}} ha terminado. Archivos: {{files}}."
+      "agentDoneFiles": "{{name}} ha terminado. Archivos: {{files}}.",
+      "aborted": "Detenido. Envía un mensaje para continuar.",
+      "briefing": "**Contexto de la ejecución anterior elegida** (solo para el orquestador):\n\n{{text}}",
+      "previous": {
+        "label": "Continuar una ejecución anterior",
+        "none": "Sin ejecución anterior",
+        "option": "{{when}} · {{outcome}} · {{request}}",
+        "noRequest": "sin encargo",
+        "hint": "Antes de su primera decisión el orquestador analiza la ejecución elegida y guarda el resultado como contexto. Los agentes no lo ven; él les pasa lo que necesitan."
+      }
     },
     "log": {
       "pause": "Pausar",
@@ -1406,7 +1594,9 @@
       "node": "Nodo",
       "allNodes": "Todos los nodos",
       "errorsOnly": "Solo errores",
-      "export": "Exportar",
+      "export": "JSON",
+      "exportText": "Exportar como texto",
+      "exportTitle": "Registro",
       "empty": "Ninguna línea de registro para este filtro.",
       "detailTitle": "Detalle del registro",
       "payload": "Carga",
@@ -1487,7 +1677,7 @@
       "refresh": "Actualizar",
       "delete": "Eliminar",
       "export": "Exportar registros",
-      "purge": "Eliminar anteriores a 90 días"
+      "purge": "Eliminar anteriores a {{days}} días"
     },
     "filter": {
       "range": "Periodo",
@@ -1524,11 +1714,52 @@
     },
     "chart": {
       "title": "Ejecuciones por día",
-      "empty": "No hay ejecuciones terminadas en este periodo."
+      "empty": "No hay ejecuciones terminadas en este periodo.",
+      "viewLabel": "Vista",
+      "views": {
+        "timeline": "Evolución",
+        "share": "Proporciones",
+        "networks": "Redes",
+        "table": "Tabla"
+      },
+      "titles": {
+        "timeline": "Ejecuciones por día",
+        "share": "Cómo terminaron las ejecuciones",
+        "networks": "Ejecuciones por red",
+        "table": "Ejecuciones por día (tabla)",
+        "timelineHours": "Ejecuciones por hora",
+        "tableHours": "Ejecuciones por hora (tabla)"
+      },
+      "runs_one": "{{formatted}} ejecución",
+      "runs_other": "{{formatted}} ejecuciones",
+      "gap": {
+        "days_one": "1 día sin ejecuciones",
+        "days_other": "{{count}} días sin ejecuciones",
+        "hours_one": "1 hora sin ejecuciones",
+        "hours_other": "{{count}} horas sin ejecuciones"
+      },
+      "moreNetworks_one": "{{count}} red más",
+      "moreNetworks_other": "{{count}} redes más",
+      "table": {
+        "outcome": "Resultado",
+        "runs": "Ejecuciones",
+        "share": "Proporción",
+        "total": "Total",
+        "day": "Día",
+        "hour": "Hora"
+      }
     },
     "errors": {
       "title": "Errores más frecuentes",
-      "empty": "Ningún error en este filtro."
+      "empty": "Ningún error en este filtro.",
+      "total_one": "{{count}} ejecución fallida · haz clic para filtrar",
+      "total_other": "{{count}} ejecuciones fallidas · haz clic para filtrar",
+      "runs_one": "{{count}} ejecución",
+      "runs_other": "{{count}} ejecuciones",
+      "last": "última vez {{date}}",
+      "filtered": "Filtrado: {{name}}",
+      "noKey": "Sin mensaje de error",
+      "more": "{{count}} tipos de error más"
     },
     "errorClass": {
       "timeout": "Tiempo agotado",
@@ -1537,7 +1768,8 @@
       "validation": "Validación",
       "service": "Servicio",
       "unknown": "Desconocido",
-      "orchestrator": "Orquestador"
+      "orchestrator": "Orquestador",
+      "budget": "Presupuesto"
     },
     "tab": {
       "history": "Historial",
@@ -1651,7 +1883,7 @@
     },
     "retention": {
       "title": "Eliminar ejecuciones antiguas",
-      "body": "Se eliminarán {{count}} ejecuciones de más de 90 días.",
+      "body": "Se eliminarán {{count}} ejecuciones de más de {{days}} días.",
       "confirm": "Eliminar"
     },
     "notify": {
@@ -1665,29 +1897,287 @@
     }
   },
   "runLog": {
+    "limitShort": {
+      "run_llm_contextCut": "historial probablemente recortado"
+    },
+    "view": {
+      "file": {
+        "read": "lee {{path}}",
+        "read_many": "lee {{path}}",
+        "write": "escribe {{path}}",
+        "edit": "modifica {{path}}",
+        "delete": "elimina {{path}}",
+        "move": "mueve {{path}} a {{to}}",
+        "list": "lista {{path}}",
+        "tree": "muestra el árbol de {{path}}",
+        "stat": "comprueba {{path}}",
+        "search": "busca {{pattern}} en {{path}}",
+        "searchText": "busca «{{text}}» en {{path}}",
+        "mkdir": "crea la carpeta {{path}}",
+        "exists": "comprueba si existe {{path}}",
+        "other": "acceso a archivos {{action}} {{path}}"
+      },
+      "terminal": "ejecuta: {{command}}",
+      "http": "{{method}} {{url}}",
+      "webSearch": "busca en la web: {{query}}",
+      "calculator": "calcula {{expression}}",
+      "zip": "ZIP {{action}} {{path}}",
+      "toolGeneric": "herramienta {{name}}",
+      "exit": "código de salida {{code}}",
+      "serverStopped": "detenido tras {{seconds}} s (no termina por sí solo)",
+      "lines_one": "{{count}} línea",
+      "lines_other": "{{count}} líneas",
+      "count": {
+        "entries_one": "{{count}} entrada",
+        "entries_other": "{{count}} entradas",
+        "matches_one": "{{count}} coincidencia",
+        "matches_other": "{{count}} coincidencias",
+        "files_one": "{{count}} archivo",
+        "files_other": "{{count}} archivos",
+        "children_one": "{{count}} entrada",
+        "children_other": "{{count}} entradas",
+        "results_one": "{{count}} resultado",
+        "results_other": "{{count}} resultados",
+        "items_one": "{{count}} elemento",
+        "items_other": "{{count}} elementos"
+      },
+      "replacements_one": "{{count}} reemplazo",
+      "replacements_other": "{{count}} reemplazos",
+      "chars_one": "{{count}} carácter",
+      "chars_other": "{{count}} caracteres",
+      "truncated": "recortado",
+      "reused": "de la memoria",
+      "llmStart": "el modelo {{model}} empieza",
+      "llm": "modelo {{model}}",
+      "tokens_one": "{{count}} token",
+      "tokens_other": "{{count}} tokens",
+      "llmTools": "llama a {{names}}",
+      "llmCut": "cortado (límite de salida)",
+      "action": {
+        "call": "llama a {{agent}}",
+        "retry": "repetición",
+        "finish": "termina la ejecución",
+        "reply": "responde",
+        "ask": "pregunta"
+      },
+      "agentStart": "encargo {{call}}",
+      "agentStartPlain": "empieza",
+      "outcome": {
+        "done": "terminado",
+        "textOnly": "terminado, solo texto sin herramienta",
+        "anomaly": "falló",
+        "stopped": "detenido por el usuario",
+        "cancelled": "cancelado"
+      },
+      "toolsCount_one": "{{count}} llamada a herramienta",
+      "toolsCount_other": "{{count}} llamadas a herramientas",
+      "toolsWithFailed_one": "{{count}} llamada a herramienta, {{failed}} fallida(s)",
+      "toolsWithFailed_other": "{{count}} llamadas a herramientas, {{failed}} fallida(s)",
+      "filesCount_one": "{{count}} archivo modificado",
+      "filesCount_other": "{{count}} archivos modificados",
+      "capped": "límite de herramientas alcanzado",
+      "agentContext": "solicitud mayor {{prompt}} de {{window}} tokens ({{share}} %)",
+      "agentContextCuts": "probablemente recortado: {{count}}×",
+      "agentCompacted": "compactado: {{count}}×",
+      "step_one": "ronda de herramientas: {{count}} llamada",
+      "step_other": "ronda de herramientas: {{count}} llamadas",
+      "stepWithFailed_one": "ronda de herramientas: {{count}} llamada, {{failed}} fallida(s)",
+      "stepWithFailed_other": "ronda de herramientas: {{count}} llamadas, {{failed}} fallida(s)",
+      "stepEnd": {
+        "call": "termina con una llamada a un agente",
+        "finish": "termina con el cierre",
+        "reply": "termina con una respuesta",
+        "ask": "termina con una pregunta",
+        "think": "termina pensando",
+        "tool-request": "termina con una solicitud de herramienta",
+        "failed-tools": "termina tras demasiados errores de herramientas",
+        "failed-window": "termina: contexto demasiado pequeño",
+        "llm-unavailable": "termina: modelo no disponible",
+        "unreadable": "termina: respuesta ilegible",
+        "stopped": "detenido",
+        "none": "sin decisión"
+      },
+      "stepCapped": "límite de herramientas alcanzado",
+      "stepWithdrawn": "retiradas: {{names}}"
+    },
+    "toolError": {
+      "fileAccess": {
+        "notFound": "archivo o carpeta no encontrado",
+        "invalidAction": "acción no válida",
+        "invalidPath": "ruta no válida",
+        "tooLarge": "archivo demasiado grande",
+        "notFile": "no es un archivo",
+        "notDir": "no es una carpeta",
+        "outsideRoot": "fuera de la carpeta compartida",
+        "denied": "acceso denegado",
+        "notText": "no es un archivo de texto",
+        "missingContent": "falta el contenido",
+        "editMiss": "texto a reemplazar no encontrado",
+        "editAmbiguous": "el texto a reemplazar aparece varias veces",
+        "invalidText": "texto de búsqueda demasiado largo o de varias líneas"
+      },
+      "terminal": {
+        "notFound": "programa no encontrado",
+        "notGranted": "programa no permitido",
+        "shellSyntax": "sintaxis de shell no permitida",
+        "missingCommand": "falta el comando",
+        "timeout": "tiempo límite superado",
+        "outsideRoot": "fuera de la carpeta de trabajo",
+        "missingRoot": "no hay carpeta de trabajo",
+        "rootNotDir": "la carpeta de trabajo no existe",
+        "inlineCode": "código en línea no permitido",
+        "commandTooLong": "comando demasiado largo"
+      },
+      "http": {
+        "upstream": "error del servidor",
+        "invalidUrl": "URL no válida"
+      },
+      "webSearch": {
+        "upstream": "error del servicio de búsqueda"
+      },
+      "badArguments": "argumentos no válidos",
+      "notOffered": "herramienta no conectada",
+      "limitReached": "límite de llamadas alcanzado",
+      "disabled": "desactivada en esta ejecución",
+      "withdrawn": "retirada",
+      "repeated": "misma llamada repetida",
+      "skipped": "omitida",
+      "stepLimit": "límite de este paso alcanzado",
+      "writeLocked": "escritura aún bloqueada"
+    },
+    "kind": {
+      "decision": "Decisión",
+      "agent": "Agente",
+      "tool": "Herramienta",
+      "llm": "Modelo",
+      "limit": "Límite",
+      "run": "Ejecución",
+      "chat": "Chat",
+      "other": "Otros"
+    },
+    "status": {
+      "running": "en curso",
+      "ok": "correcto",
+      "fail": "falló",
+      "warn": "aviso"
+    },
+    "group": {
+      "collapse": "Contraer",
+      "expand": "Expandir",
+      "running": "en curso …",
+      "noResult": "terminó sin resultado",
+      "lines_one": "{{count}} línea",
+      "lines_other": "{{count}} líneas"
+    },
+    "views": {
+      "label": "Vista",
+      "important": "Importante",
+      "all": "Todo",
+      "debug": "Depuración",
+      "importantHint": "Decisiones, encargos, resultados, límites, avisos y errores",
+      "allHint": "Además cada llamada a herramientas y modelos",
+      "debugHint": "Además líneas de depuración, por ejemplo inicios de modelo y búsqueda de conocimiento",
+      "searchHint": "Texto, encargo, ruta, comando …"
+    },
+    "detail": {
+      "tool": "Herramienta",
+      "caller": "Llamante",
+      "node": "Nodo",
+      "path": "Ruta",
+      "command": "Comando",
+      "error": "Error",
+      "result": "Resultado",
+      "hint": "Indicación para el modelo",
+      "changed": "Archivo modificado",
+      "output": "Salida",
+      "arguments": "Argumentos",
+      "content": "Contenido del archivo (recortado)",
+      "model": "Modelo",
+      "provider": "Proveedor",
+      "tokens": "Tokens",
+      "duration": "Duración",
+      "context": "Contexto",
+      "finish": "Fin",
+      "answer": "Respuesta",
+      "reasoning": "Razonamiento",
+      "agent": "Agente",
+      "call": "Encargo n.º",
+      "tools": "Llamadas a herramientas",
+      "toolsValue": "{{count}} ({{ok}} ok, {{failed}} fallidas)",
+      "reason": "Motivo",
+      "files": "Archivos modificados",
+      "task": "Encargo",
+      "resultStart": "Resultado (inicio, {{count}} caracteres)",
+      "resultText": "Resultado",
+      "action": "Acción",
+      "via": "Vía",
+      "viaValue": {
+        "tool": "herramienta de decisión",
+        "json": "respuesta JSON"
+      },
+      "source": "Fuente",
+      "text": "Texto",
+      "raw": "Datos sin procesar (JSON)"
+    },
+    "summary": {
+      "title": "Resumen de la ejecución",
+      "outcome": "Resultado",
+      "outcomes": {
+        "succeeded": "Ejecución correcta",
+        "failed": "Ejecución fallida",
+        "cancelled": "Ejecución cancelada"
+      },
+      "agentCalls": "Llamadas a agentes",
+      "llmCalls": "Llamadas al modelo",
+      "tokens": "{{tokensIn}} tokens de entrada, {{tokensOut}} de salida",
+      "toolCalls": "Llamadas a herramientas",
+      "files": "Archivos modificados",
+      "limits": "Límites",
+      "error": "Error",
+      "agent": "{{name}} ×{{count}}",
+      "agentFailed": "{{name}} ×{{count}} ({{failed}} fallidas)",
+      "contextShare": "contexto hasta {{share}} %",
+      "fileList_one": "mostrar {{count}} archivo modificado",
+      "fileList_other": "mostrar {{count}} archivos modificados"
+    },
     "run": {
+      "briefing": {
+        "done": "Ejecución anterior leída: {{chars}} caracteres de contexto.",
+        "failed": "Ejecución anterior no analizada ({{error}}); el orquestador recibe el registro abreviado.",
+        "window": "El registro no cabe en la ventana de contexto; el orquestador lo recibe abreviado.",
+        "missing": "No se encontró la ejecución anterior elegida."
+      },
+      "llmBudget": "Presupuesto de llamadas al modelo agotado para esta ejecución.",
       "start": "Ejecución iniciada ({{networkName}})",
       "wait": {
         "human": "Esperando entrada",
         "ask": "Pregunta de {{speaker}}"
       },
       "chat": {
-        "user": "Mensaje del usuario"
+        "user": "Mensaje del usuario",
+        "aborted": "Generación detenida desde el chat"
       },
       "batch": {
         "start": "Ejecución por lotes iniciada"
       },
       "agent": {
+        "textOnly": "Solo texto, sin herramienta; el orquestador revisa la respuesta.",
+        "outputLimit": "Cortado dos veces en el límite de salida; tarea terminada.",
+        "window": "El prompt no cabe en ninguna ventana de contexto.",
+        "toolCap": "Agente: {{calls}} llamadas a herramientas para esta tarea, límite alcanzado.",
         "start": "Agente iniciado",
         "done": "Agente finalizado",
         "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas seguidas",
+        "terminalLesson": "Comando de terminal rechazado anotado ({{kind}}); ahora está en el prompt de sistema de este agente ({{lessons}} en total).",
         "toolJson": "Llamada a herramienta {{name}} descartada: argumentos JSON incompletos (intento {{attempt}}/{{max}}).",
         "think": "El agente está pensando (no es un resultado).",
         "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",
         "thinkLoop": "Bucle de pensamiento de 1 token detenido tras {{thinks}} pasos.",
         "emptyStop": "Respuesta vacía descartada ({{attempt}}/{{max}}). La tarea continúa.",
         "emptyStops": "Tarea incompleta: cinco respuestas vacías seguidas.",
-        "truncated": "Respuesta cortada; no es un resultado."
+        "empty": "El agente devolvió un resultado vacío",
+        "truncated": "Respuesta cortada; no es un resultado.",
+        "compact": "Contexto compactado para que la respuesta quepa en la ventana."
       },
       "knowledge": "Búsqueda de conocimiento ({{count}} resultados)",
       "knowledgeIndex": {
@@ -1695,21 +2185,28 @@
         "embed": "Indexando conocimiento: {{name}} ({{chunks}} fragmentos, {{model}})",
         "ready": "Conocimiento listo: {{name}}",
         "cached": "El conocimiento está al día: {{name}}",
-        "failed": "No se pudo indexar el conocimiento: {{name}}"
+        "failed": "No se pudo indexar el conocimiento: {{name}}",
+        "limit": "Conocimiento {{name}}: {{files}} archivos, se indexan los primeros {{max}}"
       },
       "llm": {
+        "toolCallsRepaired": "Se añadieron {{count}} respuestas de herramienta que faltaban.",
         "start": "LLM {{model}}",
         "done": "LLM finalizado ({{durationMs}} ms)",
-        "vram": "VRAM {{model}}: estimación {{estimated}}, usado {{used}}, {{delta}} ({{percent}}). Expertos {{expertsOnGpu}}/{{expertLayers}}, atención {{attentionLayersOnGpu}}{{placement}}.",
+        "contextCut": "Historial probablemente recortado: el modelo procesó {{reported, number}} tokens de entrada, se esperaban unos {{expected, number}} (ventana {{contextMax, number}}). Probablemente le falta el inicio del historial.",
+        "release": "Otros modelos descargados ({{dropped}}); {{keep}} sigue cargado",
         "modelInfo": "Faltan los datos del modelo {{model}}. La ejecución se detuvo.",
         "moeUnsplit": "No se puede repartir los expertos de {{model}}. No se envía num_gpu."
       },
       "tool": {
+        "limitReached": "Herramienta {{name}}: límite de {{limit}} llamadas por ejecución alcanzado.",
+        "notOffered": "La herramienta {{name}} no está habilitada en este nodo; la llamada no se ejecutó.",
+        "disabled": "La herramienta {{name}} queda desactivada el resto de la ejecución ({{error}}).",
         "call": "Herramienta {{name}}"
       },
       "router": "Enrutador {{branch}} → {{target}}",
       "end": "Fin alcanzado",
       "succeeded": "Ejecución correcta",
+      "summary": "Resumen de la ejecución",
       "failed": "Ejecución fallida",
       "cancelled": "Ejecución cancelada",
       "interrupted": "Ejecución interrumpida (aplicación cerrada)",
@@ -1717,7 +2214,25 @@
         "fallbackMissing": "Falta el modelo de respaldo de ayuda"
       },
       "stepLimit": "Límite de pasos alcanzado",
+      "noEnd": "La cadena no llegó a un nodo final",
+      "memory": {
+        "source": "Texto guardado del único autor adjuntado automáticamente"
+      },
       "orchestrator": {
+        "textRetry": "El reintento de {{name}} volvió a dar solo texto ({{fails}}/{{max}}).",
+        "retryIgnored": "retry sin respuesta previa de solo texto; no cuenta.",
+        "takeoverUnavailable": "Toma de control imposible: al orquestador le faltan herramientas ({{count}}/{{max}}).",
+        "toolCap": "Orquestador: {{calls}} llamadas a herramientas en este paso, límite alcanzado.",
+        "compact": "Contexto del orquestador condensado (nivel {{level}}).",
+        "trimmed": "Prompt del orquestador acortado para caber en la ventana: {{results}} resultados antiguos quitados, {{starts}} recortados a su inicio, {{other}} recortes más ({{total}} pasos hasta ahora). Los encargos y los archivos modificados se mantienen.",
+        "privateReasoning": "El razonamiento interno del modelo no se muestra en el chat.",
+        "replyAsAsk": "La respuesta contenía una pregunta para ti y se envió como pregunta; la ejecución espera tu respuesta.",
+        "llmPause": "Modelo del orquestador no disponible ({{error}}); esperando un mensaje.",
+        "emptyTask": "Tarea vacía; se usa el último mensaje del usuario.",
+        "action": "Orquestador: {{action}} {{agent}}",
+        "step": "Ronda de herramientas: {{calls}} llamadas",
+        "unknownAgent": "Agente desconocido «{{token}}» en la llamada",
+        "unknownSource": "Fuente desconocida «{{source}}» en la llamada",
         "repair": "La orden no se pudo leer, nuevo intento.",
         "unreadable": "El orquestador no entregó un paso legible.",
         "defer": "El siguiente paso tras el mensaje de chat era ilegible; la ejecución continúa.",
@@ -1730,7 +2245,18 @@
         "takeoverStart": "{{agent}} agotó {{misses}} intentos de archivo sin cambio. El orquestador toma el control.",
         "takeoverBlocked": "Llamada a {{agent}} rechazada. El orquestador debe escribir el archivo.",
         "takeover": "{{agent}} alcanzó el límite de intentos. El orquestador no escribió ningún archivo.",
-        "takeoverNoTool": "{{agent}} alcanzó el límite de intentos. El orquestador no tiene herramienta de archivos."
+        "takeoverNoTool": "{{agent}} alcanzó el límite de intentos. El orquestador no tiene herramienta de archivos.",
+        "takeoverFailures": "{{agent}} falló {{failed}} veces seguidas ({{reason}}). El orquestador toma el control.",
+        "toolRequest": "El orquestador escribió «{{verb}}» como acción en lugar de llamar a la herramienta.",
+        "selfTakeover": "Un agente falló: el orquestador puede cambiar archivos él mismo.",
+        "toolLocked": "Llamada {{name}} no ejecutada: no está habilitada en este paso.",
+        "stuck": "El orquestador se atascó: {{decisions}} decisiones sin un paso nuevo.",
+        "stuckClose": "{{decisions}} decisiones sin un paso nuevo. El orquestador resume y la ejecución termina.",
+        "orientationCap": "Orquestador: {{calls}} llamadas a herramientas antes del primer encargo, límite alcanzado.",
+        "toolWithdrawn": "La herramienta {{name}} se retira en este paso: el mismo error o la misma llamada una y otra vez ({{error}}).",
+        "stepClose": "Límite de {{calls}} encargos alcanzado. El orquestador resume y la ejecución termina.",
+        "toolRepeated": "Llamada {{name}} no ejecutada: la misma llamada ya se hizo en este paso.",
+        "decisionTool": "El orquestador decidió mediante la herramienta {{name}}."
       }
     },
     "graph": {
@@ -1739,8 +2265,16 @@
       }
     },
     "runtime": {
+      "generationLimit": "Respuesta detenida en el límite de tiempo.",
+      "rateLimited": "El proveedor limita las peticiones (límite de frecuencia).",
       "timeout": "Sin progreso del modelo",
-      "unreachable": "Runtime no accesible"
+      "unreachable": "Runtime no accesible",
+      "upstream": "La respuesta del modelo llegó incompleta o fue rechazada",
+      "badRequest": "El modelo rechazó la solicitud",
+      "modelNotFound": "Modelo no encontrado",
+      "modelInfoFailed": "No se pudo leer la información del modelo",
+      "unauthorized": "Acceso denegado (revisa la clave)",
+      "missingCredential": "Falta la credencial"
     },
     "mcp": {
       "ping": {

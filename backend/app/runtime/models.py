@@ -21,6 +21,9 @@ class OllamaModel(ApiModel):
     digest: str | None = None
     modified_at: str | None = Field(default=None, alias="modifiedAt")
     moe: bool = False
+    # From details of /api/tags: "32.8B", "Q4_K_M". For the hover in model pickers.
+    parameter_size: str | None = Field(default=None, alias="parameterSize")
+    quantization: str | None = None
 
 
 class ToolCall(ApiModel):
@@ -35,10 +38,14 @@ class ChatMessage(ApiModel):
     name: str | None = None
     tool_call_id: str | None = Field(default=None, alias="toolCallId")
     tool_calls: list[ToolCall] | None = Field(default=None, alias="toolCalls")
+    # The model's own thinking of an earlier step. Local models get it back inside the
+    # content as <think>…</think>; cloud providers never see it (completions.py).
+    reasoning: str | None = None
 
 
 class CompletionUsage(ApiModel):
-    prompt_tokens: int = Field(alias="promptTokens")
+    # None: the provider did not report it (N3); callers fall back to their estimate.
+    prompt_tokens: int | None = Field(default=None, alias="promptTokens")
     completion_tokens: int = Field(alias="completionTokens")
 
 
@@ -53,6 +60,8 @@ class CompletionRequest(ApiModel):
     max_tokens: int | None = Field(default=None, alias="maxTokens")
     tools: list[dict[str, Any]] | None = None
     timeout_sec: float = 120.0
+    # R1: total time one call may take, even while tokens keep coming. None = no limit.
+    max_duration_sec: float | None = Field(default=None, alias="maxDurationSec")
     ollama_options: dict[str, Any] | None = None
 
 
@@ -103,6 +112,8 @@ class RuntimeModelOut(ApiModel):
     name: str
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
     moe: bool = False
+    parameter_size: str | None = Field(default=None, alias="parameterSize")
+    quantization: str | None = None
 
 
 class RuntimeModelsResponse(ApiModel):

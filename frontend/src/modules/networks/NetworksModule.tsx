@@ -27,7 +27,7 @@ import { RenameDialog } from '@/modules/networks/dialogs/RenameDialog';
 import { TagsDialog } from '@/modules/networks/dialogs/TagsDialog';
 import { FilterBar } from '@/modules/networks/filters/FilterBar';
 import { NetworkList } from '@/modules/networks/list/NetworkList';
-import { applyNetworkFilters, sharedTags, uniqueTags } from '@/modules/networks/model/filter';
+import { applyNetworkFilters, cloudTags, scopeNetworks, sharedTags, uniqueTags } from '@/modules/networks/model/filter';
 import { exportFileStem, exportStamp } from '@/modules/networks/model/importDoc';
 import { zipStore } from '@/modules/networks/model/zip';
 import { LibraryRibbon } from '@/modules/networks/ribbon/Ribbon';
@@ -69,7 +69,7 @@ export function NetworksModule() {
   const tagFilter = useNetworksUi((state) => state.tagFilter);
   const tagMode = useNetworksUi((state) => state.tagMode);
   const onlyValid = useNetworksUi((state) => state.onlyValid);
-  const onlyActive = useNetworksUi((state) => state.onlyActive);
+  const kind = useNetworksUi((state) => state.kind);
   const sortKey = useNetworksUi((state) => state.sortKey);
   const sortDir = useNetworksUi((state) => state.sortDir);
   const selectedIds = useNetworksUi((state) => state.selectedIds);
@@ -78,16 +78,20 @@ export function NetworksModule() {
   const pruneSelection = useNetworksUi((state) => state.pruneSelection);
   const setQuery = useNetworksUi((state) => state.setQuery);
   const filtered = useMemo(
-    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, tagMode, onlyValid, onlyActive, sortKey, sortDir }),
-    [filterQuery, items, onlyActive, onlyValid, sortDir, sortKey, tagFilter, tagMode],
+    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, tagMode, onlyValid, kind, sortKey, sortDir }),
+    [filterQuery, items, kind, onlyValid, sortDir, sortKey, tagFilter, tagMode],
   );
   const selected = useMemo(
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is NetworkListItem => Boolean(item)),
     [items, selectedIds],
   );
   const tags = useMemo(() => uniqueTags(items), [items]);
+  // The tag cloud follows the kind switch and "only valid"; the tags dialog keeps every tag.
+  const scoped = useMemo(() => scopeNetworks(items, { onlyValid, kind }), [items, kind, onlyValid]);
+  const scopedTags = useMemo(() => cloudTags(scoped, tagFilter), [scoped, tagFilter]);
+  const scopedSets = useMemo(() => scoped.map((item) => item.tags ?? []), [scoped]);
   const seedTags = useMemo(() => sharedTags(selected), [selected]);
-  const filtersOn = Boolean(filterQuery.trim() || tagFilter.length || onlyValid || onlyActive);
+  const filtersOn = Boolean(filterQuery.trim() || tagFilter.length || onlyValid || kind !== 'all');
   const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
   useEffect(() => {
     if (query.isLoading) return;
@@ -233,7 +237,7 @@ export function NetworksModule() {
           onExport: () => setExportOpen(true),
         }}
       />
-      <FilterBar tags={tags} tagSets={items.map((item) => item.tags ?? [])} />
+      <FilterBar tags={scopedTags} tagSets={scopedSets} />
       {query.isError ? (
         <Alert variant="destructive" className="m-3">
           <AlertTitle>{t('networks.error.title')}</AlertTitle>
@@ -268,7 +272,7 @@ export function NetworksModule() {
               variant="outline"
               onClick={() => {
                 setQuery('');
-                useNetworksUi.setState({ tagFilter: [], tagMode: 'or', onlyValid: false, onlyActive: false });
+                useNetworksUi.setState({ tagFilter: [], tagMode: 'or', onlyValid: false, kind: 'all' });
               }}
             >
               {t('networks.empty.clearFilters')}

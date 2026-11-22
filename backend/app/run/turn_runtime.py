@@ -6,10 +6,11 @@ Tests patch ``tools_execute``, ``get_mcp``, ``_set_llm``, and
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 
-from app.common.secrets import mask_obj
+from app.common.secrets import mask_content_obj, mask_obj
 from app.db.engine import utc_now
 from app.db.runs import upsert_step
 from app.db.vault import get as vault_get
@@ -40,24 +41,64 @@ from app.tools.catalog import openai_tools_for_kinds
 
 log = logging.getLogger("agentus.run")
 
-_SAME_RETRY = frozenset({"runtime.timeout", "runtime.unreachable", "runtime.upstream"})
+# runtime.rateLimited arrives here only after the call itself waited and retried (H11).
+_SAME_RETRY = frozenset(
+    {"runtime.timeout", "runtime.unreachable", "runtime.upstream", "runtime.rateLimited"}
+)
 
 _TRUNCATED_REASONS = frozenset({"length", "max_tokens", "truncated"})
 
 _FILE_MUTATIONS = frozenset({"write", "delete", "edit", "move"})
+# M6: record.error of an agent call the user stopped from the chat.
+USER_STOPPED = "stopped by user"
 
 _FILE_PREP_ACTIONS = frozenset({"read", "list", "stat", "mkdir", "search", "tree", "read_many"})
 
 
 def _completion_log_payload(result: CompletionResult, extra: dict | None = None) -> dict:
+    from app.run.limits import LOG_TEXT_MAX
+    from app.run.log_payloads import clip
+
+    # B6: up to 8 KB of answer and reasoning per line; the model saw all of it.
     payload: dict = {
         "finishReason": result.finish_reason or "",
-        "content": result.content or "",
-        "reasoning": result.reasoning or "",
+        "content": clip(result.content or "", LOG_TEXT_MAX),
+        "reasoning": clip(result.reasoning or "", LOG_TEXT_MAX),
     }
+    if result.tool_calls:
+        payload["toolCalls"] = [call.name or "" for call in result.tool_calls][:20]
     if extra:
         payload.update(extra)
     return payload
+
+def _caller(compiled: CompiledGraph, node_id: str) -> dict:
+    """B4: who made a tool or model call. The row stays at the tool or LLM node."""
+    return {"caller": node_id, "callerName": node_label(compiled, node_id) or node_id}
+
+def _llm_done_payload(
+    compiled: CompiledGraph,
+    caller_id: str,
+    llm,
+    result: CompletionResult,
+    *,
+    duration_ms: int,
+    tokens_in: int | None,
+    tokens_out: int | None,
+    per_second: float | None,
+) -> dict:
+    """B6: one readable line per model call, with the texts for the debug view."""
+    return _completion_log_payload(
+        result,
+        {
+            "provider": llm.provider,
+            "model": llm.model,
+            "durationMs": duration_ms,
+            "tokensIn": tokens_in,
+            "tokensOut": tokens_out,
+            "perSecond": round(per_second, 1) if per_second is not None else None,
+            **_caller(compiled, caller_id),
+        },
+    )
 
 def _result_truncated(result: CompletionResult) -> bool:
     reason = (result.finish_reason or "").strip().lower()
@@ -107,14 +148,138 @@ def _function_names(schemas: list[dict]) -> list[str]:
             names.append(str(name))
     return names
 
-def _parse_args(raw: str) -> dict:
+_ARGS_SHAPE = 'Send one JSON object, for example {"action": "read", "path": "notes.txt"}.'
+
+
+def _parse_args(raw: str) -> tuple[dict, str | None]:
+    """Tool arguments, or a hint for the model when they cannot be used (N2).
+
+    Broken JSON used to become ``{}``: the tool then ran without arguments and
+    answered with an unrelated error, and the model never learned why.
+    """
     import json
 
+    text = (raw or "").strip()
+    if not text:
+        return {}, None
     try:
-        value = json.loads(raw or "{}")
-        return value if isinstance(value, dict) else {}
-    except ValueError:
-        return {}
+        value = json.loads(text)
+    except ValueError as exc:
+        return {}, f"The arguments are not valid JSON ({exc.msg} at character {exc.pos}). {_ARGS_SHAPE}"
+    if isinstance(value, str):
+        # Some models send the object as a JSON string.
+        try:
+            inner = json.loads(value)
+        except ValueError:
+            inner = None
+        if isinstance(inner, dict):
+            return inner, None
+    if not isinstance(value, dict):
+        return {}, f"The arguments must be one JSON object, not {type(value).__name__}. {_ARGS_SHAPE}"
+    return value, None
+
+def _max_calls(data: dict) -> int | None:
+    """``maxCalls`` of a tool node: an int >= 1, or None for unlimited."""
+    raw = data.get("maxCalls")
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value >= 1 else None
+
+def _resolve_tool_node(compiled: CompiledGraph, owner_id: str, call_name: str):
+    """The tool or MCP node behind one function name of ``owner_id`` (first match)."""
+    from app.run.graph_models import is_mcp_node
+
+    mapped = map_openai_tool_name(call_name)
+    for edge in compiled.doc.edges:
+        if edge.target != owner_id or edge.target_handle != "tool":
+            continue
+        src = compiled.by_id.get(edge.source)
+        if src is None:
+            continue
+        if mapped:
+            if is_mcp_node(src) and str(src.data.get("mcpServerId") or "") == mapped[0]:
+                return src
+        elif str(src.data.get("kind")) == call_name:
+            return src
+    return None
+
+def _mcp_bindings(
+    compiled: CompiledGraph, owner_id: str
+) -> list[tuple[str, list[str] | None, str | None]]:
+    """MCP servers wired to ``owner_id`` with the tool names its node allows."""
+    agent = compiled.agents.get(owner_id)
+    if agent is not None:
+        return list(agent.mcp)
+    orch = compiled.orchestrator
+    if orch is not None and orch.node_id == owner_id:
+        return list(orch.mcp)
+    return []
+
+
+def _mcp_offered(compiled: CompiledGraph, owner_id: str, server_id: str, tool_name: str) -> bool:
+    """True when this node may call ``tool_name`` on ``server_id`` (H1).
+
+    The schema sent to the model is no boundary: a model can name any tool, and
+    ``salvage_tool_calls`` turns text into calls. The wiring and the tool choice
+    of the MCP node decide, exactly as they decide what is offered.
+    """
+    from app.mcp.names import safe_token
+
+    for bound_id, allow, _cred in _mcp_bindings(compiled, owner_id):
+        if bound_id != server_id:
+            continue
+        # An empty choice offers every tool of the server (see _tool_schemas).
+        if not allow:
+            return True
+        wanted = safe_token(tool_name)
+        if any(name == tool_name or safe_token(str(name)) == wanted for name in allow):
+            return True
+    return False
+
+
+def _calls_left(ctrl: RunController, node) -> int | None:
+    limit = _max_calls(node.data)
+    if limit is None:
+        return None
+    return max(0, limit - ctrl.tool_calls.get(node.id, 0))
+
+def _available_tools(
+    ctrl: RunController, compiled: CompiledGraph, owner_id: str, schemas: list[dict]
+) -> list[dict]:
+    """Drop functions whose tool node has no calls left, or is switched off, in this run."""
+    broken = getattr(ctrl, "broken_tools", {}) or {}
+    kept: list[dict] = []
+    for item in schemas:
+        name = str((item.get("function") or {}).get("name") or "")
+        node = _resolve_tool_node(compiled, owner_id, name) if name else None
+        if node is not None and (_calls_left(ctrl, node) == 0 or node.id in broken):
+            continue
+        kept.append(item)
+    return kept
+
+
+# A tool whose folder or setup is broken cannot work for the rest of the run.
+_CONFIG_ERRORS = (".rootNotDir", ".missingRoot")
+_DISABLED_DETAIL = "This tool is switched off for the rest of this run. Do not call it again; work without it."
+
+def _call_refused(ctrl: RunController, compiled: CompiledGraph, owner_id: str, call_name: str) -> bool:
+    """True when the tool node behind ``call_name`` refused calls for its maxCalls."""
+    node = _resolve_tool_node(compiled, owner_id, call_name)
+    return node is not None and node.id in ctrl.tool_refused
+
+def _take_call(ctrl: RunController, node) -> int | None:
+    """Count one call on ``node``. Returns the limit when the call is refused."""
+    limit = _max_calls(node.data)
+    used = ctrl.tool_calls.get(node.id, 0)
+    if limit is not None and used >= limit:
+        ctrl.tool_refused.add(node.id)
+        return limit
+    ctrl.tool_calls[node.id] = used + 1
+    return None
 
 def _dispatch_tool(
     ctrl: RunController,
@@ -129,11 +294,12 @@ def _dispatch_tool(
     reuse: bool,
 ) -> tuple[str, FileFact | None, bool]:
     tool_node_id = owner_id
-    args = _parse_args(call_arguments)
+    tool_started = time.perf_counter()
+    args, bad_args = _parse_args(call_arguments)
     mapped = map_openai_tool_name(call_name)
     leaf = mapped[1] if mapped else call_name
     reused = None
-    if reuse and record is not None:
+    if reuse and record is not None and bad_args is None:
         if leaf == "file_access" or call_name == "file_access":
             reused = reused_file_result(
                 record, str(args.get("action") or ""), str(args.get("path") or "")
@@ -142,8 +308,46 @@ def _dispatch_tool(
             preview = file_fact(leaf, args, {}, ok=True)
             if preview is not None and preview.path:
                 reused = reused_file_result(record, preview.action, preview.path)
+    # A server that is not wired to this node, or a tool its node does not allow.
+    not_offered = bool(mapped) and not _mcp_offered(compiled, owner_id, mapped[0], mapped[1])
+    refused_at = None
+    if reused is None and not not_offered and bad_args is None:
+        limited_node = _resolve_tool_node(compiled, owner_id, call_name)
+        if limited_node is not None:
+            refused_at = _take_call(ctrl, limited_node)
+            if refused_at is not None:
+                tool_node_id = limited_node.id
     if reused is not None:
         tool_result = reused
+    elif not_offered:
+        tool_result = {
+            "ok": False,
+            "error": "tool.notOffered",
+            "detail": "This tool is not connected to you. Call only a tool listed under Connected tools.",
+        }
+        emit_log(
+            "warn",
+            "run.tool.notOffered",
+            node_id=owner_id,
+            payload={"name": call_name},
+        )
+    elif bad_args is not None:
+        # N2: nothing runs; the model sees what was wrong with its JSON.
+        tool_result = {"ok": False, "error": "tool.badArguments", "detail": bad_args}
+    elif refused_at is not None:
+        # Not a failure: the network caps this tool. The model sees why and stops asking for it.
+        tool_result = {
+            "ok": False,
+            "error": "tool.limitReached",
+            "detail": f"This tool may run {refused_at} times per run and has no calls left. Do not call it again.",
+            "limit": refused_at,
+        }
+        emit_log(
+            "warn",
+            "run.tool.limitReached",
+            node_id=tool_node_id,
+            payload={"name": call_name, "limit": refused_at, **_caller(compiled, owner_id)},
+        )
     elif mapped and mcp:
         from app.run.graph_models import is_mcp_node
 
@@ -174,6 +378,11 @@ def _dispatch_tool(
             tool_node = compiled.by_id.get(edge.source)
             if tool_node and str(tool_node.data.get("kind")) == call_name:
                 tool_node_id = tool_node.id
+                broken = (getattr(ctrl, "broken_tools", {}) or {}).get(tool_node.id)
+                if broken:
+                    # Switched off earlier in this run; the model called it from memory.
+                    tool_result = {"ok": False, "error": "tool.disabled", "errorKey": broken, "detail": _DISABLED_DETAIL}
+                    break
                 if tool_node.type == "tool":
                     _set_node(ctrl, tool_node_id, "running", wait="tool", message=call_name)
                 try:
@@ -186,6 +395,23 @@ def _dispatch_tool(
                         secret=cred,
                     )
                     tool_result = out.model_dump(by_alias=True)
+                    if not out.ok and out.error_key:
+                        from app.tools.hints import failure_hint
+
+                        # The key alone did not tell a weak model how to fix the call.
+                        hint = failure_hint(call_name, out.error_key, tool_node.data)
+                        if out.error_key.endswith(_CONFIG_ERRORS):
+                            # Every later call would fail the same way: switch it off once.
+                            ctrl.broken_tools[tool_node.id] = out.error_key
+                            hint = f"{hint or ''} {_DISABLED_DETAIL}".strip()
+                            emit_log(
+                                "warn",
+                                "run.tool.disabled",
+                                node_id=tool_node.id,
+                                payload={"name": call_name, "error": out.error_key, **_caller(compiled, owner_id)},
+                            )
+                        if hint:
+                            tool_result["hint"] = hint
                 finally:
                     if tool_node.type == "tool":
                         _set_node(ctrl, tool_node_id, "idle")
@@ -193,25 +419,46 @@ def _dispatch_tool(
     else:
         tool_result = {"ok": False, "error": f"unknown tool {call_name}"}
     ok_tool = not (isinstance(tool_result, dict) and tool_result.get("ok") is False)
-    payload: dict = {"name": call_name, "waitReason": "tool", "ok": ok_tool}
+    fact = None if reused is not None else file_fact(leaf, args, tool_result, ok=ok_tool)
+    payload: dict = {
+        "name": call_name,
+        "waitReason": "tool",
+        "ok": ok_tool,
+        "durationMs": int((time.perf_counter() - tool_started) * 1000),
+        **_caller(compiled, owner_id),
+    }
     if isinstance(args, dict):
         import json as _json
 
-        payload["arguments"] = _json.dumps(mask_obj(args), ensure_ascii=False)
+        from app.run.log_payloads import clip_strings
+
+        # B5: a written file is in the tool, not in the log; 2 KB per string are enough to follow.
+        payload["arguments"] = _json.dumps(clip_strings(mask_obj(args)), ensure_ascii=False)
+    if reused is not None:
+        payload["reused"] = True
     if isinstance(tool_result, dict) and not ok_tool:
         if tool_result.get("errorKey"):
             payload["errorKey"] = tool_result["errorKey"]
         err = tool_result.get("error") or tool_result.get("result")
         if err:
-            payload["error"] = str(err)
+            payload["error"] = str(err)[:2000]
+        if tool_result.get("hint"):
+            payload["hint"] = str(tool_result["hint"])[:500]
+    from app.run.log_payloads import tool_result_summary
+
+    summary = tool_result_summary(tool_result)
+    if summary:
+        payload["result"] = summary
+    if fact is not None and fact.ok and fact.action in _FILE_MUTATIONS and fact.path:
+        payload["changed"] = fact.path
     emit_log(
         "info" if ok_tool else "warn",
         "run.tool.call",
         node_id=tool_node_id,
         payload=payload,
     )
-    fact = None if reused is not None else file_fact(leaf, args, tool_result, ok=ok_tool)
-    masked = format_tool_result(mask_obj(tool_result))
+    # Narrow mask (H5): the model works with this text and may write it back.
+    masked = format_tool_result(mask_content_obj(tool_result))
     if record is not None:
         record_tool(
             record,
@@ -225,6 +472,75 @@ def _dispatch_tool(
         )
     return masked, fact, ok_tool
 
+class RunBudgetExceeded(Exception):
+    """O12: the run used MAX_RUN_LLM_CALLS model calls."""
+
+    def __init__(self) -> None:
+        super().__init__("run.llmBudget")
+
+def _charge_llm(ctrl: RunController, node_id: str) -> None:
+    """Count one model call of this run; raise once the run budget is used up."""
+    from app.run.limits import MAX_RUN_LLM_CALLS
+
+    budget = getattr(ctrl, "llm_budget", None) or MAX_RUN_LLM_CALLS
+    if ctrl.llm_calls >= budget:
+        ctrl.last_error_node_id = node_id
+        raise RunBudgetExceeded()
+    ctrl.llm_calls += 1
+
+def _skip_tool_call(messages: list[LlmMessage], call, error_key: str, detail: str) -> None:
+    """Answer a tool call that was not run. Every tool_call_id needs a tool message."""
+    import json
+
+    messages.append(
+        LlmMessage(
+            role="tool",
+            content=json.dumps({"ok": False, "error": error_key, "detail": detail}),
+            tool_call_id=call.id or None,
+            name=call.name or None,
+        )
+    )
+
+def _close_open_tool_calls(messages: list[LlmMessage]) -> int:
+    """Insert a skipped answer for every tool_call_id that has none. Returns the count.
+
+    OpenAI-compatible APIs reject a request in which an assistant tool call has no
+    tool message before the next non-tool message (HTTP 400). Last line of defence;
+    a repair here means some path forgot to answer and is logged by the caller.
+    """
+    import json
+
+    inserted = 0
+    index = 0
+    while index < len(messages):
+        message = messages[index]
+        index += 1
+        calls = [call for call in (message.tool_calls or []) if call.id] if message.role == "assistant" else []
+        if not calls:
+            continue
+        answered: set[str] = set()
+        while index < len(messages) and messages[index].role == "tool":
+            if messages[index].tool_call_id:
+                answered.add(messages[index].tool_call_id)
+            index += 1
+        for call in calls:
+            if call.id in answered:
+                continue
+            messages.insert(
+                index,
+                LlmMessage(
+                    role="tool",
+                    content=json.dumps(
+                        {"ok": False, "error": "tool.skipped", "detail": "Not run: no result was recorded."}
+                    ),
+                    tool_call_id=call.id,
+                    name=call.name or None,
+                ),
+            )
+            index += 1
+            inserted += 1
+    return inserted
+
 def _with_salvaged_tools(result: CompletionResult, offered: list[dict] | None) -> CompletionResult:
     if result.tool_calls or not offered:
         return result
@@ -233,6 +549,36 @@ def _with_salvaged_tools(result: CompletionResult, offered: list[dict] | None) -
         return result
     return result.model_copy(update={"tool_calls": calls})
 
+# M3: VRAM a model took when it was last seen loaded (Ollama /api/ps), by tag key.
+_SEEN_VRAM: dict[str, int] = {}
+_FIT_MARGIN = 1.10
+
+
+def _fits_beside_resident(llm) -> bool:
+    """True when the model is loaded already, or fits next to the loaded ones.
+
+    Unknown VRAM (no GPU data, model never seen loaded) is False: then the
+    other models are unloaded as before.
+    """
+    from app.runtime.ollama import resident_index, tag_key
+
+    pool = _inference_pool_bytes()
+    if pool <= 0:
+        return False
+    resident = resident_index(base_url=llm.base_url)
+    for key, (_size, vram) in resident.items():
+        if isinstance(vram, int) and vram > 0:
+            _SEEN_VRAM[key] = vram
+    key = tag_key(llm.model)
+    if key in resident:
+        return True
+    need = _SEEN_VRAM.get(key)
+    if not need:
+        return False
+    used = sum(vram for _size, vram in resident.values() if isinstance(vram, int))
+    return used + need * _FIT_MARGIN <= pool
+
+
 def _prepare_resident(compiled: CompiledGraph, llm) -> None:
     if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
         return
@@ -240,6 +586,10 @@ def _prepare_resident(compiled: CompiledGraph, llm) -> None:
     from app.settings.service import load_settings
 
     try:
+        # M3: two models of one network that fit together stay loaded; switching
+        # between them no longer reloads each one on every call.
+        if _fits_beside_resident(llm):
+            return
         settings = load_settings()
         dropped = release_others(settings, compiled, current=llm.model)
     except Exception:
@@ -270,13 +620,6 @@ def _inference_gpus() -> list:
 def _inference_pool_bytes() -> int:
     return sum(max(0, gpu.vram_total_bytes) for gpu in _inference_gpus())
 
-def _display_count(value: object) -> str | int:
-    if isinstance(value, bool) or value is None:
-        return "—"
-    if isinstance(value, int):
-        return value
-    return "—"
-
 def _moe_auto_options(llm, choice, layers: int | None) -> dict:
     """Leave MoE placement to llama.cpp.
 
@@ -296,60 +639,30 @@ def _moe_auto_options(llm, choice, layers: int | None) -> dict:
         )
     return {}
 
-def _log_vram_compare(llm, options, choice, node_id: str) -> None:
-    if getattr(llm, "provider", None) != "ollama" or not getattr(llm, "model", None):
-        return
-    try:
-        from app.runtime.ollama import loaded_memory
-        from app.runtime.vram_est import estimate_vram_bytes, plan_moe_offload, vram_profile, with_kv_cache
+def _output_cap(llm, choice, prompt_est: int) -> tuple[int | None, bool]:
+    """R1: max output tokens for one call. Returns (cap, automatic).
 
-        profile = with_kv_cache(vram_profile(llm.model, base_url=llm.base_url), getattr(llm, "kv_cache_type", None))
-        num_ctx = choice.num_ctx if choice is not None and choice.num_ctx else 0
-        opts = options if isinstance(options, dict) else {}
-        num_gpu = opts.get("num_gpu")
-        num_cpu = opts.get("num_cpu_moe")
-        plan = (
-            plan_moe_offload(profile, num_ctx=num_ctx, pool_bytes=_inference_pool_bytes())
-            if profile is not None
-            else None
-        )
-        estimated: int | None
-        if plan is not None and (isinstance(num_cpu, int) or "num_gpu" not in opts):
-            estimated = plan.estimated_gpu_bytes
-        elif profile is not None:
-            gpu = num_gpu if isinstance(num_gpu, int) and num_gpu > 0 else None
-            estimated = estimate_vram_bytes(profile, num_ctx=num_ctx, num_gpu=gpu)
-        else:
-            estimated = None
-        size, size_vram = loaded_memory(llm.model, base_url=llm.base_url)
-        if estimated is None and size_vram is None:
-            return
-        delta = None if estimated is None or size_vram is None else size_vram - estimated
-        payload = {
-            "model": llm.model,
-            "estimatedBytes": _display_count(estimated),
-            "actualVramBytes": _display_count(size_vram),
-            "actualBytes": _display_count(size),
-            "deltaBytes": _display_count(delta),
-            "expertsOnGpu": plan.experts_on_gpu if plan else "—",
-            "expertLayers": plan.expert_layers if plan else "—",
-            "attentionLayersOnGpu": plan.attention_layers_on_gpu if plan else "—",
-            "numGpu": _display_count(num_gpu),
-            "numCpuMoe": _display_count(num_cpu),
-            "numCtx": num_ctx,
-        }
-        emit_log("info", "run.llm.vram", node_id=node_id, payload=payload)
-        log.info(
-            "vram compare model=%s estimated=%s actual_vram=%s delta=%s num_gpu=%s num_cpu_moe=%s",
-            llm.model,
-            estimated,
-            size_vram,
-            delta,
-            num_gpu,
-            num_cpu,
-        )
-    except Exception:
-        log.exception("vram compare failed model=%s", getattr(llm, "model", ""))
+    A ``maxTokens`` on the LLM node wins. Without it, Ollama would generate until the
+    context window is full (a 131k window allowed one 123k-token reasoning). The
+    automatic cap never changes the window: it is derived from it and limited to the
+    room the prompt leaves. Cloud providers keep their own defaults.
+    """
+    from app.run.limits import AUTO_OUTPUT_MAX, AUTO_OUTPUT_MIN, AUTO_OUTPUT_ROOM_MIN
+
+    if isinstance(llm.max_tokens, int) and llm.max_tokens > 0:
+        return llm.max_tokens, False
+    if llm.provider != "ollama":
+        return None, False
+    ctx = None
+    for candidate in (getattr(choice, "context_max", None), getattr(choice, "num_ctx", None), llm.num_ctx):
+        if isinstance(candidate, int) and candidate > 0:
+            ctx = candidate
+            break
+    if ctx is None:
+        return AUTO_OUTPUT_MAX, True
+    cap = min(AUTO_OUTPUT_MAX, max(AUTO_OUTPUT_MIN, ctx // 4))
+    room = max(AUTO_OUTPUT_ROOM_MIN, ctx - max(0, prompt_est))
+    return min(cap, room), True
 
 def _ollama_options(llm, choice) -> dict | None:
     if llm.provider != "ollama":
@@ -439,8 +752,36 @@ def _publish_tokens(
     context_used: int | None = None,
     context_max: int | None = None,
 ) -> None:
+    with _snap_lock(ctrl):
+        payload = _apply_tokens(
+            ctrl,
+            agent_id,
+            llm_node_id,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            per_second=per_second,
+            committed=committed,
+            context_used=context_used,
+            context_max=context_max,
+        )
+    if payload is not None:
+        publish("run", payload)
+
+
+def _apply_tokens(
+    ctrl: RunController,
+    agent_id: str,
+    llm_node_id: str,
+    *,
+    tokens_in: int | None,
+    tokens_out: int | None,
+    per_second: float | None,
+    committed: bool,
+    context_used: int | None,
+    context_max: int | None,
+) -> dict | None:
     if not ctrl.snapshot:
-        return
+        return None
     live_out = 0 if tokens_out is None else tokens_out
     live_in = 0 if tokens_in is None else tokens_in
     if committed:
@@ -476,7 +817,37 @@ def _publish_tokens(
         }
     )
     ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime, "activity": activity})
-    publish("run", ctrl.snapshot.model_dump(by_alias=True))
+    return _live_payload(ctrl.snapshot)
+
+
+# N12: token and node updates arrive several times a second. They used to carry the
+# whole snapshot (graph, every chat line) and the client merged the chat each time.
+_LIVE_FIELDS = frozenset({"run_id", "nodes_runtime", "activity"})
+
+
+def _live_payload(snapshot) -> dict:
+    """Run id, all node states and activity. The client merges this into what it has.
+
+    Every node goes along (a few fields each), so a dropped event heals with the next.
+    """
+    return snapshot.model_dump(by_alias=True, include=_LIVE_FIELDS)
+
+def _snap_lock(ctrl: RunController):
+    """M4: the controller's snapshot lock; test doubles without one get a no-op."""
+    lock = getattr(ctrl, "snap_lock", None)
+    return lock if lock is not None else contextlib.nullcontext()
+
+
+def _abort_check(ctrl: RunController):
+    """M6: model calls stop on Stop and on "stop generating" in the chat."""
+    check = getattr(ctrl, "should_abort", None)
+    return check if callable(check) else ctrl.stop_event.is_set
+
+
+def _user_aborted(ctrl: RunController) -> bool:
+    flag = getattr(ctrl, "abort_generation", None)
+    return bool(flag is not None and flag.is_set() and not ctrl.stop_event.is_set())
+
 
 def _set_node(
     ctrl: RunController,
@@ -489,21 +860,23 @@ def _set_node(
     llm: NodeLlmInfo | None = None,
     clear_llm: bool = False,
 ) -> None:
-    if not ctrl.snapshot:
-        return
-    runtime = dict(ctrl.snapshot.nodes_runtime)
-    current = runtime.get(node_id, NodeRuntime())
-    update: dict[str, object] = {"status": status, "wait_reason": wait, "error": error}
-    if message is not None:
-        cleaned = " ".join(message.split())
-        update["last_message"] = cleaned[:LAST_MESSAGE_MAX] or None
-    if llm is not None:
-        update["llm"] = llm
-    if clear_llm:
-        update["llm"] = None
-    runtime[node_id] = current.model_copy(update=update)
-    ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime})
-    _refresh_activity(ctrl)
+    with _snap_lock(ctrl):
+        if not ctrl.snapshot:
+            return
+        runtime = dict(ctrl.snapshot.nodes_runtime)
+        current = runtime.get(node_id, NodeRuntime())
+        update: dict[str, object] = {"status": status, "wait_reason": wait, "error": error}
+        if message is not None:
+            cleaned = " ".join(message.split())
+            update["last_message"] = cleaned[:LAST_MESSAGE_MAX] or None
+        if llm is not None:
+            update["llm"] = llm
+        if clear_llm:
+            update["llm"] = None
+        runtime[node_id] = current.model_copy(update=update)
+        ctrl.snapshot = ctrl.snapshot.model_copy(update={"nodes_runtime": runtime})
+        _refresh_activity(ctrl)
+        payload = _live_payload(ctrl.snapshot)
     node = ctrl.compiled.by_id.get(node_id) if ctrl.compiled else None
     upsert_step(
         run_id=ctrl.run_id or "",
@@ -515,7 +888,7 @@ def _set_node(
         wait_reason=wait,
         error_message=error,
     )
-    publish("run", ctrl.snapshot.model_dump(by_alias=True))
+    publish("run", payload)
 
 def _refresh_activity(ctrl: RunController) -> None:
     snap = ctrl.snapshot

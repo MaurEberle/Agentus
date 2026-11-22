@@ -40,7 +40,7 @@ def _with_dummy() -> FastAPI:
 
 
 def test_app_error_409(api_env) -> None:
-    response = TestClient(_with_dummy()).get("/api/_test/conflict")
+    response = TestClient(_with_dummy(), base_url="http://127.0.0.1").get("/api/_test/conflict")
     assert response.status_code == 409
     assert response.json() == {
         "messageKey": "credentials.inUse",
@@ -49,7 +49,7 @@ def test_app_error_409(api_env) -> None:
 
 
 def test_validation_is_400(api_env) -> None:
-    response = TestClient(_with_dummy()).post("/api/_test/validate", json={})
+    response = TestClient(_with_dummy(), base_url="http://127.0.0.1").post("/api/_test/validate", json={})
     assert response.status_code == 400
     body = response.json()
     assert body["messageKey"] == "http.validation"
@@ -57,7 +57,7 @@ def test_validation_is_400(api_env) -> None:
 
 
 def test_unhandled_is_500_without_traceback(api_env) -> None:
-    client = TestClient(_with_dummy(), raise_server_exceptions=False)
+    client = TestClient(_with_dummy(), base_url="http://127.0.0.1", raise_server_exceptions=False)
     response = client.get("/api/_test/boom")
     assert response.status_code == 500
     body = response.json()
@@ -67,10 +67,63 @@ def test_unhandled_is_500_without_traceback(api_env) -> None:
 
 
 def test_persist_errors_map_status(api_env) -> None:
-    client = TestClient(_with_dummy())
+    client = TestClient(_with_dummy(), base_url="http://127.0.0.1")
     invalid = client.get("/api/_test/persist-dir")
     assert invalid.status_code == 400
     assert invalid.json()["messageKey"] == "dataDir.invalidPath"
     missing = client.get("/api/_test/persist-missing")
     assert missing.status_code == 404
     assert missing.json()["messageKey"] == "db.notFound"
+
+
+def _with_upstream_failures() -> FastAPI:
+    import httpx
+
+    from app.runtime.errors import RuntimeApiError
+
+    app = create_app()
+
+    @app.get("/api/_test/model-validate")
+    def model_validate() -> None:
+        _Item.model_validate({"x": "not-a-number"})
+
+    @app.get("/api/_test/runtime")
+    def runtime() -> None:
+        raise RuntimeApiError("runtime.unreachable", detail="connect refused")
+
+    @app.get("/api/_test/connect")
+    def connect() -> None:
+        raise httpx.ConnectError("refused")
+
+    @app.get("/api/_test/read-timeout")
+    def read_timeout() -> None:
+        raise httpx.ReadTimeout("slow")
+
+    @app.get("/api/_test/bad-url")
+    def bad_url() -> None:
+        raise httpx.InvalidURL("no scheme")
+
+    return app
+
+
+def test_service_validation_is_400(api_env) -> None:
+    response = TestClient(_with_upstream_failures(), base_url="http://127.0.0.1").get("/api/_test/model-validate")
+    assert response.status_code == 400
+    assert response.json()["messageKey"] == "http.validation"
+    assert response.json()["message"].startswith("x:")
+
+
+def test_runtime_and_transport_errors_are_mapped(api_env) -> None:
+    client = TestClient(_with_upstream_failures(), base_url="http://127.0.0.1")
+    runtime = client.get("/api/_test/runtime")
+    assert runtime.status_code == 502
+    assert runtime.json() == {"messageKey": "runtime.unreachable", "message": "connect refused"}
+    connect = client.get("/api/_test/connect")
+    assert connect.status_code == 502
+    assert connect.json() == {"messageKey": "runtime.unreachable"}
+    timeout = client.get("/api/_test/read-timeout")
+    assert timeout.status_code == 504
+    assert timeout.json() == {"messageKey": "runtime.timeout"}
+    bad = client.get("/api/_test/bad-url")
+    assert bad.status_code == 400
+    assert bad.json() == {"messageKey": "runtime.invalidUrl"}

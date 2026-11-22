@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import os
 import re
-import sqlite3
 import time
 from pathlib import Path
 
 from app.common.http import client
+from app.db.ollama_settings import read_models_dir
 
 _DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 _DIGEST_IN_TEXT = re.compile(r"sha256:[0-9a-f]{64}")
@@ -23,17 +23,9 @@ def models_dir() -> Path:
     if local:
         db_path = Path(local) / "Ollama" / "db.sqlite"
         if db_path.is_file():
-            try:
-                uri = db_path.resolve().as_posix()
-                conn = sqlite3.connect(f"file:{uri}?mode=ro", uri=True)
-                try:
-                    row = conn.execute("SELECT models FROM settings LIMIT 1").fetchone()
-                finally:
-                    conn.close()
-                if row and str(row[0]).strip():
-                    return Path(str(row[0]).strip())
-            except (OSError, sqlite3.Error):
-                pass
+            stored = read_models_dir(db_path)
+            if stored:
+                return Path(stored)
     return Path.home() / ".ollama" / "models"
 
 

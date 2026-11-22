@@ -18,9 +18,11 @@ Tipos entre otros: xAI, OpenAI, Claude, Gemini, compatible con OpenAI, búsqueda
 
 ## Runtime
 
-**URL base de Ollama** (suele ser la dirección local de Ollama). **Comprobar conexión** y la **lista de modelos** pasan por la app. La lista se divide en **Modelos normales** y **Modelos de embeddings**. Un modelo cuenta como embedding si el nombre contiene `embed`. Un grupo vacío muestra **Ninguno**.
+**Entorno de Ollama:** En el modo **Entorno propio** (predeterminado) la app copia el Ollama instalado en su carpeta y arranca la copia en su propio puerto (normalmente 11435) con la misma carpeta de modelos. La tarjeta muestra estado, versión, puerto y la versión del Ollama instalado. La app de Ollama descarga las actualizaciones como siempre. Si la versión instalada es más reciente, Agentus lo avisa con una notificación y en la tarjeta. **Cambiar y reiniciar** copia la nueva versión, la arranca una vez como prueba, cierra Agentus y lo vuelve a abrir. Si después la nueva versión no arranca, la app vuelve a la anterior. No es posible mientras haya una ejecución o una descarga de modelo activa. Si la app no encuentra un Ollama instalado o la copia no arranca, usa la dirección de abajo. En el modo **Ollama externo** la app solo usa la dirección. Un cambio de modo se aplica tras reiniciar.
 
-Si la dirección es local y Ollama está instalado pero parado, la app arranca el servicio al abrir la ventana y no lo detiene. Sin Ollama alcanzable, los nodos LLM locales y la ayuda predeterminada se quedan parados. Los modelos los instalas con Ollama o en el setup; la app **no** hace pull en silencio en tiempo de ejecución. Aquí ya no se ofrece una URL base compatible con OpenAI.
+**URL base de Ollama** (la dirección de un Ollama externo; si no, la de reserva). **Comprobar conexión** y la **lista de modelos** pasan por la app. La lista se divide en **Modelos normales** y **Modelos de embeddings**. Un modelo cuenta como embedding si el nombre contiene `embed`. Un grupo vacío muestra **Ninguno**.
+
+Sin Ollama alcanzable, los nodos LLM locales y la ayuda predeterminada se quedan parados. Los modelos los instalas con Ollama o en el setup; la app **no** hace pull en silencio en tiempo de ejecución. Aquí ya no se ofrece una URL base compatible con OpenAI.
 
 ## Chat de ayuda
 
@@ -51,7 +53,7 @@ Borrar quita la configuración del servidor, no Ollama ni las credenciales.
 
 Muestra la **carpeta de datos** y el estado de los almacenes: Ajustes, Ayuda, Espacio de trabajo, Historial — sin vista SQL y sin secretos.
 
-**Cambiar** carpeta solo si ninguna red inicia, corre o se detiene. Las raíces de unidad o de sistema no valen. Opcional copiar el contenido a la carpeta nueva; la antigua se queda.
+**Cambiar** carpeta solo si ninguna red inicia, corre o se detiene. Las raíces de unidad o de sistema no valen. Opcional copiar el contenido a la carpeta nueva; la antigua se queda. Si la carpeta de destino ya tiene datos, la app no copia encima y lo avisa. Si el cambio falla, sigue activa la carpeta anterior.
 
 **Portátil** o una carpeta impuesta desde fuera: ruta **de solo lectura**.
 
@@ -60,3 +62,5 @@ Muestra la **carpeta de datos** y el estado de los almacenes: Ajustes, Ayuda, Es
 ## Acerca de
 
 Versión de UI y API, estado aproximado de Ollama, si los almacenes responden. Sin secretos ni rutas internas con nombre de usuario en una superficie que compartirías.
+
+**Registro de la app:** La app escribe errores y mensajes fuera de una ejecución en `agentus.log` (por ejemplo una memoria de ejecución no guardada, herramientas que fallaron, la copia propia de Ollama, errores de MCP). El archivo rota a los 5 MB y guarda tres anteriores. Los secretos se enmascaran. **Abrir carpeta** muestra la carpeta en el Explorador sin mostrar aquí su ruta.

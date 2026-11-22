@@ -189,7 +189,7 @@ def test_call_reopens_after_idle(api_env, monkeypatch, tmp_path) -> None:
     item = create_server(McpServerCreate(recipe_id="git", enabled=True, root_path=str(folder)))
     SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
     assert len(sessions) == 1
-    SESSIONS._idle_close(item.id)
+    SESSIONS._drop(item.id)
     assert sessions[0].closed is True
     out = SESSIONS.call(item.id, "search", {"q": "x"})
     assert out["ok"] is True
@@ -212,7 +212,7 @@ def test_idle_reopen_keeps_root_override(api_env, monkeypatch, tmp_path) -> None
     folder.mkdir()
     item = create_server(McpServerCreate(recipe_id="git", enabled=True, root_path=str(folder)))
     SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
-    SESSIONS._idle_close(item.id)
+    SESSIONS._drop(item.id)
     out = SESSIONS.call(item.id, "list_directory", {})
     assert out["ok"] is True
     assert len(captured) == 2
@@ -279,7 +279,7 @@ def test_postgres_app_db_no_spawn(api_env, monkeypatch) -> None:
     monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
     monkeypatch.setattr("app.mcp.service.runtime_available", lambda runtime: True)
     item = create_server(
-        McpServerCreate(recipe_id="postgres", credential_ids=["pg-1"], enabled=True)
+        McpServerCreate(recipe_id="postgres", credential_ids=["pg-1"], enabled=False)
     )
     put("pg-1", "file:C:/data/workspace.sqlite")
     from app.http.errors import AppError
@@ -413,3 +413,44 @@ def test_call_exception_includes_masked_error(api_env, monkeypatch) -> None:
     assert out["errorKey"] == "mcp.call.failed"
     assert "sk-abcdefghij" not in str(out.get("error"))
     assert "sk-***" in str(out.get("error"))
+
+
+def test_idle_timer_keeps_a_session_the_run_still_wants(api_env, monkeypatch, tmp_path) -> None:
+    """M13: the idle timer does not close a server while a run holds it."""
+    init()
+    sessions: list[FakeSession] = []
+
+    def _connect(**kwargs: object) -> FakeSession:
+        fake = FakeSession()
+        sessions.append(fake)
+        return fake
+
+    monkeypatch.setattr("app.mcp.sessions.connect_transport", _connect)
+    monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
+    folder = tmp_path / "kb"
+    folder.mkdir()
+    item = create_server(McpServerCreate(recipe_id="git", enabled=True, root_path=str(folder)))
+    SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
+    SESSIONS._idle_close(item.id)
+    assert sessions[0].closed is False
+    assert SESSIONS.call(item.id, "git_status", {"repo_path": "."})["ok"] is True
+    assert len(sessions) == 1
+    SESSIONS.close_all()
+    assert sessions[0].closed is True
+
+
+def test_git_call_keeps_target_revision(api_env, monkeypatch, tmp_path) -> None:
+    init()
+    fake = FakeSession()
+    monkeypatch.setattr("app.mcp.sessions.connect_transport", lambda **kwargs: fake)
+    monkeypatch.setattr("app.mcp.sessions.runtime_available", lambda runtime: True)
+    folder = tmp_path / "repo"
+    folder.mkdir()
+    item = create_server(McpServerCreate(recipe_id="git", enabled=True, root_path=str(folder)))
+    SESSIONS.open_for([item.id], root_overrides={item.id: str(folder)})
+    out = SESSIONS.call(item.id, "git_diff", {"repo_path": ".", "target": "main"})
+    assert out["ok"] is True
+    name, args = fake.calls[-1]
+    assert name == "git_diff"
+    assert args["target"] == "main"
+    SESSIONS.close_all()

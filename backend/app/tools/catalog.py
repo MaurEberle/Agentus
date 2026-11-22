@@ -110,6 +110,11 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
             "type": "boolean",
             "description": "Create missing parent directories for mkdir",
         },
+        "offset": {
+            "type": "integer",
+            "description": "read: first line to return, counted from 1. Use the nextOffset of the previous read to continue.",
+        },
+        "limit": {"type": "integer", "description": "read: number of lines to return from offset"},
         "head": {"type": "integer", "description": "read: return only the first N lines"},
         "tail": {"type": "integer", "description": "read: return only the last N lines"},
         "paths": {
@@ -123,7 +128,18 @@ FILE_ACCESS_SCHEMA: dict[str, Any] = {
         },
         "pattern": {
             "type": "string",
-            "description": "search: glob matched against the relative path and the file name",
+            "description": (
+                "search: glob matched against the relative path and the file name. "
+                "With text it picks which files are searched, for example *.css"
+            ),
+        },
+        "text": {
+            "type": "string",
+            "description": (
+                "search: exact text (case-sensitive) to find inside the file at path, or inside the files "
+                "below the folder at path (node_modules and .git are skipped). "
+                "Returns path, line number and line of each hit"
+            ),
         },
         "oldText": {"type": "string", "description": "edit: text to replace, must occur once"},
         "newText": {"type": "string", "description": "edit: replacement text"},
@@ -190,7 +206,15 @@ _MODEL_DESCRIPTIONS: dict[FirstPartyKind, str] = {
         "log(x) and ln(x) are natural; log(x, base) takes a base. "
         "sin, cos, tan use radians. factorial takes an integer from 0 to 20."
     ),
-    "file_access": "Read and write files under the configured root. Actions: list, stat, read (optional head or tail), read_many, write (creates missing parent folders), mkdir, delete, edit (oldText/newText or edits), move (destination), search (pattern), tree.",
+    "file_access": (
+        "Read and write files under the configured root. Actions: list, stat, read, read_many, "
+        "write (creates missing parent folders), mkdir, delete, edit (oldText/newText or edits), "
+        "move (destination), search (pattern for file names, text for text inside files), tree. "
+        "read returns one page of a file: content with the exact text of the lines startLine to endLine, "
+        "and lines with the size of the file. When the result has nextOffset, more lines follow: "
+        "read again with offset set to nextOffset. Optional offset and limit pick a line range, "
+        "head or tail the first or last N lines."
+    ),
     "terminal": "Run a command in the configured working directory. Output and runtime are limited. There is no elevation and no interactive input.",
     "zip": (
         "List or extract a .zip file under the configured root. "
@@ -306,6 +330,13 @@ def _file_access_parameters(actions: list[str] | None) -> tuple[dict[str, Any], 
     description = _MODEL_DESCRIPTIONS["file_access"]
     if actions is not None:
         description = "File actions under the configured root: " + ", ".join(chosen) + "."
+        if "read" in chosen:
+            description += (
+                " read returns one page (lines startLine to endLine of lines); "
+                "when the result has nextOffset, read again with offset set to nextOffset."
+            )
+        if "search" in chosen:
+            description += " search finds file names with pattern, or text inside files with text."
     return schema, description
 
 
@@ -321,7 +352,7 @@ def _terminal_description(
     allowed = ", ".join(programs or [])
     return (
         "Run one program and its arguments in the configured working directory. "
-        "No pipes, redirection, or other shell syntax. "
+        "No pipes, redirection, or other shell syntax, and no inline code (-c, -e, --eval). "
         f"Allowed programs: {allowed}."
     )
 

@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { TagMatch } from '@/lib/tags';
 
 export type NetworksSortKey = 'name' | 'updatedAt' | 'lastUsedAt';
+/** Which networks the list shows by how they run. */
+export type NetworksKindFilter = 'orchestrator' | 'all' | 'linear';
 export type NetworksSortDir = 'asc' | 'desc';
 
 const FILTER_KEY = 'agentus.networks.filters';
@@ -14,7 +16,7 @@ type NetworkFilters = {
   tagFilter: string[];
   tagMode: TagMatch;
   onlyValid: boolean;
-  onlyActive: boolean;
+  kind: NetworksKindFilter;
 };
 
 const FILTER_DEFAULTS: NetworkFilters = {
@@ -24,7 +26,7 @@ const FILTER_DEFAULTS: NetworkFilters = {
   tagFilter: [],
   tagMode: 'or',
   onlyValid: false,
-  onlyActive: false,
+  kind: 'all',
 };
 
 function normalizeFilters(raw: Partial<NetworkFilters> | null | undefined): NetworkFilters {
@@ -39,7 +41,7 @@ function normalizeFilters(raw: Partial<NetworkFilters> | null | undefined): Netw
     tagFilter,
     tagMode,
     onlyValid: raw?.onlyValid === true,
-    onlyActive: raw?.onlyActive === true,
+    kind: raw?.kind === 'orchestrator' || raw?.kind === 'linear' ? raw.kind : 'all',
   };
 }
 
@@ -69,7 +71,7 @@ function filterOf(state: NetworkFilters): NetworkFilters {
     tagFilter: state.tagFilter,
     tagMode: state.tagMode,
     onlyValid: state.onlyValid,
-    onlyActive: state.onlyActive,
+    kind: state.kind,
   };
 }
 
@@ -82,7 +84,7 @@ type NetworksUiStore = {
   tagFilter: string[];
   tagMode: TagMatch;
   onlyValid: boolean;
-  onlyActive: boolean;
+  kind: NetworksKindFilter;
   setQuery: (query: string) => void;
   setSortKey: (key: NetworksSortKey) => void;
   toggleSortDir: () => void;
@@ -90,7 +92,7 @@ type NetworksUiStore = {
   clearTags: () => void;
   setTagMode: (mode: TagMatch) => void;
   setOnlyValid: (value: boolean) => void;
-  setOnlyActive: (value: boolean) => void;
+  setKind: (value: NetworksKindFilter) => void;
   select: (ids: string[], anchorId?: string | null) => void;
   clearSelection: () => void;
   pruneSelection: (existingIds: string[]) => void;
@@ -111,7 +113,7 @@ export const useNetworksUi = create<NetworksUiStore>((set, get) => ({
   tagFilter: storedFilters.tagFilter,
   tagMode: storedFilters.tagMode,
   onlyValid: storedFilters.onlyValid,
-  onlyActive: storedFilters.onlyActive,
+  kind: storedFilters.kind,
   setQuery: (query) => set({ query }),
   setSortKey: (sortKey) =>
     set((state) => ({
@@ -135,7 +137,7 @@ export const useNetworksUi = create<NetworksUiStore>((set, get) => ({
   clearTags: () => set({ tagFilter: [] }),
   setTagMode: (tagMode) => set({ tagMode }),
   setOnlyValid: (onlyValid) => set({ onlyValid }),
-  setOnlyActive: (onlyActive) => set({ onlyActive }),
+  setKind: (kind) => set({ kind }),
   select: (selectedIds, anchorId) => {
     const current = get();
     const nextAnchor = anchorId === undefined ? current.anchorId : anchorId;

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 
+from app.common.secrets import forget_secrets, remember_secret
 from app.db.errors import VaultError
 
 _SERVICE = "Agentus-Network"
@@ -23,6 +24,7 @@ def use_memory() -> None:
 
 def reset_memory() -> None:
     _memory.clear()
+    forget_secrets()
 
 
 def _is_memory() -> bool:
@@ -36,6 +38,8 @@ def _username(credential_id: str) -> str:
 
 
 def put(credential_id: str, secret: str) -> None:
+    # Every secret that passes through the vault is masked by exact value from now on.
+    remember_secret(secret)
     if _is_memory():
         _memory[credential_id] = secret
         return
@@ -49,13 +53,17 @@ def put(credential_id: str, secret: str) -> None:
 
 def get(credential_id: str) -> str | None:
     if _is_memory():
-        return _memory.get(credential_id)
+        secret = _memory.get(credential_id)
+        remember_secret(secret)
+        return secret
     try:
         import keyring
 
-        return keyring.get_password(_SERVICE, _username(credential_id))
+        secret = keyring.get_password(_SERVICE, _username(credential_id))
     except Exception as exc:
         raise VaultError("vault.error") from exc
+    remember_secret(secret)
+    return secret
 
 
 def delete(credential_id: str) -> None:

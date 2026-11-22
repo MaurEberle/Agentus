@@ -26,7 +26,7 @@ def test_last_agent_result_returns_to_the_orchestrator() -> None:
     assert "Hallo" in blob
 
 
-def test_orchestrator_tool_lines_hide_the_result() -> None:
+def test_orchestrator_tool_lines_keep_latest_results_as_data() -> None:
     memory = RunMemory()
     memory.note_own_tool(
         ToolEvent(name="file_access", arguments="{}", ok=True, result="ROHER-LISTE"),
@@ -37,8 +37,9 @@ def test_orchestrator_tool_lines_hide_the_result() -> None:
         None,
     )
     blob = memory.prompt_text("system")
-    assert "ROHER-LISTE" not in blob
-    assert "42" not in blob
+    # O9: the latest own results stay visible, marked as data.
+    assert '<tool_result name="file_access">\nROHER-LISTE' in blob
+    assert '<tool_result name="calculator">\n42' in blob
     assert ". list ok" in blob
     assert "calculator ok" in blob
     assert memory.to_dict()["ownTools"][0]["result"] == "ROHER-LISTE"
@@ -73,7 +74,8 @@ def test_anomaly_text_only_when_the_failed_file_has_no_path() -> None:
     record.files.append(FileFact(tool="file_access", action="write", path="", ok=False))
     memory.set_anomaly(record)
     blob = memory.prompt_text("system")
-    assert "text:\n" + ("X" * 400) in blob
+    assert "text:\n<agent_result" in blob
+    assert ("X" * 400) in blob
     assert "X" * 401 not in blob
 
     other = RunMemory()
@@ -243,3 +245,45 @@ def test_file_fact_records_mcp_write() -> None:
     assert listed is not None
     assert listed.action == "list"
     assert file_fact("calculator", {}, {"result": 1}, ok=True) is None
+
+
+def test_source_none_sends_only_the_task() -> None:
+    """N4: with one stored text, "none" is the way to send a task without it."""
+    memory = RunMemory()
+    writer = memory.begin_call("w", "Autor", "schreib", False)
+    writer.text = "QUELLTEXT"
+    writer.finished = True
+    roster = [("w", "Autor"), ("t", "Save")]
+    assert memory.resolve_source("", roster).auto is True
+    choice = memory.resolve_source("none", roster)
+    assert choice.text == "" and not choice.missing and choice.auto is False
+    assert "QUELLTEXT" not in memory.agent_message("t", "neue Aufgabe", True, choice.text)
+    named = memory.resolve_source("None", [("x", "None")])
+    assert named.missing == "None"
+
+
+def test_stored_memory_bounds_arguments_and_texts() -> None:
+    """N5: write arguments with whole files and long agent texts went into runs.memory uncut."""
+    from app.run.memory import ToolEvent
+
+    memory = RunMemory()
+    memory.add_user("u" * 20_000)
+    record = memory.begin_call("w", "Autor", "t" * 20_000, True)
+    record.text = "x" * 50_000
+    record.tools.append(
+        ToolEvent(
+            name="file_access",
+            arguments='{"action":"write","path":"a.txt","content":"' + "y" * 100_000 + ' sk-abcdefghijklmnopqrstuvwx"}',
+            ok=True,
+            result="ok",
+        )
+    )
+    stored = memory.to_dict()
+    call = stored["calls"][0]
+    assert len(call["text"]) < 9_000
+    assert len(call["task"]) < 9_000
+    assert all(len(turn["text"]) < 9_000 for turn in stored["turns"])
+    arguments = call["tools"][0]["arguments"]
+    assert len(arguments) < 2_200
+    assert "omitted" in arguments
+    assert "sk-abcdefghijklmnopqrstuvwx" not in arguments

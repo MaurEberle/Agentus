@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import logging
+
 from pathlib import Path
 
 from app.mcp.models import McpToolInfo
 
+log = logging.getLogger("agentus.mcp.excel")
+
 _SUFFIXES = {".xlsx", ".xlsm", ".xltx", ".xltm"}
 _MAX_FILES = 40
+_ZIP_MAGIC = b"PK"
+_WRITE_TOOL = "excel_write_to_sheet"
 
 
 def list_workbooks(root: str | Path) -> list[Path]:
@@ -58,7 +64,7 @@ def folder_listing_text(root: str | Path) -> str:
     lines = "\n".join(str(path) for path in files)
     return (
         "That path is a folder, not a workbook. "
-        "Call this tool again with fileAbsolutePath set to one of these files:\n"
+        "Set fileAbsolutePath to one of these workbook files:\n"
         + lines
     )
 
@@ -84,6 +90,55 @@ def annotate_excel_tools(tools: list[McpToolInfo], root: str | None) -> list[Mcp
             McpToolInfo(name=tool.name, description=description, input_schema=schema)
         )
     return out
+
+
+def _is_zip_workbook(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        with path.open("rb") as handle:
+            return handle.read(2) == _ZIP_MAGIC
+    except OSError:
+        return False
+
+
+def ensure_workbook(path: Path) -> bool:
+    """Write a minimal workbook when the target is missing, empty, or not a zip.
+
+    ``excel_write_to_sheet`` only adds a sheet inside an existing workbook.
+    A zero-byte or text file named ``.xlsx`` makes that open fail with
+    ``zip: not a valid zip file``.
+    """
+    if path.suffix.lower() not in _SUFFIXES or path.is_dir() or _is_zip_workbook(path):
+        return False
+    if path.is_file() and path.stat().st_size > 0:
+        # Not a workbook but not empty either (often CSV text): keep it next to the new file.
+        backup = path.with_name(path.name + ".bak")
+        backup.write_bytes(path.read_bytes())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    from openpyxl import Workbook
+
+    book = Workbook()
+    book.save(path)
+    return True
+
+
+def prepare_excel_write(tool_name: str, arguments: dict) -> bool:
+    if tool_name != _WRITE_TOOL:
+        return False
+    raw = arguments.get("fileAbsolutePath") or arguments.get("filepath") or arguments.get("path") or ""
+    text = str(raw).strip()
+    if not text:
+        return False
+    path = Path(text)
+    # Only confined absolute paths: a relative one would land in the app's working folder.
+    if not path.is_absolute() or path.is_dir():
+        return False
+    try:
+        return ensure_workbook(path)
+    except Exception:
+        log.warning("could not prepare workbook %s", path, exc_info=True)
+        return False
 
 
 def folder_tool_result(arguments: dict, root: str | None) -> str | None:

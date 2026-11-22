@@ -10,11 +10,11 @@ import {
   mergeRunSnapshot,
   upsertChat,
 } from '@/modules/monitoring/model/graph';
-import { maskLog, maskText } from '@/modules/monitoring/model/mask';
+import type { LogView } from '@/modules/monitoring/model/logView';
+import { maskLog } from '@/modules/monitoring/model/mask';
 import type {
   ChatMessage,
   LogEvent,
-  LogLevel,
   MonitoringEvent,
   ResourceSnapshot,
   RunSnapshot,
@@ -32,7 +32,7 @@ type MonitoringState = {
   adapterErrorKey: string | null;
   lastErrorMessage: string | null;
   tab: MonitoringTab;
-  logLevelMin: LogLevel;
+  logView: LogView;
   logQuery: string;
   logNodeId: string | null;
   logErrorsOnly: boolean;
@@ -44,7 +44,7 @@ type MonitoringState = {
   pendingChatFocus: boolean;
   setTab: (tab: MonitoringTab) => void;
   setPendingChatFocus: (value: boolean) => void;
-  setLogLevelMin: (level: LogLevel) => void;
+  setLogView: (view: LogView) => void;
   setLogQuery: (query: string) => void;
   setLogNodeId: (id: string | null) => void;
   setLogErrorsOnly: (value: boolean) => void;
@@ -130,7 +130,7 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   adapterErrorKey: null,
   lastErrorMessage: null,
   tab: 'chat',
-  logLevelMin: 'info',
+  logView: 'important',
   logQuery: '',
   logNodeId: null,
   logErrorsOnly: false,
@@ -145,7 +145,7 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
     set({ tab });
   },
   setPendingChatFocus: (pendingChatFocus) => set({ pendingChatFocus }),
-  setLogLevelMin: (logLevelMin) => set({ logLevelMin }),
+  setLogView: (logView) => set({ logView }),
   setLogQuery: (logQuery) => set({ logQuery }),
   setLogNodeId: (logNodeId) => set({ logNodeId }),
   setLogErrorsOnly: (logErrorsOnly) => set({ logErrorsOnly }),
@@ -291,15 +291,14 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
     let messages = current.chatMessages;
     let generating = current.chatGenerating;
     if (evt.message) {
-      const message: ChatMessage = {
-        ...evt.message,
-        content: maskText(evt.message.content),
-      };
+      // N11: the server masks chat lines (narrowly); a second, broad mask here
+      // changed harmless code like `token = get_token()`.
+      const message: ChatMessage = evt.message;
       messages = upsertChat(messages, message);
       generating = message.role === 'user' ? true : false;
     }
     if (evt.delta && evt.id) {
-      messages = applyChatDelta(messages, evt.runId, evt.id, maskText(evt.delta));
+      messages = applyChatDelta(messages, evt.runId, evt.id, evt.delta);
       generating = true;
     }
     useMonitoringStore.setState({ chatMessages: messages, chatGenerating: generating });
@@ -337,20 +336,20 @@ export function applyMonitoringEvent(evt: MonitoringEvent) {
       toastOnce(stepKey, 'monitoring.notify.stepFailed', 'error');
     }
     if (!step) lastStepKey = '';
-    const incoming = merged.chat?.messages ?? [];
     let chatMessages = current.chatMessages;
     let chatGenerating = current.chatGenerating;
     if (isNew) {
-      chatMessages = incoming;
+      chatMessages = merged.chat?.messages ?? [];
       chatGenerating = Boolean(merged.chat?.generating);
-    } else if (incoming.length > 0) {
+    } else if (evt.run.chat) {
+      // N12: token and node updates carry no chat; only a snapshot with chat is merged.
       let next = chatMessages;
-      for (const message of incoming) {
-        next = upsertChat(next, { ...message, content: maskText(message.content) });
+      for (const message of evt.run.chat.messages ?? []) {
+        next = upsertChat(next, message);
       }
       chatMessages = next;
-      if (typeof merged.chat?.generating === 'boolean') {
-        chatGenerating = merged.chat.generating;
+      if (typeof evt.run.chat.generating === 'boolean') {
+        chatGenerating = evt.run.chat.generating;
       }
     }
     useMonitoringStore.setState({

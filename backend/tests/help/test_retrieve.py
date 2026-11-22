@@ -60,14 +60,14 @@ def test_retrieve_filters_by_locale(api_env, monkeypatch) -> None:
             ),
             HelpRagChunk(
                 id="2",
-                source="fr-guide",
+                source="es-guide",
                 section="intro",
                 text="aaa",
                 file_hash="h",
                 embedding=[1.0, 0.0],
                 embedding_model_id="nomic-embed-text",
                 dimension=2,
-                locale="fr",
+                locale="es",
             ),
         ]
     )
@@ -75,8 +75,8 @@ def test_retrieve_filters_by_locale(api_env, monkeypatch) -> None:
         "app.runtime.embeddings.embed",
         lambda req: EmbedResult(vectors=[[1.0, 0.0]], dimension=2, model=req.model),
     )
-    french = retrieve("query", locale="fr")
-    assert [hit.title for hit in french] == ["fr-guide"]
+    spanish = retrieve("query", locale="es")
+    assert [hit.title for hit in spanish] == ["es-guide"]
     german = retrieve("query", locale="de")
     assert [hit.title for hit in german] == ["de-guide"]
 

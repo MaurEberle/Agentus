@@ -2,7 +2,7 @@
 
 Agentus Network is a **local desktop app**. You build networks of agents, language models, and tools on this PC, start **one** run, and watch it live. The UI belongs to the app (its own window), not Chrome and not a `file://` page.
 
-Ollama is a **separate service**. Closing or uninstalling Agentus Network does not stop Ollama and does not delete models. If Ollama is installed on this PC, the address in Settings is local, and the service is down, the app starts it when the window opens.
+Agentus runs its **own copy** of Ollama on its own port, with the same model folder as the installed Ollama. The copy ends with the app. The installed Ollama and its models stay untouched, also when you uninstall. When the Ollama app updates itself, Agentus keeps running: the app reports the newer version and switches to it at the press of a button, restarting itself for that. In the **External Ollama** mode the app uses the address from Settings; if it is local and the service is down, the app starts an installed Ollama as before.
 
 ## Window and navigation
 
@@ -22,7 +22,7 @@ Drag the logo or empty header to move the window. Start, Stop, quick select, and
 
 ## First hour
 
-1. Ollama must be reachable. The app starts a local service itself when it is installed but down. Setup can install Ollama, start it briefly in the background, and pull the small models `nomic-embed-text` and `llama3.2:1b` — only if Ollama answers. A silent setup without the model switch pulls nothing. A failed download still finishes setup successfully.
+1. Ollama must be installed. On first start the app copies it once into its folder (about 130 MB to 1.2 GB, depending on the graphics card) and starts the copy itself. Setup can install Ollama, start it briefly in the background, and pull the small models `nomic-embed-text` and `llama3.2:1b` — only if Ollama answers. A silent setup without the model switch pulls nothing. A failed download still finishes setup successfully.
 2. Under **Settings → Runtime**, ping the connection; the model list should not be empty.
 3. Under **Settings → Help chatbot**, set provider and chat model (default: Ollama + `llama3.2:1b`). Embeddings stay a **different** model (`nomic-embed-text`).
 4. In the **library** or editor, create a network, save it, and set it **active** in quick select.
@@ -61,11 +61,11 @@ With no active network, nothing starts. Fix an invalid network (validation error
 
 While the active network is running, **that** document is read-only in the editor. You can still view other networks; deleting the running network in the library is blocked.
 
-Closing the window ends the run and the app. Ollama keeps running.
+Closing the window ends the run, the app and its Ollama copy. The installed Ollama keeps running.
 
 ## Help chatbot is not network chat
 
-Bottom right: the bubble is **in-app help** (this guide, graph terms, optional web search). Onboarding explains that the first time you open it.
+Bottom right: the bubble is **in-app help** (this guide, graph terms, optional web search). Onboarding explains that the first time you open it. The help remembers the last three questions and answers, so a follow-up like “and how do I do that?” refers to them. Clearing the help history in Settings starts it fresh.
 
 In **Monitoring**, the **Chat** tab is **run chat** for the graph (Chat node). Without an orchestrator it is the input to the agents. With an orchestrator it is the conversation: it can ask you before it calls agents.
 

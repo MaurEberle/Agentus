@@ -253,7 +253,7 @@ def test_abort_done_partial(api_env, monkeypatch) -> None:
     parsed = _parse(list(send_stream("q")))
     names = [n for n, _ in parsed]
     assert "done" in names
-    assert "500" not in "".join(d for _, d in parsed)
+    assert "error" not in names
     done = next(d for n, d in parsed if n == "done")
     assert "hi" in done
     assert "there" not in done
@@ -346,3 +346,43 @@ def test_masked_secret_persisted(api_env, monkeypatch) -> None:
     stored = list_messages()
     assert any("sk-***" in row.content for row in stored)
     assert all("sk-abcdefghijkl" not in row.content for row in stored)
+
+
+def test_follow_up_gets_the_last_answered_exchanges(api_env, monkeypatch) -> None:
+    """N10: every question went alone to the model; follow-ups had no reference."""
+    from app.db.engine import utc_now
+    from app.db.help_chat import HelpMessageRow, insert_message
+    from app.help import pipeline
+
+    init()
+    _ready_index()
+    monkeypatch.setattr(
+        "app.help.pipeline.retrieve_scored",
+        lambda q, locale=None: [(1.0, HelpSource(kind="rag", title="g", section="s"), "Block.")],
+    )
+    stamp = utc_now()
+    rows = [("u0", "user", "alt"), ("a0", "assistant", "alte Antwort")]
+    for n in range(1, 4):
+        rows += [(f"u{n}", "user", f"Frage {n}"), (f"a{n}", "assistant", f"Antwort {n} " + "x" * 3000)]
+    rows.append(("u9", "user", "abgebrochen ohne Antwort"))
+    for index, (row_id, role, content) in enumerate(rows):
+        insert_message(
+            HelpMessageRow(id=row_id, role=role, content=content, created_at=f"{stamp}-{index:02d}", sources=None)
+        )
+    captured: list[CompletionRequest] = []
+
+    def _stream(req: CompletionRequest):
+        captured.append(req)
+        yield StreamEvent(kind="delta", text="ok")
+        yield StreamEvent(kind="done")
+
+    monkeypatch.setattr("app.runtime.completions.complete_stream", _stream)
+    list(send_stream("und wie mache ich das?", locale="de"))
+    messages = captured[0].messages
+    assert [m.role for m in messages] == ["system", "user", "assistant", "user", "assistant", "user", "assistant", "user"]
+    assert [m.content for m in messages[1:7:2]] == ["Frage 1", "Frage 2", "Frage 3"]
+    assert messages[2].content.startswith("Antwort 1")
+    assert len(messages[2].content) <= pipeline.HISTORY_CHARS + 2
+    assert "abgebrochen" not in " ".join(m.content or "" for m in messages)
+    assert "und wie mache ich das?" in messages[-1].content
+    assert "Earlier turns" in messages[0].content

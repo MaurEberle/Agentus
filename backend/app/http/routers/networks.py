@@ -78,6 +78,13 @@ def duplicate(network_id: str) -> dict[str, Any]:
     return service.duplicate(network_id)
 
 
+@router.post("/networks/validate")
+def validate_unsaved(body: dict[str, Any]) -> dict[str, Any]:
+    """M24: "Validate" on a network that was never saved has no id yet."""
+    document = body.get("document") if "document" in body and "nodes" not in body else body
+    return service.validate_document_body(document)
+
+
 @router.post("/networks/{network_id}/validate")
 def validate(network_id: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
     document = None

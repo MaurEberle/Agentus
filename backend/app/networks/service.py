@@ -35,22 +35,36 @@ def _running_id() -> str | None:
     return None
 
 
-def _item(row: NetworkRow, *, last_run_id: str | None) -> dict[str, Any]:
+def _list_context() -> dict[str, Any]:
+    """What every list item needs and no item changes (N9): read once per list."""
+    try:
+        data_dir: str | None = str(get_bootstrap().data_dir)
+    except Exception:
+        data_dir = None
+    return {
+        "data_dir": data_dir,
+        "kwargs": validation_kwargs(),
+        "active_id": load_settings().active_network_id,
+        "running": _running_id(),
+    }
+
+
+def _item(
+    row: NetworkRow, *, last_run_id: str | None, context: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    ctx = context or _list_context()
     doc = AgentNetworkDocument.model_validate(row.document) if row.document else None
     errors = []
     status = "unknown"
     try:
-        data_dir = str(get_bootstrap().data_dir)
-        if doc:
+        if doc and ctx["data_dir"] is not None:
             errors = [
                 e.model_dump(by_alias=True)
-                for e in validate_document(doc, data_dir=data_dir, **validation_kwargs())
+                for e in validate_document(doc, data_dir=ctx["data_dir"], **ctx["kwargs"])
             ]
             status = "invalid" if errors else "valid"
     except Exception:
         status = "unknown"
-    settings = load_settings()
-    running = _running_id()
     return {
         "id": row.id,
         "name": row.name,
@@ -60,10 +74,12 @@ def _item(row: NetworkRow, *, last_run_id: str | None) -> dict[str, Any]:
         "lastUsedAt": row.last_used_at,
         "nodeCount": len(doc.nodes) if doc else 0,
         "edgeCount": len(doc.edges) if doc else 0,
+        # How the network runs: a chief that delegates, or a chain of steps (list filter).
+        "kind": "orchestrator" if doc and any(node.type == "orchestrator" for node in doc.nodes) else "linear",
         "validationStatus": status,
         "validationErrors": errors or None,
-        "isActive": settings.active_network_id == row.id,
-        "isRunning": running == row.id,
+        "isActive": ctx["active_id"] == row.id,
+        "isRunning": ctx["running"] == row.id,
         "lastRunId": last_run_id,
     }
 
@@ -71,7 +87,8 @@ def _item(row: NetworkRow, *, last_run_id: str | None) -> dict[str, Any]:
 def list_network_items() -> list[dict[str, Any]]:
     rows = list_networks()
     latest = latest_run_id_by_network()
-    return [_item(row, last_run_id=latest.get(row.id)) for row in rows]
+    context = _list_context()
+    return [_item(row, last_run_id=latest.get(row.id), context=context) for row in rows]
 
 
 def get_network_document(network_id: str) -> dict[str, Any]:
@@ -211,6 +228,18 @@ def validate_network(network_id: str, document: dict[str, Any] | None = None) ->
         if row is None:
             raise AppError("networks.notFound", status_code=404)
         doc = AgentNetworkDocument.model_validate(row.document)
+    errors = validate_document(doc, data_dir=data_dir, **validation_kwargs())
+    return {
+        "valid": not errors,
+        "errors": [e.model_dump(by_alias=True) for e in errors],
+    }
+
+
+def validate_document_body(document: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(document, dict):
+        raise AppError("networks.invalidDocument", status_code=400)
+    data_dir = str(get_bootstrap().data_dir)
+    doc = AgentNetworkDocument.model_validate(document)
     errors = validate_document(doc, data_dir=data_dir, **validation_kwargs())
     return {
         "valid": not errors,

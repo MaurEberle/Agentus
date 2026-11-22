@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CircleAlert, CircleCheck, Info, Trash2, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { formatRelative } from '@/lib/relativeTime';
 import { cn } from '@/lib/utils';
+import { OLLAMA_RUNTIME_ACTION, OLLAMA_RUNTIME_PATH } from '@/lib/ollamaRuntime';
 import { WAIT_ASK_ACTION, openRunChat } from '@/lib/waitAsk';
 import { useAppStore, type AppNotification, type NotificationVariant } from '@/store';
 
@@ -88,6 +90,7 @@ function NotificationRow({
   onRead: () => void;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const Icon = VARIANT_ICON[item.variant];
   return (
     <li>
@@ -100,6 +103,7 @@ function NotificationRow({
         onClick={() => {
           onRead();
           if (item.action === WAIT_ASK_ACTION) openRunChat();
+          if (item.action === OLLAMA_RUNTIME_ACTION) navigate(OLLAMA_RUNTIME_PATH);
         }}
       >
         <Icon className="mt-0.5 size-4 shrink-0" />

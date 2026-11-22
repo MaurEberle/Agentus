@@ -37,6 +37,51 @@ def resident_tags(
     return keep
 
 
+def network_tags(compiled: Any | None) -> set[str]:
+    """Ollama chat models of this network (agents and orchestrator)."""
+    tags: set[str] = set()
+    if compiled is None:
+        return tags
+    llms = [agent.llm for agent in (getattr(compiled, "agents", None) or {}).values()]
+    orch = getattr(compiled, "orchestrator", None)
+    if orch is not None:
+        llms.append(orch.llm)
+    for llm in llms:
+        model = (getattr(llm, "model", None) or "").strip()
+        if getattr(llm, "provider", None) == "ollama" and model:
+            tags.add(model)
+    return tags
+
+
+def release_network(settings: Any, compiled: Any | None) -> list[str]:
+    """Teardown (M3): unload this network's models only.
+
+    Models another program loaded stay; Ollama drops idle ones after its own
+    keep-alive anyway.
+    """
+    from app.runtime.ollama import list_loaded_models, tag_key, unload
+
+    keep = {tag_key(item) for item in resident_tags(settings, compiled, None)}
+    mine = {tag_key(item) for item in network_tags(compiled)}
+    dropped: list[str] = []
+    if not mine:
+        return dropped
+    try:
+        loaded = list_loaded_models()
+    except Exception:
+        return dropped
+    for name in loaded:
+        key = tag_key(name)
+        if key not in mine or key in keep:
+            continue
+        try:
+            unload(name)
+        except Exception:
+            continue
+        dropped.append(name)
+    return dropped
+
+
 def release_others(
     settings: Any,
     compiled: Any | None = None,

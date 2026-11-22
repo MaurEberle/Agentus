@@ -11,6 +11,7 @@ from app.db.paths import webview_storage_dir
 from app.http.paths import static_dir
 from app.host.bridge import ChromeHostApi, inject_chrome_host
 from app.host.geometry import MIN_H, MIN_W, start_placement
+from app.host.maximize import fit_maximize, keep_off_taskbar
 from app.host.native_frame import (
     configure_webview,
     enable_frameless_resize,
@@ -18,6 +19,7 @@ from app.host.native_frame import (
     set_window_icon,
 )
 from app.host.navigation import guard_navigation, is_allowed_url
+from app.host import restart
 from app.host.server import start_uvicorn, stop_uvicorn, wait_health
 from app.host.single_instance import WINDOW_TITLE, acquire, release
 
@@ -86,7 +88,8 @@ def on_closing(server: Any, port: int) -> bool:
     try:
         from app.run.controller import get_controller
 
-        get_controller().stop()
+        # M2: closing the app does not load the help model again.
+        get_controller().stop(closing=True)
     except Exception:
         pass
     return True
@@ -120,11 +123,13 @@ def run_host(host: str, port: int) -> None:
             shadow=True,
         )
         api._window = win
+        restart.set_window(win)
 
         def _shown() -> None:
             enable_frameless_resize(win)
             set_window_icon(win, icon_path)
             guard_navigation(win, port)
+            fit_maximize(win)
             if maximized:
                 win.maximize()
 
@@ -132,9 +137,11 @@ def run_host(host: str, port: int) -> None:
             return on_closing(server, port)
 
         def _moved() -> None:
+            keep_off_taskbar(win)
             _save_geom(win)
 
         def _resized() -> None:
+            keep_off_taskbar(win)
             _save_geom(win)
 
         def _loaded() -> None:
@@ -160,6 +167,16 @@ def run_host(host: str, port: int) -> None:
         except Exception as exc:
             raise SystemExit("host.webview2.missing") from exc
     finally:
+        restart.set_window(None)
+        try:
+            from app.runtime.ollama_own import shutdown_ollama_runtime
+
+            shutdown_ollama_runtime()
+        except Exception:
+            log.debug("stopping own Ollama failed", exc_info=True)
         release()
         if server is not None:
             stop_uvicorn(server)
+        if restart.pending():
+            # The next instance waits for this process to end.
+            restart.exit_now()

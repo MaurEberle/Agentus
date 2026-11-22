@@ -14,6 +14,7 @@ from app.run.graph_models import (
     normalize_mcp_nodes,
 )
 from app.run.models import ValidationError
+from app.run.node_values import knowledge_issues, llm_issues
 from app.run.router_rules import branch_match, branch_pattern, branch_rows, pattern_error
 from app.tools.file_access_tool import is_forbidden_root
 from app.tools.kinds import FIRST_PARTY_KINDS
@@ -32,6 +33,12 @@ _IN_HANDLES = {
     "orchestrator": {"message", "llm", "tool"},
     "router": {"message"},
     "end": {"message"},
+    # N13: these only send. An edge into a chat input used to pass.
+    "chat_input": set(),
+    "llm": set(),
+    "tool": set(),
+    "mcp": set(),
+    "knowledge": set(),
 }
 
 
@@ -44,6 +51,16 @@ def _orchestrator_edge_ok(edge: GraphEdge, dst: GraphNode) -> bool:
         and dst.type == "agent"
         and edge.target_handle == "channel"
     )
+
+
+def _max_calls_ok(data: dict) -> bool:
+    """``maxCalls`` per run: absent/None is unlimited, otherwise a whole number >= 1."""
+    raw = data.get("maxCalls")
+    if raw is None:
+        return True
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        return False
+    return raw >= 1
 
 
 def _err(key: str, node_id: str | None = None) -> ValidationError:
@@ -84,6 +101,31 @@ def _orchestrator_reaches_end(doc: AgentNetworkDocument, orch_id: str, by_id: di
             (dst := by_id.get(item.target)) is not None and dst.type == "end" for item in outs
         ):
             return True
+    return False
+
+
+def _chain_starts(doc: AgentNetworkDocument) -> list[str]:
+    """Where a chain without orchestrator begins: the chat input, else agents nobody feeds."""
+    chat = next((node for node in doc.nodes if node.type == "chat_input"), None)
+    if chat is not None:
+        return [chat.id]
+    fed = {edge.target for edge in doc.edges if edge.target_handle == "message"}
+    return [node.id for node in doc.nodes if node.type == "agent" and node.id not in fed]
+
+
+def _chain_reaches_end(doc: AgentNetworkDocument, by_id: dict[str, GraphNode]) -> bool:
+    """N13: a chain that never reaches an end node runs and then fails without a reason."""
+    queue = list(_chain_starts(doc))
+    seen: set[str] = set()
+    while queue:
+        node_id = queue.pop()
+        if node_id in seen:
+            continue
+        seen.add(node_id)
+        node = by_id.get(node_id)
+        if node is not None and node.type == "end":
+            return True
+        queue.extend(edge.target for edge in doc.edges if edge.source == node_id and edge.target_handle == "message")
     return False
 
 
@@ -145,6 +187,31 @@ def _knowledge_reason(source_path: str, data_dir: str) -> str | None:
     return source_block_reason(source_path, data_dir)
 
 
+def folder_exists(path: str) -> bool:
+    """A tool folder must exist before a run; a missing one failed every call (Dev Team run, 2026-11-17)."""
+    try:
+        return Path(path).expanduser().is_dir()
+    except (OSError, ValueError):
+        return False
+
+
+def _check_tool_root(node, kind_key: str, errors: list) -> None:
+    root = str(node.data.get("rootPath") or "").strip()
+    if not root:
+        errors.append(_err(f"graph.{kind_key}.root", node.id))
+        return
+    try:
+        root_path = Path(root).expanduser()
+        if not root_path.is_absolute() or is_forbidden_root(root_path):
+            errors.append(_err(f"graph.{kind_key}.root", node.id))
+            return
+    except (ValueError, OSError):
+        errors.append(_err(f"graph.{kind_key}.root", node.id))
+        return
+    if not folder_exists(root):
+        errors.append(_err(f"graph.{kind_key}.rootMissing", node.id))
+
+
 def validate_document(
     doc: AgentNetworkDocument,
     *,
@@ -188,8 +255,19 @@ def validate_document(
         llm_in = [e for e in doc.edges if e.target == orch.id and e.target_handle == "llm"]
         if len(llm_in) != 1:
             errors.append(_err("graph.orchestrator.noLlm", orch.id))
+        has_agent = any(
+            e.source == orch.id
+            and e.target_handle == "channel"
+            and (dst := by_id.get(e.target)) is not None
+            and dst.type == "agent"
+            for e in doc.edges
+        )
+        if not has_agent:
+            errors.append(_err("graph.orchestrator.noAgents", orch.id))
     if not any(n.type == "end" for n in doc.nodes):
         errors.append(_err("graph.end.missing"))
+    elif not orchestrators and _chain_starts(doc) and not _chain_reaches_end(doc, by_id):
+        errors.append(_err("graph.chain.noEnd", chats[0].id if chats else None))
     if _has_cycle(doc):
         errors.append(_err("graph.cycle"))
 
@@ -265,6 +343,9 @@ def validate_document(
                 errors.append(_err("graph.llm.credential", node.id))
             if provider in NEEDS_CREDENTIAL and not str(node.data.get("credentialId") or "").strip():
                 errors.append(_err("graph.llm.credential", node.id))
+            errors.extend(_err(key, node.id) for key in llm_issues(node.data))
+        if (node.type in {"tool", "mcp"} or is_mcp_node(node)) and not _max_calls_ok(node.data):
+            errors.append(_err("graph.tool.maxCalls", node.id))
         if node.type == "mcp" or is_mcp_node(node):
             if not mcp_available:
                 errors.append(_err("graph.mcp.unavailable", node.id))
@@ -309,43 +390,22 @@ def validate_document(
                 pass
             elif kind and kind not in FIRST_PARTY_KINDS:
                 errors.append(_err("graph.mcp.server", node.id))
+            if kind == "http" and str(node.data.get("credentialId") or "").strip():
+                # H2: the credential is sent to the origin of this URL and nowhere else.
+                from app.tools.http_tool import credential_origin
+
+                if credential_origin(node.data) is None:
+                    errors.append(_err("graph.http.credentialUrl", node.id))
             if kind == "file_access":
-                root = str(node.data.get("rootPath") or "").strip()
-                if not root:
-                    errors.append(_err("graph.fileAccess.root", node.id))
-                else:
-                    try:
-                        root_path = Path(root).expanduser()
-                        if not root_path.is_absolute() or is_forbidden_root(root_path):
-                            errors.append(_err("graph.fileAccess.root", node.id))
-                    except (ValueError, OSError):
-                        errors.append(_err("graph.fileAccess.root", node.id))
+                _check_tool_root(node, "fileAccess", errors)
             if kind == "terminal":
-                root = str(node.data.get("rootPath") or "").strip()
-                if not root:
-                    errors.append(_err("graph.terminal.root", node.id))
-                else:
-                    try:
-                        root_path = Path(root).expanduser()
-                        if not root_path.is_absolute() or is_forbidden_root(root_path):
-                            errors.append(_err("graph.terminal.root", node.id))
-                    except (ValueError, OSError):
-                        errors.append(_err("graph.terminal.root", node.id))
+                _check_tool_root(node, "terminal", errors)
                 mode = str(node.data.get("terminalMode") or "restricted").strip().lower()
                 programs = node.data.get("terminalPrograms")
                 if mode != "unrestricted" and isinstance(programs, list) and not programs:
                     errors.append(_err("graph.terminal.programs", node.id))
             if kind == "zip":
-                root = str(node.data.get("rootPath") or "").strip()
-                if not root:
-                    errors.append(_err("graph.zip.root", node.id))
-                else:
-                    try:
-                        root_path = Path(root).expanduser()
-                        if not root_path.is_absolute() or is_forbidden_root(root_path):
-                            errors.append(_err("graph.zip.root", node.id))
-                    except (ValueError, OSError):
-                        errors.append(_err("graph.zip.root", node.id))
+                _check_tool_root(node, "zip", errors)
         if node.type == "knowledge":
             path = str(node.data.get("sourcePath") or "")
             reason = _knowledge_reason(path, data_dir)
@@ -355,6 +415,7 @@ def validate_document(
                 errors.append(_err("graph.knowledge.dataDir", node.id))
             elif reason:
                 errors.append(_err("graph.knowledge.path", node.id))
+            errors.extend(_err(key, node.id) for key in knowledge_issues(node.data))
     return errors
 
 

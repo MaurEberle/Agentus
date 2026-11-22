@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
@@ -14,14 +16,61 @@ from pydantic import Field
 
 from app.common.http import client
 from app.http.app import ApiModel
-from app.runtime.errors import RuntimeApiError, is_transport_error, raise_for_status, raise_transport, response_json
+from app.runtime.errors import (
+    RuntimeApiError,
+    is_transport_error,
+    raise_for_status,
+    raise_transport,
+    response_json,
+    retry_after_seconds,
+)
 from app.runtime.ollama import list_ollama_models, tag_key
 
 HUB = "https://huggingface.co"
 _CACHE: dict[str, tuple[float, tuple[list[dict[str, Any]], str | None]]] = {}
 _CACHE_SEC = 60.0
-_FLAG_CACHE: dict[str, tuple[float, tuple[bool, bool, bool]]] = {}
-_FLAG_SEC = 600.0
+_CACHE_MAX = 200
+_CACHE_LOCK = threading.Lock()
+_HUB_TIMEOUT = 12.0  # one Hub call
+_SEARCH_SECONDS = 25.0  # what one search may spend reading the Hub
+# Without a token the Hub allows 500 calls in 5 minutes ("ratelimit-policy" header). After a 429
+# nothing is sent until the window resets, or every call would only stretch the block.
+_COOLDOWN = {"until": 0.0}
+_COOLDOWN_MAX = 300.0
+_RATELIMIT_RESET = re.compile(r"[;,]\s*t=(\d+)")
+# Asked with every search page, so sorting, filtering and the tools/thinking/MoE marks need no
+# call per model. The chat template is read once and dropped (``slim_row``).
+_EXPAND = (
+    "downloads",
+    "likes",
+    "pipeline_tag",
+    "tags",
+    "gguf",
+    "trendingScore",
+    "lastModified",
+    "createdAt",
+    "private",
+    "gated",
+    "disabled",
+)
+_ROW_KEEP = (
+    "id",
+    "modelId",
+    "pipeline_tag",
+    "downloads",
+    "likes",
+    "trendingScore",
+    "lastModified",
+    "createdAt",
+    "private",
+    "gated",
+    "disabled",
+)
+_HUB_ERRORS = {
+    "runtime.timeout": "models.hub.timeout",
+    "runtime.unreachable": "models.hub.unreachable",
+    "runtime.rateLimited": "models.hub.rateLimited",
+}
 _PAGE_SIZES = (10, 20, 30, 50, 100)
 _DEFAULT_PAGE_SIZE = 30
 _NEXT_LINK = re.compile(r'<([^>]+)>;\s*rel="next"')
@@ -33,8 +82,10 @@ _PULL = re.compile(
     r"^hf\.co/[A-Za-z0-9][A-Za-z0-9._-]{0,80}/[A-Za-z0-9][A-Za-z0-9._-]{0,120}:[A-Za-z0-9][A-Za-z0-9._+-]{0,180}$"
 )
 
+# "text" is every chat model, those that also see images included; the "vision" capability
+# (Sehen) picks or drops those. "vision" stays as a type for older requests.
 PIPELINES = {
-    "text": ("text-generation",),
+    "text": ("text-generation", "image-text-to-text"),
     "embed": ("feature-extraction", "sentence-similarity"),
     "vision": ("image-text-to-text",),
 }
@@ -52,7 +103,7 @@ def pipeline_tags(pipeline: str) -> tuple[str, ...]:
     """UI keys, comma-separated. Empty or ``all`` means every type."""
     keys = [part.strip() for part in pipeline.split(",") if part.strip() and part.strip() != "all" and part.strip() != "moe"]
     if not keys:
-        keys = ["text", "embed", "vision"]
+        keys = ["text", "embed"]
     tags: list[str] = []
     seen: set[str] = set()
     for key in keys:
@@ -108,46 +159,21 @@ SORTS = {
     "likes": "likes",
     "trending": "trendingScore",
     "modified": "lastModified",
+    "new": "createdAt",
 }
 
 
 def hf_sort_key(sort: str) -> str:
-    """Hub names. Name is ordered locally, so the request stays on downloads."""
-    if sort == "name":
-        return "downloads"
+    """Hub names. The Hub sorts these, and only descending; anything else is downloads."""
     return SORTS.get(sort, "downloads")
 
-_REGISTRY_HOSTS = frozenset({"hf.co", "huggingface.co", "www.huggingface.co"})
 
-
-def display_model_name(raw: str) -> str:
-    """Same visible name as frontend/src/lib/modelName.ts. The registry host is not part of it."""
-    text = raw.strip()
-    slash = text.rfind("/")
-    colon = text.rfind(":")
-    path = text
-    suffix = ""
-    if colon > slash:
-        path = text[:colon]
-        suffix = text[colon + 1 :]
-    parts = [part for part in path.split("/") if part]
-    while len(parts) > 1 and parts[0].lower() in _REGISTRY_HOSTS:
-        del parts[0]
-    repo = parts[-1] if parts else path
-    if suffix and suffix.lower() != "latest":
-        return f"{repo}:{suffix}"
-    return repo
-
-
-def order_hits(items: list[HubHit], sort: str, *, ascending: bool) -> None:
-    """Name is ordered here. The Hub only sorts downloads, likes, trend, and date, and only descending."""
-    if sort == "name":
-        items.sort(key=lambda item: (display_model_name(item.id).casefold(), item.id.casefold()))
-        if not ascending:
-            items.reverse()
-        return
-    if ascending:
-        items.reverse()
+def sort_value(row: dict[str, Any], sort_key: str) -> float | str:
+    """The value the Hub sorted a row by, so rows of several tasks merge in the same order."""
+    value = row.get(sort_key)
+    if sort_key in ("lastModified", "createdAt"):
+        return value if isinstance(value, str) else ""
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0.0
 
 
 class HubHit(ApiModel):
@@ -160,6 +186,10 @@ class HubHit(ApiModel):
     thinking: bool = False
     vision: bool = False
     moe: bool = False
+    # From the GGUF header in the listing: "27B", the raw weight count, and the context window.
+    parameters: str | None = None
+    parameter_count: int | None = Field(default=None, alias="parameterCount")
+    context_length: int | None = Field(default=None, alias="contextLength")
 
 
 class HubSearchResponse(ApiModel):
@@ -168,6 +198,8 @@ class HubSearchResponse(ApiModel):
     has_next: bool = Field(default=False, alias="hasNext")
     next_cursor: str | None = Field(default=None, alias="nextCursor")
     message_key: str | None = Field(default=None, alias="messageKey")
+    # Seconds until the Hub takes calls again, with models.hub.rateLimited.
+    retry_after: int | None = Field(default=None, alias="retryAfter")
 
 
 class QuantFile(ApiModel):
@@ -204,6 +236,7 @@ class HubFilesResponse(ApiModel):
     reason: str | None = None
     quants: list[QuantFile] = Field(default_factory=list)
     message_key: str | None = Field(default=None, alias="messageKey")
+    retry_after: int | None = Field(default=None, alias="retryAfter")
 
 
 def valid_repo_id(repo_id: str) -> bool:
@@ -301,18 +334,19 @@ def flags_from_card(info: dict[str, Any], model_id: str = "") -> tuple[bool, boo
     return tools, thinking, vision, is_moe(model_id, info)
 
 
-def model_flags(model_id: str) -> tuple[bool, bool, bool, bool]:
-    cached = _FLAG_CACHE.get(model_id)
-    now = time.monotonic()
-    if cached and now - cached[0] < _FLAG_SEC:
-        return cached[1]
-    try:
-        info = _get_json(f"{HUB}/api/models/{model_id}")
-    except RuntimeApiError:
-        return False, False, False, moe_from_name(model_id)
-    flags = flags_from_card(info if isinstance(info, dict) else {}, model_id)
-    _FLAG_CACHE[model_id] = (now, flags)
-    return flags
+def slim_row(row: dict[str, Any]) -> dict[str, Any]:
+    """What a search keeps of a Hub row: the sort and filter fields and the flags, not the template."""
+    model_id = row.get("modelId") or row.get("id")
+    slim = {key: row[key] for key in _ROW_KEEP if key in row}
+    slim["flags"] = flags_from_card(row, model_id if isinstance(model_id, str) else "")
+    gguf = row.get("gguf") if isinstance(row.get("gguf"), dict) else {}
+    total = gguf.get("total")
+    context = gguf.get("context_length")
+    if isinstance(total, int) and not isinstance(total, bool) and total > 0:
+        slim["params"] = total
+    if isinstance(context, int) and not isinstance(context, bool) and context > 0:
+        slim["context"] = context
+    return slim
 
 
 def template_flags(template: str, tags: list[str]) -> tuple[bool, bool]:
@@ -344,39 +378,6 @@ def cursor_from_link(header: str | None) -> str | None:
     return cursor
 
 
-def pack_cursors(cursors: list[str | None]) -> str | None:
-    if all(item is None for item in cursors):
-        return None
-    if len(cursors) == 1:
-        return cursors[0]
-    raw = base64.urlsafe_b64encode(json.dumps(cursors).encode()).decode().rstrip("=")
-    return f"v1.{raw}"
-
-
-def unpack_cursors(token: str | None, count: int) -> list[str | None] | None:
-    """None starts every pipeline at the first page. A list skips exhausted ones."""
-    if not token:
-        return None
-    if count == 1 and not token.startswith("v1."):
-        return [token]
-    if not token.startswith("v1."):
-        return None
-    padded = token[3:] + "=" * (-len(token[3:]) % 4)
-    try:
-        loaded = json.loads(base64.urlsafe_b64decode(padded))
-    except (ValueError, json.JSONDecodeError):
-        return None
-    if not isinstance(loaded, list) or len(loaded) != count:
-        return None
-    out: list[str | None] = []
-    for item in loaded:
-        if item is None or (isinstance(item, str) and len(item) <= 4000):
-            out.append(item if isinstance(item, str) else None)
-        else:
-            return None
-    return out
-
-
 def quant_token(filename: str) -> str:
     stem = filename.rsplit("/", 1)[-1]
     if stem.lower().endswith(".gguf"):
@@ -397,18 +398,59 @@ def keep_hub_row(row: dict[str, Any], pipelines: tuple[str, ...]) -> bool:
     return isinstance(model_id, str) and valid_repo_id(model_id)
 
 
-def _get_json(url: str) -> Any:
+def hub_cooldown() -> int:
+    """Seconds before the Hub takes calls again after a 429; 0 when it does."""
+    return max(0, math.ceil(_COOLDOWN["until"] - time.monotonic()))
+
+
+def _rate_limit_wait(headers: Any) -> float:
+    """Retry-After, else the reset of the "ratelimit" header (``"api";r=0;t=120``), else a minute."""
+    wait = retry_after_seconds(headers)
+    if wait is None:
+        found = _RATELIMIT_RESET.search(str(headers.get("ratelimit") or ""))
+        wait = float(found.group(1)) if found else 60.0
+    return min(max(wait, 1.0), _COOLDOWN_MAX)
+
+
+def hub_error(exc: RuntimeApiError) -> tuple[str, int | None]:
+    """The message key for the hub pane, and the seconds to wait when the Hub is rate limiting."""
+    key = _HUB_ERRORS.get(exc.error_key, exc.error_key)
+    wait = math.ceil(exc.retry_after) if key == "models.hub.rateLimited" and exc.retry_after else None
+    return key, wait
+
+
+def _hub_get(url: str, *, timeout: float) -> Any:
+    """One GET to the Hub. During a 429 cooldown nothing is sent."""
+    wait = hub_cooldown()
+    if wait:
+        raise RuntimeApiError("runtime.rateLimited", status=429, retry_after=wait)
     try:
-        with client(timeout_sec=20.0) as http:
+        with client(timeout_sec=timeout) as http:
             response = http.get(url)
-        raise_for_status(response)
-        return response_json(response)
-    except RuntimeApiError:
-        raise
     except Exception as exc:
         if is_transport_error(exc):
             raise_transport(exc)
         raise RuntimeApiError("models.hub.failed") from exc
+    if response.status_code == 429:
+        _COOLDOWN["until"] = max(_COOLDOWN["until"], time.monotonic() + _rate_limit_wait(response.headers))
+        raise RuntimeApiError("runtime.rateLimited", status=429, retry_after=hub_cooldown())
+    raise_for_status(response)
+    return response
+
+
+def _get_json(url: str) -> Any:
+    return response_json(_hub_get(url, timeout=20.0))
+
+
+def _remember(url: str, value: tuple[list[dict[str, Any]], str | None]) -> None:
+    now = time.monotonic()
+    with _CACHE_LOCK:
+        if len(_CACHE) >= _CACHE_MAX:
+            for key in [key for key, (at, _) in _CACHE.items() if now - at >= _CACHE_SEC]:
+                del _CACHE[key]
+            while len(_CACHE) >= _CACHE_MAX:
+                del _CACHE[next(iter(_CACHE))]
+        _CACHE[url] = (now, value)
 
 
 def _search_one(
@@ -419,8 +461,9 @@ def _search_one(
     sort: str,
     limit: int,
     cursor: str | None,
-    direction: str = "-1",
+    deadline: float | None = None,
 ) -> tuple[list[dict[str, Any]], str | None]:
+    """One page of one task, slimmed. A slow moment gets one more try; a rate limit does not."""
     params: list[tuple[str, str]] = [
         ("filter", "gguf"),
         ("pipeline_tag", pipeline),
@@ -434,42 +477,37 @@ def _search_one(
         params.append(("num_parameters", size))
     if cursor:
         params.append(("cursor", cursor))
+    params.extend(("expand[]", field) for field in _EXPAND)
     url = f"{HUB}/api/models?{urlencode(params)}"
     cached = _CACHE.get(url)
-    now = time.monotonic()
-    if cached and now - cached[0] < _CACHE_SEC:
+    if cached and time.monotonic() - cached[0] < _CACHE_SEC:
         return cached[1]
-    last: RuntimeApiError | None = None
+    response = None
     for attempt in range(2):
+        left = _HUB_TIMEOUT if deadline is None else min(_HUB_TIMEOUT, deadline - time.monotonic())
+        if left < 1.0:
+            raise RuntimeApiError("runtime.timeout")
         try:
-            with client(timeout_sec=20.0) as http:
-                response = http.get(url)
-            raise_for_status(response)
-            payload = response_json(response)
+            response = _hub_get(url, timeout=left)
             break
         except RuntimeApiError as exc:
-            last = exc
-            retry = exc.error_key in {"runtime.timeout", "runtime.unreachable", "runtime.upstream"} or exc.status == 429
-            if attempt == 0 and retry:
+            if attempt == 0 and exc.error_key in {"runtime.timeout", "runtime.unreachable", "runtime.upstream"}:
                 continue
             raise
-        except Exception as exc:
-            if is_transport_error(exc):
-                raise_transport(exc)
-            raise RuntimeApiError("models.hub.failed") from exc
-    else:
-        if last:
-            raise last
+    if response is None:
         raise RuntimeApiError("models.hub.failed")
-    rows = payload if isinstance(payload, list) else []
-    clean = [row for row in rows if isinstance(row, dict)]
-    nxt = cursor_from_link(response.headers.get("link"))
-    _CACHE[url] = (now, (clean, nxt))
-    return clean, nxt
+    payload = response_json(response)
+    rows = [slim_row(row) for row in (payload if isinstance(payload, list) else []) if isinstance(row, dict)]
+    found = (rows, cursor_from_link(response.headers.get("link")))
+    _remember(url, found)
+    return found
 
 
 _CAPABILITIES = ("tools", "thinking", "vision")
-_SCAN_PAGES = 8
+_SCAN_PAGES = 8  # Hub pages read per request beyond the first page of every task
+_VISION_PIPE = "image-text-to-text"
+_SCAN_PREFIX = "m1."
+_MAX_TAKEN = 1000
 
 
 def parse_capabilities(raw: str) -> tuple[str, ...]:
@@ -481,10 +519,40 @@ def parse_capabilities(raw: str) -> tuple[str, ...]:
     return tuple(found)
 
 
-def _matches(item: HubHit, wanted: tuple[str, ...], moe: bool = False) -> bool:
+def capability_filter(must_raw: str, never_raw: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Capabilities a model must have, and those it must not have. "Must not" wins a clash."""
+    never = parse_capabilities(never_raw)
+    must = tuple(key for key in parse_capabilities(must_raw) if key not in never)
+    return must, never
+
+
+def narrow_pipelines(
+    pipes: tuple[str, ...], must: tuple[str, ...], never: tuple[str, ...]
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """Vision is the image-text-to-text task: filter it by task instead of model by model."""
+    if "vision" in never:
+        pipes = tuple(pipe for pipe in pipes if pipe != _VISION_PIPE)
+    elif "vision" in must:
+        pipes = tuple(pipe for pipe in pipes if pipe == _VISION_PIPE)
+    return pipes, tuple(key for key in must if key != "vision"), tuple(key for key in never if key != "vision")
+
+
+def _matches(
+    item: HubHit,
+    must: tuple[str, ...],
+    never: tuple[str, ...] = (),
+    moe: bool = False,
+    min_context: int = 0,
+    skip: frozenset[str] = frozenset(),
+) -> bool:
+    """Capabilities, MoE, a minimum context (unknown counts as too short) and repos to leave out."""
     if moe and not item.moe:
         return False
-    return all(getattr(item, key) for key in wanted)
+    if min_context and (item.context_length or 0) < min_context:
+        return False
+    if skip and item.id.lower() in skip:
+        return False
+    return all(getattr(item, key) for key in must) and not any(getattr(item, key) for key in never)
 
 
 def _row_hit(row: dict[str, Any]) -> HubHit | None:
@@ -494,51 +562,65 @@ def _row_hit(row: dict[str, Any]) -> HubHit | None:
     downloads = row.get("downloads")
     likes = row.get("likes")
     tag = row.get("pipeline_tag")
+    flags = row.get("flags")
+    if not (isinstance(flags, tuple) and len(flags) == 4):
+        flags = (False, False, False, moe_from_name(model_id))
+    tools, thinking, vision, moe = flags
+    params = row.get("params")
+    context = row.get("context")
+    count = params if isinstance(params, int) and params > 0 else None
     return HubHit(
         id=model_id,
         pipeline=tag if isinstance(tag, str) else None,
         downloads=int(downloads) if isinstance(downloads, int) else 0,
         likes=int(likes) if isinstance(likes, int) else 0,
         url=f"{HUB}/{model_id}",
+        tools=bool(tools),
+        thinking=bool(thinking),
+        vision=bool(vision),
+        moe=bool(moe),
+        parameters=format_parameter_count(count) if count else None,
+        parameter_count=count,
+        context_length=context if isinstance(context, int) and context > 0 else None,
     )
 
 
-def _pack_scan(states: list[dict[str, Any]]) -> str | None:
-    if all(state.get("done") for state in states):
+def pack_scan(states: list[dict[str, Any]]) -> str | None:
+    """Where each task's reading stands: its Hub page cursor and the rows taken from that page."""
+    if all(state["done"] for state in states):
         return None
-    raw = base64.urlsafe_b64encode(json.dumps(states).encode()).decode().rstrip("=")
-    return f"f1.{raw}"
+    rows = [[state["hf"], state["n"], 1 if state["done"] else 0] for state in states]
+    raw = base64.urlsafe_b64encode(json.dumps(rows, separators=(",", ":")).encode()).decode().rstrip("=")
+    return f"{_SCAN_PREFIX}{raw}"
 
 
-def _unpack_scan(token: str | None, count: int) -> list[dict[str, Any]] | None:
-    if not token:
+def unpack_scan(token: str | None, count: int) -> list[dict[str, Any]] | None:
+    if not token or not token.startswith(_SCAN_PREFIX):
         return None
-    if not token.startswith("f1."):
-        return None
-    padded = token[3:] + "=" * (-len(token[3:]) % 4)
+    body = token[len(_SCAN_PREFIX) :]
     try:
-        loaded = json.loads(base64.urlsafe_b64decode(padded))
+        loaded = json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
     except (ValueError, json.JSONDecodeError):
         return None
     if not isinstance(loaded, list) or len(loaded) != count:
         return None
     states: list[dict[str, Any]] = []
     for item in loaded:
-        if not isinstance(item, dict):
+        if not isinstance(item, list) or len(item) != 3:
             return None
-        skip = item.get("skip")
-        if skip is None:
-            skip = []
-        if not isinstance(skip, list) or any(not isinstance(name, str) for name in skip):
+        hf, taken, done = item
+        if hf is not None and (not isinstance(hf, str) or len(hf) > 4000):
             return None
-        hf = item.get("hf")
-        if hf is not None and not isinstance(hf, str):
+        if not isinstance(taken, int) or isinstance(taken, bool) or not 0 <= taken <= _MAX_TAKEN:
             return None
-        states.append({"hf": hf, "skip": skip, "done": bool(item.get("done"))})
+        states.append({"hf": hf, "n": taken, "done": done == 1})
     return states
 
 
-def _search_capable(
+_STALLED = object()
+
+
+def _search_merged(
     *,
     pipes: tuple[str, ...],
     needle: str,
@@ -546,81 +628,95 @@ def _search_capable(
     sort_key: str,
     page: int,
     cursor: str | None,
-    wanted: tuple[str, ...],
-    direction: str,
-    sort: str,
-    moe: bool = False,
+    must: tuple[str, ...],
+    never: tuple[str, ...],
+    moe: bool,
+    min_context: int = 0,
+    skip: frozenset[str] = frozenset(),
 ) -> HubSearchResponse:
-    """Keep reading Hub pages until the page is full of models with the chosen capabilities."""
-    states = _unpack_scan(cursor, len(pipes))
-    if states is None:
-        states = [{"hf": None, "skip": [], "done": False} for _ in pipes]
+    """Read every task's Hub results in the Hub's order and merge them by the sort value.
+
+    Each task keeps its own Hub cursor and how many rows of that page are taken, so the
+    next request picks up exactly there. With a capability or MoE filter, pages are read
+    until the page is full, the page budget is spent or the time is up. A task whose first
+    page fails is left out of this page and tried again on the next one; a later failure
+    ends the page there.
+    """
+    states = unpack_scan(cursor, len(pipes)) or [{"hf": None, "n": 0, "done": False} for _ in pipes]
+    deadline = time.monotonic() + _SEARCH_SECONDS
+    pages: dict[int, tuple[list[tuple[HubHit | None, float | str]], str | None]] = {}
+    failed: dict[int, RuntimeApiError] = {}
+    budget = _SCAN_PAGES
+
+    def load(index: int) -> bool:
+        try:
+            rows, nxt = _search_one(
+                pipes[index],
+                search=needle,
+                size=size_query,
+                sort=sort_key,
+                limit=page,
+                cursor=states[index]["hf"],
+                deadline=deadline,
+            )
+        except RuntimeApiError as exc:
+            failed[index] = exc  # not done: the next page starts this task from the same place
+            return False
+        pages[index] = (
+            [(_row_hit(row) if keep_hub_row(row, pipes) else None, sort_value(row, sort_key)) for row in rows],
+            nxt,
+        )
+        return True
+
+    def head(index: int) -> Any:
+        nonlocal budget
+        state = states[index]
+        while not state["done"] and index not in failed:
+            if index not in pages:
+                if budget <= 0 or time.monotonic() >= deadline:
+                    return _STALLED
+                budget -= 1
+                if not load(index):
+                    return _STALLED
+            entries, nxt = pages[index]
+            if state["n"] < len(entries):
+                return entries[state["n"]]
+            del pages[index]
+            if not nxt:
+                states[index] = {"hf": None, "n": 0, "done": True}
+                return None
+            state["hf"], state["n"] = nxt, 0
+        return None
+
+    first = [index for index, state in enumerate(states) if not state["done"]]
+    if first:
+        with ThreadPoolExecutor(max_workers=len(first)) as pool:
+            list(pool.map(load, first))
     collected: list[HubHit] = []
     seen: set[str] = set()
-    scanned = 0
-    try:
-        while len(collected) < page and scanned < _SCAN_PAGES:
-            moved = False
-            for index, pipe in enumerate(pipes):
-                state = states[index]
-                if state.get("done") or len(collected) >= page:
-                    continue
-                try:
-                    rows, nxt = _search_one(
-                        pipe,
-                        search=needle,
-                        size=size_query,
-                        sort=sort_key,
-                        limit=page,
-                        cursor=state.get("hf") if isinstance(state.get("hf"), str) else None,
-                        direction=direction,
-                    )
-                except RuntimeApiError:
-                    states[index] = {"hf": None, "skip": [], "done": True}
-                    continue
-                scanned += 1
-                hits = [hit for row in rows if (hit := _row_hit(row)) and keep_hub_row(row, pipes)]
-                _attach_flags(hits)
-                skip = {name for name in state.get("skip", []) if isinstance(name, str)}
-                pending = False
-                taken = list(skip)
-                for hit in hits:
-                    if hit.id in skip or hit.id in seen:
-                        continue
-                    if not _matches(hit, wanted, moe):
-                        continue
-                    if len(collected) >= page:
-                        pending = True
-                        break
-                    collected.append(hit)
-                    seen.add(hit.id)
-                    taken.append(hit.id)
-                if pending:
-                    states[index] = {"hf": state.get("hf"), "skip": taken, "done": False}
-                    break
-                if nxt:
-                    states[index] = {"hf": nxt, "skip": [], "done": False}
-                    moved = True
-                else:
-                    states[index] = {"hf": None, "skip": [], "done": True}
-                if scanned >= _SCAN_PAGES:
-                    break
-            if len(collected) >= page or not moved and all(item.get("done") for item in states):
+    while len(collected) < page:
+        best: tuple[int, tuple[HubHit | None, float | str]] | None = None
+        stalled = False
+        for index in range(len(pipes)):
+            entry = head(index)
+            if entry is _STALLED:
+                stalled = True
                 break
-            if not moved:
-                break
-    except RuntimeApiError as exc:
-        return HubSearchResponse(items=[], page_size=page, message_key=exc.error_key)
-    if sort != "name":
-        collected.sort(key=lambda item: item.downloads, reverse=True)
-    order_hits(collected, sort, ascending=direction == "1")
-    nxt_token = _pack_scan(states)
-    return HubSearchResponse(
-        items=collected[:page],
-        page_size=page,
-        has_next=nxt_token is not None,
-        next_cursor=nxt_token,
-    )
+            if entry is not None and (best is None or entry[1] > best[1][1]):
+                best = (index, entry)
+        if stalled or best is None:
+            break
+        index, (hit, _) = best
+        states[index]["n"] += 1
+        if hit is None or hit.id in seen or not _matches(hit, must, never, moe, min_context, skip):
+            continue
+        seen.add(hit.id)
+        collected.append(hit)
+    if not collected and failed:
+        key, wait = hub_error(next(iter(failed.values())))
+        return HubSearchResponse(items=[], page_size=page, message_key=key, retry_after=wait)
+    token = pack_scan(states)
+    return HubSearchResponse(items=collected, page_size=page, has_next=token is not None, next_cursor=token)
 
 
 def search_hub(
@@ -632,97 +728,43 @@ def search_hub(
     limit: int = _DEFAULT_PAGE_SIZE,
     cursor: str | None = None,
     capabilities: str = "",
-    direction: str = "desc",
+    without: str = "",
+    min_context: int = 0,
+    hide_installed: bool = False,
 ) -> HubSearchResponse:
+    """GGUF models of the chosen tasks, merged by the sort value (the Hub sorts descending only)."""
     tasks, moe = type_selection(pipeline)
-    pipes = pipeline_tags(tasks or "all")
-    size_query = parameter_query(size)
-    sort_key = hf_sort_key(sort)
+    must, never = capability_filter(capabilities, without)
+    pipes, must, never = narrow_pipelines(pipeline_tags(tasks or "all"), must, never)
     page = page_limit(limit)
-    needle = search.strip()[:80]
-    order = "1" if direction == "asc" else "-1"
-    wanted = parse_capabilities(capabilities)
-    if wanted or moe:
-        return _search_capable(
-            pipes=pipes,
-            needle=needle,
-            size_query=size_query,
-            sort_key=sort_key,
-            page=page,
-            cursor=cursor,
-            wanted=wanted,
-            direction=order,
-            sort=sort,
-            moe=moe,
-        )
-    incoming = unpack_cursors(cursor, len(pipes))
-    batches: list[list[dict[str, Any]]] = []
-    following: list[str | None] = []
-    failures = 0
-    for index, pipe in enumerate(pipes):
-        pipe_cursor = None if incoming is None else incoming[index]
-        if incoming is not None and pipe_cursor is None:
-            batches.append([])
-            following.append(None)
-            continue
-        try:
-            rows, nxt = _search_one(
-                pipe,
-                search=needle,
-                size=size_query,
-                sort=sort_key,
-                limit=page,
-                cursor=pipe_cursor,
-                direction=order,
-            )
-        except RuntimeApiError:
-            failures += 1
-            batches.append([])
-            following.append(None)
-            continue
-        batches.append(rows)
-        following.append(nxt)
-    if failures == len(pipes):
-        return HubSearchResponse(items=[], page_size=page, message_key="models.hub.failed")
-    seen: set[str] = set()
-    items: list[HubHit] = []
-    for row in (row for batch in batches for row in batch):
-        if not keep_hub_row(row, pipes):
-            continue
-        model_id = str(row.get("modelId") or row.get("id"))
-        if model_id in seen:
-            continue
-        seen.add(model_id)
-        downloads = row.get("downloads")
-        likes = row.get("likes")
-        tag = row.get("pipeline_tag")
-        items.append(
-            HubHit(
-                id=model_id,
-                pipeline=tag if isinstance(tag, str) else None,
-                downloads=int(downloads) if isinstance(downloads, int) else 0,
-                likes=int(likes) if isinstance(likes, int) else 0,
-                url=f"{HUB}/{model_id}",
-            )
-        )
-        if len(items) >= page:
-            break
-    _attach_flags(items)
-    order_hits(items, sort, ascending=order == "1")
-    nxt = pack_cursors(following)
-    return HubSearchResponse(items=items, page_size=page, has_next=nxt is not None, next_cursor=nxt)
+    if not pipes:
+        return HubSearchResponse(items=[], page_size=page)
+    return _search_merged(
+        pipes=pipes,
+        needle=search.strip()[:80],
+        size_query=parameter_query(size),
+        sort_key=hf_sort_key(sort),
+        page=page,
+        cursor=cursor,
+        must=must,
+        never=never,
+        moe=moe,
+        min_context=max(0, min(int(min_context or 0), 10_000_000)),
+        skip=installed_repos() if hide_installed else frozenset(),
+    )
 
 
-def _attach_flags(items: list[HubHit]) -> None:
-    if not items:
-        return
-    with ThreadPoolExecutor(max_workers=min(8, len(items))) as pool:
-        flags = list(pool.map(lambda item: model_flags(item.id), items))
-    for item, (tools, thinking, vision, moe) in zip(items, flags, strict=True):
-        item.tools = tools
-        item.thinking = thinking
-        item.vision = vision
-        item.moe = moe
+_HF_REPO = re.compile(r"^(?:hf\.co|huggingface\.co)/([^/:\s]+/[^/:\s]+)(?::\S*)?$", re.IGNORECASE)
+
+
+def installed_repos() -> frozenset[str]:
+    """Hugging Face repos with at least one quant pulled into Ollama, lower case."""
+    found = set()
+    for key in _installed_keys():
+        match = _HF_REPO.match(key)
+        if match:
+            found.add(match.group(1).lower())
+    return frozenset(found)
 
 
 def _file_size(row: dict[str, Any]) -> int | None:
@@ -749,7 +791,8 @@ def repo_files(repo_id: str) -> HubFilesResponse:
         info = _get_json(f"{HUB}/api/models/{repo}")
         tree = _get_json(f"{HUB}/api/models/{repo}/tree/main")
     except RuntimeApiError as exc:
-        return HubFilesResponse(id=repo, url=url, installable=False, message_key=exc.error_key)
+        key, wait = hub_error(exc)
+        return HubFilesResponse(id=repo, url=url, installable=False, message_key=key, retry_after=wait)
     if not isinstance(info, dict):
         info = {}
     gated = bool(info.get("gated") or info.get("private"))

@@ -40,32 +40,46 @@ def _want_host() -> bool:
     return sys.platform == "win32"
 
 
+def _assert_port_free(host: str, port: int) -> None:
+    """Fail before bootstrap: a second process must not touch the stores.
+
+    ``db.init`` marks every ``running`` run as orphaned; done by a second
+    instance it would cancel the live run of the first one.
+    """
+    import socket
+
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(family, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind((host, port))
+        except OSError:
+            raise SystemExit(f"port {port} already in use; is Agentus Network already running?") from None
+
+
 def _bootstrap() -> None:
-    try:
-        from app.db import init as db_init
+    # N8: none of these modules is optional. A swallowed ImportError started the
+    # app without persistence or MCP, and the cause surfaced later as store.missing.
+    from app.db import init as db_init
 
-        db_init()
-        from app.llm.downloads import ensure_worker
+    db_init()
+    from app.llm.downloads import ensure_worker
 
-        ensure_worker()
-    except ImportError:
-        pass
-    try:
-        from app.mcp import register_hooks
+    ensure_worker()
+    from app.mcp import register_hooks
 
-        register_hooks()
-    except ImportError:
-        pass
+    register_hooks()
 
 
 def _maybe_start_ollama() -> None:
-    """Installed Ollama that is stopped: start it. Never stop it later."""
+    """Own Ollama copy (default), or start the installed Ollama as before."""
     try:
-        from app.runtime.ollama_daemon import start_local_ollama_background
+        from app.runtime.ollama_own import boot_ollama_runtime
 
-        start_local_ollama_background()
+        boot_ollama_runtime()
     except Exception:
-        pass
+        import logging
+
+        logging.getLogger("agentus").exception("starting the Ollama runtime failed")
 
 
 def _run() -> None:
@@ -74,9 +88,23 @@ def _run() -> None:
 
         multiprocessing.freeze_support()
     ensure_stdio()
+    from app.applog import setup_app_log
+
+    # B1: stdout and stderr go nowhere in the desktop app; the app log goes to a file.
+    setup_app_log()
+    # A restart: the old instance still closes; wait before lock and port.
+    from app.host.restart import wait_for_previous
+
+    wait_for_previous()
     host = os.environ.get("AGENTUS_NETWORK_API_HOST", "127.0.0.1")
     port = _port()
     assert_loopback(host)
+    if _want_host():
+        from app.host.single_instance import acquire
+
+        if not acquire():
+            return  # the running instance was focused
+    _assert_port_free(host, port)
     _bootstrap()
     _maybe_start_ollama()
     if _want_host():

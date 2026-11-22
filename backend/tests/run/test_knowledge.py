@@ -355,7 +355,8 @@ def test_missing_fingerprint_forces_reindex(monkeypatch, api_env, tmp_path) -> N
         )
     )
     assert index_node("net-null", node, data_dir=data_dir) == "ready"
-    assert calls["n"] == 2
+    # M22: the file did not change, so its vectors are reused; the marker is repaired.
+    assert calls["n"] == 1
     refreshed = get_collection("net-null", "k-null")
     assert refreshed is not None and refreshed.content_fingerprint
 
@@ -455,9 +456,13 @@ def test_empty_ready_collection_is_indexed_again(monkeypatch, api_env, tmp_path)
         )
     )
     assert index_node("net-empty", node, data_dir=data_dir) == "ready"
-    assert calls["n"] == 2
+    # M22: the stored vectors are still valid and come back without a new embedding call.
+    assert calls["n"] == 1
     refreshed = get_collection("net-empty", "k-empty")
     assert refreshed is not None and (refreshed.dimension or 0) > 0
+    # A forced reindex embeds again.
+    assert index_node("net-empty", node, data_dir=data_dir, force=True) == "ready"
+    assert calls["n"] == 2
 
 
 def test_source_limit_covers_a_typeset_book() -> None:
@@ -488,3 +493,99 @@ def test_oversized_reindex_does_not_wipe_chunks(monkeypatch, api_env, tmp_path) 
     assert stored is not None and stored.state == "error"
     assert stored.content_fingerprint is None
     assert list_chunks("net-big", "k-big") == kept
+
+
+def test_only_changed_files_are_embedded_again(monkeypatch, api_env, tmp_path) -> None:
+    """M22: one edited file no longer re-embeds the whole folder."""
+    from app.db.network_rag import list_chunks
+    from app.runtime.models import EmbedResult
+
+    init()
+    sent: list[list[str]] = []
+
+    def _embed(req):
+        sent.append(list(req.texts))
+        return EmbedResult(vectors=[[0.3, 0.4] for _ in req.texts], dimension=2, model=req.model)
+
+    monkeypatch.setattr("app.runtime.embeddings.embed", _embed)
+    _empty_network("net-inc")
+    folder = tmp_path / "notes"
+    folder.mkdir()
+    (folder / "a.md").write_text("# A\nalpha", encoding="utf-8")
+    (folder / "b.md").write_text("# B\nbeta", encoding="utf-8")
+    node = _knowledge_node("k-inc", folder)
+    data_dir = str(tmp_path / "appdata")
+    assert index_node("net-inc", node, data_dir=data_dir) == "ready"
+    assert len(sent) == 1
+    (folder / "b.md").write_text("# B\nbeta changed", encoding="utf-8")
+    assert index_node("net-inc", node, data_dir=data_dir) == "ready"
+    assert len(sent) == 2
+    assert all("alpha" not in text for text in sent[1])
+    assert any("beta changed" in text for text in sent[1])
+    texts = sorted(chunk.text for chunk in list_chunks("net-inc", "k-inc"))
+    assert any("alpha" in text for text in texts)
+    assert any("beta changed" in text for text in texts)
+    assert len({chunk.id for chunk in list_chunks("net-inc", "k-inc")}) == len(texts)
+
+
+def test_index_failure_carries_the_reason(monkeypatch, api_env, tmp_path) -> None:
+    """M22: the run log said only "failed"; the embedding error key is passed on."""
+    from app.runtime.errors import RuntimeApiError
+
+    init()
+
+    def _embed(req):
+        raise RuntimeApiError("runtime.modelNotFound", detail="nomic-embed-text")
+
+    monkeypatch.setattr("app.runtime.embeddings.embed", _embed)
+    _empty_network("net-err")
+    folder = tmp_path / "notes"
+    folder.mkdir()
+    (folder / "a.md").write_text("# A\nalpha", encoding="utf-8")
+    seen: list[tuple[str, dict]] = []
+    node = _knowledge_node("k-err", folder)
+    state = index_node(
+        "net-err",
+        node,
+        data_dir=str(tmp_path / "appdata"),
+        on_progress=lambda phase, payload: seen.append((phase, payload)),
+    )
+    assert state == "error"
+    errors = [payload for phase, payload in seen if phase == "error"]
+    assert errors and errors[0]["error"] == "runtime.modelNotFound"
+
+
+def test_retrieve_reuses_loaded_vectors_until_the_index_changes(monkeypatch, api_env, tmp_path) -> None:
+    from app.run import knowledge
+    from app.runtime.models import EmbedResult
+
+    init()
+    monkeypatch.setattr(
+        "app.runtime.embeddings.embed",
+        lambda req: EmbedResult(vectors=[[1.0, 0.0] for _ in req.texts], dimension=2, model=req.model),
+    )
+    _empty_network("net-cache")
+    folder = tmp_path / "notes"
+    folder.mkdir()
+    (folder / "a.md").write_text("# A\nalpha", encoding="utf-8")
+    node = _knowledge_node("k-cache", folder)
+    data_dir = str(tmp_path / "appdata")
+    assert index_node("net-cache", node, data_dir=data_dir) == "ready"
+    loads = {"n": 0}
+    real = knowledge.list_chunks
+
+    def _counting(network_id, node_id):
+        loads["n"] += 1
+        return real(network_id, node_id)
+
+    monkeypatch.setattr(knowledge, "list_chunks", _counting)
+    knowledge.reset_vector_cache()
+    for _ in range(3):
+        assert retrieve("net-cache", "k-cache", "alpha", node=node, score_min=0.0)
+    assert loads["n"] == 1
+    (folder / "b.md").write_text("# B\nbeta", encoding="utf-8")
+    assert index_node("net-cache", node, data_dir=data_dir) == "ready"
+    loads["n"] = 0
+    hits = retrieve("net-cache", "k-cache", "beta", node=node, score_min=0.0)
+    assert loads["n"] >= 1
+    assert {hit.title for hit in hits} == {"a", "b"}

@@ -1,3 +1,4 @@
+import { knowledgeRangeIssues, llmRangeIssues } from '@/modules/network/model/ranges';
 import { embeddingNeedsCredential, isForbiddenDataRoot } from '@/modules/settings/model';
 import type { McpRecipe, McpServerListItem } from '@/modules/settings/model';
 import { connectionAllowed, portKind, type PortContext } from '@/modules/network/schema/ports';
@@ -17,6 +18,15 @@ import {
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function hasCycle(doc: AgentNetworkDocument): boolean {
@@ -95,9 +105,17 @@ export function validateDocument(
     if (!toEnd) {
       issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorEnd' });
     }
+    const hasAgent = doc.edges.some(
+      (edge) => edge.source === orch.id && edge.targetHandle === 'channel' && byId.get(edge.target)?.type === 'agent',
+    );
+    if (!hasAgent) {
+      issues.push({ nodeId: orch.id, messageKey: 'network.validation.orchestratorAgents' });
+    }
   }
   if (!doc.nodes.some((node) => node.type === 'end')) {
     issues.push({ messageKey: 'network.validation.endRequired' });
+  } else if (orchestrators.length === 0 && chainStarts(doc).length > 0 && !chainReachesEnd(doc)) {
+    issues.push({ nodeId: chatInputs[0]?.id, messageKey: 'network.validation.chainEnd' });
   }
 
   for (const edge of doc.edges) {
@@ -153,6 +171,31 @@ function routerPatternProblem(match: string, pattern: string): 'routerPattern' |
   const trimmed = pattern.trim();
   if (!trimmed || trimmed.length > ROUTER_PATTERN_MAX) return 'routerPattern';
   return null;
+}
+
+/** Where a chain without orchestrator begins: the chat input, else agents nobody feeds. */
+function chainStarts(doc: AgentNetworkDocument): string[] {
+  const chat = doc.nodes.find((node) => node.type === 'chat_input');
+  if (chat) return [chat.id];
+  const fed = new Set(doc.edges.filter((edge) => edge.targetHandle === 'message').map((edge) => edge.target));
+  return doc.nodes.filter((node) => node.type === 'agent' && !fed.has(node.id)).map((node) => node.id);
+}
+
+/** N13: a chain that never reaches an end node runs and then fails. */
+function chainReachesEnd(doc: AgentNetworkDocument): boolean {
+  const types = new Map(doc.nodes.map((node) => [node.id, node.type]));
+  const queue = chainStarts(doc);
+  const seen = new Set<string>();
+  while (queue.length > 0) {
+    const id = queue.pop() as string;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (types.get(id) === 'end') return true;
+    for (const edge of doc.edges) {
+      if (edge.source === id && edge.targetHandle === 'message') queue.push(edge.target);
+    }
+  }
+  return false;
 }
 
 function routerGoesOnlyToEnds(doc: AgentNetworkDocument, routerId: string): boolean {
@@ -274,6 +317,12 @@ function validateNode(
     if (provider !== 'ollama' && !asString(node.data.credentialId)) {
       issues.push({ nodeId: node.id, messageKey: 'network.validation.credentialRequired' });
     }
+    // Mirrors graph.llm.temperature, graph.llm.maxTokens and graph.llm.maxTokensContext.
+    for (const messageKey of llmRangeIssues(node.data)) issues.push({ nodeId: node.id, messageKey });
+  }
+  if (node.type === 'knowledge') {
+    // Mirrors graph.knowledge.topK and graph.knowledge.score.
+    for (const messageKey of knowledgeRangeIssues(node.data)) issues.push({ nodeId: node.id, messageKey });
   }
   if (node.type === 'mcp' || isMcpNode(node)) {
     const serverId = asString(node.data.mcpServerId);
@@ -294,9 +343,20 @@ function validateNode(
       }
     }
   }
+  if (node.type === 'tool' || node.type === 'mcp') {
+    // Mirrors graph.tool.maxCalls: absent/null = unlimited, otherwise a whole number >= 1.
+    const maxCalls = node.data.maxCalls;
+    if (maxCalls !== undefined && maxCalls !== null && !(Number.isInteger(maxCalls) && (maxCalls as number) >= 1)) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.toolMaxCalls' });
+    }
+  }
   if (node.type === 'tool') {
     const kind = asString(node.data.kind);
     if (!kind) issues.push({ nodeId: node.id, messageKey: 'network.validation.toolKind' });
+    // Mirrors graph.http.credentialUrl: a credential is only sent to the origin of the node URL.
+    if (kind === 'http' && asString(node.data.credentialId) && !isHttpUrl(asString(node.data.url))) {
+      issues.push({ nodeId: node.id, messageKey: 'network.validation.httpCredentialUrl' });
+    }
     if (kind === 'file_access') {
       const root = asString(node.data.rootPath);
       if (!root || isForbiddenDataRoot(root)) {

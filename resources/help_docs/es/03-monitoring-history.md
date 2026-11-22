@@ -25,7 +25,7 @@ Cabecera: ID de ejecución, hora de inicio, duración, paso aproximado, LLM acti
 
 Si hay conocimiento en un agente, el inicio ya muestra la ejecución mientras se indexa: el nodo de conocimiento corre con motivo de espera **índice**, el registro nombra la lectura y los embeddings, y el encabezado y el panel muestran el mismo nombre. Un índice ya actual se omite y solo se anota como actual.
 
-**Actividad:** nodos actuales, progreso «paso x de y», tokens entrada/salida, ventana de contexto opcional.
+**Actividad:** Arriba los valores en vivo: tokens por segundo del modelo que está escribiendo; cuánto ocupa su ventana de contexto (barra, amarilla desde el 75 %, roja desde el 90 %); tokens de salida de toda la ejecución. Debajo, en una línea, quién está trabajando, y el encargo completo del agente que trabaja, listo para copiar. Si la ejecución te espera, una línea destacada lo indica.
 
 Chat y registro están encima de la red y la actividad. Las tres tarjetas mantienen su altura al agrandar la ventana; se arrastra el borde para cambiar el tamaño. Los tamaños se conservan al cerrar la aplicación.
 
@@ -33,21 +33,43 @@ Chat y registro están encima de la red y la actividad. Las tres tarjetas mantie
 
 ## Chat de red (supervisión)
 
-Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano.
+Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. Antes del primer mensaje puedes elegir en **Continuar una ejecución anterior** una ejecución anterior de esta red (hora, resultado, inicio del encargo). Antes de su primera decisión el orquestador lee su registro: encargos, llamadas a agentes, cómo terminó, archivos cambiados y, si esa ejecución continuaba otra, su contexto. Con ello escribe un contexto de como mucho 3000 caracteres, que aparece en el chat. Describe solo la ejecución anterior tal como terminó; tu mensaje nuevo no entra en él, y lo que los agentes informan en la nueva ejecución cuenta como más reciente. Solo el orquestador lo recibe y pasa a los agentes lo que necesitan. Si el análisis falla, recibe el registro abreviado. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano. **Detener la generación** corta la respuesta en curso. Con orquestador la ejecución sigue abierta y espera tu siguiente mensaje; en una cadena sin orquestador termina como cancelada.
 
 Esto **no** es la burbuja de ayuda. Historial y herramientas son los de la red.
 
 ## Registro (supervisión)
 
-Pestaña **Registro**: líneas con nivel (depuración, info, aviso, error), nodo, hora. Lo más nuevo arriba. Pausa detiene el seguimiento; «Ir a los más recientes» salta otra vez al final. Filtros: búsqueda, nivel mínimo, un nodo, solo errores. Exportar las líneas visibles.
+Pestaña **Registro**: una línea por evento como frase, lo más nuevo arriba. Delante: hora, icono (decisión, agente, herramienta, modelo, límite) y estado (✓ correcto, ✗ falló, ⚠ aviso); a la derecha la duración. Ejemplos: «Senior: lee src/App.tsx · 41 líneas», «Senior: ejecuta: npm run build · código de salida 1: …», «Jefe: llama a Senior: corregir RTL». Pausa detiene el seguimiento; «Ir a los más recientes» salta otra vez al final.
+
+**Vista:**
+
+- **Importante** (por defecto): decisiones del orquestador, encargos, resultados, límites, avisos y errores.
+- **Todo**: además cada llamada a herramientas y modelos.
+- **Depuración**: además líneas de depuración, por ejemplo inicios de modelo.
+
+**Grupos:** Cada encargo de un agente es un grupo. La cabecera nombra agente, encargo y resultado (llamadas a herramientas, archivos modificados, duración); la flecha muestra las líneas de debajo. Un encargo en curso está expandido.
+
+**Filtros:** La búsqueda encuentra el texto mostrado, el encargo, el resultado, la ruta y el comando. El filtro de nodo muestra también las llamadas a herramientas y modelos de ese agente. Además «solo errores».
+
+**Detalle:** clic en una línea. Las herramientas muestran ruta o comando, resultado, error y la indicación para el modelo; los agentes, encargo y resultado; las llamadas al modelo, tokens, duración, respuesta y razonamiento. Los datos sin procesar (JSON) se pueden desplegar.
+
+**Resumen:** Al final de una ejecución, una tarjeta arriba muestra resultado, duración, llamadas a agentes por agente (con la mayor parte usada de la ventana de contexto), llamadas al modelo y tokens, llamadas a herramientas, archivos modificados y límites alcanzados.
+
+**Contexto:** La línea final de cada encargo de agente indica la solicitud mayor frente a la ventana (por ejemplo «solicitud mayor 30.896 de 202.752 tokens (15 %)») y cuántas veces se compactó. Si el modelo informa claramente menos tokens de entrada que en el paso anterior dentro de un encargo sin compactar, o muchos menos de lo estimado en el borde de la ventana, el registro avisa: **historial probablemente recortado**. Entonces probablemente le falta al modelo el inicio del historial; casi siempre la ventana del nodo LLM es demasiado pequeña.
+
+**Exportar:** «Exportar como texto» guarda las líneas mostradas como Markdown, «JSON» como JSON Lines. El contenido de archivos se recorta a 2 KB en el registro, las respuestas del modelo a 8 KB.
 
 Las cargas y los mensajes **enmascaran** secretos (por ejemplo `Bearer`, prefijos de clave). No los reenvíes sin filtrar.
 
 ## Historial
 
-Cinta: Actualizar, borrar ejecuciones seleccionadas, exportar registros, depurar entradas antiguas según retención (véase Ajustes → Datos, predeterminado 90 días).
+Cinta: Actualizar, borrar ejecuciones seleccionadas, exportar registros, depurar entradas antiguas según retención (véase Ajustes → Datos, predeterminado 90 días; con «Ilimitado» no aparece el botón).
 
 **Un filtro** lo controla todo: periodo (hoy, 7/30 días, desde–hasta), red, modelo, búsqueda (ID de ejecución, red, error). KPI, gráfico «ejecuciones por día», errores más frecuentes, pestañas Historial / Por modelo / Por red y la lista usan el mismo filtro.
+
+**Ejecuciones** tiene un selector arriba a la derecha: **Evolución** (ejecuciones por día, por hora en menos de dos días, apiladas por resultado; los días sin ejecuciones se reducen a un «⋯» estrecho), **Proporciones** (cómo terminaron, como una barra dividida con tabla), **Redes** (ejecuciones por red, primero las que más) y **Tabla** (los números por día). Pasar el puntero o el foco muestra los valores de una columna; la vista se recuerda.
+
+**Errores más frecuentes** muestra cada tipo de error de las ejecuciones fallidas como un área: cuanto más frecuente, más grande, con el color según la clase de error (orquestador, LLM, herramienta, timeout …). Las áreas grandes indican también la proporción, los nodos y la última vez; en las pequeñas lo dice el tooltip. Un clic filtra KPI, gráfico y lista por ese tipo de error; un segundo clic o la ✕ de la cabecera quita el filtro. Las áreas se quedan donde están.
 
 El gráfico y la lista de errores, y la lista de ejecuciones y el detalle, se redimensionan arrastrando el borde, igual que en Supervisión. Los tamaños se conservan al cerrar la app.
 
@@ -65,6 +87,6 @@ El gráfico y la lista de errores, y la lista de ejecuciones y el detalle, se re
 
 ## Detalle de la ejecución
 
-Lado derecho o vista propia: meta, mini-grafo, pestañas **Registro**, **Pasos**, **Chat**. Pasos: nodo, rol, estado, error. Chat: transcripción, solo lectura. Exportar un registro suelto.
+Lado derecho o vista propia: meta, mini-grafo, pestañas **Registro**, **Pasos**, **Chat**. El registro se ve como en la supervisión: vistas, grupos, resumen, exportar como texto. Las ejecuciones antiguas tienen menos datos (sin encargo, sin llamante). Pasos: nodo, rol, estado, error. Chat: transcripción, solo lectura. Exportar un registro suelto.
 
 Borrar entradas del historial no cambia las redes guardadas.

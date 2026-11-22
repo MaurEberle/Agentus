@@ -7,8 +7,13 @@ from typing import Any
 _MAX_SAVE_CHARS = 32_000_000
 _SAVE_FILTERS = {
     "json": "JSON (*.json)",
+    "jsonl": "JSON Lines (*.jsonl)",
     "zip": "ZIP (*.zip)",
+    "md": "Markdown (*.md)",
 }
+# Kinds whose content arrives as text; the others come base64 encoded.
+_TEXT_KINDS = frozenset({"json", "jsonl", "md"})
+_DEFAULT_NAMES = {"json": "network.json", "jsonl": "logs.jsonl", "zip": "networks.zip", "md": "log.md"}
 
 
 class ChromeHostApi:
@@ -21,11 +26,16 @@ class ChromeHostApi:
 
     def maximize(self) -> None:
         if self._window is not None:
+            from app.host.maximize import fit_maximize
+
+            fit_maximize(self._window)
             self._window.maximize()
 
     def restore(self) -> None:
         if self._window is not None:
-            self._window.restore()
+            from app.host.maximize import restore_window
+
+            restore_window(self._window)
 
     def close(self) -> None:
         if self._window is not None:
@@ -85,7 +95,7 @@ class ChromeHostApi:
             return None
         path = Path(target)
         try:
-            if file_kind == "json":
+            if file_kind in _TEXT_KINDS:
                 path.write_bytes(content.encode("utf-8"))
             else:
                 path.write_bytes(base64.b64decode(content, validate=True))
@@ -98,7 +108,7 @@ def _save_name(name: str, kind: str) -> str:
     base = Path(str(name or "").replace("\x00", "")).name
     suffix = f".{kind}"
     if not base or base in {".", ".."}:
-        base = "network.json" if kind == "json" else "networks.zip"
+        base = _DEFAULT_NAMES.get(kind, f"export.{kind}")
     if not base.lower().endswith(suffix):
         base = f"{base}{suffix}"
     return base[:180]

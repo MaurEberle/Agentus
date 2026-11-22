@@ -13,6 +13,11 @@ _TRUNCATED_TOOL_MARKERS = (
 _TRUNCATED_TOOL_NAME = re.compile(r'for "([^"]+)"')
 
 ERROR_DETAIL_MAX = 500
+# H11: a provider that throttles (HTTP 429) is asked again, a few times and not forever.
+RATE_LIMIT_RETRIES = 3
+# A longer wait than this is not sat out inside one model call.
+RATE_LIMIT_WAIT_MAX = 60.0
+_RATE_LIMIT_BACKOFF = (2.0, 5.0, 10.0)
 
 
 def clip_error_detail(text: str | None) -> str | None:
@@ -30,10 +35,13 @@ class RuntimeApiError(Exception):
         error_key: str,
         status: int | None = None,
         detail: str | None = None,
+        retry_after: float | None = None,
     ) -> None:
         self.error_key = error_key
         self.status = status
         self.detail = clip_error_detail(detail)
+        # Seconds the provider asked us to wait (HTTP 429), when it said so.
+        self.retry_after = retry_after
         super().__init__(error_key)
 
 
@@ -46,6 +54,9 @@ def map_http_status(status: int) -> str:
         return "runtime.unauthorized"
     if status == 404:
         return "runtime.modelNotFound"
+    if status == 429:
+        # Not a bad request: the same call works a moment later.
+        return "runtime.rateLimited"
     if status == 400:
         return "runtime.badRequest"
     if status >= 500:
@@ -53,6 +64,45 @@ def map_http_status(status: int) -> str:
     if status >= 400:
         return "runtime.badRequest"
     return "runtime.upstream"
+
+
+def retry_after_seconds(headers: object) -> float | None:
+    """Wait the provider asks for: ``retry-after-ms``, or ``Retry-After`` in seconds or as a date."""
+    getter = getattr(headers, "get", None)
+    if getter is None:
+        return None
+    raw_ms = getter("retry-after-ms")
+    if raw_ms:
+        try:
+            return max(0.0, float(raw_ms) / 1000.0)
+        except (TypeError, ValueError):
+            pass
+    raw = getter("retry-after")
+    if not raw:
+        return None
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        pass
+    try:
+        from datetime import datetime, timezone
+        from email.utils import parsedate_to_datetime
+
+        when = parsedate_to_datetime(str(raw))
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def rate_limit_wait(retry_after: float | None, attempt: int) -> float | None:
+    """Seconds before retry number ``attempt`` (from 0). None: do not wait, report the limit."""
+    if retry_after is not None:
+        if retry_after > RATE_LIMIT_WAIT_MAX:
+            return None
+        return max(0.5, retry_after)
+    return _RATE_LIMIT_BACKOFF[min(max(attempt, 0), len(_RATE_LIMIT_BACKOFF) - 1)]
 
 
 def is_timeout_error(exc: BaseException) -> bool:
@@ -81,6 +131,7 @@ def raise_for_status(response: httpx.Response) -> None:
         map_http_status(response.status_code),
         status=response.status_code,
         detail=detail,
+        retry_after=retry_after_seconds(response.headers) if response.status_code == 429 else None,
     )
 
 

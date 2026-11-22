@@ -54,6 +54,22 @@ def test_list_models_names_and_size(monkeypatch: pytest.MonkeyPatch) -> None:
     assert items[0].name == "llama3.2:1b"
     assert items[0].size_bytes == 111
     assert items[1].name == "nomic-embed-text"
+    assert items[0].parameter_size is None and items[0].quantization is None
+
+
+def test_list_models_keeps_parameters_and_quantization(monkeypatch: pytest.MonkeyPatch) -> None:
+    """For the hover card of the model picker (32B, Q4_K_M)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/api/tags"):
+            details = {"parameter_size": "32.8B", "quantization_level": "Q4_K_M", "family": "qwen3"}
+            return httpx.Response(200, json={"models": [{"name": "hf.co/a/b:Q4_K_M", "details": details}]})
+        return httpx.Response(200, json={"model_info": {}})
+
+    install_transport(monkeypatch, handler)
+    item = list_ollama_models()[0]
+    assert (item.parameter_size, item.quantization) == ("32.8B", "Q4_K_M")
+    assert item.model_dump(by_alias=True)["parameterSize"] == "32.8B"
 
 
 def test_list_models_marks_mixture_of_experts(monkeypatch: pytest.MonkeyPatch) -> None:

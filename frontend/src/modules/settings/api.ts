@@ -12,6 +12,7 @@ import type {
   LlmProvider,
   McpRecipe,
   McpServerListItem,
+  OllamaRuntimeStatus,
   RuntimeModel,
   RuntimeModelStats,
   RuntimePing,
@@ -185,8 +186,8 @@ export async function setDataDir(input: { path: string; copy?: boolean }): Promi
     method: 'POST',
     body: JSON.stringify(input),
   });
-  await queryClient.invalidateQueries({ queryKey: ['stores'] });
-  await queryClient.invalidateQueries({ queryKey: ['settings'] });
+  // M20: networks, runs, prompts, credentials and the session all live in the new folder.
+  await queryClient.invalidateQueries();
   return location;
 }
 
@@ -196,6 +197,46 @@ export async function getAbout(): Promise<AboutInfo> {
 
 export async function resetHelpChatOnboarding(): Promise<AppSettings> {
   return patchSettings({ chatOnboardingSeen: false });
+}
+
+export async function getOllamaRuntime(): Promise<OllamaRuntimeStatus> {
+  return apiFetch<OllamaRuntimeStatus>('/runtime/ollama');
+}
+
+export async function checkOllamaRuntime(): Promise<OllamaRuntimeStatus> {
+  const status = await apiFetch<OllamaRuntimeStatus>('/runtime/ollama/check', { method: 'POST' });
+  queryClient.setQueryData(['runtime', 'ollama'], status);
+  return status;
+}
+
+/** Copy and test the installed Ollama version; ``restart`` says the window closes now. */
+export async function applyOllamaUpdate(): Promise<{ version: string; restart: boolean }> {
+  const result = await apiFetch<{ version: string; restart: boolean }>('/runtime/ollama/update', {
+    method: 'POST',
+  });
+  void queryClient.invalidateQueries({ queryKey: ['runtime', 'ollama'] });
+  return result;
+}
+
+export async function restartApp(): Promise<{ restart: boolean }> {
+  return apiFetch<{ restart: boolean }>('/app/restart', { method: 'POST' });
+}
+
+/** Open the folder with agentus.log in the file manager. The path stays on the backend. */
+export async function openLogFolder(): Promise<{ opened: boolean }> {
+  return apiFetch<{ opened: boolean }>('/app/open-logs', { method: 'POST' });
+}
+
+const OLLAMA_SETTLING = new Set(['preparing', 'starting']);
+
+/** Fast while the copy starts, then every five minutes (the backend checks hourly). */
+export function useOllamaRuntimeQuery() {
+  return useQuery({
+    queryKey: ['runtime', 'ollama'],
+    queryFn: getOllamaRuntime,
+    refetchInterval: (query) =>
+      OLLAMA_SETTLING.has(query.state.data?.state ?? '') ? 2_000 : 5 * 60_000,
+  });
 }
 
 export function useSettingsQuery() {

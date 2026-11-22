@@ -4,6 +4,8 @@ import type { ServiceStatus } from '@/store/session';
 
 export type ValidationStatus = 'valid' | 'invalid' | 'unknown';
 
+export type NetworkKind = 'orchestrator' | 'linear';
+
 export type NetworkListItem = {
   id: string;
   name: string;
@@ -13,6 +15,8 @@ export type NetworkListItem = {
   lastUsedAt?: string;
   nodeCount: number;
   edgeCount: number;
+  /** A chief that delegates to agents, or a chain of steps. Older backends leave it out. */
+  kind?: NetworkKind;
   validationStatus: ValidationStatus;
   credentialMissing?: boolean;
   isActive: boolean;

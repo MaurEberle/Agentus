@@ -32,6 +32,8 @@
     "or": "Oder",
     "mode": "Tags verknüpfen",
     "empty": "Keine Tags",
+    "noMatch": "Keine passenden Tags",
+    "search": "Tags suchen",
     "clear": "Alle Tags abwählen"
   },
   "models": {
@@ -55,6 +57,7 @@
       "loadedYes": "Ja",
       "loadedNo": "Nein",
       "family": "Familie",
+      "publisher": "Herausgeber",
       "parameters": "Parameter",
       "quant": "Quantisierung",
       "format": "Format",
@@ -68,7 +71,12 @@
       "template": "Chat-Vorlage vorhanden",
       "size": "Größe",
       "modified": "Geändert",
-      "vramNow": "VRAM belegt"
+      "vramNow": "VRAM belegt",
+      "groupArchitecture": "Architektur",
+      "groupFile": "Datei und Herkunft",
+      "loadedVram": "Geladen · {{size}} VRAM",
+      "digest": "Prüfsumme",
+      "licenseShow": "Lizenztext anzeigen"
     },
     "delete": {
       "title": "Modell löschen",
@@ -89,14 +97,47 @@
       "search": "Suche nach Name",
       "type": "Typ",
       "size": "Größe",
+      "range": {
+        "upTo": "bis {{max}}B",
+        "from": "ab {{min}}B",
+        "between": "{{min}}–{{max}}B"
+      },
       "sort": "Sortierung",
-      "types": { "text": "Text", "embed": "Embedding", "vision": "Bild verstehen", "moe": "MoE" },
-      "sizes": { "any": "Alles", "3": "bis 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "über 70B", "custom": "Bereich", "from": "von", "to": "bis" },
-      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trend", "modified": "Geändert", "name": "Name" },
+      "types": { "text": "Text", "embed": "Embedding", "moe": "MoE" },
+      "sizes": { "any": "Alles", "3": "bis 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "über 70B", "from": "von", "to": "bis" },
+      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trend", "modified": "Geändert", "new": "Neu" },
       "capabilities": "Fähigkeiten",
+      "rule": {
+        "must": "Muss",
+        "any": "Egal",
+        "never": "Nicht"
+      },
+      "ruleHint": {
+        "must": "Muss vorkommen",
+        "any": "Kann vorkommen",
+        "never": "Darf nicht vorkommen"
+      },
       "reset": "Filter zurücksetzen",
+      "context": "Kontext",
+      "contextAny": "Beliebig",
+      "hideInstalled": "Installierte ausblenden",
+      "fit": {
+        "fits": "passt",
+        "tight": "knapp",
+        "large": "zu groß",
+        "pill": "GPU",
+        "hint": "≈ {{size}} bei Q4_K_M · {{vram}} VRAM",
+        "only": "Nur was auf die GPU passt",
+        "onlyHint": "bis ≈ {{max}}B bei Q4_K_M ({{vram}} VRAM)",
+        "noGpu": "Keine GPU erkannt."
+      },
       "empty": "Keine passenden Modelle.",
       "failed": "Die Suche ist fehlgeschlagen.",
+      "timeout": "Hugging Face antwortet gerade nicht.",
+      "unreachable": "Hugging Face ist nicht erreichbar. Prüfe die Internetverbindung.",
+      "rateLimited": "Hugging Face nimmt gerade keine weiteren Anfragen an (Limit ohne Anmeldung).",
+      "retryIn": "Wieder möglich in etwa {{seconds}} s.",
+      "retry": "Erneut versuchen",
       "downloads": "{{count}} Downloads",
       "likes": "{{count}} Likes",
       "pick": "Wähle ein Modell.",
@@ -109,6 +150,12 @@
       "quants": "Quantisierung",
       "install": "Installieren",
       "installed": "Installiert",
+      "state": {
+        "installed": "Installiert",
+        "installedMany": "{{count}} installiert",
+        "running": "Lädt {{percent}} %",
+        "busy": "Diese Quantisierung ist schon in der Download-Liste."
+      },
       "gated": "Dieses Modell braucht eine Freigabe auf Hugging Face.",
       "noGguf": "Keine ladbare GGUF-Datei.",
       "vramHint": "Die Datei ist größer als der Grafikspeicher.",
@@ -132,7 +179,9 @@
         "tools": "Werkzeuge",
         "thinking": "Denken",
         "vision": "Sehen",
-        "moe": "MoE"
+        "moe": "MoE",
+        "groupDetails": "Details",
+        "groupSource": "Herkunft"
       }
     },
     "pull": { "failed": "Der Download ist fehlgeschlagen.", "invalid": "Dieser Modellname kann nicht geladen werden." },
@@ -229,6 +278,11 @@
     }
   },
   "notify": {
+    "ollamaUpdate": {
+      "title": "Ollama {{version}} ist verfügbar",
+      "desc": "Agentus nutzt {{current}}. Übernehmen unter Einstellungen → Runtime; Agentus startet dafür neu.",
+      "action": "Öffnen"
+    },
     "welcome": {
       "title": "Willkommen bei Agentus Network",
       "desc": "Wähle ein Netzwerk und starte einen Lauf über die Kopfzeile."
@@ -420,6 +474,63 @@
       "openModels": "Zur Modellverwaltung",
       "modelName": "Modell",
       "modelSize": "Größe",
+      "own": {
+        "title": "Ollama-Laufzeit",
+        "lead": "Agentus startet eine eigene Kopie von Ollama. Updates der Ollama-App unterbrechen Agentus dann nicht mehr.",
+        "modeLabel": "Betrieb",
+        "modeOwn": "Eigene Laufzeit (empfohlen)",
+        "modeOwnHint": "Agentus kopiert das installierte Ollama in seinen Ordner und startet es auf eigenem Port mit demselben Modellordner. Die Kopie endet mit Agentus.",
+        "modeExternal": "Externes Ollama",
+        "modeExternalHint": "Agentus nutzt die Adresse unten, zum Beispiel ein Ollama auf einem anderen Rechner.",
+        "stateLabel": "Zustand",
+        "state": {
+          "disabled": "Aus",
+          "preparing": "Wird eingerichtet",
+          "starting": "Startet",
+          "running": "Läuft",
+          "failed": "Fehler",
+          "unavailable": "Nicht verfügbar",
+          "stopped": "Beendet"
+        },
+        "version": "Version {{version}}",
+        "port": "Port {{port}}",
+        "installedLabel": "Installiertes Ollama",
+        "installed": "Installiertes Ollama: {{version}}",
+        "installedNone": "Kein installiertes Ollama gefunden.",
+        "checkedAt": "geprüft {{time}}",
+        "check": "Nach Updates suchen",
+        "checkNone": "Keine neuere Ollama-Version installiert.",
+        "updateTitle": "Ollama {{version}} ist verfügbar",
+        "updateDesc": "Agentus nutzt {{current}}. Zum Übernehmen wird Agentus geschlossen und startet von selbst neu.",
+        "updateButton": "Übernehmen und neu starten",
+        "confirmTitle": "Ollama {{version}} übernehmen?",
+        "confirmDesc": "Agentus kopiert die neue Version, startet sie einmal zur Probe und startet dann neu. Läuft sie danach nicht, nutzt Agentus wieder {{current}}.",
+        "confirmOk": "Übernehmen",
+        "restarting": "Agentus startet neu …",
+        "staged": "Ollama {{version}} ist bereit und wird nach dem nächsten Neustart von Agentus genutzt.",
+        "restartTitle": "Neustart nötig",
+        "restartModeDesc": "Der geänderte Betrieb gilt nach einem Neustart von Agentus.",
+        "restartButton": "Agentus neu starten",
+        "restartManual": "Bitte starte Agentus von Hand neu.",
+        "urlHint": "Bei eigener Laufzeit ist das die Ausweichadresse, falls die Kopie nicht startet.",
+        "logPath": "Protokoll: {{path}}",
+        "messages": {
+          "noSource": "Kein installiertes Ollama gefunden. Agentus nutzt die Adresse unten.",
+          "copyFailed": "Ollama ließ sich nicht in den Agentus-Ordner kopieren. Agentus nutzt die Adresse unten.",
+          "diskFull": "Zu wenig Speicherplatz für die Ollama-Kopie.",
+          "probeFailed": "Die neue Ollama-Version startete beim Test nicht. Agentus bleibt bei der bisherigen.",
+          "sourceChanged": "Ollama wird gerade aktualisiert. Versuche es in einer Minute noch einmal.",
+          "versionUnknown": "Die Version des installierten Ollama ist nicht lesbar.",
+          "startFailed": "Die eigene Ollama-Kopie startete nicht. Agentus nutzt die Adresse unten.",
+          "crashed": "Die eigene Ollama-Kopie ist mehrfach abgestürzt. Agentus nutzt die Adresse unten.",
+          "rolledBack": "Ollama {{failed}} startete nicht. Agentus nutzt wieder {{version}}.",
+          "busy": "Während ein Lauf aktiv ist, geht das nicht.",
+          "downloadRunning": "Warte, bis der Modell-Download fertig ist.",
+          "notActive": "Agentus nutzt gerade keine eigene Ollama-Kopie.",
+          "noUpdate": "Es ist keine neuere Ollama-Version installiert.",
+          "restartBusy": "Während ein Lauf aktiv ist, startet Agentus nicht neu."
+        }
+      },
       "status": {
         "unknown": "Unbekannt",
         "ok": "OK",
@@ -546,6 +657,8 @@
       "pick": "Ordner wählen",
       "busy": "Ordnerwechsel ist gesperrt, solange ein Netz startet, läuft oder stoppt.",
       "invalidRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
+      "targetHasData": "Im Zielordner liegen schon Daten. Kopieren würde sie überschreiben; wähle einen leeren Ordner oder wechsle ohne Kopieren.",
+      "switchFailed": "Der Wechsel ist fehlgeschlagen. Die App nutzt weiter den bisherigen Datenordner.",
       "stores": "Stores",
       "storeName": "Store",
       "fileName": "Datei",
@@ -581,6 +694,10 @@
       "apiVersion": "API-Version",
       "runtime": "Ollama",
       "dataFolder": "Datenordner",
+      "appLog": "App-Log",
+      "appLogHint": "Fehler außerhalb eines Laufs, 5 MB × 3",
+      "openLogs": "Ordner öffnen",
+      "openLogsFailed": "Der Log-Ordner ließ sich nicht öffnen.",
       "storesOk": "Stores erreichbar"
     },
     "notify": {
@@ -880,6 +997,8 @@
     },
     "inspector": {
       "title": "Inspector",
+      "range": "Erlaubt: {{min}} bis {{max}}. Beim Verlassen des Felds wird der Wert angepasst.",
+      "rangeInteger": "Erlaubt: eine ganze Zahl von {{min}} bis {{max}}. Beim Verlassen des Felds wird der Wert angepasst.",
       "collapse": "Inspector einklappen",
       "expand": "Inspector ausklappen",
       "resize": "Inspectorbreite ändern",
@@ -898,6 +1017,9 @@
         "noIssues": "Keine Validierungsfehler."
       },
       "llm": {
+        "maxTokensAuto": "leer = automatisch {{count}}",
+        "maxTokensAutoMax": "leer = automatisch, höchstens {{count}}",
+        "maxTokensProvider": "leer = Standard des Anbieters",
         "provider": "Provider",
         "openaiCompat": "OpenAI-kompatibel",
         "model": "Modell",
@@ -916,9 +1038,13 @@
         "kindDense": "Normale Modelle",
         "kindMoe": "MoE-Modelle",
         "noModels": "Keine Modelle geladen.",
+        "modelUnavailable": "Dieses Modell ist gerade nicht verfügbar. Die Auswahl bleibt gespeichert.",
         "useModel": "„{{name}}“ verwenden",
         "temperature": "Temperature",
         "maxTokens": "Max. Tokens",
+        "temperatureDefault": "leer = Standard des Modells",
+        "temperatureHint": "0 bis {{max}}. Niedrig antwortet gleichbleibend und sachlich, hoch abwechslungsreicher. Für Code und Werkzeuge eignen sich 0 bis 0,4.",
+        "maxTokensHint": "Ganze Zahl von 64 bis {{max}}, kleiner als der Kontext.",
         "numCtx": "Kontextlänge",
         "numCtxHint": "Grenzen kommen vom gewählten Modell.",
         "numCtxLoading": "Modellgrenzen werden geladen…",
@@ -966,13 +1092,25 @@
       "agent": {
         "hint": "LLM, Werkzeuge und Wissen kommen über Kanten. Ohne Orchestrator startet die Nachricht den Agenten.",
         "channelHint": "Dieser Agent hängt am Orchestrator. Aufträge kommen über den Kanal, die Antwort geht dorthin zurück.",
-        "systemPrompt": "Systemprompt"
+        "systemPrompt": "Systemprompt",
+        "maxToolCalls": "Werkzeugaufrufe je Auftrag",
+        "maxToolCallsHint": "Danach antwortet der Agent mit dem, was er hat, und nennt, was offen ist. Leer: 100.",
+        "reasoningSteps": "Gedächtnis (Schritte)",
+        "reasoningStepsHint": "Wie viele Schritte eines Auftrags ihr Denken an das Modell zurückgeben (lokale Modelle). Gekürzt wird gesammelt: Sind es doppelt so viele, fallen die älteren auf einmal weg, damit das Modell nicht bei jedem Schritt den ganzen Verlauf neu lesen muss. Leer: 10."
       },
       "orchestrator": {
         "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang. Angeschlossene Werkzeuge ruft er selbst auf.",
         "systemPrompt": "Systemprompt",
         "agentMissLimit": "Fehlversuche je Agent",
-        "agentMissLimitHint": "So oft darf ein Agent mit Dateizugriff einen Auftrag ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 3."
+        "agentMissLimitHint": "So oft in Folge darf ein Agent scheitern oder einen Auftrag mit Dateizugriff ohne Schreiben, Ändern oder Löschen beenden. Danach übernimmt der Orchestrator diese Aufgabe. Standard ist 2.",
+        "maxAgentCalls": "Agentenaufrufe je Lauf",
+        "maxAgentCallsHint": "So oft darf der Orchestrator Agenten beauftragen. Ist die Grenze erreicht, fasst er im Chat zusammen, was fertig ist und was offen bleibt, und der Lauf endet. Jede Review-Runde und jeder Prüfauftrag zählt mit. Leer: 50.",
+        "maxToolCalls": "Werkzeugaufrufe je Entscheidung",
+        "maxToolCallsHint": "So viele eigene Werkzeugaufrufe darf der Orchestrator nach einem gescheiterten Agentenaufruf oder in einer Übernahme für eine Entscheidung machen. Davor darf er nur Dateien lesen (Lesezugriffe je Entscheidung). Leer: 50.",
+        "maxReadCalls": "Lesezugriffe je Entscheidung",
+        "maxReadCallsHint": "So viele Dateien darf der Orchestrator in einer Entscheidung lesen, solange er nur lesen darf, also bis ein Agentenaufruf scheitert. Will er danach weiterlesen, bekommt er dafür die nächste Entscheidung. Vor dem ersten Agentenauftrag gelten höchstens 10 insgesamt. Leer: 15.",
+        "maxLlmCalls": "Modellaufrufe je Lauf",
+        "maxLlmCallsHint": "Orchestrator und Agenten zusammen. Danach endet der Lauf mit einem Fehler. Leer: 1000."
       },
       "prompt": {
         "pick": "Prompt",
@@ -1025,8 +1163,13 @@
         "terminalUnrestricted": "Uneingeschränkt",
         "terminalUnrestrictedHint": "PowerShell läuft als der Benutzer der App. Der Ordner ist nur das Startverzeichnis. Keine Rückfrage im Lauf, keine erhöhten Rechte.",
         "terminalHint": "Nur die angekreuzten Programme, ohne Pipes und Umleitung. Der Ordner ist das Startverzeichnis.",
+        "terminalTimeout": "Zeitlimit je Befehl (Sekunden, 5–600)",
         "zipHint": "Listet eine ZIP im Wurzelordner auf und entpackt sie dorthin. Pfade bleiben im Ordner.",
         "terminalPrograms": "Programme",
+        "maxCalls": "Max. Aufrufe pro Lauf",
+        "maxCallsUnlimited": "Unbegrenzt",
+        "maxCallsHint": "Zählt alle Aufrufe dieses Werkzeugs in einem Lauf, egal ob vom Orchestrator oder einem Agenten. Danach wird es nicht mehr angeboten.",
+        "credentialUrlHint": "Der Zugang wird nur an Schema, Host und Port der URL oben gesendet, nie an andere Adressen.",
         "terminalProgramPlaceholder": "Programmname",
         "terminalProgramAdd": "Hinzufügen",
         "dateHint": "Zeigt die aktuelle Zeit in einer IANA-Zeitzone, Standard ist UTC. Ein Zeitpunkt lässt sich um Tage, Stunden und Minuten verschieben, auch rückwärts. Der Abstand zweier Zeitpunkte kommt in Sekunden, Stunden und Tagen. Bestandteile sind Datum, Uhrzeit und Wochentag, Montag ist 1. Dieselbe Zeit lässt sich in eine andere Zeitzone umrechnen.",
@@ -1074,6 +1217,8 @@
         "embedModel": "Embedding-Modell",
         "topK": "topK",
         "score": "Score-Schwelle",
+        "topKHint": "Wie viele Textstellen der Agent je Anfrage bekommt, 1 bis 20. Leer: 4.",
+        "scoreHint": "Nur Textstellen mit mindestens dieser Ähnlichkeit, 0 bis 1. Leer: 0, also alle.",
         "reindex": "Index neu",
         "reindexOk": "Index neu aufgebaut",
         "reindexFail": "Index fehlgeschlagen",
@@ -1155,6 +1300,8 @@
       "routerTarget": "Ein Router führt zu einem Agenten, einem Router oder einem Ende.",
       "routerOrchestrator": "Ein Router hinter dem Orchestrator führt nur zu Enden.",
       "orchestratorLooseAgent": "Mit Orchestrator braucht jeder Agent einen Kanal von ihm.",
+      "orchestratorAgents": "Der Orchestrator braucht einen Kanal zu mindestens einem Agenten.",
+      "chainEnd": "Ohne Orchestrator muss die Kette vom Start (Chat-Eingang oder erster Agent) bis zu einem Endknoten führen.",
       "agentMode": "Ein Agent hängt entweder in der Kette oder am Orchestrator.",
       "agentChannel": "Ein Agent hat höchstens einen Kanal.",
       "modelRequired": "Modell ist Pflicht.",
@@ -1166,7 +1313,17 @@
       "fileAccessRoot": "Dateizugriff braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "terminalRoot": "Das Terminal braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
       "terminalPrograms": "Im eingeschränkten Modus ist mindestens ein Programm nötig.",
+      "toolMaxCalls": "Max. Aufrufe muss eine ganze Zahl ab 1 sein.",
+      "llmTemperature": "Temperature muss zwischen 0 und 2 liegen, bei Anthropic zwischen 0 und 1.",
+      "llmMaxTokens": "Max. Tokens muss eine ganze Zahl von 64 bis 262144 sein.",
+      "llmMaxTokensContext": "Max. Tokens muss kleiner sein als der Kontext des LLM-Knotens.",
+      "knowledgeTopK": "topK muss eine ganze Zahl von 1 bis 20 sein.",
+      "knowledgeScore": "Die Score-Schwelle muss zwischen 0 und 1 liegen.",
+      "httpCredentialUrl": "HTTP mit Zugang braucht eine vollständige URL (http/https). Der Zugang wird nur an diese Adresse gesendet.",
       "zipRoot": "ZIP braucht einen Ordner, der nicht die Laufwerkswurzel ist.",
+      "fileAccessRootMissing": "Der Ordner des Dateizugriffs existiert nicht. Lege ihn an oder wähle einen anderen.",
+      "terminalRootMissing": "Der Arbeitsordner des Terminals existiert nicht. Lege ihn an oder wähle einen anderen.",
+      "zipRootMissing": "Der Ordner des ZIP-Werkzeugs existiert nicht. Lege ihn an oder wähle einen anderen.",
       "knowledgePath": "Quellenordner ist Pflicht.",
       "knowledgeRoot": "Laufwerks- oder Systemwurzel ist nicht erlaubt.",
       "knowledgeSandbox": "Pfad muss unter dem Datenordner liegen.",
@@ -1195,6 +1352,10 @@
     }
   },
   "networks": {
+    "kind": {
+      "orchestrator": "Orchestrator",
+      "linear": "Linear"
+    },
     "title": "Verwaltung",
     "copySuffix": "(Kopie)",
     "ribbon": {
@@ -1225,17 +1386,26 @@
       "direction": "Sortierreihenfolge",
       "tags": "Tags",
       "onlyValid": "Nur gültige",
-      "onlyActive": "Nur aktive"
+      "onlyActive": "Nur aktive",
+      "kind": "Art des Netzes",
+      "kinds": {
+        "orchestrator": "Orchestrator",
+        "all": "Alle",
+        "linear": "Linear"
+      }
     },
     "list": {
       "selectAll": "Alle sichtbaren auswählen",
       "name": "Name",
+      "tags": "Tags",
+      "kind": "Art",
       "description": "Beschreibung",
       "status": "Status",
-      "graph": "Graph",
       "updated": "Geändert",
       "lastUsed": "Zuletzt verwendet",
-      "counts": "{{nodes}} Knoten · {{edges}} Kanten",
+      "allTags": "Alle Tags: {{tags}}",
+      "tagCount_one": "{{count}} Tag",
+      "tagCount_other": "{{count}} Tags",
       "move": "{{column}} verschieben",
       "resize": "Breite von {{column}} ändern"
     },
@@ -1253,6 +1423,9 @@
       "multi": "{{count}} ausgewählt",
       "noDescription": "Keine Beschreibung.",
       "lastRun": "Letzter Lauf",
+      "neverUsed": "Noch nie verwendet",
+      "moreErrors_one": "und {{count}} weiterer Fehler",
+      "moreErrors_other": "und {{count}} weitere Fehler",
       "resize": "Detailbreite ändern",
       "graphLoading": "Graph wird geladen…"
     },
@@ -1428,6 +1601,9 @@
       "current": "Aktuelle Knoten",
       "now": "Jetzt",
       "task": "Auftrag",
+      "taskFor": "Auftrag an {{name}}",
+      "noTask": "Gerade kein Auftrag.",
+      "contextLabel": "Kontext",
       "agents": "Agenten",
       "agentsDone": "{{completed}} von {{total}} fertig",
       "none": "Kein Knoten aktiv",
@@ -1438,7 +1614,9 @@
       "tokensOut": "Ausgabe",
       "perSecond": "{{value}} Token/s",
       "rate": "Token/s",
-      "runTotal": "Lauf gesamt",
+      "runTotal": "Ausgabe gesamt",
+      "runTotalOut": "Ausgabe-Token",
+      "runTotalIn": "Eingabe {{value}}",
       "context": "Kontext {{used}} / {{max}}"
     },
     "tabs": {
@@ -1452,6 +1630,7 @@
       "splitWidth": "Breite von Netz und Aktivität ändern"
     },
     "chat": {
+      "llmRetry": "Das Orchestrator-Modell ist gerade nicht erreichbar. Schreib eine Nachricht, um es erneut zu versuchen.",
       "placeholder": "Nachricht…",
       "send": "Senden",
       "stop": "Generierung stoppen",
@@ -1460,7 +1639,16 @@
       "empty": "Noch keine Nachrichten in diesem Lauf.",
       "disabled": "Chat nur während eines Laufs.",
       "agentDone": "{{name}} ist fertig.",
-      "agentDoneFiles": "{{name}} ist fertig. Dateien: {{files}}."
+      "agentDoneFiles": "{{name}} ist fertig. Dateien: {{files}}.",
+      "aborted": "Gestoppt. Schreib eine Nachricht, um weiterzumachen.",
+      "briefing": "**Vorwissen aus dem gewählten Vorlauf** (nur für den Orchestrator):\n\n{{text}}",
+      "previous": {
+        "label": "An Vorlauf anknüpfen",
+        "none": "Kein Vorlauf",
+        "option": "{{when}} · {{outcome}} · {{request}}",
+        "noRequest": "ohne Auftrag",
+        "hint": "Vor seiner ersten Entscheidung wertet der Orchestrator den gewählten Lauf aus und bekommt das Ergebnis als Vorwissen. Die Agenten sehen es nicht; er gibt ihnen weiter, was sie brauchen."
+      }
     },
     "log": {
       "pause": "Halten",
@@ -1473,7 +1661,9 @@
       "node": "Knoten",
       "allNodes": "Alle Knoten",
       "errorsOnly": "Nur Fehler",
-      "export": "Export",
+      "export": "JSON",
+      "exportText": "Als Text exportieren",
+      "exportTitle": "Log",
       "empty": "Keine Logzeilen für diesen Filter.",
       "detailTitle": "Log-Detail",
       "payload": "Payload",
@@ -1554,7 +1744,7 @@
       "refresh": "Aktualisieren",
       "delete": "Löschen",
       "export": "Logs exportieren",
-      "purge": "Älter als 90 Tage löschen"
+      "purge": "Älter als {{days}} Tage löschen"
     },
     "filter": {
       "range": "Zeitraum",
@@ -1591,11 +1781,52 @@
     },
     "chart": {
       "title": "Läufe nach Tag",
-      "empty": "Keine terminalen Läufe in diesem Zeitraum."
+      "empty": "Keine terminalen Läufe in diesem Zeitraum.",
+      "viewLabel": "Darstellung",
+      "views": {
+        "timeline": "Verlauf",
+        "share": "Anteile",
+        "networks": "Netze",
+        "table": "Tabelle"
+      },
+      "titles": {
+        "timeline": "Läufe nach Tag",
+        "share": "Ausgang der Läufe",
+        "networks": "Läufe nach Netz",
+        "table": "Läufe nach Tag (Tabelle)",
+        "timelineHours": "Läufe nach Stunde",
+        "tableHours": "Läufe nach Stunde (Tabelle)"
+      },
+      "runs_one": "{{formatted}} Lauf",
+      "runs_other": "{{formatted}} Läufe",
+      "gap": {
+        "days_one": "1 Tag ohne Läufe",
+        "days_other": "{{count}} Tage ohne Läufe",
+        "hours_one": "1 Stunde ohne Läufe",
+        "hours_other": "{{count}} Stunden ohne Läufe"
+      },
+      "moreNetworks_one": "{{count}} weiteres Netz",
+      "moreNetworks_other": "{{count}} weitere Netze",
+      "table": {
+        "outcome": "Ergebnis",
+        "runs": "Läufe",
+        "share": "Anteil",
+        "total": "Gesamt",
+        "day": "Tag",
+        "hour": "Stunde"
+      }
     },
     "errors": {
       "title": "Häufigste Fehler",
-      "empty": "Keine Fehler in diesem Filter."
+      "empty": "Keine Fehler in diesem Filter.",
+      "total_one": "{{count}} fehlgeschlagener Lauf · zum Filtern anklicken",
+      "total_other": "{{count}} fehlgeschlagene Läufe · zum Filtern anklicken",
+      "runs_one": "{{count}} Lauf",
+      "runs_other": "{{count}} Läufe",
+      "last": "zuletzt {{date}}",
+      "filtered": "Gefiltert: {{name}}",
+      "noKey": "Ohne Fehlermeldung",
+      "more": "{{count}} weitere Fehlerarten"
     },
     "errorClass": {
       "timeout": "Timeout",
@@ -1604,7 +1835,8 @@
       "validation": "Validierung",
       "service": "Dienst",
       "unknown": "Unbekannt",
-      "orchestrator": "Orchestrator"
+      "orchestrator": "Orchestrator",
+      "budget": "Budget"
     },
     "tab": {
       "history": "Historie",
@@ -1718,7 +1950,7 @@
     },
     "retention": {
       "title": "Ältere Läufe löschen",
-      "body": "{{count}} Läufe älter als 90 Tage werden gelöscht.",
+      "body": "{{count}} Läufe älter als {{days}} Tage werden gelöscht.",
       "confirm": "Löschen"
     },
     "notify": {
@@ -1732,29 +1964,287 @@
     }
   },
   "runLog": {
+    "limitShort": {
+      "run_llm_contextCut": "Verlauf vermutlich abgeschnitten"
+    },
+    "view": {
+      "file": {
+        "read": "liest {{path}}",
+        "read_many": "liest {{path}}",
+        "write": "schreibt {{path}}",
+        "edit": "ändert {{path}}",
+        "delete": "löscht {{path}}",
+        "move": "verschiebt {{path}} nach {{to}}",
+        "list": "listet {{path}}",
+        "tree": "zeigt den Baum von {{path}}",
+        "stat": "prüft {{path}}",
+        "search": "sucht {{pattern}} in {{path}}",
+        "searchText": "sucht „{{text}}“ in {{path}}",
+        "mkdir": "legt den Ordner {{path}} an",
+        "exists": "prüft, ob {{path}} existiert",
+        "other": "Dateizugriff {{action}} {{path}}"
+      },
+      "terminal": "führt aus: {{command}}",
+      "http": "{{method}} {{url}}",
+      "webSearch": "sucht im Web: {{query}}",
+      "calculator": "rechnet {{expression}}",
+      "zip": "ZIP {{action}} {{path}}",
+      "toolGeneric": "Werkzeug {{name}}",
+      "exit": "Exit-Code {{code}}",
+      "serverStopped": "nach {{seconds}} s beendet (läuft sonst dauerhaft)",
+      "lines_one": "{{count}} Zeile",
+      "lines_other": "{{count}} Zeilen",
+      "count": {
+        "entries_one": "{{count}} Eintrag",
+        "entries_other": "{{count}} Einträge",
+        "matches_one": "{{count}} Treffer",
+        "matches_other": "{{count}} Treffer",
+        "files_one": "{{count}} Datei",
+        "files_other": "{{count}} Dateien",
+        "children_one": "{{count}} Eintrag",
+        "children_other": "{{count}} Einträge",
+        "results_one": "{{count}} Ergebnis",
+        "results_other": "{{count}} Ergebnisse",
+        "items_one": "{{count}} Element",
+        "items_other": "{{count}} Elemente"
+      },
+      "replacements_one": "{{count}} Ersetzung",
+      "replacements_other": "{{count}} Ersetzungen",
+      "chars_one": "{{count}} Zeichen",
+      "chars_other": "{{count}} Zeichen",
+      "truncated": "gekürzt",
+      "reused": "aus dem Gedächtnis",
+      "llmStart": "Modell {{model}} startet",
+      "llm": "Modell {{model}}",
+      "tokens_one": "{{count}} Token",
+      "tokens_other": "{{count}} Token",
+      "llmTools": "ruft {{names}}",
+      "llmCut": "abgeschnitten (Ausgabegrenze)",
+      "action": {
+        "call": "ruft {{agent}}",
+        "retry": "Wiederholung",
+        "finish": "beendet den Lauf",
+        "reply": "antwortet",
+        "ask": "fragt"
+      },
+      "agentStart": "Auftrag {{call}}",
+      "agentStartPlain": "beginnt",
+      "outcome": {
+        "done": "fertig",
+        "textOnly": "fertig, nur Text ohne Werkzeug",
+        "anomaly": "fehlgeschlagen",
+        "stopped": "vom Nutzer gestoppt",
+        "cancelled": "abgebrochen"
+      },
+      "toolsCount_one": "{{count}} Werkzeugaufruf",
+      "toolsCount_other": "{{count}} Werkzeugaufrufe",
+      "toolsWithFailed_one": "{{count}} Werkzeugaufruf, {{failed}} fehlgeschlagen",
+      "toolsWithFailed_other": "{{count}} Werkzeugaufrufe, {{failed}} fehlgeschlagen",
+      "filesCount_one": "{{count}} Datei geändert",
+      "filesCount_other": "{{count}} Dateien geändert",
+      "capped": "Werkzeuggrenze erreicht",
+      "agentContext": "größte Anfrage {{prompt}} von {{window}} Token ({{share}} %)",
+      "agentContextCuts": "vermutlich abgeschnitten: {{count}}×",
+      "agentCompacted": "verdichtet: {{count}}×",
+      "step_one": "Werkzeugrunde: {{count}} Aufruf",
+      "step_other": "Werkzeugrunde: {{count}} Aufrufe",
+      "stepWithFailed_one": "Werkzeugrunde: {{count}} Aufruf, {{failed}} fehlgeschlagen",
+      "stepWithFailed_other": "Werkzeugrunde: {{count}} Aufrufe, {{failed}} fehlgeschlagen",
+      "stepEnd": {
+        "call": "endet mit einem Agentenaufruf",
+        "finish": "endet mit dem Abschluss",
+        "reply": "endet mit einer Antwort",
+        "ask": "endet mit einer Frage",
+        "think": "endet mit Nachdenken",
+        "tool-request": "endet mit einer Werkzeuganfrage",
+        "failed-tools": "endet nach zu vielen Werkzeugfehlern",
+        "failed-window": "endet: Kontext zu klein",
+        "llm-unavailable": "endet: Modell nicht erreichbar",
+        "unreadable": "endet: Antwort unlesbar",
+        "stopped": "gestoppt",
+        "none": "ohne Entscheidung"
+      },
+      "stepCapped": "Werkzeuggrenze erreicht",
+      "stepWithdrawn": "zurückgezogen: {{names}}"
+    },
+    "toolError": {
+      "fileAccess": {
+        "notFound": "Datei oder Ordner nicht gefunden",
+        "invalidAction": "ungültige Aktion",
+        "invalidPath": "ungültiger Pfad",
+        "tooLarge": "Datei zu groß",
+        "notFile": "keine Datei",
+        "notDir": "kein Ordner",
+        "outsideRoot": "außerhalb des freigegebenen Ordners",
+        "denied": "Zugriff verweigert",
+        "notText": "keine Textdatei",
+        "missingContent": "Inhalt fehlt",
+        "editMiss": "Text zum Ersetzen nicht gefunden",
+        "editAmbiguous": "Text zum Ersetzen kommt mehrfach vor",
+        "invalidText": "Suchtext zu lang oder mehrzeilig"
+      },
+      "terminal": {
+        "notFound": "Programm nicht gefunden",
+        "notGranted": "Programm nicht freigegeben",
+        "shellSyntax": "Shell-Syntax nicht erlaubt",
+        "missingCommand": "Befehl fehlt",
+        "timeout": "Zeitlimit überschritten",
+        "outsideRoot": "außerhalb des Arbeitsordners",
+        "missingRoot": "kein Arbeitsordner eingestellt",
+        "rootNotDir": "Arbeitsordner existiert nicht",
+        "inlineCode": "Code im Befehl nicht erlaubt",
+        "commandTooLong": "Befehl zu lang"
+      },
+      "http": {
+        "upstream": "Fehler des Servers",
+        "invalidUrl": "ungültige URL"
+      },
+      "webSearch": {
+        "upstream": "Fehler des Suchdienstes"
+      },
+      "badArguments": "ungültige Argumente",
+      "notOffered": "Werkzeug nicht verbunden",
+      "limitReached": "Aufrufgrenze erreicht",
+      "disabled": "für diesen Lauf abgeschaltet",
+      "withdrawn": "zurückgezogen",
+      "repeated": "gleicher Aufruf wiederholt",
+      "skipped": "übersprungen",
+      "stepLimit": "Grenze dieses Schritts erreicht",
+      "writeLocked": "Schreiben noch gesperrt"
+    },
+    "kind": {
+      "decision": "Entscheidung",
+      "agent": "Agent",
+      "tool": "Werkzeug",
+      "llm": "Modell",
+      "limit": "Grenze",
+      "run": "Lauf",
+      "chat": "Chat",
+      "other": "Sonstiges"
+    },
+    "status": {
+      "running": "läuft",
+      "ok": "erfolgreich",
+      "fail": "fehlgeschlagen",
+      "warn": "Warnung"
+    },
+    "group": {
+      "collapse": "Zuklappen",
+      "expand": "Aufklappen",
+      "running": "läuft …",
+      "noResult": "ohne Ergebnis beendet",
+      "lines_one": "{{count}} Zeile",
+      "lines_other": "{{count}} Zeilen"
+    },
+    "views": {
+      "label": "Ansicht",
+      "important": "Wichtig",
+      "all": "Alles",
+      "debug": "Debug",
+      "importantHint": "Entscheidungen, Aufträge, Ergebnisse, Grenzen, Warnungen und Fehler",
+      "allHint": "Zusätzlich jeder Werkzeug- und Modellaufruf",
+      "debugHint": "Zusätzlich Debug-Zeilen, zum Beispiel Modellstarts und Wissenssuche",
+      "searchHint": "Text, Auftrag, Pfad, Befehl …"
+    },
+    "detail": {
+      "tool": "Werkzeug",
+      "caller": "Aufrufer",
+      "node": "Knoten",
+      "path": "Pfad",
+      "command": "Befehl",
+      "error": "Fehler",
+      "result": "Ergebnis",
+      "hint": "Hinweis an das Modell",
+      "changed": "Geänderte Datei",
+      "output": "Ausgabe",
+      "arguments": "Argumente",
+      "content": "Dateiinhalt (gekürzt)",
+      "model": "Modell",
+      "provider": "Anbieter",
+      "tokens": "Token",
+      "duration": "Dauer",
+      "context": "Kontext",
+      "finish": "Ende",
+      "answer": "Antwort",
+      "reasoning": "Denktext",
+      "agent": "Agent",
+      "call": "Auftrag Nr.",
+      "tools": "Werkzeugaufrufe",
+      "toolsValue": "{{count}} ({{ok}} ok, {{failed}} fehlgeschlagen)",
+      "reason": "Grund",
+      "files": "Geänderte Dateien",
+      "task": "Auftrag",
+      "resultStart": "Ergebnis (Anfang, {{count}} Zeichen)",
+      "resultText": "Ergebnis",
+      "action": "Aktion",
+      "via": "Weg",
+      "viaValue": {
+        "tool": "Entscheidungs-Werkzeug",
+        "json": "JSON-Antwort"
+      },
+      "source": "Quelle",
+      "text": "Text",
+      "raw": "Rohdaten (JSON)"
+    },
+    "summary": {
+      "title": "Laufzusammenfassung",
+      "outcome": "Ausgang",
+      "outcomes": {
+        "succeeded": "Lauf erfolgreich",
+        "failed": "Lauf fehlgeschlagen",
+        "cancelled": "Lauf abgebrochen"
+      },
+      "agentCalls": "Agentenaufrufe",
+      "llmCalls": "Modellaufrufe",
+      "tokens": "{{tokensIn}} Token rein, {{tokensOut}} raus",
+      "toolCalls": "Werkzeugaufrufe",
+      "files": "Geänderte Dateien",
+      "limits": "Grenzen",
+      "error": "Fehler",
+      "agent": "{{name}} ×{{count}}",
+      "agentFailed": "{{name}} ×{{count}} ({{failed}} fehlgeschlagen)",
+      "contextShare": "Kontext bis {{share}} %",
+      "fileList_one": "{{count}} geänderte Datei anzeigen",
+      "fileList_other": "{{count}} geänderte Dateien anzeigen"
+    },
     "run": {
+      "briefing": {
+        "done": "Vorlauf gelesen: {{chars}} Zeichen Vorwissen.",
+        "failed": "Vorlauf nicht ausgewertet ({{error}}); der Orchestrator bekommt den gekürzten Laufbericht.",
+        "window": "Laufbericht passt nicht ins Kontextfenster; der Orchestrator bekommt ihn gekürzt.",
+        "missing": "Gewählter Vorlauf nicht gefunden."
+      },
+      "llmBudget": "Budget an Modellaufrufen für diesen Lauf aufgebraucht.",
       "start": "Lauf gestartet ({{networkName}})",
       "wait": {
         "human": "Wartet auf Eingabe",
         "ask": "Rückfrage von {{speaker}}"
       },
       "chat": {
-        "user": "Nutzereingabe"
+        "user": "Nutzereingabe",
+        "aborted": "Generierung im Chat gestoppt"
       },
       "batch": {
         "start": "Batch-Lauf gestartet"
       },
       "agent": {
+        "textOnly": "Nur Text, kein Werkzeug genutzt; der Orchestrator prüft die Antwort.",
+        "outputLimit": "Zweimal an der Ausgabegrenze abgeschnitten; Auftrag beendet.",
+        "window": "Der Prompt passt in kein Kontextfenster.",
+        "toolCap": "Agent: {{calls}} Werkzeugaufrufe für diesen Auftrag, Grenze erreicht.",
         "start": "Agent gestartet",
         "done": "Agent fertig",
         "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen hintereinander beendet",
+        "terminalLesson": "Abgelehnter Terminalbefehl gemerkt ({{kind}}); steht jetzt im Systemprompt dieses Agenten ({{lessons}} insgesamt).",
         "toolJson": "Werkzeugaufruf {{name}} verworfen: JSON-Argumente unvollständig (Versuch {{attempt}}/{{max}}).",
         "think": "Agent denkt (kein Ergebnis).",
         "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",
         "thinkLoop": "1-Token-Denkschleife nach {{thinks}} Schritten beendet.",
         "emptyStop": "Leere Antwort verworfen ({{attempt}}/{{max}}). Der Auftrag geht weiter.",
         "emptyStops": "Aufgabe unvollständig: fünf leere Antworten hintereinander.",
-        "truncated": "Antwort abgeschnitten; kein Ergebnis."
+        "empty": "Agent lieferte ein leeres Ergebnis",
+        "truncated": "Antwort abgeschnitten; kein Ergebnis.",
+        "compact": "Kontext verdichtet, damit die Antwort ins Fenster passt."
       },
       "knowledge": "Wissenssuche ({{count}} Treffer)",
       "knowledgeIndex": {
@@ -1762,21 +2252,28 @@
         "embed": "Wissen wird indiziert: {{name}} ({{chunks}} Abschnitte, {{model}})",
         "ready": "Wissen bereit: {{name}}",
         "cached": "Wissen ist aktuell: {{name}}",
-        "failed": "Wissen konnte nicht indiziert werden: {{name}}"
+        "failed": "Wissen konnte nicht indiziert werden: {{name}}",
+        "limit": "Wissen {{name}}: {{files}} Dateien, indiziert werden die ersten {{max}}"
       },
       "llm": {
+        "toolCallsRepaired": "{{count}} fehlende Werkzeugantworten ergänzt.",
         "start": "LLM {{model}}",
         "done": "LLM fertig ({{durationMs}} ms)",
-        "vram": "VRAM {{model}}: Schätzung {{estimated}}, belegt {{used}}, {{delta}} ({{percent}}). Experten {{expertsOnGpu}}/{{expertLayers}}, Attention {{attentionLayersOnGpu}}{{placement}}.",
+        "contextCut": "Verlauf vermutlich abgeschnitten: Das Modell hat {{reported, number}} Eingabe-Tokens verarbeitet, erwartet waren etwa {{expected, number}} (Fenster {{contextMax, number}}). Der Anfang des Verlaufs fehlt ihm wahrscheinlich.",
+        "release": "Andere Modelle entladen ({{dropped}}); {{keep}} bleibt geladen",
         "modelInfo": "Modelldaten von {{model}} fehlen. Der Lauf wurde abgebrochen.",
         "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
       },
       "tool": {
+        "limitReached": "Werkzeug {{name}}: Limit von {{limit}} Aufrufen pro Lauf erreicht.",
+        "notOffered": "Werkzeug {{name}} ist an diesem Knoten nicht freigegeben; der Aufruf wurde nicht ausgeführt.",
+        "disabled": "Werkzeug {{name}} ist für den Rest des Laufs abgeschaltet ({{error}}).",
         "call": "Werkzeug {{name}}"
       },
       "router": "Router {{branch}} → {{target}}",
       "end": "Ende erreicht",
       "succeeded": "Lauf erfolgreich",
+      "summary": "Laufzusammenfassung",
       "failed": "Lauf fehlgeschlagen",
       "cancelled": "Lauf abgebrochen",
       "interrupted": "Lauf unterbrochen (App beendet)",
@@ -1784,7 +2281,25 @@
         "fallbackMissing": "Hilfe-Fallback-Modell fehlt"
       },
       "stepLimit": "Schrittlimit erreicht",
+      "noEnd": "Kette hat keinen Endknoten erreicht",
+      "memory": {
+        "source": "Text des einzigen Autors automatisch angehängt"
+      },
       "orchestrator": {
+        "textRetry": "Wiederholung von {{name}} lieferte wieder nur Text ({{fails}}/{{max}}).",
+        "retryIgnored": "retry ohne vorherige reine Textantwort; zählt nicht.",
+        "takeoverUnavailable": "Übernahme nicht möglich: Orchestrator fehlen die Werkzeuge ({{count}}/{{max}}).",
+        "toolCap": "Orchestrator: {{calls}} Werkzeugaufrufe in diesem Schritt, Grenze erreicht.",
+        "compact": "Orchestrator-Kontext verdichtet (Stufe {{level}}).",
+        "trimmed": "Orchestrator-Prompt gekürzt, damit er ins Fenster passt: {{results}} ältere Ergebnisse entfernt, {{starts}} auf ihren Anfang gekürzt, {{other}} weitere Kürzungen (bisher {{total}} Schritte). Aufträge und geänderte Dateien bleiben.",
+        "privateReasoning": "Interne Überlegung des Modells nicht im Chat gezeigt.",
+        "replyAsAsk": "Die Antwort enthielt eine Frage an dich und wurde als Rückfrage gestellt; der Lauf wartet auf deine Antwort.",
+        "llmPause": "Orchestrator-Modell nicht erreichbar ({{error}}); wartet auf eine Nachricht.",
+        "emptyTask": "Leerer Auftrag; letzte Nutzernachricht wird verwendet.",
+        "action": "Orchestrator: {{action}} {{agent}}",
+        "step": "Werkzeugrunde: {{calls}} Aufrufe",
+        "unknownAgent": "Unbekannter Agent „{{token}}“ im Aufruf",
+        "unknownSource": "Unbekannte Quelle „{{source}}“ im Aufruf",
         "repair": "Steuerbefehl war unlesbar, neuer Versuch.",
         "unreadable": "Der Orchestrator hat keinen lesbaren nächsten Schritt geliefert.",
         "defer": "Nächster Schritt nach der Chat-Nachricht war unlesbar; der Lauf geht weiter.",
@@ -1797,7 +2312,18 @@
         "takeoverStart": "{{agent}} hat {{misses}} Dateiversuche ohne Änderung verbraucht. Der Orchestrator übernimmt.",
         "takeoverBlocked": "Aufruf von {{agent}} abgelehnt. Der Orchestrator muss die Datei selbst schreiben.",
         "takeover": "{{agent}} hat das Versuchslimit erreicht. Der Orchestrator hat keine Datei geschrieben.",
-        "takeoverNoTool": "{{agent}} hat das Versuchslimit erreicht. Am Orchestrator hängt kein Dateiwerkzeug."
+        "takeoverNoTool": "{{agent}} hat das Versuchslimit erreicht. Am Orchestrator hängt kein Dateiwerkzeug.",
+        "takeoverFailures": "{{agent}} ist {{failed}}-mal in Folge gescheitert ({{reason}}). Der Orchestrator übernimmt.",
+        "toolRequest": "Der Orchestrator hat „{{verb}}“ als Aktion geschrieben statt das Werkzeug aufzurufen.",
+        "selfTakeover": "Ein Agent ist gescheitert: Der Orchestrator darf Dateien jetzt selbst ändern.",
+        "toolLocked": "Werkzeugaufruf {{name}} nicht ausgeführt: in diesem Schritt nicht freigegeben.",
+        "stuck": "Der Orchestrator kam nicht weiter: {{decisions}} Entscheidungen ohne neuen Schritt.",
+        "stuckClose": "{{decisions}} Entscheidungen ohne neuen Schritt. Der Orchestrator fasst zusammen, dann endet der Lauf.",
+        "orientationCap": "Orchestrator: {{calls}} Werkzeugaufrufe vor dem ersten Agentenauftrag, Grenze erreicht.",
+        "toolWithdrawn": "Werkzeug {{name}} ist für diesen Schritt zurückgezogen: wiederholt derselbe Fehler oder derselbe Aufruf ({{error}}).",
+        "stepClose": "Grenze von {{calls}} Agentenaufrufen erreicht. Der Orchestrator fasst zusammen, dann endet der Lauf.",
+        "toolRepeated": "Werkzeugaufruf {{name}} nicht ausgeführt: derselbe Aufruf lief in diesem Schritt schon.",
+        "decisionTool": "Der Orchestrator hat über das Werkzeug {{name}} entschieden."
       }
     },
     "mcp": {
@@ -1811,8 +2337,16 @@
       }
     },
     "runtime": {
+      "generationLimit": "Antwort nach der Zeitgrenze abgebrochen.",
+      "rateLimited": "Der Anbieter drosselt die Anfragen (Rate-Limit).",
       "timeout": "Kein Fortschritt vom Modell",
-      "unreachable": "Runtime nicht erreichbar"
+      "unreachable": "Runtime nicht erreichbar",
+      "upstream": "Antwort des Modells unvollständig oder abgelehnt",
+      "badRequest": "Anfrage vom Modell abgelehnt",
+      "modelNotFound": "Modell nicht gefunden",
+      "modelInfoFailed": "Modellinfo nicht lesbar",
+      "unauthorized": "Zugang abgelehnt (Schlüssel prüfen)",
+      "missingCredential": "Zugang fehlt"
     }
   },
   "help": {

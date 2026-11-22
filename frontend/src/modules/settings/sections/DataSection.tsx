@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ApiError } from '@/api/client';
 import { notify } from '@/lib/notifications';
 import { patchSettings, pickDataDir, setDataDir, useSettingsQuery, useStoresQuery } from '@/modules/settings/api';
 import { isForbiddenDataRoot, type HistoryRetentionDays } from '@/modules/settings/model';
@@ -73,8 +74,15 @@ export function DataSection() {
       notify({ titleKey: 'settings.notify.dataDirOk', variant: 'success' });
       setPendingPath(null);
       setCopy(false);
-    } catch {
-      notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
+    } catch (error) {
+      const key = error instanceof ApiError ? error.messageKey : undefined;
+      const titleKey =
+        key === 'dataDir.targetHasData'
+          ? 'settings.data.targetHasData'
+          : key === 'dataDir.switchFailed'
+            ? 'settings.data.switchFailed'
+            : 'settings.notify.saveError';
+      notify({ titleKey, variant: 'error' });
     } finally {
       setConfirming(false);
     }

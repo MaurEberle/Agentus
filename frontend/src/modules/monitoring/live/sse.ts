@@ -120,18 +120,20 @@ export function createSseHandle(): MonitoringHandle {
       es.onopen = () => {
         retry = 1000;
         lastEventAt = Date.now();
+        stopPoll();
       };
       es.onerror = () => {
         closeSource();
-        emit({ type: 'service', serviceStatus: 'disconnected' });
+        // While polling, the poll owns serviceStatus; a failed retry must not flap it.
+        if (pollTimer === null) emit({ type: 'service', serviceStatus: 'disconnected' });
         if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
         reconnectTimer = window.setTimeout(() => {
+          reconnectTimer = null;
           retry = Math.min(retry * 2, 15_000);
-          if (retry >= 8_000) {
-            startPoll();
-            return;
-          }
-          connect();
+          // Poll bridges a long outage, but keep retrying the stream: log and chat
+          // events only arrive over SSE.
+          if (retry >= 8_000) startPoll();
+          if (listeners.size > 0) connect();
         }, retry);
       };
     } catch {
@@ -170,10 +172,15 @@ export function createSseHandle(): MonitoringHandle {
     getSnapshot() {
       return { ...snapshot };
     },
-    sendChat(text: string) {
-      void apiFetch('/run/chat', { method: 'POST', body: JSON.stringify({ text }) }).catch(() => {
-        emit({ type: 'adapterError', messageKey: 'monitoring.empty.errorTitle' });
-      });
+    sendChat(text: string, previousRunId?: string) {
+      const body = previousRunId ? { text, previousRunId } : { text };
+      return apiFetch('/run/chat', { method: 'POST', body: JSON.stringify(body) }).then(
+        () => true,
+        () => {
+          emit({ type: 'adapterError', messageKey: 'monitoring.empty.errorTitle' });
+          return false;
+        },
+      );
     },
     abortChat() {
       void apiFetch('/run/chat/abort', { method: 'POST' }).catch(() => undefined);

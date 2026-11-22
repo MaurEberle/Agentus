@@ -265,15 +265,20 @@ def test_move_search_and_tree(tmp_path) -> None:
 def test_read_head_and_many(tmp_path) -> None:
     root = tmp_path / "root"
     root.mkdir()
-    (root / "a.txt").write_text("one\ntwo\nthree", encoding="utf-8")
-    (root / "b.txt").write_text("bee", encoding="utf-8")
+    # Bytes, not write_text: on Windows that would store CRLF and the page shows it.
+    (root / "a.txt").write_bytes(b"one\ntwo\nthree")
+    (root / "b.txt").write_bytes(b"bee")
     head = execute_first_party(
         "file_access",
         config={"rootPath": str(root)},
         args={"action": "read", "path": "a.txt", "head": 2},
     )
     assert head.ok is True
-    assert head.result["content"] == "one\ntwo"
+    # A page is the exact text of its lines, line endings included.
+    assert head.result["content"] == "one\ntwo\n"
+    assert head.result["lines"] == 3
+    assert (head.result["startLine"], head.result["endLine"]) == (1, 2)
+    assert head.result["nextOffset"] == 3
     many = execute_first_party(
         "file_access",
         config={"rootPath": str(root)},
@@ -281,3 +286,222 @@ def test_read_head_and_many(tmp_path) -> None:
     )
     assert many.ok is True
     assert [item["path"] for item in many.result["files"]] == ["a.txt", "b.txt"]
+
+
+def test_read_pages_through_a_large_file(tmp_path) -> None:
+    import json
+
+    from app.mcp.payload import TOOL_RESULT_CHARS, format_tool_result
+
+    root = tmp_path / "root"
+    root.mkdir()
+    lines = [f"line {index:04d} " + "x" * 40 for index in range(1, 401)]
+    (root / "big.txt").write_bytes("\n".join(lines).encode("utf-8"))
+    seen: list[str] = []
+    offset: int | None = None
+    for _ in range(40):
+        args: dict[str, object] = {"action": "read", "path": "big.txt"}
+        if offset is not None:
+            args["offset"] = offset
+        page = execute_first_party("file_access", config={"rootPath": str(root)}, args=args)
+        assert page.ok is True
+        # The whole result fits the tool budget and stays valid JSON.
+        text = format_tool_result(page.model_dump(by_alias=True))
+        assert len(text) <= TOOL_RESULT_CHARS
+        assert json.loads(text)["result"]["lines"] == 400
+        seen.append(page.result["content"])
+        offset = page.result.get("nextOffset")
+        if offset is None:
+            assert "truncated" not in page.result
+            break
+        assert page.result["truncated"] is True
+    assert "".join(seen) == "\n".join(lines)
+    assert len(seen) > 1
+
+
+def test_read_offset_and_limit_pick_a_line_range(tmp_path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "a.txt").write_bytes(b"one\ntwo\nthree\nfour\n")
+    page = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "read", "path": "a.txt", "offset": 2, "limit": 2},
+    )
+    assert page.result["content"] == "two\nthree\n"
+    assert (page.result["startLine"], page.result["endLine"]) == (2, 3)
+    assert page.result["nextOffset"] == 4
+    assert "truncated" not in page.result
+    tail = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "read", "path": "a.txt", "tail": 1},
+    )
+    assert tail.result["content"] == "four\n"
+    assert "nextOffset" not in tail.result
+
+
+def test_read_keeps_code_that_only_looks_like_a_secret(tmp_path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    source = 'headers = {"Authorization": f"Bearer {token}"}\nKEY = "sk-abcdefghijklmnop"\n'
+    (root / "client.py").write_bytes(source.encode("utf-8"))
+    read = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "read", "path": "client.py"},
+    )
+    content = read.result["content"]
+    # H5: the template survives; a real-looking key is still masked.
+    assert 'f"Bearer {token}"}' in content
+    assert "sk-abcdefghijklmnop" not in content
+    assert "sk-***" in content
+
+
+def test_edit_reads_the_whole_file_not_one_page(tmp_path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    lines = [f"line {index:04d} " + "x" * 40 for index in range(1, 401)]
+    (root / "big.txt").write_bytes("\n".join(lines).encode("utf-8"))
+    edited = execute_first_party(
+        "file_access",
+        config={"rootPath": str(root)},
+        args={"action": "edit", "path": "big.txt", "oldText": "line 0390 ", "newText": "LINE 390 "},
+    )
+    assert edited.ok is True
+    assert "LINE 390 " in (root / "big.txt").read_text(encoding="utf-8")
+
+
+def test_write_object_content_is_json(tmp_path) -> None:
+    """M10: an object as content is written as JSON, not as a Python repr."""
+    import json
+
+    config = {"rootPath": str(tmp_path)}
+    written = execute_first_party(
+        "file_access",
+        config=config,
+        args={"action": "write", "path": "package.json", "content": {"name": "demo", "private": True}},
+    )
+    assert written.ok is True
+    text = (tmp_path / "package.json").read_text(encoding="utf-8")
+    assert json.loads(text) == {"name": "demo", "private": True}
+    assert "True" not in text
+
+
+def test_write_object_with_base64_is_rejected(tmp_path) -> None:
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={"action": "write", "path": "x.bin", "content": {"a": 1}, "encoding": "base64"},
+    )
+    assert result.ok is False
+    assert result.error_key == "tools.fileAccess.invalidAction"
+
+
+def test_edit_matches_lf_text_in_crlf_file(tmp_path) -> None:
+    """M11: the model sends LF, the file has CRLF; the edit lands and keeps CRLF."""
+    target = tmp_path / "app.py"
+    target.write_bytes(b"def a():\r\n    return 1\r\n\r\ndef b():\r\n    return 2\r\n")
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={
+            "action": "edit",
+            "path": "app.py",
+            "oldText": "def a():\n    return 1\n",
+            "newText": "def a():\n    return 10\n",
+        },
+    )
+    assert result.ok is True, result.error_key
+    assert target.read_bytes() == b"def a():\r\n    return 10\r\n\r\ndef b():\r\n    return 2\r\n"
+
+
+def test_edit_single_line_in_crlf_file_keeps_crlf(tmp_path) -> None:
+    target = tmp_path / "notes.txt"
+    target.write_bytes(b"one\r\ntwo\r\n")
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={"action": "edit", "path": "notes.txt", "oldText": "one", "newText": "one\nhalf"},
+    )
+    assert result.ok is True, result.error_key
+    assert target.read_bytes() == b"one\r\nhalf\r\ntwo\r\n"
+
+
+def test_edit_crlf_text_in_lf_file(tmp_path) -> None:
+    target = tmp_path / "unix.txt"
+    target.write_bytes(b"alpha\nbeta\n")
+    result = execute_first_party(
+        "file_access",
+        config={"rootPath": str(tmp_path)},
+        args={"action": "edit", "path": "unix.txt", "oldText": "alpha\r\nbeta", "newText": "alpha\r\ngamma"},
+    )
+    assert result.ok is True, result.error_key
+    assert target.read_bytes() == b"alpha\ngamma\n"
+
+
+def _search(root, **args):
+    return execute_first_party("file_access", config={"rootPath": str(root)}, args={"action": "search", **args})
+
+
+def test_search_with_text_finds_lines_in_a_folder(tmp_path) -> None:
+    """Coder_Team run, 2026-11-20: 106 failed calls tried to find text with grep and the like."""
+    root = tmp_path / "root"
+    (root / "src" / "modules").mkdir(parents=True)
+    (root / "node_modules" / "lib").mkdir(parents=True)
+    (root / "src" / "modules" / "_cards.scss").write_bytes(b".grid {}\n.language-card { color: red; }\n")
+    (root / "src" / "Card.tsx").write_bytes(b'<article className="language-card">\n')
+    (root / "node_modules" / "lib" / "x.css").write_bytes(b".language-card {}\n")
+    found = _search(root, path=".", text="language-card")
+    assert found.ok is True, found.error_key
+    hits = {(item["path"], item["line"]) for item in found.result["matches"]}
+    # node_modules is skipped below the start folder.
+    assert hits == {("src/modules/_cards.scss", 2), ("src/Card.tsx", 1)}
+    assert found.result["occurrences"] == 2 and found.result["files"] == 2
+    only_scss = _search(root, path="src", text="language-card", pattern="*.scss")
+    assert [item["path"] for item in only_scss.result["matches"]] == ["src/modules/_cards.scss"]
+    inside = _search(root, path="node_modules/lib", text="language-card")
+    assert [item["path"] for item in inside.result["matches"]] == ["node_modules/lib/x.css"]
+
+
+def test_search_with_text_in_one_minified_file(tmp_path) -> None:
+    root = tmp_path / "root"
+    (root / "dist").mkdir(parents=True)
+    css = ".a{color:red}" * 40 + ".rotate-animation{animation:20s linear infinite rotate}" + ".b{}" * 40
+    (root / "dist" / "index.css").write_text(css, encoding="utf-8")
+    found = _search(root, path="dist/index.css", text="rotate-animation")
+    assert found.ok is True, found.error_key
+    [hit] = found.result["matches"]
+    assert hit["line"] == 1
+    assert "rotate-animation" in hit["text"] and len(hit["text"]) <= 162
+    assert hit["text"].startswith("…") and hit["text"].endswith("…")
+    missing = _search(root, path="dist/index.css", text="--color-accent")
+    assert missing.ok is True and missing.result["matches"] == [] and missing.result["occurrences"] == 0
+
+
+def test_a_pattern_on_a_file_is_searched_as_text(tmp_path) -> None:
+    """The run sent {"action":"search","path":"dist/assets/x.css","pattern":"--color-accent"} ten times."""
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "x.css").write_bytes(b":root{--color-accent:#3182ce}\n")
+    found = _search(root, path="x.css", pattern="--color-accent")
+    assert found.ok is True, found.error_key
+    assert found.result["matches"][0]["line"] == 1
+    assert "as text" in found.result["note"]
+
+
+def test_search_text_limits(tmp_path) -> None:
+    from app.tools.file_access_tool import MAX_TEXT_HITS
+
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "many.txt").write_bytes(b"hit\n" * (MAX_TEXT_HITS + 5))
+    (root / "blob.bin").write_bytes(b"\x00\x01hit")
+    found = _search(root, path=".", text="hit")
+    assert len(found.result["matches"]) == MAX_TEXT_HITS
+    assert found.result["truncated"] is True
+    assert found.result["occurrences"] == MAX_TEXT_HITS + 5
+    assert {item["path"] for item in found.result["matches"]} == {"many.txt"}
+    assert _search(root, path=".", text="a\nb").error_key == "tools.fileAccess.invalidText"
+    assert _search(root, path=".", text="x" * 201).error_key == "tools.fileAccess.invalidText"
+    assert _search(root, path="gone", text="hit").error_key == "tools.fileAccess.notFound"

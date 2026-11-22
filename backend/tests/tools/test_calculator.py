@@ -29,6 +29,21 @@ def test_pow_within_limit() -> None:
     assert result.result == {"value": 1024}
 
 
+def test_nested_pow_rejected_quickly() -> None:
+    import time
+
+    started = time.perf_counter()
+    result = execute_first_party("calculator", args={"expression": "((((((9**20)**20)**20)**20)**20)**20)"})
+    assert result.ok is False
+    assert time.perf_counter() - started < 1.0
+
+
+def test_large_but_valid_pow() -> None:
+    result = execute_first_party("calculator", args={"expression": "(2**20)**20"})
+    assert result.ok is True
+    assert result.result == {"value": float(2**400)}
+
+
 def test_sqrt_cbrt_and_constants() -> None:
     root = execute_first_party("calculator", args={"expression": "sqrt(9)"})
     assert root.ok is True

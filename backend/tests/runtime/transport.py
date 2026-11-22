@@ -20,3 +20,4 @@ def install_transport(
     monkeypatch.setattr("app.runtime.embeddings.client", wrapped)
     monkeypatch.setattr("app.runtime.catalog.client", wrapped)
     monkeypatch.setattr("app.runtime.model_stats.client", wrapped)
+    monkeypatch.setattr("app.runtime.ollama_embed_runner.client", wrapped)

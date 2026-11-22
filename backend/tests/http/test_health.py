@@ -22,7 +22,7 @@ def test_health_ok_camel_case(client: TestClient) -> None:
 
 
 def test_health_without_db(api_env) -> None:
-    response = TestClient(create_app()).get("/api/health")
+    response = TestClient(create_app(), base_url="http://127.0.0.1").get("/api/health")
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
@@ -47,7 +47,7 @@ def test_spa_html_is_not_cached(tmp_path, monkeypatch) -> None:
     dist.mkdir()
     (dist / "index.html").write_text("<html><body>ok</body></html>", encoding="utf-8")
     monkeypatch.setenv("AGENTUS_NETWORK_STATIC_DIR", str(dist))
-    response = TestClient(create_app()).get("/")
+    response = TestClient(create_app(), base_url="http://127.0.0.1").get("/")
     assert response.status_code == 200
     assert "ok" in response.text
     assert response.headers.get("cache-control") == "no-store"
@@ -95,3 +95,22 @@ def test_loopback_uvicorn_health(api_env) -> None:
         thread.join(timeout=3)
     assert response.status_code == 200
     assert response.json()["ok"] is True
+
+
+def test_spa_client_route_serves_index(tmp_path, monkeypatch) -> None:
+    """N7: reloading /history/<id> in a browser returned a JSON 404."""
+    dist = tmp_path / "spa"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<html><body>app</body></html>", encoding="utf-8")
+    (dist / "assets" / "app.js").write_text("console.log(1)", encoding="utf-8")
+    monkeypatch.setenv("AGENTUS_NETWORK_STATIC_DIR", str(dist))
+    http = TestClient(create_app(), base_url="http://127.0.0.1")
+    page = http.get("/history/run-123")
+    assert page.status_code == 200
+    assert "app" in page.text
+    assert page.headers.get("cache-control") == "no-store"
+    assert http.get("/assets/app.js").status_code == 200
+    assert http.get("/assets/missing-1234.js").status_code == 404
+    api = http.get("/api/does-not-exist")
+    assert api.status_code == 404
+    assert api.json()["messageKey"] == "http.notFound"

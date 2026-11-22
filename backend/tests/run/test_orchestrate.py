@@ -105,6 +105,45 @@ def test_empty_ask_is_rejected() -> None:
     assert reject_reason(raw) == "empty"
 
 
+def test_reply_keeps_the_only_other_string() -> None:
+    raw = '{"action":"reply","message":"Die Datei wurde aufbereitet."}'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+    assert parsed["text"] == "Die Datei wurde aufbereitet."
+    assert reject_reason(raw) is None
+
+
+def test_ask_keeps_the_question_field() -> None:
+    raw = '{"action":"ask","question":"Von welchem Flughafen startest du?"}'
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "ask"
+    assert parsed["text"] == "Von welchem Flughafen startest du?"
+    assert reject_reason(raw) is None
+
+
+def test_canonical_text_wins_over_another_string() -> None:
+    raw = '{"action":"reply","text":"Kurz","message":"Lang"}'
+    assert parse_orchestrator_action(raw)["text"] == "Kurz"
+    assert reject_reason(raw) is None
+
+
+def test_two_unnamed_strings_stay_empty() -> None:
+    raw = '{"action":"reply","message":"A","content":"B"}'
+    assert parse_orchestrator_action(raw)["text"] == ""
+    assert reject_reason(raw) == "empty"
+
+
+def test_reply_ignores_tool_markup_after_the_object() -> None:
+    raw = (
+        '{"action":"reply","message":"Die Datei wurde aufbereitet."}'
+        "</arg_value><arg_key>action</arg_key><arg_value>finish</arg_value></tool_call>"
+    )
+    parsed = parse_orchestrator_action(raw)
+    assert parsed["action"] == "reply"
+    assert parsed["text"] == "Die Datei wurde aufbereitet."
+    assert reject_reason(raw) is None
+
+
 def test_pasted_story_with_broken_quotes_is_not_a_call() -> None:
     story = "Wort " * 80 + 'fragte: "hallo" und weiter'
     raw = '{"action":"call","agent":"Translate","task":"' + story + '"}'
@@ -118,9 +157,11 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "private channel" in text
     assert "id: ag" in text
     assert "parallel" not in text
-    assert "not in this prompt" in text
-    assert "status line" in text
-    assert "result of that call" in text
+    # Run bd3cfb0f: the course of all calls is in the prompt, the latest result per agent in full.
+    assert "numbered status line, oldest first" in text
+    assert "the start of its task, the files it changed" in text
+    assert "the full text stays in memory" in text
+    assert "a later call may already have done or fixed" in text
     assert "stored text" in text
     assert "Do not write that you might ask" in text
     assert "without waiting" in text
@@ -128,20 +169,93 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "Use think for internal planning" in text
     assert '{"action":"think","text":"..."}' in text
     assert '{"action":"call","agent":"<id or name>","task":"..."}' in text
-    assert "Omit source" in text
+    assert 'Set source to "none"' in text
+    assert "exactly one agent has stored text" in text
 
 
-def test_instructions_mention_connected_tools() -> None:
-    plain = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
-    assert "You have tools" not in plain
+def test_instructions_have_fixed_sections_in_order() -> None:
     text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"])
-    assert "You have tools: file_access." in text
-    assert "not the tool result" in text
-    assert "instead of calling an agent" in text
-    assert "You may call tools as often as you need" in text
+    order = [text.index(head) for head in ("# Role", "# Agents", "# Your tools", "# Data", "# Decision")]
+    assert order == sorted(order)
+    assert text.startswith("leite\n\n# Role\nYou orchestrate this agent network")
+    assert "You do not implement anything yourself." in text
+    # The decision format comes last, after the tool text.
+    assert text.rstrip().endswith("Write ask, reply, think, and finish text in the user's language.")
+
+
+def test_instructions_say_when_the_orchestrator_has_no_tools() -> None:
+    """Coder_Team run, 2026-11-20: nothing said so, and it planned to check the files itself."""
+    plain = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")])
+    assert "# Your tools\nYou have no tools of your own." in plain
+    assert "cannot read, search or change files" in plain
+    assert "call an agent that has the tool" in plain
+    # No tool names: nothing to invent a call from.
+    assert "terminal" not in plain.lower() and "file_access" not in plain
+    withheld = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], [], tools_connected=True)
+    assert "# Your tools\nNot available on this turn. Call an agent or ask." in withheld
+
+
+def test_instructions_carry_the_overview_and_the_agent_tools() -> None:
+    overview = "Files: you have no file access.\nOther tools connected to you:\n- Websuche (web_search): searches"
+    text = orchestrator_instructions(
+        "leite",
+        [("ag", "Schreiber", "schreibe")],
+        [],
+        tools_connected=True,
+        overview=overview,
+        agent_tools={"ag": "file access (read and change) in C:/p, terminal (npm)"},
+    )
+    assert "Not available on this turn. Call an agent or ask.\nFiles: you have no file access." in text
+    assert "- id: ag\n  name: Schreiber\n  tools: file access (read and change) in C:/p, terminal (npm)\n" in text
+    # The overview replaces the shorter line about tools that open later.
+    reading = orchestrator_instructions(
+        "leite",
+        [("ag", "Schreiber", "schreibe")],
+        ["file_access"],
+        write_open=False,
+        later=["the terminal"],
+        overview="Files: you can read files in C:/p yourself.",
+    )
+    assert "Files: you can read files in C:/p yourself." in reading
+    assert "After an agent call failed you also get" not in reading
+
+
+def test_instructions_for_repair_after_a_failure() -> None:
+    text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access", "terminal"])
+    assert "# Your tools: repairing a failed step" in text
+    assert "Available now: file_access, terminal." in text
+    assert "your last three tool results" in text
+    assert "up to 50 tools per decision" in text
     assert "Five failed tool calls in a row start a think round" in text
     assert "Two failed think rounds in a row stop the run" in text
-    assert "At most two tool rounds" not in text
+    assert "withdrawn for the rest of that decision" in text
+
+
+def test_instructions_before_a_failure_read_files_only() -> None:
+    text = orchestrator_instructions(
+        "leite",
+        [("ag", "Schreiber", "schreibe")],
+        ["file_access"],
+        write_open=False,
+        tool_cap=8,
+        later=["file changes", "the terminal"],
+        orientation_left=8,
+    )
+    assert "# Your tools: reading files only" in text
+    assert "at most 8 more tool calls" in text
+    assert "Do not change files, create projects, install packages, build or run anything" in text
+    assert "After an agent call failed you also get file changes and the terminal" in text
+    assert 'there is no action "write"' in text
+    no_terminal = orchestrator_instructions(
+        "leite", [("ag", "Schreiber", "schreibe")], ["file_access"], write_open=False, later=["file changes"]
+    )
+    assert "terminal" not in no_terminal.lower()
+
+
+def test_instructions_during_takeover() -> None:
+    text = orchestrator_instructions("leite", [("ag", "Schreiber", "schreibe")], ["file_access"], takeover=True)
+    assert "# Takeover\nTakeover is active." in text
+    assert "Do not call the closed agent." in text
 
 
 def test_match_agent_by_id_or_name() -> None:

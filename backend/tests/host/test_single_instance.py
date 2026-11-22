@@ -34,13 +34,16 @@ def test_run_host_second_instance_skips_uvicorn(monkeypatch) -> None:
 
 
 def test_on_closing_stops_controller(monkeypatch) -> None:
-    seen = {"stop": 0}
+    seen = {"stop": 0, "closing": None}
 
     class Fake:
-        def stop(self):
+        def stop(self, *, closing=False):
             seen["stop"] += 1
+            seen["closing"] = closing
             return {"serviceStatus": "stopped"}
 
     monkeypatch.setattr("app.run.controller.get_controller", lambda: Fake())
     assert on_closing(object(), 8765) is True
     assert seen["stop"] == 1
+    # M2: closing the app does not load the help model again.
+    assert seen["closing"] is True

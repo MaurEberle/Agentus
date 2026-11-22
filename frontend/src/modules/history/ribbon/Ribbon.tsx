@@ -9,6 +9,7 @@ export function HistoryRibbon({
   onDelete,
   onExport,
   onPurge,
+  purgeDays,
 }: {
   selectedCount: number;
   busy: boolean;
@@ -16,6 +17,8 @@ export function HistoryRibbon({
   onDelete: () => void;
   onExport: () => void;
   onPurge: () => void;
+  /** M15: retention from Settings → Data; null is "unlimited" and hides the button. */
+  purgeDays: number | null;
 }) {
   const { t } = useTranslation();
   return (
@@ -32,10 +35,12 @@ export function HistoryRibbon({
         <Download className="size-3.5" />
         {t('history.ribbon.export')}
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={onPurge} disabled={busy} loading={busy}>
-        <Clock className="size-3.5" />
-        {t('history.ribbon.purge')}
-      </Button>
+      {purgeDays == null ? null : (
+        <Button type="button" size="sm" variant="outline" onClick={onPurge} disabled={busy} loading={busy}>
+          <Clock className="size-3.5" />
+          {t('history.ribbon.purge', { days: purgeDays })}
+        </Button>
+      )}
     </div>
   );
 }

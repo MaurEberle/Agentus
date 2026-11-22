@@ -156,7 +156,7 @@ export function PromptPickDialog({
               onToggle={(tag) => setTagFilter((current) => (current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]))}
               onModeChange={setTagMode}
               label={t('prompts.filter.tags')}
-              className="h-full min-h-0 w-full overflow-auto"
+              className="h-full min-h-0 w-full"
             />
           </div>
         </div>

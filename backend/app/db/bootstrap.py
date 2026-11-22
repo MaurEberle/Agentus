@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
+import threading
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -21,6 +23,8 @@ from app.db.paths import (
 )
 
 StoreSource = DataDirSource
+
+log = logging.getLogger("agentus.db")
 
 
 @dataclass
@@ -146,9 +150,25 @@ def _payload(data_dir: Path, stores: StoreFiles, window: WindowGeom, existing: d
     return out
 
 
+def _portable_relative(data_dir: Path) -> Path:
+    """M18: in portable mode a data folder under the app folder is stored relative.
+
+    An absolute path broke when the folder moved or got another drive letter.
+    """
+    root = portable_root()
+    if root is None:
+        return data_dir
+    try:
+        return Path(data_dir).resolve().relative_to(root.resolve())
+    except (ValueError, OSError):
+        return data_dir
+
+
 def save_bootstrap(bootstrap: Bootstrap) -> None:
     existing = _read_raw(bootstrap.config_path) or {}
     yaml_dir = bootstrap.yaml_data_dir if bootstrap.source == "env" else bootstrap.data_dir
+    if bootstrap.source == "portable":
+        yaml_dir = _portable_relative(yaml_dir)
     raw = _payload(yaml_dir, bootstrap.stores, bootstrap.window, existing)
     _atomic_write(bootstrap.config_path, _dump_text(bootstrap.config_path, raw))
 
@@ -174,7 +194,15 @@ def load_bootstrap() -> Bootstrap:
         read_only = True
     elif portable is not None:
         source = "portable"
-        data_dir = yaml_data_dir if raw.get("dataDir") else fallback_data
+        # M18: a relative dataDir is resolved against the app folder. An absolute one
+        # was written by an older version for the old location; after a move it points
+        # at a stale or missing folder, so the folder next to the exe wins.
+        raw_dir = raw.get("dataDir")
+        relative = isinstance(raw_dir, str) and raw_dir.strip() and not Path(raw_dir).is_absolute()
+        data_dir = yaml_data_dir if relative else fallback_data.resolve()
+        yaml_data_dir = data_dir
+        if not relative:
+            rewrite = True
         read_only = True
     elif rewrite:
         source = "default"
@@ -231,7 +259,25 @@ def get_data_location() -> dict[str, Any]:
     }
 
 
+_SWITCH_LOCK = threading.Lock()
+
+
 def set_data_dir(path: str | Path, *, copy: bool = False) -> dict[str, Any]:
+    """Move the stores to another folder (M20: one switch at a time, with rollback)."""
+    with _SWITCH_LOCK:
+        return _switch_data_dir(path, copy=copy)
+
+
+def _copy_conflicts(bootstrap: Bootstrap, target: Path) -> list[str]:
+    names = [getattr(bootstrap.stores, store) for store in STORE_IDS]
+    found = [name for name in names if (target / name).exists()]
+    rag = target / RAG_DIR_NAME
+    if rag.is_dir() and any(rag.iterdir()):
+        found.append(RAG_DIR_NAME)
+    return found
+
+
+def _switch_data_dir(path: str | Path, *, copy: bool) -> dict[str, Any]:
     from app.db.engine import close_all, get_bootstrap, open_all, set_bootstrap
 
     bootstrap = get_bootstrap()
@@ -240,19 +286,17 @@ def set_data_dir(path: str | Path, *, copy: bool = False) -> dict[str, Any]:
     resolved = Path(path).expanduser().resolve()
     if is_invalid_data_dir(resolved):
         raise ConfigError("dataDir.invalidPath")
-    resolved.mkdir(parents=True, exist_ok=True)
-
     source_dir = Path(bootstrap.data_dir)
-    close_all()
+    if resolved == source_dir.resolve():
+        return get_data_location()
+    try:
+        resolved.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ConfigError("dataDir.invalidPath") from exc
     if copy:
-        for store in STORE_IDS:
-            name = getattr(bootstrap.stores, store)
-            src = source_dir / name
-            if src.is_file():
-                shutil.copy2(src, resolved / name)
-        rag_src = source_dir / RAG_DIR_NAME
-        if rag_src.is_dir():
-            shutil.copytree(rag_src, resolved / RAG_DIR_NAME, dirs_exist_ok=True)
+        # M20: copying used to overwrite stores already in the target folder.
+        if _copy_conflicts(bootstrap, resolved):
+            raise ConfigError("dataDir.targetHasData")
 
     updated = Bootstrap(
         data_dir=resolved,
@@ -263,7 +307,29 @@ def set_data_dir(path: str | Path, *, copy: bool = False) -> dict[str, Any]:
         read_only_data_dir=False,
         yaml_data_dir=resolved,
     )
-    save_bootstrap(updated)
-    set_bootstrap(updated)
-    open_all()
+    close_all()
+    try:
+        if copy:
+            for store in STORE_IDS:
+                name = getattr(bootstrap.stores, store)
+                src = source_dir / name
+                if src.is_file():
+                    shutil.copy2(src, resolved / name)
+            rag_src = source_dir / RAG_DIR_NAME
+            if rag_src.is_dir():
+                shutil.copytree(rag_src, resolved / RAG_DIR_NAME, dirs_exist_ok=True)
+        save_bootstrap(updated)
+        set_bootstrap(updated)
+        open_all()
+    except Exception as exc:
+        # M20: an OSError left every store closed. Go back to the old folder.
+        log.exception("data dir switch failed, back to %s", source_dir)
+        close_all()
+        try:
+            save_bootstrap(bootstrap)
+        except Exception:
+            log.exception("could not restore config.yaml")
+        set_bootstrap(bootstrap)
+        open_all()
+        raise ConfigError("dataDir.switchFailed") from exc
     return get_data_location()

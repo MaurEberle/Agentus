@@ -1,7 +1,8 @@
 import { durationMs, median, percentile } from '@/modules/history/model/format';
 import type {
   ChartBucket,
-  ErrorTopRow,
+  ErrorClass,
+  ErrorTile,
   HistoryKpis,
   LlmCall,
   ModelAggRow,
@@ -61,7 +62,8 @@ export function computeChart(runs: RunSummary[], from: Date, to: Date, locale: s
     const label = hourly
       ? `${cursor.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} ${pad(cursor.getHours())}:00`
       : cursor.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-    buckets.set(key, { key, label, succeeded: 0, failed: 0, cancelled: 0, timeout: 0 });
+    const axisLabel = hourly ? `${pad(cursor.getHours())}:00` : label;
+    buckets.set(key, { key, label, axisLabel, unit: hourly ? 'hour' : 'day', succeeded: 0, failed: 0, cancelled: 0, timeout: 0 });
     if (hourly) cursor.setHours(cursor.getHours() + 1);
     else cursor.setDate(cursor.getDate() + 1);
   }
@@ -81,27 +83,71 @@ export function computeChart(runs: RunSummary[], from: Date, to: Date, locale: s
   return [...buckets.values()];
 }
 
-export function computeErrorTop(runs: RunSummary[], limit = 8): ErrorTopRow[] {
-  const map = new Map<string, ErrorTopRow>();
+/** Value of the error filter for failed runs without an error key (backend NO_ERROR_KEY). */
+export const NO_ERROR_KEY = 'none';
+
+/**
+ * Failed runs by error key, for the error map: one tile per key, its size the count.
+ * Beyond ``limit`` keys the smallest ones share one "more" tile, which filters nothing.
+ */
+export function computeErrorMap(runs: RunSummary[], limit = 12): ErrorTile[] {
+  const map = new Map<string, ErrorTile & { classes: Map<ErrorClass, number>; nodeCounts: Map<string, number> }>();
   for (const run of runs) {
     if (run.outcome !== 'failed' && run.outcome !== 'timeout') continue;
-    const errorClass = run.errorClass ?? (run.outcome === 'timeout' ? 'timeout' : 'unknown');
-    const message = run.errorMessage ?? errorClass;
-    const id = `${errorClass}|${run.errorNodeName ?? ''}|${message}`;
-    const current = map.get(id);
-    if (current) {
-      current.count += 1;
-    } else {
-      map.set(id, {
-        id,
-        nodeName: run.errorNodeName,
-        errorClass,
-        message,
-        count: 1,
-      });
+    const error = run.errorMessage || NO_ERROR_KEY;
+    let tile = map.get(error);
+    if (!tile) {
+      tile = {
+        id: error,
+        error,
+        errorClass: 'unknown',
+        count: 0,
+        nodes: [],
+        lastAt: run.startedAt,
+        classes: new Map(),
+        nodeCounts: new Map(),
+      };
+      map.set(error, tile);
     }
+    tile.count += 1;
+    if (run.startedAt > tile.lastAt) tile.lastAt = run.startedAt;
+    const errorClass = run.errorClass ?? (run.outcome === 'timeout' ? 'timeout' : 'unknown');
+    tile.classes.set(errorClass, (tile.classes.get(errorClass) ?? 0) + 1);
+    if (run.errorNodeName) tile.nodeCounts.set(run.errorNodeName, (tile.nodeCounts.get(run.errorNodeName) ?? 0) + 1);
   }
-  return [...map.values()].sort((a, b) => b.count - a.count).slice(0, limit);
+  const tiles: ErrorTile[] = [...map.values()]
+    .map(({ classes, nodeCounts, ...tile }) => ({
+      ...tile,
+      errorClass: [...classes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'unknown',
+      nodes: [...nodeCounts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })),
+    }))
+    .sort((a, b) => b.count - a.count || b.lastAt.localeCompare(a.lastAt));
+  if (tiles.length <= limit) return tiles;
+  const kept = tiles.slice(0, limit - 1);
+  const rest = tiles.slice(limit - 1);
+  kept.push({
+    id: 'more',
+    error: null,
+    errorClass: 'unknown',
+    count: rest.reduce((sum, tile) => sum + tile.count, 0),
+    nodes: [],
+    lastAt: rest.reduce((latest, tile) => (tile.lastAt > latest ? tile.lastAt : latest), rest[0].lastAt),
+    more: rest.length,
+  });
+  return kept;
+}
+
+/** Rows the server counted over every call of the filtered runs (`byModel` of GET /runs/calls). */
+export function modelRowsFromStats(stats: Array<Omit<ModelAggRow, 'errorRate'>>): ModelAggRow[] {
+  return stats
+    .map((row) => ({
+      ...row,
+      medianMs: row.medianMs ?? null,
+      tokensIn: row.tokensIn ?? null,
+      tokensOut: row.tokensOut ?? null,
+      errorRate: row.calls === 0 ? 0 : row.error / row.calls,
+    }))
+    .sort((a, b) => b.calls - a.calls);
 }
 
 export function aggregateModels(calls: LlmCall[]): ModelAggRow[] {

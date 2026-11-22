@@ -11,19 +11,27 @@ import { notify } from '@/lib/notifications';
 import { ApiError } from '@/api/client';
 import { isHistoryStoreOk } from '@/modules/dashboard/model';
 import { listNetworkSummaries } from '@/modules/network/api';
-import { useStoresQuery } from '@/modules/settings/api';
+import { useSettingsQuery, useStoresQuery } from '@/modules/settings/api';
 import { deleteRuns, deleteRunsOlderThan, getRun, listCalls, listRunLogs, listRuns, toApiFilter } from '@/modules/history/api';
 import { RunsChart } from '@/modules/history/chart/RunsChart';
 import { RunDetailPanel } from '@/modules/history/detail/RunDetailPanel';
-import { ErrorTop } from '@/modules/history/errors/ErrorTop';
+import { ErrorMap } from '@/modules/history/errors/ErrorMap';
 import { FilterBar } from '@/modules/history/filters/FilterBar';
 import { useHistoryFilters } from '@/modules/history/filters/storage';
 import { KpiRow } from '@/modules/history/kpi/KpiRow';
 import { RunList } from '@/modules/history/list/RunList';
 import { endOfLocalDay, fileStamp, modelKey, safeFilePart, shortId, startOfLocalDay } from '@/modules/history/model/format';
 import { maskLog, maskText } from '@/modules/monitoring/model/mask';
-import { downloadBlob, zipStore } from '@/modules/networks/model/zip';
-import { aggregateModels, aggregateNetworks, computeChart, computeErrorTop, computeKpis } from '@/modules/history/model/stats';
+import { zipStore } from '@/modules/networks/model/zip';
+import { saveExportFile } from '@/lib/saveFile';
+import {
+  aggregateModels,
+  aggregateNetworks,
+  computeChart,
+  computeErrorMap,
+  computeKpis,
+  modelRowsFromStats,
+} from '@/modules/history/model/stats';
 import {
   defaultHistoryFilter,
   historySearchFrom,
@@ -31,7 +39,7 @@ import {
   resolveBounds,
   sameFilter,
 } from '@/modules/history/model/url';
-import { PAGE_SIZE, STATS_LIMIT, type ErrorTopRow, type HistoryFilter, type HistoryTab, type LogEvent } from '@/modules/history/model/types';
+import { PAGE_SIZE, STATS_LIMIT, type ErrorTile, type HistoryFilter, type HistoryTab, type LogEvent } from '@/modules/history/model/types';
 import { useHistoryPanes } from '@/modules/history/panes';
 import { HistoryRibbon } from '@/modules/history/ribbon/Ribbon';
 import { useHistoryUi } from '@/modules/history/store';
@@ -91,16 +99,26 @@ export function HistoryModule() {
           outcomes: filter.outcomes,
           model: filter.model,
           q: filter.q,
+          error: filter.error,
         },
         { limit: STATS_LIMIT, offset: 0 },
       ),
-    [bounds, filter.model, filter.networkId, filter.q, outcomeKey],
+    [bounds, filter.error, filter.model, filter.networkId, filter.q, outcomeKey],
   );
+  // The error map keeps every tile while one of them filters the list: its runs come
+  // without the error filter (the same query as the unfiltered list, so mostly cached).
+  const mapFilter = useMemo(() => ({ ...apiFilter, error: undefined }), [apiFilter]);
 
   const runsQuery = useQuery({
     queryKey: ['runs', 'history', apiFilter],
     queryFn: () => listRuns(apiFilter),
     enabled: historyOk,
+    placeholderData: keepPreviousData,
+  });
+  const mapQuery = useQuery({
+    queryKey: ['runs', 'history', mapFilter],
+    queryFn: () => listRuns(mapFilter),
+    enabled: historyOk && Boolean(filter.error),
     placeholderData: keepPreviousData,
   });
   const callsQuery = useQuery({
@@ -123,14 +141,17 @@ export function HistoryModule() {
     queryFn: () => listRunLogs(runId ?? ''),
     enabled: Boolean(runId) && historyOk,
   });
+  const settingsQuery = useSettingsQuery();
+  // M15: purge by the retention from Settings → Data. Unlimited (null) offers no purge.
+  const purgeDays = settingsQuery.data ? (settingsQuery.data.historyRetentionDays ?? null) : null;
   const purgePreview = useQuery({
-    queryKey: ['runs', 'purge-preview'],
+    queryKey: ['runs', 'purge-preview', purgeDays],
     queryFn: () =>
       listRuns({
-        to: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        to: new Date(Date.now() - (purgeDays ?? 0) * 24 * 60 * 60 * 1000).toISOString(),
         limit: STATS_LIMIT,
       }),
-    enabled: purgeOpen && historyOk,
+    enabled: purgeOpen && historyOk && purgeDays != null,
   });
 
   const items = useMemo(() => runsQuery.data?.items ?? [], [runsQuery.data?.items]);
@@ -141,8 +162,16 @@ export function HistoryModule() {
 
   const kpis = useMemo(() => computeKpis(items), [items]);
   const buckets = useMemo(() => computeChart(items, bounds.from, bounds.to, i18n.language), [bounds.from, bounds.to, i18n.language, items]);
-  const errors = useMemo(() => computeErrorTop(items), [items]);
-  const modelRows = useMemo(() => aggregateModels(callsQuery.data ?? []), [callsQuery.data]);
+  const mapRuns = filter.error ? mapQuery.data?.items : items;
+  const errors = useMemo(() => computeErrorMap(mapRuns ?? []), [mapRuns]);
+  // H10: the server counts every call of the filtered runs. The page of calls is only a
+  // fallback for an older backend; it covers at most STATS_LIMIT calls.
+  const modelRows = useMemo(() => {
+    const data = callsQuery.data;
+    if (!data) return [];
+    if (data.byModel) return modelRowsFromStats(data.byModel);
+    return aggregateModels(data.items);
+  }, [callsQuery.data]);
   const networkRows = useMemo(() => aggregateNetworks(items), [items]);
 
   const modelOptions = useMemo(() => {
@@ -286,9 +315,13 @@ export function HistoryModule() {
   }
 
   async function confirmPurge() {
+    if (purgeDays == null) {
+      setPurgeOpen(false);
+      return;
+    }
     setBusy(true);
     try {
-      const result = await deleteRunsOlderThan(90);
+      const result = await deleteRunsOlderThan(purgeDays);
       notify({
         titleKey: 'history.notify.purged',
         values: { count: String(result.deleted) },
@@ -317,15 +350,15 @@ export function HistoryModule() {
           text: logsToJsonl(logs),
         });
       }
-      if (files.length === 1 && files[0]) {
-        downloadBlob(files[0].name, new Blob([files[0].text], { type: 'application/x-ndjson' }));
-      } else {
-        downloadBlob(
-          `history-logs-${fileStamp()}.zip`,
-          zipStore(files.map((file) => ({ name: file.name, data: encoder.encode(file.text) }))),
-        );
-      }
-      notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
+      // M17: the save dialog of the host; a blob download is blocked in the desktop app.
+      const saved =
+        files.length === 1 && files[0]
+          ? await saveExportFile(files[0].name, new Blob([files[0].text], { type: 'application/x-ndjson' }))
+          : await saveExportFile(
+              `history-logs-${fileStamp()}.zip`,
+              zipStore(files.map((file) => ({ name: file.name, data: encoder.encode(file.text) }))),
+            );
+      if (saved) notify({ titleKey: 'history.notify.exported', variant: 'success', persist: false });
     } catch {
       notify({ titleKey: 'history.notify.exportError', variant: 'error' });
     } finally {
@@ -333,11 +366,17 @@ export function HistoryModule() {
     }
   }
 
-  function onPickError(row: ErrorTopRow) {
-    patchFilter({ q: row.errorClass, tab: 'history', page: 1 });
+  function onPickError(tile: ErrorTile) {
+    if (!tile.error) return;
+    // A second click on the same tile lifts the filter.
+    patchFilter({ error: filter.error === tile.error ? '' : tile.error, tab: 'history', page: 1 });
   }
 
-  const emptyAll = !runsQuery.isLoading && total === 0 && !filter.q && !filter.networkId && !filter.model && filter.outcomes.length === 0 && filter.range === '7d';
+  function clearErrorFilter() {
+    patchFilter({ error: '', page: 1 });
+  }
+
+  const emptyAll = !runsQuery.isLoading && total === 0 && !filter.q && !filter.networkId && !filter.model && !filter.error && filter.outcomes.length === 0 && filter.range === '7d';
   const emptyFiltered = !runsQuery.isLoading && total === 0 && !emptyAll;
   const showDetail = Boolean(runId);
   const missing = Boolean(runId && detailQuery.isFetched && !detailQuery.data);
@@ -435,7 +474,7 @@ export function HistoryModule() {
               style={desktop ? paneColStyle(panes.statsShare) : undefined}
             >
               <div className="min-h-0 w-full" style={{ height: panes.chartH }}>
-                <RunsChart buckets={buckets} />
+                <RunsChart buckets={buckets} runs={items} />
               </div>
               <HeightGrip
                 label={t('history.resize.chartHeight')}
@@ -453,7 +492,7 @@ export function HistoryModule() {
               style={desktop ? paneColStyle(1 - panes.statsShare) : undefined}
             >
               <div className="min-h-0 w-full" style={{ height: panes.errorsH }}>
-                <ErrorTop rows={errors} onPick={onPickError} />
+                <ErrorMap tiles={errors} activeError={filter.error} onPick={onPickError} onClear={clearErrorFilter} />
               </div>
               <HeightGrip
                 label={t('history.resize.errorsHeight')}
@@ -488,6 +527,7 @@ export function HistoryModule() {
                 onDelete={() => setDeleteOpen(true)}
                 onExport={() => void exportIds(selectedIds)}
                 onPurge={() => setPurgeOpen(true)}
+                purgeDays={purgeDays}
               />
             </div>
           </div>
@@ -584,7 +624,7 @@ export function HistoryModule() {
       {purgeOpen ? (
         <ConfirmBar
           title={t('history.retention.title')}
-          body={t('history.retention.body', { count: purgePreview.data?.total ?? 0 })}
+          body={t('history.retention.body', { count: purgePreview.data?.total ?? 0, days: purgeDays ?? 0 })}
           confirm={t('history.retention.confirm')}
           cancel={t('history.delete.cancel')}
           busy={busy}

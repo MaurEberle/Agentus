@@ -1,7 +1,15 @@
 export type RunOutcome = 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timeout';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LlmProvider = 'ollama' | 'xai' | 'openai' | 'anthropic' | 'gemini' | 'openai_compat';
-export type ErrorClass = 'timeout' | 'tool_error' | 'llm_error' | 'validation' | 'service' | 'unknown' | 'orchestrator';
+export type ErrorClass =
+  | 'timeout'
+  | 'tool_error'
+  | 'llm_error'
+  | 'validation'
+  | 'service'
+  | 'unknown'
+  | 'orchestrator'
+  | 'budget';
 export type RangeKey = 'today' | '7d' | '30d' | 'custom';
 export type HistoryTab = 'history' | 'model' | 'network';
 export type DetailTab = 'log' | 'steps' | 'chat';
@@ -108,6 +116,8 @@ export type RunListFilter = {
   outcome?: RunOutcome[];
   model?: string;
   q?: string;
+  /** Exact error key of failed runs (a tile of the error map). */
+  error?: string;
   limit?: number;
   offset?: number;
 };
@@ -120,6 +130,8 @@ export type HistoryFilter = {
   outcomes: RunOutcome[];
   model: string;
   q: string;
+  /** Exact error key from the error map; '' for none. Only in the address, not remembered. */
+  error: string;
   tab: HistoryTab;
   page: number;
 };
@@ -137,18 +149,28 @@ export type HistoryKpis = {
 export type ChartBucket = {
   key: string;
   label: string;
+  /** Short text under the column: "23. Okt.", or "14:00" for hours. */
+  axisLabel: string;
+  unit: 'day' | 'hour';
   succeeded: number;
   failed: number;
   cancelled: number;
   timeout: number;
 };
 
-export type ErrorTopRow = {
+/** One error key of failed runs in the error map; its area is its count. */
+export type ErrorTile = {
   id: string;
-  nodeName?: string;
+  /** Error key to filter by ("none" for runs without one); null for the "more" tile. */
+  error: string | null;
+  /** The class most of these runs had. */
   errorClass: ErrorClass;
-  message: string;
   count: number;
+  /** Nodes where it happened, most often first. */
+  nodes: { name: string; count: number }[];
+  lastAt: string;
+  /** The "more" tile: how many smaller error keys it holds. */
+  more?: number;
 };
 
 export type ModelAggRow = {

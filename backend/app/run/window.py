@@ -30,6 +30,8 @@ def prompt_tokens(messages: list[ChatMessage]) -> int:
     for message in messages:
         if message.content:
             parts.append(message.content)
+        if message.reasoning:
+            parts.append(message.reasoning)
         for call in message.tool_calls or []:
             parts.append(call.name or "")
             parts.append(call.arguments or "")

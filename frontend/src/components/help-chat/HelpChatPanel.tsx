@@ -75,10 +75,20 @@ export function HelpChatPanel({
   function startResize(edge: 'left' | 'top' | 'corner') {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
       event.preventDefault();
+      const handle = event.currentTarget;
+      const pointerId = event.pointerId;
       const startX = event.clientX;
       const startY = event.clientY;
       const startW = width || window.innerWidth * 0.3;
       const startH = height || window.innerHeight * 0.8;
+      // The grip keeps the pointer, and dragging across the messages selects no text.
+      try {
+        handle.setPointerCapture(pointerId);
+      } catch {
+        // No active pointer to capture (synthetic event): window listeners still follow it.
+      }
+      const userSelect = document.body.style.userSelect;
+      document.body.style.userSelect = 'none';
       function move(moveEvent: PointerEvent) {
         const viewport = { w: window.innerWidth, h: window.innerHeight };
         const dw = edge === 'top' ? 0 : startX - moveEvent.clientX;
@@ -86,11 +96,15 @@ export function HelpChatPanel({
         setHelpChatSize(clampHelpChatSize(startW + dw, startH + dh, viewport));
       }
       function up() {
+        if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+        document.body.style.userSelect = userSelect;
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
       }
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
     };
   }
 

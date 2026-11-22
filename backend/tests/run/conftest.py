@@ -13,6 +13,16 @@ from app.tools.catalog import reset_mcp_catalog_provider
 
 
 unloads: list[str] = []
+FAKE_SHOW = {
+    "model_info": {
+        "general.architecture": "llama",
+        "llama.block_count": 16,
+        "llama.context_length": 131072,
+    },
+    "capabilities": ["completion", "tools"],
+    "details": {"family": "llama"},
+    "modelfile": "",
+}
 keeps: list[set[str]] = []
 
 
@@ -58,6 +68,15 @@ def mini_doc(**chat: object) -> dict:
     }
 
 
+@pytest.fixture(autouse=True)
+def _tool_folders_exist(monkeypatch: pytest.MonkeyPatch):
+    """Test documents name tool folders like C:/stories that exist nowhere; the tool runs are mocked.
+
+    Tests of the missing-folder rule restore the real check.
+    """
+    monkeypatch.setattr("app.run.validate.folder_exists", lambda path: True)
+
+
 @pytest.fixture
 def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AGENTUS_NETWORK_HOME", str(tmp_path / "home"))
@@ -79,8 +98,14 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
         lambda *a, **k: [OllamaModel(name="llama3.2:1b", size_bytes=None)],
     )
     monkeypatch.setattr("app.runtime.ollama.model_is_moe", lambda *a, **k: False)
+    # Hermetic: /api/show answers like a small dense model (16 blocks, 128k context).
+    monkeypatch.setattr("app.runtime.ollama._fetch_show", lambda *a, **k: dict(FAKE_SHOW))
     monkeypatch.setattr("app.runtime.vram_est.vram_profile", lambda *a, **k: None)
     monkeypatch.setattr("app.runtime.ollama.loaded_memory", lambda *a, **k: (None, None))
+    # Hermetic: no /api/ps against a real daemon; unknown VRAM keeps the old unload.
+    monkeypatch.setattr("app.runtime.ollama.resident_index", lambda *a, **k: {})
+    monkeypatch.setattr("app.runtime.ollama.list_loaded_models", lambda *a, **k: [])
+    monkeypatch.setattr("app.run.turn_runtime._inference_pool_bytes", lambda: 0)
     monkeypatch.setattr("app.runtime.ollama.unload", lambda *a, **k: unloads.append(a[0] if a else ""))
 
     def _keep_only(keep, **kwargs):
@@ -110,4 +135,4 @@ def api_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture
 def client(api_env) -> TestClient:
     init()
-    return TestClient(create_app())
+    return TestClient(create_app(), base_url="http://127.0.0.1")

@@ -20,6 +20,15 @@ _PENDING_MAX = 8192
 
 def ollama_server_log() -> Path | None:
     """Active Ollama server log, if this machine has one."""
+    try:
+        from app.runtime.ollama_own import own_server_log
+
+        own = own_server_log()
+    except Exception:
+        own = None
+    if own is not None:
+        # Agentus' own copy writes here; the tray app's log belongs to the other server.
+        return own if own.is_file() else None
     candidates: list[Path] = []
     local = os.environ.get("LOCALAPPDATA")
     if local:

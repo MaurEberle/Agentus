@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 import type { TagMatch } from '@/lib/tags';
-import type { ModelKind } from '@/modules/models/model';
+import type { HubFiles, HubHit, ModelKind } from '@/modules/models/model';
 
 export type ModelsTab = 'installed' | 'hub';
 export type InstalledSortKey = 'name' | 'size' | 'modified';
-export type HubSort = 'downloads' | 'likes' | 'trending' | 'modified' | 'name';
-export type HubPipeline = 'text' | 'embed' | 'vision' | 'moe';
-export type HubSize = 'any' | '3' | '8' | '14' | '32' | '70' | 'xl' | 'custom';
+/** What the Hub sorts by; it sorts descending only. */
+export type HubSort = 'downloads' | 'likes' | 'trending' | 'modified' | 'new';
+/** Text: chat models, with or without vision (the Sehen capability decides). */
+export type HubPipeline = 'text' | 'embed' | 'moe';
 export type HubCapability = 'tools' | 'thinking' | 'vision';
+/** A capability the model must have, or must not have; absent means either is fine. */
+export type HubCapabilityRule = 'must' | 'never';
+export type HubCapabilities = Partial<Record<HubCapability, HubCapabilityRule>>;
 
 type InstalledUi = {
   search: string;
@@ -43,23 +47,49 @@ export function rememberHubPageSize(value: number): void {
   }
 }
 
+export type HubSnapshot = {
+  key: string;
+  items: HubHit[];
+  hasNext: boolean;
+  nextCursor?: string;
+  errorKey?: string;
+  retryAfter?: number;
+};
+
+export type HubFilesSnapshot = {
+  id: string;
+  data: HubFiles;
+  /** `filesNonce` the data was fetched for; an older nonce means installed state may be stale. */
+  nonce: number;
+};
+
 type HubUi = {
   search: string;
   debounced: string;
   pipelines: HubPipeline[];
-  size: HubSize;
+  /** Parameter bounds in billions as typed; empty is open. `bounds` is what was searched. */
   minB: string;
   maxB: string;
   bounds: { min: string; max: string };
   sort: HubSort;
-  sortDir: 'asc' | 'desc';
   pageSize: HubPageSize;
-  capabilities: HubCapability[];
+  capabilities: HubCapabilities;
+  /** Minimum context window in tokens; 0 is any. */
+  minContext: number;
+  /** Leave out repos with a quant already pulled. */
+  hideInstalled: boolean;
+  /** Only models whose Q4_K_M fits the GPU. */
+  fitsGpu: boolean;
   page: number;
   cursors: (string | null)[];
   picked: string | null;
   quant: string | null;
   share: number;
+  snapshot: HubSnapshot | null;
+  files: HubFilesSnapshot | null;
+  filesError: string | null;
+  /** Bumped when installed models change (download done, delete) so the picked files refetch. */
+  filesNonce: number;
 };
 
 type ModelsUiStore = {
@@ -83,17 +113,21 @@ const installedDefaults: InstalledUi = {
   share: 0.62,
 };
 
-export const hubFilterDefaults: Pick<HubUi, 'search' | 'debounced' | 'pipelines' | 'size' | 'minB' | 'maxB' | 'bounds' | 'sort' | 'sortDir' | 'capabilities'> = {
+export const hubFilterDefaults: Pick<
+  HubUi,
+  'search' | 'debounced' | 'pipelines' | 'minB' | 'maxB' | 'bounds' | 'sort' | 'capabilities' | 'minContext' | 'hideInstalled' | 'fitsGpu'
+> = {
   search: '',
   debounced: '',
   pipelines: [],
-  size: 'any',
   minB: '',
   maxB: '',
   bounds: { min: '', max: '' },
   sort: 'downloads',
-  sortDir: 'desc',
-  capabilities: [],
+  capabilities: {},
+  minContext: 0,
+  hideInstalled: false,
+  fitsGpu: false,
 };
 
 export const useModelsUi = create<ModelsUiStore>((set) => ({
@@ -107,6 +141,10 @@ export const useModelsUi = create<ModelsUiStore>((set) => ({
     picked: null,
     quant: null,
     share: 0.68,
+    snapshot: null,
+    files: null,
+    filesError: null,
+    filesNonce: 0,
   },
   setTab: (tab) => set({ tab }),
   patchInstalled: (patch) =>
@@ -124,3 +162,8 @@ export const useModelsUi = create<ModelsUiStore>((set) => ({
       hub: { ...state.hub, ...hubFilterDefaults, page: 0, cursors: [null] },
     })),
 }));
+
+/** Hub detail lives in this store, not React Query: invalidate it explicitly. */
+export function invalidateHubFiles(): void {
+  useModelsUi.getState().patchHub((hub) => ({ filesNonce: hub.filesNonce + 1 }));
+}

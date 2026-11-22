@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { ModelCombobox } from '@/components/ModelCombobox';
 import { TagInput } from '@/components/TagInput';
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { modelFactsMap } from '@/lib/modelName';
 import { pickFolderPath } from '@/lib/pickFolder';
 import {
   useEditorCredentialsQuery,
@@ -28,8 +30,28 @@ import {
   type RouterMatch,
   type ValidationIssue,
 } from '@/modules/network/model/document';
+import { NumberField } from '@/modules/network/inspector/NumberField';
 import { PromptPickDialog } from '@/modules/network/inspector/PromptPickDialog';
-import { editorDeleteSelection, editorUpdateNodeData, useNetworkEditor } from '@/modules/network/store';
+import {
+  AGENT_MISS_RANGE,
+  DEFAULT_AGENT_MISS,
+  DEFAULT_SCORE,
+  DEFAULT_SEARCH_RESULTS,
+  DEFAULT_TERMINAL_TIMEOUT,
+  DEFAULT_TOP_K,
+  SCORE_RANGE,
+  SEARCH_RESULTS_RANGE,
+  TERMINAL_TIMEOUT_RANGE,
+  TOP_K_RANGE,
+  maxTokensRange,
+  temperatureRange,
+} from '@/modules/network/model/ranges';
+import {
+  editorDeleteSelection,
+  editorNormalizeNodeData,
+  editorUpdateNodeData,
+  useNetworkEditor,
+} from '@/modules/network/store';
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
@@ -173,6 +195,7 @@ export function Inspector({
       {node.type === 'orchestrator' ? <OrchestratorFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'tool' ? <ToolFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'mcp' ? <McpFields node={node} readOnly={readOnly} /> : null}
+      {node.type === 'tool' || node.type === 'mcp' ? <MaxCallsField node={node} readOnly={readOnly} /> : null}
       {node.type === 'knowledge' ? <KnowledgeFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'router' ? <RouterFields node={node} readOnly={readOnly} /> : null}
       {node.type === 'chat_input' ? <ChatInputFields node={node} readOnly={readOnly} /> : null}
@@ -232,7 +255,7 @@ function ContextWindowField({ node, readOnly }: { node: GraphNode; readOnly: boo
   useEffect(() => {
     if (readOnly || max == null || min == null) return;
     if (!Number.isFinite(current) || current < min || current > max) {
-      editorUpdateNodeData(node.id, { numCtx: max });
+      editorNormalizeNodeData(node.id, { numCtx: max });
     }
   }, [current, max, min, node.id, readOnly]);
 
@@ -333,7 +356,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
       ) {
         return;
       }
-      editorUpdateNodeData(node.id, {
+      editorNormalizeNodeData(node.id, {
         gpuPlacement: 'auto',
         numGpuPercent: undefined,
         numGpu: undefined,
@@ -350,7 +373,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
       ) {
         return;
       }
-      editorUpdateNodeData(node.id, {
+      editorNormalizeNodeData(node.id, {
         gpuPlacement: 'layers',
         numGpuLayers: value,
         numGpuPercent: undefined,
@@ -366,7 +389,7 @@ function GpuOffloadField({ node, readOnly }: { node: GraphNode; readOnly: boolea
     ) {
       return;
     }
-    editorUpdateNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
+    editorNormalizeNodeData(node.id, { numGpuLayers: value, numGpuPercent: undefined, numGpu: undefined });
   }, [
     auto,
     isMoe,
@@ -595,7 +618,7 @@ function VramNeedField({ node, readOnly }: { node: GraphNode; readOnly: boolean 
     ) {
       return;
     }
-    editorUpdateNodeData(node.id, {
+    editorNormalizeNodeData(node.id, {
       gpuPlacement: 'auto',
       numGpuLayers: next.numGpuLayers,
       numCpuMoe: next.numCpuMoe,
@@ -773,7 +796,7 @@ function CpuThreadField({ node, readOnly }: { node: GraphNode; readOnly: boolean
     // Full load was the old automatic default. A value the user picked stays.
     const oldFullDefault = !touched && current === threads;
     if (missing || oldFullDefault) {
-      editorUpdateNodeData(node.id, { numThread: standard, numThreadTouched: true });
+      editorNormalizeNodeData(node.id, { numThread: standard, numThreadTouched: true });
     }
   }, [current, node.id, readOnly, standard, threads, touched]);
 
@@ -831,6 +854,21 @@ function DisplayNameField({ node, readOnly }: { node: GraphNode; readOnly: boole
   );
 }
 
+/**
+ * What applies when "Max tokens" is empty. Mirrors backend `turn_runtime._output_cap`:
+ * Ollama gets context / 4 (4,096 to 16,384, and at most the room the prompt leaves);
+ * cloud providers keep their own default.
+ */
+function autoMaxTokensLabel(provider: string, numCtx: unknown, t: TFunction): string {
+  if (provider !== 'ollama') return t('network.inspector.llm.maxTokensProvider');
+  const ctx = Number(numCtx);
+  if (!Number.isFinite(ctx) || ctx <= 0) {
+    return t('network.inspector.llm.maxTokensAutoMax', { count: (16384).toLocaleString() });
+  }
+  const auto = Math.min(16384, Math.max(4096, Math.floor(ctx / 4)));
+  return t('network.inspector.llm.maxTokensAuto', { count: auto.toLocaleString() });
+}
+
 function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
   const credentials = useEditorCredentialsQuery();
@@ -860,11 +898,19 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const onlyMoe = ollamaListReady && moeNames.length > 0 && denseNames.length === 0;
   const onlyDense = ollamaListReady && denseNames.length > 0 && moeNames.length === 0;
   const storedKind = node.data.modelKind === 'moe' ? 'moe' : node.data.modelKind === 'dense' ? 'dense' : null;
-  const modelKind: 'dense' | 'moe' = onlyMoe
+  // The list the stored model is in decides its kind; only then the stored or the only kind.
+  const listedKind: 'dense' | 'moe' | null = moeNames.includes(model)
     ? 'moe'
-    : onlyDense
+    : denseNames.includes(model)
       ? 'dense'
-      : (storedKind ?? (moeNames.includes(model) ? 'moe' : 'dense'));
+      : null;
+  const modelKind: 'dense' | 'moe' =
+    listedKind ?? (onlyMoe ? 'moe' : onlyDense ? 'dense' : (storedKind ?? 'dense'));
+  // Parameters, quantization and size for the hover card of the model picker.
+  const modelFacts = useMemo(
+    () => modelFactsMap(provider === 'ollama' ? (ollamaModels.data?.items ?? []) : (catalogModels.data?.items ?? [])),
+    [catalogModels.data?.items, ollamaModels.data?.items, provider],
+  );
   const modelOptions = useMemo(() => {
     if (provider === 'ollama') return modelKind === 'moe' ? moeNames : denseNames;
     if (!catalogProvider) return [];
@@ -878,13 +924,20 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         : false;
   const modelLocked = catalogProvider && !credentialId;
 
+  // H4: a stored model is never cleared or swapped here. An empty list (Ollama down,
+  // offline, a provider without a catalog) or a list without the model says nothing
+  // about the choice; opening the node must not change the network. Only an empty
+  // field is filled.
+  const modelUnavailable =
+    Boolean(model) &&
+    !modelLocked &&
+    !modelsLoading &&
+    (provider === 'ollama' || catalogProvider) &&
+    !modelOptions.includes(model);
   useEffect(() => {
-    if (readOnly || modelLocked || modelsLoading) return;
+    if (readOnly || modelLocked || modelsLoading || modelOptions.length === 0) return;
     const patch: Record<string, unknown> = {};
-    if (provider === 'ollama' && node.data.modelKind !== modelKind) patch.modelKind = modelKind;
-    if (modelOptions.length === 0) {
-      if (model) patch.model = '';
-    } else if (!modelOptions.includes(model)) {
+    if (!model) {
       patch.model = modelOptions[0];
       patch.numCtx = undefined;
       patch.numGpu = undefined;
@@ -893,7 +946,9 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       patch.numCpuMoe = undefined;
       patch.gpuPlacement = undefined;
     }
-    if (Object.keys(patch).length > 0) editorUpdateNodeData(node.id, patch);
+    const kindKnown = !model || modelOptions.includes(model);
+    if (provider === 'ollama' && kindKnown && node.data.modelKind !== modelKind) patch.modelKind = modelKind;
+    if (Object.keys(patch).length > 0) editorNormalizeNodeData(node.id, patch);
   }, [model, modelKind, modelLocked, modelOptions, modelsLoading, node.data.modelKind, node.id, provider, readOnly]);
   const catalogFailed =
     catalogProvider &&
@@ -1023,6 +1078,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         <ModelCombobox
           value={modelLocked ? '' : model}
           options={modelOptions}
+          facts={modelFacts}
           disabled={readOnly || modelLocked}
           restrictToOptions
           placeholder={
@@ -1043,6 +1099,8 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         />
         {catalogFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
+        ) : modelUnavailable ? (
+          <p className="text-xs text-destructive">{t('network.inspector.llm.modelUnavailable')}</p>
         ) : null}
       </Field>
       {model && !modelLocked ? <ContextWindowField node={node} readOnly={readOnly} /> : null}
@@ -1062,30 +1120,30 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       {advanced ? (
         <>
           <Field label={t('network.inspector.llm.temperature')}>
-            <Input
-              type="number"
-              step="0.1"
-              value={node.data.temperature == null ? '' : String(node.data.temperature)}
-              disabled={readOnly}
-              onChange={(event) =>
-                editorUpdateNodeData(node.id, {
-                  temperature: event.target.value === '' ? undefined : Number(event.target.value),
-                })
-              }
+            <NumberField
+              value={numberOrUndefined(node.data.temperature)}
+              range={temperatureRange(provider)}
+              step={0.1}
+              placeholder={t('network.inspector.llm.temperatureDefault')}
+              readOnly={readOnly}
+              onChange={(value) => editorUpdateNodeData(node.id, { temperature: value })}
             />
           </Field>
+          <p className="text-xs text-muted-foreground">
+            {t('network.inspector.llm.temperatureHint', { max: temperatureRange(provider).max })}
+          </p>
           <Field label={t('network.inspector.llm.maxTokens')}>
-            <Input
-              type="number"
-              value={node.data.maxTokens == null ? '' : String(node.data.maxTokens)}
-              disabled={readOnly}
-              onChange={(event) =>
-                editorUpdateNodeData(node.id, {
-                  maxTokens: event.target.value === '' ? undefined : Number(event.target.value),
-                })
-              }
+            <NumberField
+              value={numberOrUndefined(node.data.maxTokens)}
+              range={maxTokensRange(node.data.numCtx)}
+              placeholder={autoMaxTokensLabel(provider, node.data.numCtx, t)}
+              readOnly={readOnly}
+              onChange={(value) => editorUpdateNodeData(node.id, { maxTokens: value })}
             />
           </Field>
+          <p className="text-xs text-muted-foreground">
+            {t('network.inspector.llm.maxTokensHint', { max: maxTokensRange(node.data.numCtx).max })}
+          </p>
         </>
       ) : null}
     </>
@@ -1099,25 +1157,96 @@ function OrchestratorFields({ node, readOnly }: { node: GraphNode; readOnly: boo
       <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.hint')}</p>
       <SystemPromptField key={node.id} node={node} readOnly={readOnly} label={t('network.inspector.orchestrator.systemPrompt')} />
       <Field label={t('network.inspector.orchestrator.agentMissLimit')}>
-        <Input
-          type="number"
-          min={1}
-          max={8}
-          value={node.data.agentMissLimit == null ? 3 : String(node.data.agentMissLimit)}
-          disabled={readOnly}
-          onChange={(event) => {
-            const raw = event.target.value;
-            if (raw === '') {
-              editorUpdateNodeData(node.id, { agentMissLimit: undefined });
-              return;
-            }
-            const next = Math.round(Number(raw));
-            if (!Number.isFinite(next)) return;
-            editorUpdateNodeData(node.id, { agentMissLimit: Math.max(1, Math.min(8, next)) });
-          }}
+        <NumberField
+          value={numberOrUndefined(node.data.agentMissLimit)}
+          range={AGENT_MISS_RANGE}
+          placeholder={String(DEFAULT_AGENT_MISS)}
+          readOnly={readOnly}
+          onChange={(value) => editorUpdateNodeData(node.id, { agentMissLimit: value })}
         />
       </Field>
       <p className="text-xs text-muted-foreground">{t('network.inspector.orchestrator.agentMissLimitHint')}</p>
+      <CountField
+        node={node}
+        field="maxAgentCalls"
+        fallback={50}
+        min={1}
+        max={500}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxAgentCalls')}
+        hint={t('network.inspector.orchestrator.maxAgentCallsHint')}
+      />
+      <CountField
+        node={node}
+        field="maxToolCalls"
+        fallback={50}
+        min={1}
+        max={1000}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxToolCalls')}
+        hint={t('network.inspector.orchestrator.maxToolCallsHint')}
+      />
+      <CountField
+        node={node}
+        field="maxReadCalls"
+        fallback={15}
+        min={1}
+        max={1000}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxReadCalls')}
+        hint={t('network.inspector.orchestrator.maxReadCallsHint')}
+      />
+      <CountField
+        node={node}
+        field="maxLlmCalls"
+        fallback={1000}
+        min={10}
+        max={10000}
+        readOnly={readOnly}
+        label={t('network.inspector.orchestrator.maxLlmCalls')}
+        hint={t('network.inspector.orchestrator.maxLlmCallsHint')}
+      />
+    </>
+  );
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+/** A whole-number node setting. Empty means the default, shown as placeholder. */
+function CountField({
+  node,
+  field,
+  fallback,
+  min,
+  max,
+  readOnly,
+  label,
+  hint,
+}: {
+  node: GraphNode;
+  field: string;
+  fallback: number;
+  min: number;
+  max: number;
+  readOnly: boolean;
+  label: string;
+  hint: string;
+}) {
+  const raw = node.data[field];
+  return (
+    <>
+      <Field label={label}>
+        <NumberField
+          value={numberOrUndefined(raw)}
+          range={{ min, max, integer: true }}
+          placeholder={String(fallback)}
+          readOnly={readOnly}
+          onChange={(value) => editorUpdateNodeData(node.id, { [field]: value })}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </>
   );
 }
@@ -1133,6 +1262,26 @@ function AgentFields({ node, readOnly }: { node: GraphNode; readOnly: boolean })
         {t(onChannel ? 'network.inspector.agent.channelHint' : 'network.inspector.agent.hint')}
       </p>
       <SystemPromptField key={node.id} node={node} readOnly={readOnly} label={t('network.inspector.agent.systemPrompt')} />
+      <CountField
+        node={node}
+        field="maxToolCalls"
+        fallback={100}
+        min={1}
+        max={1000}
+        readOnly={readOnly}
+        label={t('network.inspector.agent.maxToolCalls')}
+        hint={t('network.inspector.agent.maxToolCallsHint')}
+      />
+      <CountField
+        node={node}
+        field="reasoningSteps"
+        fallback={10}
+        min={2}
+        max={50}
+        readOnly={readOnly}
+        label={t('network.inspector.agent.reasoningSteps')}
+        hint={t('network.inspector.agent.reasoningStepsHint')}
+      />
     </>
   );
 }
@@ -1268,6 +1417,10 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
               ))}
             </SelectContent>
           </Select>
+          {/* H2: the key only travels to the origin of the URL above. */}
+          {listedId !== 'none' ? (
+            <p className="text-xs text-muted-foreground">{t('network.inspector.tool.credentialUrlHint')}</p>
+          ) : null}
         </Field>
       ) : null}
       {kind === 'file_access' ? <FileAccessFields node={node} readOnly={readOnly} /> : null}
@@ -1280,6 +1433,57 @@ function ToolFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) 
         <p className="text-xs text-muted-foreground">{t('network.inspector.tool.calculatorHint')}</p>
       ) : null}
     </>
+  );
+}
+
+/** Calls per run for one tool or MCP node. Unlimited (default) stores no value. */
+function MaxCallsField({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const stored = typeof node.data.maxCalls === 'number' ? node.data.maxCalls : null;
+  const unlimited = stored === null;
+  // Local text so the field can be empty while typing; only whole numbers >= 1 are stored.
+  const [draft, setDraft] = useState(stored === null ? '' : String(stored));
+  const inputId = `max-calls-${node.id}`;
+
+  useEffect(() => {
+    setDraft(stored === null ? '' : String(stored));
+  }, [stored, node.id]);
+
+  function commit(text: string) {
+    setDraft(text);
+    const value = Number(text);
+    if (Number.isInteger(value) && value >= 1) editorUpdateNodeData(node.id, { maxCalls: value });
+  }
+
+  return (
+    <div className="space-y-2">
+      <Field label={t('network.inspector.tool.maxCalls')} htmlFor={inputId}>
+        <Input
+          id={inputId}
+          type="number"
+          min={1}
+          step={1}
+          inputMode="numeric"
+          value={unlimited ? '' : draft}
+          placeholder={unlimited ? t('network.inspector.tool.maxCallsUnlimited') : undefined}
+          disabled={readOnly || unlimited}
+          onChange={(event) => commit(event.target.value)}
+          onBlur={() => setDraft(stored === null ? '' : String(stored))}
+          className="w-32"
+        />
+      </Field>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={unlimited}
+          disabled={readOnly}
+          onCheckedChange={(value) =>
+            editorUpdateNodeData(node.id, { maxCalls: value === true ? undefined : Math.max(1, Number(draft) || 10) })
+          }
+        />
+        {t('network.inspector.tool.maxCallsUnlimited')}
+      </label>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.tool.maxCallsHint')}</p>
+    </div>
   );
 }
 
@@ -1490,7 +1694,6 @@ function WebSearchFields({
   const matching = items.filter((item) => item.kind === provider);
   const credentialId = String(node.data.credentialId ?? '');
   const listedId = matching.some((item) => item.id === credentialId) ? credentialId : 'none';
-  const maxResults = Number(node.data.maxResults ?? 5);
 
   return (
     <>
@@ -1532,18 +1735,12 @@ function WebSearchFields({
         </Field>
       ) : null}
       <Field label={t('network.inspector.tool.maxResults')}>
-        <Input
-          type="number"
-          min={1}
-          max={10}
-          value={Number.isFinite(maxResults) ? maxResults : 5}
-          disabled={readOnly}
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            editorUpdateNodeData(node.id, {
-              maxResults: Number.isFinite(next) ? Math.max(1, Math.min(10, next)) : 5,
-            });
-          }}
+        <NumberField
+          value={numberOrUndefined(node.data.maxResults)}
+          range={SEARCH_RESULTS_RANGE}
+          placeholder={String(DEFAULT_SEARCH_RESULTS)}
+          readOnly={readOnly}
+          onChange={(value) => editorUpdateNodeData(node.id, { maxResults: value })}
         />
       </Field>
       <p className="text-xs text-muted-foreground">{t(`network.inspector.tool.searchHint.${provider}`)}</p>
@@ -1690,7 +1887,7 @@ function ZipFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
 }
 
 const TERMINAL_CHOICES = ['git', 'python', 'py', 'dotnet', 'node', 'npm', 'pnpm', 'cargo', 'go'] as const;
-const TERMINAL_DEFAULT = ['git', 'python', 'py', 'dotnet'];
+const TERMINAL_DEFAULT = ['git'];
 
 function TerminalFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
   const { t } = useTranslation();
@@ -1761,6 +1958,15 @@ function TerminalFields({ node, readOnly }: { node: GraphNode; readOnly: boolean
       <p className="text-xs text-muted-foreground">
         {t(unrestricted ? 'network.inspector.tool.terminalUnrestrictedHint' : 'network.inspector.tool.terminalHint')}
       </p>
+      <Field label={t('network.inspector.tool.terminalTimeout')}>
+        <NumberField
+          value={numberOrUndefined(node.data.timeoutSec)}
+          range={TERMINAL_TIMEOUT_RANGE}
+          placeholder={String(DEFAULT_TERMINAL_TIMEOUT)}
+          readOnly={readOnly}
+          onChange={(value) => editorUpdateNodeData(node.id, { timeoutSec: value })}
+        />
+      </Field>
       {unrestricted ? null : (
         <div className="space-y-2">
           <p className="text-sm font-medium">{t('network.inspector.tool.terminalPrograms')}</p>
@@ -1837,6 +2043,10 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
     const items = embedProvider === 'ollama' ? (ollamaModels.data?.items ?? []) : (embedCatalog.data?.items ?? []);
     return items.map((item) => item.name).filter((name) => isEmbeddingModelName(name));
   }, [embedCatalog.data?.items, embedProvider, ollamaModels.data?.items]);
+  const embedFacts = useMemo(
+    () => modelFactsMap(embedProvider === 'ollama' ? (ollamaModels.data?.items ?? []) : (embedCatalog.data?.items ?? [])),
+    [embedCatalog.data?.items, embedProvider, ollamaModels.data?.items],
+  );
   const embedLoading =
     embedProvider === 'ollama'
       ? ollamaModels.isPending || ollamaModels.isFetching
@@ -1853,15 +2063,13 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
     credentialMatchesProvider(item.kind, embedProvider),
   );
 
+  // H4: same rule as the LLM node. A stored embedding model stays; only an empty field is filled.
+  const embedUnavailable =
+    Boolean(embedModel) && !embedLocked && !embedLoading && !embedOptions.includes(embedModel);
   useEffect(() => {
     if (readOnly || embedLocked || embedLoading) return;
-    if (embedOptions.length === 0) {
-      if (embedModel) editorUpdateNodeData(node.id, { embeddingModel: '' });
-      return;
-    }
-    if (!embedOptions.includes(embedModel)) {
-      editorUpdateNodeData(node.id, { embeddingModel: embedOptions[0] });
-    }
+    if (embedModel || embedOptions.length === 0) return;
+    editorNormalizeNodeData(node.id, { embeddingModel: embedOptions[0] });
   }, [embedLoading, embedLocked, embedModel, embedOptions, node.id, readOnly]);
 
   function applyPath(path: string) {
@@ -1973,6 +2181,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
         <ModelCombobox
           value={embedLocked ? '' : embedModel}
           options={embedOptions}
+          facts={embedFacts}
           disabled={readOnly || embedLocked}
           restrictToOptions
           placeholder={
@@ -1983,6 +2192,8 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
         />
         {embedFailed ? (
           <p className="text-xs text-destructive">{t('network.inspector.llm.modelsLoadError')}</p>
+        ) : embedUnavailable ? (
+          <p className="text-xs text-destructive">{t('network.inspector.llm.modelUnavailable')}</p>
         ) : null}
       </Field>
       <Field label={t('network.inspector.knowledge.path')}>
@@ -2003,26 +2214,26 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
         <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.filesHint')}</p>
       </Field>
       <Field label={t('network.inspector.knowledge.topK')}>
-        <Input
-          type="number"
-          value={node.data.topK == null ? 5 : Number(node.data.topK)}
-          disabled={readOnly}
-          onChange={(event) => editorUpdateNodeData(node.id, { topK: Number(event.target.value) })}
+        <NumberField
+          value={numberOrUndefined(node.data.topK)}
+          range={TOP_K_RANGE}
+          placeholder={String(DEFAULT_TOP_K)}
+          readOnly={readOnly}
+          onChange={(value) => editorUpdateNodeData(node.id, { topK: value })}
         />
       </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.topKHint')}</p>
       <Field label={t('network.inspector.knowledge.score')}>
-        <Input
-          type="number"
-          step="0.05"
-          value={node.data.scoreThreshold == null ? '' : String(node.data.scoreThreshold)}
-          disabled={readOnly}
-          onChange={(event) =>
-            editorUpdateNodeData(node.id, {
-              scoreThreshold: event.target.value === '' ? undefined : Number(event.target.value),
-            })
-          }
+        <NumberField
+          value={numberOrUndefined(node.data.scoreThreshold)}
+          range={SCORE_RANGE}
+          step={0.05}
+          placeholder={String(DEFAULT_SCORE)}
+          readOnly={readOnly}
+          onChange={(value) => editorUpdateNodeData(node.id, { scoreThreshold: value })}
         />
       </Field>
+      <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.scoreHint')}</p>
       <p className="text-xs text-muted-foreground">{t('network.inspector.knowledge.reindexHint')}</p>
       <Button type="button" size="sm" variant="outline" disabled={!document.id || reindexing} loading={reindexing} onClick={() => void reindex()}>
         {t('network.inspector.knowledge.reindex')}

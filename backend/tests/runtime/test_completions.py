@@ -366,7 +366,7 @@ def test_parse_usage_field_aliases() -> None:
     assert ollama.completion_tokens == 22
     partial = _parse_usage({"completion_tokens": 9})
     assert partial is not None
-    assert partial.prompt_tokens == 0
+    assert partial.prompt_tokens is None  # N3: unknown, not 0
     assert partial.completion_tokens == 9
     compat = _parse_usage({"input_tokens": 4, "output_tokens": 8})
     assert compat is not None
@@ -1004,3 +1004,56 @@ def test_openai_luna_stream_parses_responses_events(monkeypatch: pytest.MonkeyPa
     assert result.usage is not None
     assert result.usage.prompt_tokens == 3
     assert result.usage.completion_tokens == 2
+
+
+def test_native_stream_without_done_is_an_upstream_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """N3: Ollama quitting mid-answer left a partial text that counted as finished."""
+    payload = (
+        b'{"message":{"role":"assistant","content":"Hel"},"done":false}\n'
+        b'{"message":{"role":"assistant","content":"lo"},"done":false}\n'
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    events = list(complete_stream(CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG)))
+    assert [e.text for e in events if e.kind == "delta"] == ["Hel", "lo"]
+    assert events[-1].kind == "error"
+    assert events[-1].error_key == "runtime.upstream"
+    with pytest.raises(RuntimeApiError) as caught:
+        complete_live(CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG))
+    assert caught.value.error_key == "runtime.upstream"
+
+
+def test_openai_stream_with_finish_reason_but_no_done_line_is_complete(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = (
+        b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'
+        b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG))
+    assert result.content == "ok"
+    assert result.finish_reason == "stop"
+
+
+def test_missing_prompt_usage_stays_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    """N3: a provider without prompt usage stored tokensIn 0 instead of the estimate."""
+    payload = (
+        b'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n'
+        b'data: {"choices":[],"usage":{"completion_tokens":3}}\n\n'
+        b"data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    install_transport(monkeypatch, handler)
+    result = complete_live(CompletionRequest(provider="ollama", model="llama3.2:1b", messages=_MSG))
+    assert result.usage is not None
+    assert result.usage.prompt_tokens is None
+    assert result.usage.completion_tokens == 3

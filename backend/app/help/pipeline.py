@@ -6,7 +6,7 @@ from collections.abc import Iterator
 
 from app.common.secrets import mask_text
 from app.db.engine import utc_now
-from app.db.help_chat import HelpMessageRow, insert_message
+from app.db.help_chat import HelpMessageRow, insert_message, list_recent_messages
 from app.help.abort import begin_request, end_request
 from app.help.index import index_is_ready
 from app.help.models import HelpMessage, HelpSource
@@ -20,6 +20,35 @@ from app.runtime.errors import RuntimeApiError
 from app.runtime.models import ChatMessage, CompletionRequest, StreamEvent
 
 log = logging.getLogger("agentus.help")
+
+# N10: a follow-up ("and how do I do that?") needs the conversation. Help models
+# are small, so only the last answered exchanges go along, each one shortened.
+HISTORY_MESSAGES = 6
+HISTORY_CHARS = 1_500
+
+
+def _clip_turn(text: str) -> str:
+    text = (text or "").strip()
+    return text if len(text) <= HISTORY_CHARS else text[:HISTORY_CHARS].rstrip() + " …"
+
+
+def _history() -> list[ChatMessage]:
+    """Answered exchanges before this question, oldest first.
+
+    A question without a stored answer (aborted, failed) is left out, so the
+    model never sees two user turns in a row.
+    """
+    rows = list_recent_messages(HISTORY_MESSAGES * 2)
+    turns: list[ChatMessage] = []
+    question: str | None = None
+    for row in rows:
+        if row.role == "user":
+            question = row.content
+        elif row.role == "assistant" and question is not None:
+            turns.append(ChatMessage(role="user", content=_clip_turn(question)))
+            turns.append(ChatMessage(role="assistant", content=_clip_turn(row.content)))
+            question = None
+    return turns[-HISTORY_MESSAGES:]
 
 
 def _persist(message: HelpMessage) -> None:
@@ -148,6 +177,7 @@ def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
                 {"sources": [item.model_dump(by_alias=True) for item in web_sources]},
             )
         user_packet = build_user_packet(stripped, rag_blocks, web_lines)
+        history = _history()
         degraded = get_degraded()
         options = {"num_gpu": 0} if degraded and help_chat.provider == "ollama" else None
         from app.runtime.completions import complete_stream
@@ -173,6 +203,7 @@ def send_stream(text: str, locale: str | None = None) -> Iterator[bytes]:
                             role="system",
                             content=system_prompt(locale, web_search_enabled=search_on),
                         ),
+                        *history,
                         ChatMessage(role="user", content=user_packet),
                     ],
                     credential_id=help_chat.credential_id,

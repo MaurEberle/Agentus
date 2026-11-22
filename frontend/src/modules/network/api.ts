@@ -26,8 +26,9 @@ export async function updateNetwork(id: string, doc: AgentNetworkDocument): Prom
     method: 'PUT',
     body: JSON.stringify(doc),
   });
-  queryClient.setQueryData(['networks', id], updated);
-  await queryClient.invalidateQueries({ queryKey: ['networks'] });
+  // M24: the editor reads ['networks', id, 'document']; the list refreshes in the background.
+  queryClient.setQueryData(['networks', id, 'document'], updated);
+  void queryClient.invalidateQueries({ queryKey: ['networks'], exact: true });
   return updated;
 }
 

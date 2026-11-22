@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
@@ -21,6 +22,8 @@ from app.llm.usage import model_usages
 from app.runtime.errors import RuntimeApiError
 from app.runtime.ollama import resident_index, tag_key
 from app.runtime.urls import ollama_native_root, settings_roots
+
+log = logging.getLogger("agentus.downloads")
 
 _LOCK = threading.Lock()
 _CANCEL = threading.Event()
@@ -114,11 +117,36 @@ def _front_position(conn: Any) -> int:
     return int(row["n"]) - 1
 
 
+def _installed_before(model: str) -> bool:
+    """M19: True when Ollama already has this tag, or when that cannot be told.
+
+    Unknown counts as installed: removing the entry then never deletes a model.
+    """
+    root = settings_roots()[0] or ollama_native_root("")
+    try:
+        with client(timeout_sec=5.0) as http:
+            response = http.get(f"{root}/api/tags")
+        if response.status_code != 200:
+            return True
+        payload = response.json()
+    except Exception:
+        return True
+    rows = payload.get("models") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        return True
+    wanted = tag_key(model)
+    for row in rows:
+        if isinstance(row, dict) and tag_key(str(row.get("name") or row.get("model") or "")) == wanted:
+            return True
+    return False
+
+
 def enqueue(body: DownloadCreate) -> DownloadList:
     model = body.model.strip()
     if not valid_pull_model(model):
         raise RuntimeApiError("models.pull.invalid")
     label = body.label.strip() or model
+    preinstalled = _installed_before(model)
     now = utc_now()
     with transaction("workspace") as conn:
         existing = conn.execute(
@@ -129,8 +157,9 @@ def enqueue(body: DownloadCreate) -> DownloadList:
             conn.execute(
                 """
                 INSERT INTO model_downloads (
-                  id, model, label, publisher, size_bytes, status, position, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, 'queued', ?, ?, ?)
+                  id, model, label, publisher, size_bytes, status, position, created_at, updated_at,
+                  preinstalled
+                ) VALUES (?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?)
                 """,
                 (
                     uuid.uuid4().hex,
@@ -141,6 +170,7 @@ def enqueue(body: DownloadCreate) -> DownloadList:
                     _next_position(conn),
                     now,
                     now,
+                    1 if preinstalled else 0,
                 ),
             )
     ensure_worker()
@@ -240,9 +270,11 @@ def _forget_installed(model: str) -> None:
         return
 
 
-def _discard(model: str, remembered: list[str]) -> None:
+def _discard(model: str, remembered: list[str], *, preinstalled: bool = False) -> None:
     digests = list(dict.fromkeys([*remembered, *fetch_manifest_digests(model)]))
-    _forget_installed(model)
+    if not preinstalled:
+        _forget_installed(model)
+    # Blobs a manifest still names stay; only partial and orphaned files go.
     discard_blob_files(digests)
 
 
@@ -253,7 +285,7 @@ def remove_downloads(ids: list[str]) -> DownloadList:
     with transaction("workspace") as conn:
         marks = ",".join("?" for _ in clean)
         rows = conn.execute(
-            f"SELECT id, model, digests, status FROM model_downloads WHERE id IN ({marks})",
+            f"SELECT id, model, digests, status, preinstalled FROM model_downloads WHERE id IN ({marks})",
             clean,
         ).fetchall()
         running = _running_id(conn)
@@ -268,7 +300,7 @@ def remove_downloads(ids: list[str]) -> DownloadList:
         if row["status"] == "done":
             continue
         remembered = stored_digests(str(row["digests"]) if row["digests"] is not None else "[]")
-        _discard(str(row["model"]), remembered)
+        _discard(str(row["model"]), remembered, preinstalled=bool(row["preinstalled"]))
     return list_downloads()
 
 
@@ -334,7 +366,13 @@ def _note_progress(download_id: str, completed: int | None, total: int | None) -
 
 def _loop() -> None:
     while True:
-        row = _claim()
+        try:
+            row = _claim()
+        except Exception:
+            # Store closed or busy (e.g. data-dir switch): back off, never let the worker die.
+            log.warning("download queue unavailable; retrying", exc_info=True)
+            time.sleep(2.0)
+            continue
         if row is None:
             time.sleep(0.4)
             continue
@@ -365,10 +403,13 @@ def _loop() -> None:
         if _CANCEL.is_set():
             _PROGRESS.pop(download_id, None)
             continue
-        if outcome == "success":
-            _finish(download_id, "done")
-        else:
-            _finish(download_id, "error", "models.pull.failed")
+        try:
+            if outcome == "success":
+                _finish(download_id, "done")
+            else:
+                _finish(download_id, "error", "models.pull.failed")
+        except Exception:
+            log.warning("could not record download %s outcome", download_id, exc_info=True)
 
 
 def ensure_worker() -> None:

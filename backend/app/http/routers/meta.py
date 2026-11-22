@@ -49,6 +49,26 @@ def health() -> dict[str, Any]:
     return body
 
 
+@router.post("/app/restart")
+def app_restart() -> dict[str, Any]:
+    """Close and reopen the desktop app. Refused while a run is active."""
+    from app.host.restart import request_restart
+    from app.http.errors import AppError
+    from app.settings.service import is_run_busy
+
+    if is_run_busy():
+        raise AppError("app.restart.busy", status_code=409)
+    return {"restart": request_restart()}
+
+
+@router.post("/app/open-logs")
+def app_open_logs() -> dict[str, Any]:
+    """Open the folder with agentus.log in the file manager. The path itself is not sent."""
+    from app.applog import open_log_dir
+
+    return {"opened": open_log_dir()}
+
+
 @router.get("/about")
 def about() -> dict[str, Any]:
     from app.http.app import api_version

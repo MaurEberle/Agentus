@@ -12,6 +12,8 @@ import { duplicateNodes } from '@/modules/network/model/serialize';
 import { normalizeChannelEdges } from '@/modules/network/schema/channels';
 
 const MAX_HISTORY = 50;
+/** M23: keystrokes in one field within this gap are one undo step. */
+const COALESCE_MS = 1000;
 
 type EditorStore = {
   document: AgentNetworkDocument;
@@ -20,6 +22,8 @@ type EditorStore = {
   selectedEdgeIds: string[];
   past: AgentNetworkDocument[];
   future: AgentNetworkDocument[];
+  /** Bumped on every history step; a coalesced edit only merges into the same step. */
+  historySeq: number;
   snap: boolean;
   showGrid: boolean;
   showMinimap: boolean;
@@ -38,7 +42,10 @@ type EditorStore = {
   setShowMinimap: (show: boolean) => void;
   undo: () => void;
   redo: () => void;
-  markSaved: (doc: AgentNetworkDocument) => void;
+  /** `sent` is the document as it went to the server (M24). */
+  markSaved: (doc: AgentNetworkDocument, sent?: AgentNetworkDocument) => void;
+  /** M25: derived values (window, threads, defaults); no undo step, not "changed". */
+  normalizeNode: (id: string, patch: Record<string, unknown>) => void;
   isDirty: () => boolean;
 };
 
@@ -56,6 +63,7 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
   selectedEdgeIds: [],
   past: [],
   future: [],
+  historySeq: 0,
   snap: true,
   showGrid: true,
   showMinimap: true,
@@ -68,6 +76,7 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
       selectedEdgeIds: [],
       past: [],
       future: [],
+      historySeq: get().historySeq + 1,
       loadErrorKey: undefined,
     });
   },
@@ -79,6 +88,7 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
       selectedEdgeIds: [],
       past: [],
       future: [],
+      historySeq: get().historySeq + 1,
       loadErrorKey: undefined,
     }),
   setMeta: (patch) => {
@@ -110,6 +120,7 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
         document: { ...state.document, nodes: [...state.document.nodes, { ...node, position }] },
         past: [...state.past, cloneDocument(state.document)].slice(-MAX_HISTORY),
         future: [],
+        historySeq: state.historySeq + 1,
         selectedNodeIds: [node.id],
         selectedEdgeIds: [],
       };
@@ -130,6 +141,7 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
       document: previous,
       past: past.slice(0, -1),
       future: [cloneDocument(document), ...future].slice(0, MAX_HISTORY),
+      historySeq: get().historySeq + 1,
       selectedNodeIds: [],
       selectedEdgeIds: [],
     });
@@ -142,11 +154,44 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
       document: next,
       future: future.slice(1),
       past: [...past, cloneDocument(document)].slice(-MAX_HISTORY),
+      historySeq: get().historySeq + 1,
       selectedNodeIds: [],
       selectedEdgeIds: [],
     });
   },
-  markSaved: (doc) => set({ document: cloneDocument(doc), saved: cloneDocument(doc) }),
+  markSaved: (doc, sent) => {
+    const current = get().document;
+    if (!sent || withoutHistory(current) === withoutHistory(sent)) {
+      set({ document: cloneDocument(doc), saved: cloneDocument(doc) });
+      return;
+    }
+    // M24: edits made while the request ran stay; the document only learns its id
+    // (and the name the save gave it, unless that was edited too).
+    set({
+      document: {
+        ...current,
+        id: doc.id,
+        updatedAt: doc.updatedAt,
+        name: current.name === sent.name ? doc.name : current.name,
+      },
+      saved: cloneDocument(doc),
+    });
+  },
+  normalizeNode: (id, patch) => {
+    const state = get();
+    const apply = (doc: AgentNetworkDocument): AgentNetworkDocument => ({
+      ...doc,
+      nodes: doc.nodes.map((node) => (node.id === id ? { ...node, data: { ...node.data, ...patch } } : node)),
+    });
+    const node = state.document.nodes.find((item) => item.id === id);
+    if (!node || Object.entries(patch).every(([key, value]) => node.data[key] === value)) return;
+    const savedNode = state.saved?.nodes.find((item) => item.id === id);
+    set({
+      document: apply(state.document),
+      // The saved copy gets the same derived values, so they do not count as a change.
+      saved: state.saved && savedNode ? apply(state.saved) : state.saved,
+    });
+  },
   isDirty: () => {
     const { document, saved } = get();
     if (!saved) return withoutHistory(document) !== withoutHistory(emptyDocument()) || Boolean(document.name);
@@ -168,6 +213,7 @@ function push(
     document: next,
     past: [...state.past, cloneDocument(state.document)].slice(-MAX_HISTORY),
     future: [],
+    historySeq: state.historySeq + 1,
   });
 }
 
@@ -217,12 +263,28 @@ export function editorNudge(dx: number, dy: number) {
   });
 }
 
+let lastEdit: { key: string; at: number; seq: number } | null = null;
+
 export function editorUpdateNodeData(id: string, patch: Record<string, unknown>) {
   const state = useNetworkEditor.getState();
-  state.applyDocument({
-    ...state.document,
-    nodes: state.document.nodes.map((node) =>
-      node.id === id ? { ...node, data: { ...node.data, ...patch } } : node,
-    ),
-  });
+  const key = `${id}:${Object.keys(patch).sort().join(',')}`;
+  const now = Date.now();
+  // M23: typing into one field is one undo step, not one per key.
+  const merge =
+    lastEdit !== null && lastEdit.key === key && lastEdit.seq === state.historySeq && now - lastEdit.at < COALESCE_MS;
+  state.applyDocument(
+    {
+      ...state.document,
+      nodes: state.document.nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, ...patch } } : node,
+      ),
+    },
+    !merge,
+  );
+  lastEdit = { key, at: now, seq: useNetworkEditor.getState().historySeq };
+}
+
+/** M25: a value the inspector derives, not one the user typed. */
+export function editorNormalizeNodeData(id: string, patch: Record<string, unknown>) {
+  useNetworkEditor.getState().normalizeNode(id, patch);
 }

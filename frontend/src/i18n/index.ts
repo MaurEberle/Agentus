@@ -32,7 +32,7 @@ function applyDocumentLang(lng: string) {
   if (typeof document === 'undefined') return;
   const resolved = resolveAppLanguage(lng);
   document.documentElement.lang = resolved;
-  document.documentElement.dir = languageDirection(resolved);
+  document.documentElement.dir = languageDirection();
 }
 
 void i18n.use(initReactI18next).init({
