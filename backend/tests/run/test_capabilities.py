@@ -149,3 +149,13 @@ def test_overview_names_an_mcp_server(api_env) -> None:
     text = orchestrator_tool_overview(compiled, "ag", [])
     assert "- Dateien (MCP server): read_file, list_dir; opens only after an agent call failed" in text
     assert tool_summary(compiled, "ag") == "MCP server Dateien"
+
+
+def test_overview_in_repair_mode_says_files_can_change_now() -> None:
+    """Review finding 1: in repair mode it still said changing files opens only after a failure."""
+    from app.run.capabilities import orchestrator_tool_overview
+
+    compiled = compile_document(_doc(), network_id="n", network_name="mini")
+    repair = orchestrator_tool_overview(compiled, "ag", ["file_access", "terminal"], write_open=True)
+    assert repair.startswith("Files: you can read and change files in C:/dev/hello4 on this turn")
+    assert "opens only after an agent call failed" not in repair.split("\n", 1)[0]

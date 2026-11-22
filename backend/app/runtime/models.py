@@ -21,6 +21,9 @@ class OllamaModel(ApiModel):
     digest: str | None = None
     modified_at: str | None = Field(default=None, alias="modifiedAt")
     moe: bool = False
+    # From details of /api/tags: "32.8B", "Q4_K_M". For the hover in model pickers.
+    parameter_size: str | None = Field(default=None, alias="parameterSize")
+    quantization: str | None = None
 
 
 class ToolCall(ApiModel):
@@ -35,6 +38,9 @@ class ChatMessage(ApiModel):
     name: str | None = None
     tool_call_id: str | None = Field(default=None, alias="toolCallId")
     tool_calls: list[ToolCall] | None = Field(default=None, alias="toolCalls")
+    # The model's own thinking of an earlier step. Local models get it back inside the
+    # content as <think>…</think>; cloud providers never see it (completions.py).
+    reasoning: str | None = None
 
 
 class CompletionUsage(ApiModel):
@@ -106,6 +112,8 @@ class RuntimeModelOut(ApiModel):
     name: str
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
     moe: bool = False
+    parameter_size: str | None = Field(default=None, alias="parameterSize")
+    quantization: str | None = None
 
 
 class RuntimeModelsResponse(ApiModel):

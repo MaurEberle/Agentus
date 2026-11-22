@@ -472,6 +472,12 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
     ctrl.llm_budget = orch.max_llm_calls
     if user_text:
         memory.add_user(user_text)
+    if ctrl.previous_run_id:
+        from app.run import previous_run
+
+        # The orchestrator reads the chosen earlier run before its first decision.
+        previous_run.brief(ctrl, compiled, memory)
+        _store_memory(ctrl, memory)
     roster: list[tuple[str, str, str]] = []
     for agent_id in orch.agents:
         node = compiled.by_id.get(agent_id)
@@ -578,7 +584,9 @@ def _run_orchestrator(ctrl: RunController, compiled: CompiledGraph, user_text: s
             later=later,
             orientation_left=orientation_left,
             capabilities=orchestrator_capabilities(compiled, orch.node_id, offered),
-            overview=orchestrator_tool_overview(compiled, orch.node_id, turn_runtime._function_names(offered)),
+            overview=orchestrator_tool_overview(
+                compiled, orch.node_id, turn_runtime._function_names(offered), write_open=write_open
+            ),
             agent_tools=agent_tools,
         )
         own_start = len(memory.own_tools)

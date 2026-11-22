@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { modelFactsMap } from '@/lib/modelName';
 import { pickFolderPath } from '@/lib/pickFolder';
 import {
   useEditorCredentialsQuery,
@@ -905,6 +906,11 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
       : null;
   const modelKind: 'dense' | 'moe' =
     listedKind ?? (onlyMoe ? 'moe' : onlyDense ? 'dense' : (storedKind ?? 'dense'));
+  // Parameters, quantization and size for the hover card of the model picker.
+  const modelFacts = useMemo(
+    () => modelFactsMap(provider === 'ollama' ? (ollamaModels.data?.items ?? []) : (catalogModels.data?.items ?? [])),
+    [catalogModels.data?.items, ollamaModels.data?.items, provider],
+  );
   const modelOptions = useMemo(() => {
     if (provider === 'ollama') return modelKind === 'moe' ? moeNames : denseNames;
     if (!catalogProvider) return [];
@@ -1072,6 +1078,7 @@ function LlmFields({ node, readOnly }: { node: GraphNode; readOnly: boolean }) {
         <ModelCombobox
           value={modelLocked ? '' : model}
           options={modelOptions}
+          facts={modelFacts}
           disabled={readOnly || modelLocked}
           restrictToOptions
           placeholder={
@@ -2026,6 +2033,10 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
     const items = embedProvider === 'ollama' ? (ollamaModels.data?.items ?? []) : (embedCatalog.data?.items ?? []);
     return items.map((item) => item.name).filter((name) => isEmbeddingModelName(name));
   }, [embedCatalog.data?.items, embedProvider, ollamaModels.data?.items]);
+  const embedFacts = useMemo(
+    () => modelFactsMap(embedProvider === 'ollama' ? (ollamaModels.data?.items ?? []) : (embedCatalog.data?.items ?? [])),
+    [embedCatalog.data?.items, embedProvider, ollamaModels.data?.items],
+  );
   const embedLoading =
     embedProvider === 'ollama'
       ? ollamaModels.isPending || ollamaModels.isFetching
@@ -2160,6 +2171,7 @@ function KnowledgeFields({ node, readOnly }: { node: GraphNode; readOnly: boolea
         <ModelCombobox
           value={embedLocked ? '' : embedModel}
           options={embedOptions}
+          facts={embedFacts}
           disabled={readOnly || embedLocked}
           restrictToOptions
           placeholder={

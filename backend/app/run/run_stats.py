@@ -20,6 +20,7 @@ LIMIT_KEYS = frozenset(
         "run.agent.toolCap",
         "run.agent.toolFailures",
         "run.agent.window",
+        "run.llm.contextCut",
         "run.llmBudget",
         "run.orchestrator.orientationCap",
         "run.orchestrator.stepClose",
@@ -47,6 +48,8 @@ class _AgentTally:
     failed: int = 0
     duration_ms: int = 0
     tools: int = 0
+    # Highest share of the context window one call of this agent used, in percent.
+    context_share: float = 0.0
 
 
 @dataclass
@@ -108,6 +111,9 @@ class RunStats:
             tally.failed += 1
         tally.duration_ms += _int(data.get("durationMs"))
         tally.tools += _int(data.get("tools"))
+        share = data.get("contextShare")
+        if isinstance(share, (int, float)) and not isinstance(share, bool):
+            tally.context_share = max(tally.context_share, float(share))
 
     def summary(self, outcome: str, error: str | None = None) -> dict:
         body: dict = {
@@ -122,6 +128,7 @@ class RunStats:
                     "failed": item.failed,
                     "durationMs": item.duration_ms,
                     "tools": item.tools,
+                    **({"contextShare": item.context_share} if item.context_share else {}),
                 }
                 for key, item in self.agents.items()
             ],

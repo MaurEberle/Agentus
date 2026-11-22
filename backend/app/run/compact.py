@@ -91,6 +91,7 @@ def transcript_tokens(messages: list[LlmMessage]) -> int:
     return estimate_token_count(
         "\n".join(
             (message.content or "")
+            + (message.reasoning or "")
             + "".join((call.arguments or "") for call in message.tool_calls or [])
             for message in messages
         )

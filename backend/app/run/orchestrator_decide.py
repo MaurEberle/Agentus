@@ -9,6 +9,7 @@ import traceback
 from app.db.runs import insert_call
 from app.db.vault import get as vault_get
 from app.run import agent_turn, dispatch, orch_tools, turn_runtime
+from app.run.context_watch import ContextWatch
 from app.run import window as run_window
 from app.run.compile import CompiledGraph
 from app.run.controller import RunController, emit_log, node_label
@@ -23,9 +24,10 @@ from app.run.limits import (
     MAX_SAME_TOOL_ERRORS,
     STREAM_IDLE_TIMEOUT_SEC,
 )
-from app.run.memory import MAX_COMPACT_LEVEL, RunMemory, ToolEvent, clip_tool_messages
+from app.run.memory import RunMemory, ToolEvent, clip_tool_messages
 from app.help.visible import strip_think
 from app.run.orchestrate import (
+    asks_user,
     control_source,
     invented_tool_action,
     match_agent,
@@ -216,24 +218,25 @@ def _orchestrator_action(
             # With own tools offered, the decisions are tools too; without, JSON only.
             decision_tools = orch_tools.decision_schemas() if offered else []
             choice = turn_runtime._bind_window(orch.llm, messages, memory)
-            while not choice.fits and memory.compact_level < MAX_COMPACT_LEVEL:
-                # O7: condense the course instead of ending the run. Messages of this
-                # decision (tool calls and results) are kept; at the last level their
-                # tool results are shortened too.
-                memory.compact_level += 1
+            cuts: list[str] = []
+            while not choice.fits:
+                # O7: shorten the course step by step, oldest results first, instead of
+                # ending the run. Tasks and changed files of every call stay. Messages of
+                # this decision (tool calls and results) are kept; the last step shortens
+                # their tool results.
+                cut = memory.compact_step()
+                if cut is None:
+                    break
+                cuts.append(cut)
                 extras = messages[base_len:]
-                if memory.compact_level >= MAX_COMPACT_LEVEL:
+                if memory.clip_tools:
                     extras = clip_tool_messages(extras)
                 base = memory.orchestrator_messages(system)
                 base_len = len(base)
                 messages = base + extras
-                emit_log(
-                    "info",
-                    "run.orchestrator.compact",
-                    node_id=orch.node_id,
-                    payload={"level": memory.compact_level},
-                )
                 choice = turn_runtime._bind_window(orch.llm, messages, memory)
+            if cuts:
+                emit_log("info", "run.orchestrator.trimmed", node_id=orch.node_id, payload=memory.trim_payload(cuts))
             if not choice.fits:
                 ctrl.fail_message = "run.orchestrator.window"
                 ctrl.fail_class = "orchestrator"
@@ -263,6 +266,7 @@ def _orchestrator_action(
                     "model": llm.model,
                     "waitReason": "llm",
                     "contextMax": context_max,
+                    "promptEst": context_est,
                     "maxTokens": output_cap,
                     "maxTokensAuto": auto_cap,
                     **turn_runtime._caller(compiled, orch.node_id),
@@ -341,6 +345,17 @@ def _orchestrator_action(
                 estimate_token_count(result.content) if result.content else None
             )
             in_final = usage.prompt_tokens if usage and usage.prompt_tokens is not None else context_est
+            # Only the edge check: the prompt is rebuilt from memory for every decision.
+            cut = ContextWatch(detect_drops=False).observe(
+                reported=usage.prompt_tokens if usage else None, estimate=context_est, context_max=context_max
+            )
+            if cut is not None:
+                emit_log(
+                    "warn",
+                    "run.llm.contextCut",
+                    node_id=llm_node_id,
+                    payload={"model": llm.model, **cut, **turn_runtime._caller(compiled, orch.node_id)},
+                )
             rate_final = None
             if out_final is not None and duration_ms > 0:
                 rate_final = out_final / max(duration_ms / 1000.0, 0.05)
@@ -624,6 +639,10 @@ def _orchestrator_action(
                 emit_log("info", "run.orchestrator.privateReasoning", node_id=orch.node_id)
                 action = {"action": "think", "text": parsed.get("text") or "", "agent": "", "task": "", "source": ""}
                 return _tag_tokens(action, result, out_final)
+            if kind == "reply" and asks_user(parsed.get("text") or ""):
+                # A question needs an answer: the run waits instead of deciding on and asking again.
+                emit_log("info", "run.orchestrator.replyAsAsk", node_id=orch.node_id)
+                parsed["action"] = kind = "ask"
             if kind == "reply" and block_reply:
                 action = {
                     "action": "think",

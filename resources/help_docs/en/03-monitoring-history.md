@@ -25,7 +25,7 @@ Header: run id, start time, duration, rough step, active LLMs (local vs cloud).
 
 If knowledge hangs off an agent, start already shows the run while indexing: the knowledge node runs with wait reason **index**, the log names reading and embeddings, and the header and dashboard show the same name. An index that is already current is skipped and only noted as current.
 
-**Activity:** current nodes, progress “step x of y”, tokens in/out, optional context window.
+**Activity:** At the top the live values: tokens per second of the model that is writing; how full its context window is (bar, yellow from 75 %, red from 90 %); output tokens of the whole run. Below, in one line, who is at work, and the full task of the working agent, ready to copy. When the run waits for you, a highlighted line says so.
 
 Chat and log sit above the network and activity. The three cards keep their height when the window grows; drag the edges between them to resize. The sizes you set are kept after you close the app.
 
@@ -33,7 +33,7 @@ Chat and log sit above the network and activity. The three cards keep their heig
 
 ## Run chat (monitoring)
 
-**Chat** tab (opens when a run starts, if the graph has a chat input): the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. The run waits only on a follow-up question. Agent text and internal commands do not appear here. A follow-up question shows in the notification bell and the header; the taskbar icon flashes while the window is in the background. **Stop generating** ends the answer in progress. With an orchestrator the run stays open and waits for your next message; in a chain without one the run ends as cancelled.
+**Chat** tab (opens when a run starts, if the graph has a chat input): the conversation of the running graph. Only while the run is active. Without an orchestrator the chat waits for the first line and passes it down the chain. With an orchestrator you talk only to it. Before the first message you can pick an earlier run of this network under **Continue from an earlier run** (time, outcome, start of the request). Before its first decision the orchestrator then reads that run's record: requests, agent calls, how it ended, changed files and, if that run itself continued from an earlier one, its background. From it the orchestrator writes itself a background of at most 3000 characters; it appears in the chat. It describes only the earlier run as it ended; your new message is not part of it, and what the agents report in the new run counts as newer. Only the orchestrator gets it and passes on to the agents what they need. If the analysis fails, it gets the shortened record. The run waits only on a follow-up question. Agent text and internal commands do not appear here. A follow-up question shows in the notification bell and the header; the taskbar icon flashes while the window is in the background. **Stop generating** ends the answer in progress. With an orchestrator the run stays open and waits for your next message; in a chain without one the run ends as cancelled.
 
 This is **not** the help bubble. History and tools belong to the network.
 
@@ -53,7 +53,9 @@ This is **not** the help bubble. History and tools belong to the network.
 
 **Detail:** click a line. Tools show path or command, result, error and the hint for the model; agents show task and result; model calls show tokens, duration, answer and reasoning. The raw data (JSON) can be expanded.
 
-**Summary:** At the end of a run a card at the top shows outcome, duration, agent calls per agent, model calls and tokens, tool calls, changed files and limits reached.
+**Summary:** At the end of a run a card at the top shows outcome, duration, agent calls per agent (with the highest share of the context window), model calls and tokens, tool calls, changed files and limits reached.
+
+**Context:** The closing line of each agent task names the largest request against the window (for example “largest request 30,896 of 202,752 tokens (15 %)”) and how often it was compacted. If the model reports clearly fewer input tokens than in the step before within one task without compaction, or far fewer than estimated at the window edge, the log warns: **conversation probably cut**. The model is then likely missing the start of the conversation; usually the window on the LLM node is too small.
 
 **Export:** “Export as text” saves the shown lines as Markdown, “JSON” as JSON Lines. File contents are clipped to 2 KB in the log, model answers to 8 KB.
 

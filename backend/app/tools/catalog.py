@@ -352,7 +352,7 @@ def _terminal_description(
     allowed = ", ".join(programs or [])
     return (
         "Run one program and its arguments in the configured working directory. "
-        "No pipes, redirection, or other shell syntax. "
+        "No pipes, redirection, or other shell syntax, and no inline code (-c, -e, --eval). "
         f"Allowed programs: {allowed}."
     )
 

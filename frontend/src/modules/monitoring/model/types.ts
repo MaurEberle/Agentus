@@ -130,7 +130,7 @@ export type MonitoringHandle = {
     resources: ResourceSnapshot | null;
   };
   /** Resolves false when the backend did not accept the message. */
-  sendChat?(text: string): Promise<boolean> | void;
+  sendChat?(text: string, previousRunId?: string): Promise<boolean> | void;
   abortChat?(): void;
   setMockScenario?(id: MockScenario): void;
 };

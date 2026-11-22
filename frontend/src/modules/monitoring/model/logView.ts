@@ -58,6 +58,7 @@ export const LIMIT_KEYS = new Set([
   'run.agent.toolCap',
   'run.agent.toolFailures',
   'run.agent.window',
+  'run.llm.contextCut',
   'run.llmBudget',
   'run.orchestrator.orientationCap',
   'run.orchestrator.stepClose',
@@ -79,6 +80,7 @@ const RUN_KEYS = new Set(['run.summary', 'run.succeeded', 'run.failed', 'run.can
 
 // Info lines that belong to the "important" view besides decisions, agents and limits.
 const IMPORTANT_INFO = new Set([
+  'run.briefing.done',
   'run.orchestrator.takeoverStart',
   'run.orchestrator.takeoverFailures',
   'run.orchestrator.selfTakeover',
@@ -120,6 +122,9 @@ function clip(text: string, limit: number): string {
 
 /** Short name of a limit key: its log text without the values only a log line has. */
 export function limitLabel(key: string, t: TFunction): string {
+  // A short name where the log text needs its values (formatted numbers read as NaN without them).
+  const short = t(`runLog.limitShort.${key.replace(/\./g, '_')}`, { defaultValue: '' });
+  if (typeof short === 'string' && short) return short;
   return formatRunLogMessage(key, t)
     .replace(/\s*\(?\{\{\s*\w+\s*\}\}\)?/g, '')
     .replace(/\s+([,.:;])/g, '$1')
@@ -383,6 +388,23 @@ function describeAgent(event: LogEvent, ctx: LogContext): LogLine {
   const files = num(payload.filesCount);
   if (files !== null && files > 0) parts.push(t('runLog.view.filesCount', { count: files }));
   if (payload.capped === true) parts.push(t('runLog.view.capped'));
+  // How full the context window got in this call, and whether it looked cut.
+  const prompt = num(payload.promptMax);
+  const windowSize = num(payload.contextMax);
+  const share = num(payload.contextShare);
+  if (prompt !== null && windowSize !== null && share !== null) {
+    parts.push(
+      t('runLog.view.agentContext', {
+        prompt: formatNumber(prompt, ctx.locale),
+        window: formatNumber(windowSize, ctx.locale),
+        share: formatNumber(share, ctx.locale, share < 10 ? 1 : 0),
+      }),
+    );
+  }
+  const compactions = num(payload.compactions) ?? 0;
+  if (compactions > 0) parts.push(t('runLog.view.agentCompacted', { count: compactions }));
+  const cuts = num(payload.contextCuts) ?? 0;
+  if (cuts > 0) parts.push(t('runLog.view.agentContextCuts', { count: cuts }));
   line.text = parts.join(' · ');
   // Older runs logged no outcome: their done line says the turn ended, not that it worked.
   if (!payload.outcome) line.status = null;
@@ -575,7 +597,16 @@ export function logsToMarkdown(
   return `${out.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`;
 }
 
-export type SummaryAgent = { id: string; name: string; calls: number; failed: number; durationMs: number; tools: number };
+export type SummaryAgent = {
+  id: string;
+  name: string;
+  calls: number;
+  failed: number;
+  durationMs: number;
+  tools: number;
+  /** Highest share of the context window in one call, percent; null in older runs. */
+  contextShare: number | null;
+};
 
 export type RunSummary = {
   outcome: string;
@@ -614,6 +645,7 @@ export function readSummary(event: LogEvent): RunSummary {
         failed: num(item.failed) ?? 0,
         durationMs: num(item.durationMs) ?? 0,
         tools: num(item.tools) ?? 0,
+        contextShare: num(item.contextShare),
       })),
     llmCalls: num(payload.llmCalls) ?? 0,
     llmMs: num(payload.llmMs) ?? 0,

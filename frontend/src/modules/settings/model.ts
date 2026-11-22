@@ -207,7 +207,14 @@ export type McpServerListItem = {
 };
 
 export type RuntimePing = { ok: boolean; messageKey?: string };
-export type RuntimeModel = { name: string; sizeBytes?: number; moe?: boolean };
+export type RuntimeModel = {
+  name: string;
+  sizeBytes?: number;
+  moe?: boolean;
+  /** Ollama details: "32.8B", "Q4_K_M". */
+  parameterSize?: string;
+  quantization?: string;
+};
 
 export type KvLayer = {
   bytesPerToken?: number;

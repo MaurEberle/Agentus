@@ -92,6 +92,11 @@ SSE_QUEUE_MAX = 1000
 SUBSTANTIAL_RESULT_CHARS = 400
 # Per-string cap for run log payloads. Payloads stay valid JSON; the UI clips previews.
 LOG_PAYLOAD_MAX = 1_000_000
+# Reasoning sent back inside one agent call: the latest steps only, each clipped.
+# The model planned in its reasoning (771 characters per step on average) and lost it
+# after every step (investigation 2026-11-21).
+REASONING_STEPS_KEPT = 8
+REASONING_CHARS = 1500
 # Strings in tool arguments (file contents) in the log; the tool gets the full text (B5).
 LOG_ARG_MAX = 2048
 # Model answer and reasoning per run.llm.done line (B6).

@@ -57,6 +57,7 @@
       "loadedYes": "Sí",
       "loadedNo": "No",
       "family": "Familia",
+      "publisher": "Editor",
       "parameters": "Parámetros",
       "quant": "Cuantización",
       "format": "Formato",
@@ -111,6 +112,12 @@
       "quants": "Cuantización",
       "install": "Instalar",
       "installed": "Instalado",
+      "state": {
+        "installed": "Instalado",
+        "installedMany": "{{count}} instalados",
+        "running": "Descargando {{percent}} %",
+        "busy": "Esta cuantización ya está en la lista de descargas."
+      },
       "gated": "Este modelo necesita aprobación en Hugging Face.",
       "noGguf": "No hay un GGUF instalable.",
       "vramHint": "El archivo es mayor que la memoria gráfica.",
@@ -1469,6 +1476,9 @@
       "current": "Nodos actuales",
       "now": "Ahora",
       "task": "Encargo",
+      "taskFor": "Encargo para {{name}}",
+      "noTask": "Ahora no hay ningún encargo.",
+      "contextLabel": "Contexto",
       "agents": "Agentes",
       "agentsDone": "{{completed}} de {{total}} listos",
       "none": "Ningún nodo activo",
@@ -1479,7 +1489,9 @@
       "tokensOut": "Salida",
       "perSecond": "{{value}} tokens/s",
       "rate": "Tokens/s",
-      "runTotal": "Total de la ejecución",
+      "runTotal": "Salida total",
+      "runTotalOut": "tokens de salida",
+      "runTotalIn": "entrada {{value}}",
       "context": "Contexto {{used}} / {{max}}"
     },
     "tabs": {
@@ -1503,7 +1515,15 @@
       "disabled": "El chat solo está disponible durante una ejecución.",
       "agentDone": "{{name}} ha terminado.",
       "agentDoneFiles": "{{name}} ha terminado. Archivos: {{files}}.",
-      "aborted": "Detenido. Envía un mensaje para continuar."
+      "aborted": "Detenido. Envía un mensaje para continuar.",
+      "briefing": "**Contexto de la ejecución anterior elegida** (solo para el orquestador):\n\n{{text}}",
+      "previous": {
+        "label": "Continuar una ejecución anterior",
+        "none": "Sin ejecución anterior",
+        "option": "{{when}} · {{outcome}} · {{request}}",
+        "noRequest": "sin encargo",
+        "hint": "Antes de su primera decisión el orquestador analiza la ejecución elegida y guarda el resultado como contexto. Los agentes no lo ven; él les pasa lo que necesitan."
+      }
     },
     "log": {
       "pause": "Pausar",
@@ -1777,6 +1797,9 @@
     }
   },
   "runLog": {
+    "limitShort": {
+      "run_llm_contextCut": "historial probablemente recortado"
+    },
     "view": {
       "file": {
         "read": "lee {{path}}",
@@ -1852,6 +1875,9 @@
       "filesCount_one": "{{count}} archivo modificado",
       "filesCount_other": "{{count}} archivos modificados",
       "capped": "límite de herramientas alcanzado",
+      "agentContext": "solicitud mayor {{prompt}} de {{window}} tokens ({{share}} %)",
+      "agentContextCuts": "probablemente recortado: {{count}}×",
+      "agentCompacted": "compactado: {{count}}×",
       "step_one": "ronda de herramientas: {{count}} llamada",
       "step_other": "ronda de herramientas: {{count}} llamadas",
       "stepWithFailed_one": "ronda de herramientas: {{count}} llamada, {{failed}} fallida(s)",
@@ -2009,10 +2035,17 @@
       "error": "Error",
       "agent": "{{name}} ×{{count}}",
       "agentFailed": "{{name}} ×{{count}} ({{failed}} fallidas)",
+      "contextShare": "contexto hasta {{share}} %",
       "fileList_one": "mostrar {{count}} archivo modificado",
       "fileList_other": "mostrar {{count}} archivos modificados"
     },
     "run": {
+      "briefing": {
+        "done": "Ejecución anterior leída: {{chars}} caracteres de contexto.",
+        "failed": "Ejecución anterior no analizada ({{error}}); el orquestador recibe el registro abreviado.",
+        "window": "El registro no cabe en la ventana de contexto; el orquestador lo recibe abreviado.",
+        "missing": "No se encontró la ejecución anterior elegida."
+      },
       "llmBudget": "Presupuesto de llamadas al modelo agotado para esta ejecución.",
       "start": "Ejecución iniciada ({{networkName}})",
       "wait": {
@@ -2034,6 +2067,7 @@
         "start": "Agente iniciado",
         "done": "Agente finalizado",
         "toolFailures": "Agente detenido tras {{failed}} llamadas a herramientas fallidas seguidas",
+        "terminalLesson": "Comando de terminal rechazado anotado ({{kind}}); ahora está en el prompt de sistema de este agente ({{lessons}} en total).",
         "toolJson": "Llamada a herramienta {{name}} descartada: argumentos JSON incompletos (intento {{attempt}}/{{max}}).",
         "think": "El agente está pensando (no es un resultado).",
         "thinkLimit": "Demasiados pasos de pensamiento sin resultado.",
@@ -2057,6 +2091,7 @@
         "toolCallsRepaired": "Se añadieron {{count}} respuestas de herramienta que faltaban.",
         "start": "LLM {{model}}",
         "done": "LLM finalizado ({{durationMs}} ms)",
+        "contextCut": "Historial probablemente recortado: el modelo procesó {{reported, number}} tokens de entrada, se esperaban unos {{expected, number}} (ventana {{contextMax, number}}). Probablemente le falta el inicio del historial.",
         "release": "Otros modelos descargados ({{dropped}}); {{keep}} sigue cargado",
         "modelInfo": "Faltan los datos del modelo {{model}}. La ejecución se detuvo.",
         "moeUnsplit": "No se puede repartir los expertos de {{model}}. No se envía num_gpu."
@@ -2088,7 +2123,9 @@
         "takeoverUnavailable": "Toma de control imposible: al orquestador le faltan herramientas ({{count}}/{{max}}).",
         "toolCap": "Orquestador: {{calls}} llamadas a herramientas en este paso, límite alcanzado.",
         "compact": "Contexto del orquestador condensado (nivel {{level}}).",
+        "trimmed": "Prompt del orquestador acortado para caber en la ventana: {{results}} resultados antiguos quitados, {{starts}} recortados a su inicio, {{other}} recortes más ({{total}} pasos hasta ahora). Los encargos y los archivos modificados se mantienen.",
         "privateReasoning": "El razonamiento interno del modelo no se muestra en el chat.",
+        "replyAsAsk": "La respuesta contenía una pregunta para ti y se envió como pregunta; la ejecución espera tu respuesta.",
         "llmPause": "Modelo del orquestador no disponible ({{error}}); esperando un mensaje.",
         "emptyTask": "Tarea vacía; se usa el último mensaje del usuario.",
         "action": "Orquestador: {{action}} {{agent}}",

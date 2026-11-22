@@ -46,6 +46,7 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("GET", "/api/run", RUN),
     ContractRoute("GET", "/api/run/stream", RUN),
     ContractRoute("POST", "/api/run/chat", RUN),
+    ContractRoute("GET", "/api/run/previous", RUN),
     ContractRoute("POST", "/api/run/chat/abort", RUN),
     ContractRoute("GET", "/api/networks", NETWORKS),
     ContractRoute("GET", "/api/networks/:id", NETWORKS),

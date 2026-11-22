@@ -34,9 +34,12 @@ from app.run.limits import (
     MAX_FAILED_TOOL_CALLS,
     MAX_SHORT_THINKS,
     MAX_TOOL_JSON_ATTEMPTS,
+    REASONING_CHARS,
+    REASONING_STEPS_KEPT,
     STREAM_IDLE_TIMEOUT_SEC,
     SUBSTANTIAL_RESULT_CHARS,
 )
+from app.run.context_watch import ContextWatch
 from app.run.memory import (
     AgentRecord,
     RunMemory,
@@ -198,8 +201,12 @@ def done_payload(
     call: int | None = None,
     reason: str = "",
     capped: bool = False,
+    context: dict | None = None,
 ) -> dict:
-    """B3: how an agent call ended: time, tools, changed files, outcome, start of the result."""
+    """B3: how an agent call ended: time, tools, changed files, outcome, start of the result.
+
+    ``context``: largest prompt, window, share, compactions and likely cuts (ContextWatch).
+    """
     from app.run.limits import LOG_RESULT_PREVIEW
     from app.run.log_payloads import clip
 
@@ -227,6 +234,8 @@ def done_payload(
         payload["reason"] = reason
     if capped:
         payload["capped"] = True
+    if context:
+        payload.update(context)
     return payload
 
 def _agent_turn(
@@ -297,6 +306,12 @@ def _agent_turn(
     if tools:
         system = system + "\n\n" + _TOOL_REQUIRED
     system = system + "\n\n" + capability_text(compiled, agent_id, available=bool(tools))
+    from app.run import terminal_lessons
+
+    # Rejected terminal commands of earlier calls of this agent in this run.
+    lessons = terminal_lessons.block_for(ctrl, agent_id) if tools else ""
+    if lessons:
+        system = system + "\n\n" + lessons
     mcp = turn_runtime.get_mcp()
     secret = None
     if agent.llm.provider != "ollama" and agent.llm.credential_id:
@@ -334,10 +349,12 @@ def _agent_turn(
     last_prompt_tokens: int | None = None
     last_context_max: int | None = None
     overflows = 0
+    watch = ContextWatch()
     try:
         while not ctrl.stop_event.is_set():
             offered = turn_runtime._available_tools(ctrl, compiled, agent_id, offered)
             window_mem = memory if memory is not None else RunMemory()
+            size_before = run_window.prompt_tokens(messages)
             if not _make_room(
                 ctrl,
                 compiled,
@@ -349,6 +366,9 @@ def _agent_turn(
                 last_context_max=last_context_max,
             ):
                 return ""
+            if run_window.prompt_tokens(messages) < size_before:
+                # Compacted on purpose: the next prompt may be smaller without anything lost.
+                watch.compacted()
             last_prompt_tokens = None
             last_context_max = None
             choice = turn_runtime._bind_window(agent.llm, messages, window_mem)
@@ -369,6 +389,7 @@ def _agent_turn(
                     "model": agent.llm.model,
                     "waitReason": "llm",
                     "contextMax": context_max,
+                    "promptEst": context_est,
                     "maxTokens": output_cap,
                     "maxTokensAuto": auto_cap,
                     **turn_runtime._caller(compiled, agent_id),
@@ -447,12 +468,7 @@ def _agent_turn(
                             **(turn_runtime._runtime_error_payload(exc) or {}),
                         },
                     )
-                    messages.append(
-                        LlmMessage(
-                            role="user",
-                            content=_TOOL_JSON_NOTE.format(name=tool_name),
-                        )
-                    )
+                    _add_note(messages, _TOOL_JSON_NOTE.format(name=tool_name))
                     if json_attempts < MAX_TOOL_JSON_ATTEMPTS:
                         continue
                     json_attempts = 0
@@ -531,6 +547,20 @@ def _agent_turn(
                 rate_final = out_final / max(duration_ms / 1000.0, 0.05)
             used_now = in_final if in_final is not None else context_est
             _note_tokens(record, out_final)
+            cut = watch.observe(
+                reported=usage.prompt_tokens if usage is not None else None,
+                estimate=context_est,
+                context_max=context_max,
+            )
+            if cut is not None:
+                emit_log(
+                    "warn",
+                    "run.llm.contextCut",
+                    node_id=llm_node_id,
+                    payload={"model": agent.llm.model, **cut, **turn_runtime._caller(compiled, agent_id)},
+                )
+            if record is not None:
+                record.context = watch.payload()
             turn_runtime._publish_tokens(
                 ctrl,
                 agent_id,
@@ -583,8 +613,10 @@ def _agent_turn(
                         role="assistant",
                         content=result.content,
                         tool_calls=result.tool_calls,
+                        reasoning=_kept_reasoning(result.reasoning),
                     )
                 )
+                _prune_reasoning(messages)
                 hit_failure_limit = False
                 for call in result.tool_calls:
                     if tool_calls_used >= tool_cap:
@@ -604,6 +636,23 @@ def _agent_turn(
                     )
                     if not ok_call:
                         failed_total += 1
+                        if call.name == "terminal":
+                            # Keep the mistake in the system prompt; the hint in the tool result scrolls away.
+                            before = terminal_lessons.block_for(ctrl, agent_id)
+                            learned = terminal_lessons.note(ctrl, compiled, agent_id, call.arguments or "", body)
+                            if learned:
+                                terminal_lessons.refresh_system(
+                                    messages, before, terminal_lessons.block_for(ctrl, agent_id)
+                                )
+                                emit_log(
+                                    "info",
+                                    "run.agent.terminalLesson",
+                                    node_id=agent_id,
+                                    payload={
+                                        "kind": learned,
+                                        "lessons": len(ctrl.terminal_lessons.get(agent_id) or {}),
+                                    },
+                                )
                     if ok_call:
                         failed_tools = 0
                         tool_ok = True
@@ -642,9 +691,7 @@ def _agent_turn(
                         node_id=agent_id,
                         payload={"calls": tool_calls_used, "max": tool_cap},
                     )
-                    messages.append(
-                        LlmMessage(role="user", content=_AGENT_TOOL_CAP_NOTE.format(n=tool_calls_used))
-                    )
+                    _add_note(messages, _AGENT_TOOL_CAP_NOTE.format(n=tool_calls_used))
                     continue
                 if wrote_ok:
                     _set_system_note(messages, _TOOL_REQUIRED, _TOOL_DONE)
@@ -781,6 +828,7 @@ def _agent_turn(
                     files=wrote_paths,
                     outcome="done",
                     text=content or "",
+                    context=watch.payload(),
                 ),
             )
         if publish_chat and compiled.chat_input:
@@ -858,6 +906,10 @@ def _make_room(
         last_prompt_tokens=last_prompt_tokens,
         last_context_max=last_context_max,
     ):
+        return True
+    if _drop_reasoning(messages) and not window_pressure(messages, llm, memory):
+        # Earlier reasoning goes first; it is a help, not part of the course.
+        emit_log("info", "run.agent.compact", node_id=agent_id, payload={"messages": len(messages), "reasoning": True})
         return True
     budget = held_window(llm, memory) or run_window._LADDER[-1]
     before = len(messages)
@@ -1001,6 +1053,50 @@ def _store_think(messages: list[LlmMessage], stored: str) -> None:
         messages[-1] = think
         return
     messages.append(think)
+
+def _kept_reasoning(text: str | None) -> str | None:
+    """The reasoning of one step as it goes back to the model: start and end, clipped."""
+    from app.mcp.payload import clip_middle
+
+    cleaned = (text or "").strip()
+    return clip_middle(cleaned, REASONING_CHARS) if cleaned else None
+
+
+def _prune_reasoning(messages: list[LlmMessage]) -> None:
+    """Keep reasoning on the latest REASONING_STEPS_KEPT assistant messages only."""
+    kept = 0
+    for index in range(len(messages) - 1, -1, -1):
+        message = messages[index]
+        if message.role != "assistant" or not message.reasoning:
+            continue
+        kept += 1
+        if kept > REASONING_STEPS_KEPT:
+            messages[index] = message.model_copy(update={"reasoning": None})
+
+
+def _drop_reasoning(messages: list[LlmMessage]) -> bool:
+    """Remove all reasoning (first step of compaction). True when something was removed."""
+    dropped = False
+    for index, message in enumerate(messages):
+        if message.reasoning:
+            messages[index] = message.model_copy(update={"reasoning": None})
+            dropped = True
+    return dropped
+
+
+def _add_note(messages: list[LlmMessage], note: str) -> None:
+    """A runtime note inside the tool loop. After tool results it goes into the last result.
+
+    A user message starts a new round for the chat templates, and they drop the reasoning
+    of the steps before it. Only where no tool result is last (after a text answer) the
+    note stays a user message, which the next answer needs anyway.
+    """
+    last = messages[-1] if messages else None
+    if last is not None and last.role == "tool":
+        messages[-1] = last.model_copy(update={"content": (last.content or "") + "\n\nNote from the runtime: " + note})
+        return
+    messages.append(LlmMessage(role="user", content=note))
+
 
 def _set_system_note(messages: list[LlmMessage], old: str, new: str) -> None:
     if not messages or messages[0].role != "system":

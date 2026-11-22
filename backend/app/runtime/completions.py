@@ -112,12 +112,28 @@ def _endpoint(
     )
 
 
-def _openai_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
+def with_thinking(message: ChatMessage) -> str | None:
+    """The content of an assistant message with its reasoning in front, as <think>…</think>.
+
+    Ollama 0.40 ignores the thinking and reasoning_content fields of earlier messages for
+    these models; inside the content the model sees it (test 2026-11-21: +366 tokens for
+    a 400-token thought with Nemotron and GLM, +0 with either field). Jinja templates of
+    llama.cpp, LM Studio and vLLM split it off again as reasoning_content.
+    """
+    reasoning = (message.reasoning or "").strip()
+    if message.role != "assistant" or not reasoning:
+        return message.content
+    body = (message.content or "").strip()
+    return f"<think>\n{reasoning}\n</think>" + (f"\n\n{body}" if body else "")
+
+
+def _openai_messages(messages: list[ChatMessage], *, with_reasoning: bool = False) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for message in messages:
         item: dict[str, Any] = {"role": message.role}
-        if message.content is not None:
-            item["content"] = message.content
+        content = with_thinking(message) if with_reasoning else message.content
+        if content is not None:
+            item["content"] = content
         if message.name:
             item["name"] = message.name
         if message.tool_call_id:
@@ -297,8 +313,9 @@ def _ollama_messages(messages: list[ChatMessage]) -> list[dict[str, Any]]:
     used: set[int] = set()
     for message in messages:
         item: dict[str, Any] = {"role": message.role}
-        if message.content is not None:
-            item["content"] = message.content
+        content = with_thinking(message)
+        if content is not None:
+            item["content"] = content
         elif message.tool_calls or message.role == "tool":
             item["content"] = ""
         if message.tool_calls:
@@ -359,7 +376,8 @@ def _payload(req: CompletionRequest, *, stream: bool) -> dict[str, Any]:
         return _responses_payload(req, stream=stream)
     body: dict[str, Any] = {
         "model": req.model,
-        "messages": _openai_messages(req.messages),
+        # Only a local OpenAI-compatible server gets earlier reasoning; cloud APIs reject or misread it.
+        "messages": _openai_messages(req.messages, with_reasoning=req.provider == "openai_compat"),
         "stream": stream,
     }
     if req.temperature is not None:

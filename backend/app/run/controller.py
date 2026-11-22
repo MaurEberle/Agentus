@@ -70,6 +70,8 @@ class RunController:
         self.run_id: str | None = None
         self.started_at: str | None = None
         self.network_id: str | None = None
+        # Earlier run chosen with the first chat message; the orchestrator gets a briefing on it.
+        self.previous_run_id: str | None = None
         self.snapshot: RunSnapshot | None = None
         self.stop_event = threading.Event()
         self.abort_generation = threading.Event()
@@ -94,6 +96,8 @@ class RunController:
         self.llm_budget: int | None = None
         # Tool nodes switched off for this run after a configuration error (node id -> error key).
         self.broken_tools: dict[str, str] = {}
+        # Rejected terminal commands per agent (kind -> line); they start every later call.
+        self.terminal_lessons: dict[str, dict[str, str]] = {}
         self.tool_refused: set[str] = set()
         # B7: tally of the log lines of this run, for run.summary.
         self.stats = RunStats()
@@ -109,6 +113,7 @@ class RunController:
         self.run_id = None
         self.started_at = None
         self.network_id = None
+        self.previous_run_id = None
         self.snapshot = None
         self.compiled = None
         self.thread = None
@@ -201,6 +206,7 @@ class RunController:
             self.abort_generation.clear()
             self.chat_input_queue = queue.Queue()
             self.conversation = []
+            self.previous_run_id = None
             self.last_error_node_id = None
             self.fail_message = None
             self.fail_class = None
@@ -212,6 +218,7 @@ class RunController:
             self.llm_calls = 0
             self.llm_budget = None
             self.broken_tools = {}
+            self.terminal_lessons = {}
             self.stats = RunStats()
         publish("service", {"serviceStatus": "starting"})
         try:
@@ -723,19 +730,40 @@ class RunController:
         # broad mask turned code such as ``token = get_token()`` into ``token = ***``.
         # Every chat line now gets the narrow mask here; real secrets still go.
         # User lines keep the broad mask from send_chat on top.
+        update: dict = {}
         if msg.content:
-            msg = msg.model_copy(update={"content": mask_content(msg.content)})
+            update["content"] = mask_content(msg.content)
+        if msg.message_params:
+            # The chat shows the parameters too (the briefing text is one); they get the same mask.
+            update["message_params"] = {
+                key: mask_content(value) if isinstance(value, str) else value
+                for key, value in msg.message_params.items()
+            }
+        if update:
+            msg = msg.model_copy(update=update)
         with self.lock:
             self.conversation.append(msg)
             run_id = self.run_id or ""
         self.flush_chat(generating=generating)
         publish("chat", {"runId": run_id, "message": msg.model_dump(by_alias=True, exclude_none=True)})
 
-    def send_chat(self, text: str) -> None:
+    def send_chat(self, text: str, previous_run_id: str | None = None) -> None:
         with self.lock:
             if self.service_status != "running" or not self.compiled or not self.compiled.chat_input:
                 raise AppError("run.busy", status_code=409)
             run_id = self.run_id or ""
+            if previous_run_id:
+                from app.run.previous_run import check_previous
+
+                # Only with the first message, and only for a run with an orchestrator.
+                first = not any(msg.role == "user" for msg in self.conversation)
+                if (
+                    not first
+                    or self.compiled.orchestrator is None
+                    or not check_previous(previous_run_id, self.network_id, run_id)
+                ):
+                    raise AppError("run.previousInvalid", status_code=400)
+                self.previous_run_id = previous_run_id
         self.clear_wait_ask(publish_run=True)
         # M6: a new message ends an earlier "stop generating".
         self.abort_generation.clear()

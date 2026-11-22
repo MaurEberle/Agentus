@@ -36,31 +36,66 @@ def test_level_zero_bounds_notes_and_long_results() -> None:
     assert len(memory.records[0].text) == 50_004
 
 
+def _cut_all(memory: RunMemory) -> list[str]:
+    cuts = []
+    while (cut := memory.compact_step()) is not None:
+        cuts.append(cut)
+    return cuts
+
+
 def test_full_text_still_travels_as_source() -> None:
     memory = RunMemory()
     _finished(memory, "ag", "Schreiber", "B" * 30_000)
-    memory.compact_level = 3
+    _cut_all(memory)
     source = memory.resolve_source("ag", [("ag", "Schreiber"), ("tr", "Translate")])
     message = memory.agent_message("tr", "übersetze", has_tools=False, source_text=source.text)
     assert message.count("B") >= 30_000
 
 
-def test_higher_levels_condense_further() -> None:
+def test_steps_cut_the_oldest_results_first_and_keep_every_task() -> None:
+    """Run bd3cfb0f, 2026-11-22: the old level 2 dropped every task; now they stay."""
     memory = RunMemory()
     memory.add_user("Start")
-    for index in range(10):
+    for index in range(6):
         memory.add_spoken("reply", f"reply {index}")
-        _finished(memory, f"a{index % 2}", f"Agent{index % 2}", "C" * 5_000)
-    sizes = []
-    for level in range(4):
-        memory.compact_level = level
+        record = _finished(memory, f"a{index % 3}", f"Agent{index % 3}", f"R{index}-" + "C" * 5_000)
+        record.task = f"Aufgabe {index}: " + "t" * 300
+    sizes = [len(_prompt(memory))]
+    cuts = []
+    while (cut := memory.compact_step()) is not None:
+        cuts.append(cut)
         sizes.append(len(_prompt(memory)))
-    assert sizes == sorted(sizes, reverse=True) and sizes[3] < sizes[0]
-    memory.compact_level = 3
+    # Calls 1-3 were replaced by calls 4-6: their starts go first, oldest first.
+    assert cuts[:3] == ["olderResult"] * 3
+    # Then the latest results except the newest (call 6): calls 4 and 5 to their start, then away.
+    assert cuts[3:7] == ["resultStart", "resultStart", "result", "result"]
+    assert cuts[7:] == ["course", "course", "course", "newestResult", "newestResult", "tasks", "user", "user", "toolResults"]
+    assert sizes == sorted(sizes, reverse=True) and sizes[-1] < sizes[0] // 3
+    assert memory.compact_steps == len(cuts)
     prompt = _prompt(memory)
-    assert "Earlier calls, summarized:" in prompt
-    assert "reply 9" in prompt and "reply 0" not in prompt
+    # Every call keeps its line and task, shortened; the user message stays.
+    for index in range(6):
+        assert f"Call {index + 1}: Agent" in prompt and f"task: Aufgabe {index}: " in prompt
+    assert "t" * 120 not in prompt
     assert "Start" in prompt
+    assert "Earlier calls, summarized" not in prompt
+    # Removed results say so and how to pass them on; the newest result is still there, cut.
+    assert "result: removed from this prompt for space; a later call of this agent replaced it." in prompt
+    assert "result: removed from this prompt for space; set source to a1 to pass the full text." in prompt
+    assert "R5-" in prompt and "R4-" not in prompt and "R0-" not in prompt
+    assert "reply 5" in prompt and "reply 0" not in prompt
+
+
+def test_one_step_at_a_time_keeps_the_newest_result_whole() -> None:
+    memory = RunMemory()
+    for index in range(3):
+        _finished(memory, f"a{index}", f"Agent{index}", f"R{index}-" + "D" * 3_000)
+    assert memory.compact_step() == "resultStart"
+    prompt = _prompt(memory)
+    # Only the oldest latest result is cut to its start; the others stay whole.
+    assert "only the start is shown" in prompt and prompt.count("only the start is shown") == 1
+    assert "R1-" + "D" * 2_900 in prompt and "R2-" + "D" * 2_900 in prompt
+    assert "R0-" + "D" * 1_000 not in prompt
 
 
 def test_run_condenses_instead_of_failing(monkeypatch, api_env) -> None:
@@ -92,10 +127,12 @@ def test_run_condenses_instead_of_failing(monkeypatch, api_env) -> None:
 
     stored = _drive(monkeypatch, _complete)
     assert stored["outcome"] == "succeeded"
-    messages = [row["message"] for row in list_logs(stored["id"])]
-    assert "run.orchestrator.compact" in messages
+    logs = list_logs(stored["id"])
+    messages = [row["message"] for row in logs]
+    assert "run.orchestrator.trimmed" in messages
     assert "run.orchestrator.window" not in messages
-    assert stored["memory"]["compactLevel"] >= 1
+    trimmed = [row["payload"] for row in logs if row["message"] == "run.orchestrator.trimmed"]
+    assert trimmed[0]["steps"] >= 1 and trimmed[-1]["total"] == stored["memory"]["compactSteps"]
 
 
 def test_run_still_fails_when_nothing_fits(monkeypatch, api_env) -> None:
@@ -110,5 +147,7 @@ def test_run_still_fails_when_nothing_fits(monkeypatch, api_env) -> None:
     stored = _drive(monkeypatch, _complete)
     assert stored["outcome"] == "failed"
     assert stored["error_message"] == "run.orchestrator.window"
-    messages = [row["message"] for row in list_logs(stored["id"])]
-    assert messages.count("run.orchestrator.compact") == 3
+    logs = list_logs(stored["id"])
+    trimmed = [row["payload"] for row in logs if row["message"] == "run.orchestrator.trimmed"]
+    # One line for the decision, after every step was tried.
+    assert len(trimmed) == 1 and trimmed[0]["cuts"][-1] == "toolResults"

@@ -25,7 +25,7 @@ Kopfbereich: Lauf-ID, Startzeit, Dauer, grober Schritt, aktive LLMs (lokal vs. C
 
 Hängt Wissen an einem Agenten, zeigt der Start den Lauf schon während der Indizierung: der Wissensknoten läuft mit Wartegrund **Index**, das Log nennt Lesen und Embeddings, die Kopfzeile und das Dashboard denselben Namen. Ein bereits aktueller Index wird übersprungen und nur kurz als aktuell gemeldet.
 
-**Aktivität:** aktuelle Knoten, Fortschritt „Schritt x von y“, Token ein/aus, optional Kontextfenster.
+**Aktivität:** Oben die Live-Werte: Token pro Sekunde des Modells, das gerade schreibt; wie voll sein Kontextfenster ist (Balken, gelb ab 75 %, rot ab 90 %); Ausgabe-Token des ganzen Laufs. Darunter in einer Zeile, wer gerade arbeitet, und der Auftrag des arbeitenden Agenten in voller Länge, zum Kopieren. Wartet der Lauf auf dich, steht das hervorgehoben darüber.
 
 Chat und Log stehen über Netz und Aktivität. Die drei Karten behalten ihre Höhe, wenn das Fenster größer wird; am Rand dazwischen lässt sich die Größe ziehen. Die eingestellten Größen bleiben nach dem Schließen der App erhalten.
 
@@ -33,7 +33,7 @@ Chat und Log stehen über Netz und Aktivität. Die drei Karten behalten ihre Hö
 
 ## Netz-Chat (Monitoring)
 
-Tab **Chat** (beim Start eines Laufs, wenn der Graph einen Chat-Eingang hat): Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht. Bei einer Rückfrage erscheinen ein Hinweis in der Glocke und in der Kopfzeile; das Taskleisten-Symbol blinkt, wenn das Fenster im Hintergrund liegt. **Generierung stoppen** bricht die laufende Antwort ab. Mit Orchestrator bleibt der Lauf offen und wartet auf deine nächste Nachricht; in einer Kette ohne Orchestrator endet der Lauf als Abbruch.
+Tab **Chat** (beim Start eines Laufs, wenn der Graph einen Chat-Eingang hat): Gespräch des laufenden Graphen. Nur aktiv, solange der Lauf läuft. Ohne Orchestrator wartet der Chat auf die erste Zeile und gibt sie an die Kette. Mit Orchestrator sprichst du nur mit ihm. Vor der ersten Nachricht kannst du dort unter **An Vorlauf anknüpfen** einen früheren Lauf dieses Netzes wählen (Zeit, Ergebnis, Anfang des Auftrags). Vor seiner ersten Entscheidung liest der Orchestrator dann dessen Bericht: Aufträge, Agentenaufrufe, Ende, geänderte Dateien und, falls jener Lauf selbst an einen früheren anknüpfte, dessen Vorwissen. Daraus schreibt er sich ein Vorwissen von höchstens 3000 Zeichen; es erscheint im Chat. Es beschreibt nur den früheren Lauf, wie er endete; deine neue Nachricht fließt nicht ein, und was die Agenten im neuen Lauf berichten, gilt als neuer. Nur der Orchestrator bekommt es, den Agenten gibt er weiter, was sie brauchen. Scheitert die Auswertung, bekommt er den gekürzten Bericht. Der Lauf wartet nur bei einer Rückfrage. Agententexte und interne Aufträge siehst du hier nicht. Bei einer Rückfrage erscheinen ein Hinweis in der Glocke und in der Kopfzeile; das Taskleisten-Symbol blinkt, wenn das Fenster im Hintergrund liegt. **Generierung stoppen** bricht die laufende Antwort ab. Mit Orchestrator bleibt der Lauf offen und wartet auf deine nächste Nachricht; in einer Kette ohne Orchestrator endet der Lauf als Abbruch.
 
 Das ist **nicht** die Hilfe-Sprechblase. Verlauf und Tools sind die des Netzes.
 
@@ -53,7 +53,9 @@ Tab **Log**: eine Zeile pro Ereignis als Satz, neueste oben. Vorn stehen Zeit, S
 
 **Detail:** Klick auf eine Zeile. Werkzeuge zeigen Pfad oder Befehl, Ergebnis, Fehler und den Hinweis an das Modell; Agenten Auftrag und Ergebnis; Modellaufrufe Token, Dauer, Antwort und Denktext. Die Rohdaten (JSON) sind aufklappbar.
 
-**Zusammenfassung:** Am Ende eines Laufs steht oben eine Karte: Ausgang, Dauer, Agentenaufrufe je Agent, Modellaufrufe und Token, Werkzeugaufrufe, geänderte Dateien, erreichte Grenzen.
+**Zusammenfassung:** Am Ende eines Laufs steht oben eine Karte: Ausgang, Dauer, Agentenaufrufe je Agent (mit dem höchsten Anteil am Kontextfenster), Modellaufrufe und Token, Werkzeugaufrufe, geänderte Dateien, erreichte Grenzen.
+
+**Kontext:** Die Abschlusszeile jedes Agentenauftrags nennt die größte Anfrage im Verhältnis zum Fenster (etwa „größte Anfrage 30.896 von 202.752 Token (15 %)“) und wie oft verdichtet wurde. Meldet das Modell innerhalb eines Auftrags ohne Verdichtung deutlich weniger Eingabe-Tokens als im Schritt davor, oder am Fensterrand viel weniger als geschätzt, warnt das Log: **Verlauf vermutlich abgeschnitten**. Dann fehlt dem Modell wahrscheinlich der Anfang des Verlaufs; meist ist das Fenster am LLM-Knoten zu klein.
 
 **Export:** „Als Text exportieren“ speichert die angezeigten Zeilen als Markdown, „JSON“ als JSON Lines. Dateiinhalte stehen im Log nur gekürzt (2 KB), Modellantworten bis 8 KB.
 

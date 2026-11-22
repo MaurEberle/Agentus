@@ -222,6 +222,7 @@ def _orchestrator_call(
                 text=record.text or "",
                 reason="" if outcome in {"stopped", "cancelled"} else record.error,
                 capped=record.capped,
+                context=record.context,
             ),
         )
 

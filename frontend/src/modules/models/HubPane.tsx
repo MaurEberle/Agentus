@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownAZ, ArrowDownZA, ChevronDown, RotateCcw } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownZA, Check, ChevronDown, Download, RotateCcw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,8 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError, queryClient } from '@/api/client';
 import { formatBytes, formatDateTime } from '@/lib/format';
-import { enqueueDownload, hubFiles, searchHub } from '@/modules/models/api';
+import { enqueueDownload, hubFiles, listDownloads, listInstalled, searchHub } from '@/modules/models/api';
 import { modelLabel } from '@/lib/modelName';
+import { downloadLabel, hubLocalState, tagKey } from '@/modules/models/hubState';
 import type { HubFiles, QuantFile } from '@/modules/models/model';
 import { useHostResourcesQuery } from '@/modules/settings/api';
 import { inferenceVramBytes } from '@/modules/network/inspector/vram';
@@ -274,6 +278,17 @@ export function HubPane() {
     if (next) patchHub({ quant: next.tag });
   }, [detail, patchHub]);
   const chosen = (detail?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
+  // Installed models and the download queue: same queries as the models list and the
+  // download header (which polls), so the marks follow a running download.
+  const installedQuery = useQuery({ queryKey: ['models'], queryFn: listInstalled, gcTime: Number.POSITIVE_INFINITY });
+  const downloadsQuery = useQuery({ queryKey: ['models', 'downloads'], queryFn: listDownloads });
+  const local = useMemo(
+    () => hubLocalState(installedQuery.data, downloadsQuery.data?.items),
+    [installedQuery.data, downloadsQuery.data],
+  );
+  const isInstalled = (file: QuantFile) => (local.installedKeys ? local.installedKeys.has(tagKey(file.tag)) : file.installed);
+  const chosenInstalled = chosen ? isInstalled(chosen) : false;
+  const chosenJob = chosen ? local.downloadByKey.get(tagKey(chosen.tag)) : undefined;
   function toggleCapability(key: Capability) {
     setCapabilities((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
   }
@@ -461,14 +476,42 @@ export function HubPane() {
         >
           {stored && !stored.errorKey && stored.items.length > 0 ? (
             <ul className="min-h-0 flex-1 overflow-auto">
-              {stored.items.map((item) => (
+              {stored.items.map((item) => {
+                const repo = item.id.toLowerCase();
+                const installedTags = local.installedByRepo.get(repo) ?? [];
+                const job = local.downloadByRepo.get(repo);
+                return (
                 <li key={item.id}>
                   <button
                     type="button"
                     onClick={() => setPicked(item.id)}
                     className={`flex w-full flex-col gap-0.5 border-b px-3 py-2 text-left ${picked === item.id ? 'bg-accent' : ''}`}
                   >
-                    <ModelName value={item.id} variant="tag" className="text-sm font-medium" />
+                    <span className="flex min-w-0 max-w-full items-center gap-1.5">
+                      <ModelName value={item.id} variant="tag" className="text-sm font-medium" />
+                      {installedTags.length > 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 gap-1 border-primary/40 bg-primary/10 px-1.5 py-0 text-[11px] text-primary"
+                          title={installedTags.join('\n')}
+                        >
+                          <Check className="size-3" aria-hidden />
+                          {installedTags.length > 1
+                            ? t('models.hub.state.installedMany', { count: installedTags.length })
+                            : t('models.hub.state.installed')}
+                        </Badge>
+                      ) : null}
+                      {job ? (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 gap-1 border-warning/50 bg-warning/10 px-1.5 py-0 text-[11px] text-foreground"
+                          title={job.model}
+                        >
+                          <Download className="size-3" aria-hidden />
+                          {downloadLabel(t, job)}
+                        </Badge>
+                      ) : null}
+                    </span>
                     <span className="truncate text-xs text-muted-foreground">
                       {[
                         t('models.hub.downloads', { count: item.downloads.toLocaleString(i18n.language) }),
@@ -481,7 +524,8 @@ export function HubPane() {
                     </span>
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           ) : searching ? (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4" role="status" aria-label={t('app.loading')}>
@@ -574,25 +618,42 @@ export function HubPane() {
                 <Select value={quant ?? ''} onValueChange={setQuant} disabled={!detail.quants.length}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {detail.quants.map((item) => (
-                      <SelectItem key={item.tag} value={item.tag}>
-                        {item.quant}{item.sizeBytes ? ` · ${formatBytes(item.sizeBytes, i18n.language)}` : ''}
-                      </SelectItem>
-                    ))}
+                    {detail.quants.map((item) => {
+                      const job = local.downloadByKey.get(tagKey(item.tag));
+                      const state = isInstalled(item) ? t('models.hub.state.installed') : job ? downloadLabel(t, job) : '';
+                      return (
+                        <SelectItem key={item.tag} value={item.tag}>
+                          {item.quant}
+                          {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes, i18n.language)}` : ''}
+                          {state ? ` · ${state}` : ''}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </label>
               {chosen?.sizeBytes && vram > 0 && chosen.sizeBytes > vram ? (
                 <p className="text-xs text-muted-foreground">{t('models.hub.vramHint')}</p>
               ) : null}
+              {/* Locked while this quant is installed or in the download queue (queued, running, paused). */}
               <Button
                 type="button"
-                disabled={!chosen || chosen.installed || !detail.installable || queuing}
+                disabled={!chosen || chosenInstalled || Boolean(chosenJob) || !detail.installable || queuing}
                 loading={queuing}
-                onClick={() => chosen && void install(chosen)}
+                onClick={() => chosen && !chosenInstalled && !chosenJob && void install(chosen)}
               >
-                {chosen?.installed ? t('models.hub.installed') : t('models.hub.install')}
+                {chosenInstalled
+                  ? t('models.hub.installed')
+                  : chosenJob
+                    ? downloadLabel(t, chosenJob)
+                    : t('models.hub.install')}
               </Button>
+              {chosenJob && !chosenInstalled ? (
+                <p className="text-xs text-muted-foreground">
+                  {t('models.hub.state.busy')}{' '}
+                  <Link to="/downloads" className="text-primary underline">{t('models.downloads.title')}</Link>
+                </p>
+              ) : null}
               <a className="text-sm text-primary underline" href={detail.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
             </div>
           ) : null}

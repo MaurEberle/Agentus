@@ -12,6 +12,7 @@ import { chatInputConfig } from '@/modules/monitoring/model/graph';
 import { formatTime } from '@/modules/monitoring/model/format';
 import { formatChatBody } from '@/modules/monitoring/model/logMessage';
 import type { ChatMessage, RunSnapshot } from '@/modules/monitoring/model/types';
+import { PreviousRunPicker } from '@/modules/monitoring/chat/PreviousRunPicker';
 import { useMonitoringStore } from '@/modules/monitoring/store';
 import type { ServiceStatus } from '@/store/session';
 
@@ -26,6 +27,8 @@ export function NetworkChat({
   const messages = useMonitoringStore((state) => state.chatMessages);
   const generating = useMonitoringStore((state) => state.chatGenerating);
   const [text, setText] = useState('');
+  // Earlier run to continue from; sent with the first message only.
+  const [previousRunId, setPreviousRunId] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
@@ -36,6 +39,7 @@ export function NetworkChat({
   const waitingHuman =
     running && Object.values(run.nodesRuntime).some((node) => node.waitReason === 'human');
   const waitingInput = waitingHuman && messages.length === 0;
+  const hasOrchestrator = run.graph.nodes.some((node) => node.type === 'orchestrator');
   const lastContent = messages[messages.length - 1]?.content;
 
   useCopySelection(listRef);
@@ -66,7 +70,8 @@ export function NetworkChat({
     if (!value || !running || generating) return;
     stickToBottom.current = true;
     setText('');
-    void sendRunChat(value).then((accepted) => {
+    const previous = messages.length === 0 && hasOrchestrator && previousRunId ? previousRunId : undefined;
+    void sendRunChat(value, previous).then((accepted) => {
       // Give the text back so a failed send does not lose what the user typed.
       if (!accepted) setText((current) => current || value);
     });
@@ -100,6 +105,9 @@ export function NetworkChat({
           <AlertTitle>{t('shell.waitAsk')}</AlertTitle>
           <AlertDescription>{t('monitoring.chat.waitReply')}</AlertDescription>
         </Alert>
+      ) : null}
+      {waitingInput && hasOrchestrator ? (
+        <PreviousRunPicker runId={run.runId} value={previousRunId} onChange={setPreviousRunId} />
       ) : null}
       <form
         onSubmit={submit}

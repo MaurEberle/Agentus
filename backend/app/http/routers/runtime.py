@@ -115,7 +115,14 @@ def runtime_models(
         return RuntimeModelsResponse(items=[], message_key=exc.error_key)
     return RuntimeModelsResponse(
         items=[
-            RuntimeModelOut(name=item.name, size_bytes=item.size_bytes, moe=item.moe) for item in models
+            RuntimeModelOut(
+                name=item.name,
+                size_bytes=item.size_bytes,
+                moe=item.moe,
+                parameter_size=item.parameter_size,
+                quantization=item.quantization,
+            )
+            for item in models
         ]
     )
 

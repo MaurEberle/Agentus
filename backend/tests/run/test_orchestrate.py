@@ -157,9 +157,11 @@ def test_instructions_name_each_channel_and_stay_sequential() -> None:
     assert "private channel" in text
     assert "id: ag" in text
     assert "parallel" not in text
-    assert "not in this prompt" in text
-    assert "status line" in text
-    assert "result of that call" in text
+    # Run bd3cfb0f: the course of all calls is in the prompt, the latest result per agent in full.
+    assert "numbered status line, oldest first" in text
+    assert "the start of its task, the files it changed" in text
+    assert "the full text stays in memory" in text
+    assert "a later call may already have done or fixed" in text
     assert "stored text" in text
     assert "Do not write that you might ask" in text
     assert "without waiting" in text

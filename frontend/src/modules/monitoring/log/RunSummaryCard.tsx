@@ -24,11 +24,17 @@ export function RunSummaryCard({ event, locale }: { event: LogEvent; locale: str
   const outcome = summary.outcome;
   const Icon = outcome === 'succeeded' ? CheckCircle2 : outcome === 'cancelled' ? CircleSlash : OctagonAlert;
   const limits = Object.entries(summary.limits);
-  const agents = summary.agents.map((item) =>
-    item.failed > 0
-      ? t('runLog.summary.agentFailed', { name: item.name, count: item.calls, failed: item.failed })
-      : t('runLog.summary.agent', { name: item.name, count: item.calls }),
-  );
+  const agents = summary.agents.map((item) => {
+    const base =
+      item.failed > 0
+        ? t('runLog.summary.agentFailed', { name: item.name, count: item.calls, failed: item.failed })
+        : t('runLog.summary.agent', { name: item.name, count: item.calls });
+    if (item.contextShare === null) return base;
+    const share = new Intl.NumberFormat(locale, { maximumFractionDigits: item.contextShare < 10 ? 1 : 0 }).format(
+      item.contextShare,
+    );
+    return `${base} (${t('runLog.summary.contextShare', { share })})`;
+  });
   return (
     <section
       aria-label={t('runLog.summary.title')}

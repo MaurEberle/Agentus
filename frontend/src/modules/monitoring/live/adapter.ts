@@ -43,9 +43,10 @@ export function useLiveMonitoring(mockQuery: string | null) {
   }, [mockQuery]);
 }
 
-export async function sendRunChat(text: string): Promise<boolean> {
+/** ``previousRunId``: earlier run to continue from, only with the first message. */
+export async function sendRunChat(text: string, previousRunId?: string): Promise<boolean> {
   useMonitoringStore.getState().setChatGenerating(true);
-  const accepted = await getMonitoringHandle().sendChat?.(text);
+  const accepted = await getMonitoringHandle().sendChat?.(text, previousRunId);
   if (accepted === false) {
     // Nothing is generating; leaving the flag set would keep the stop button forever.
     useMonitoringStore.getState().setChatGenerating(false);

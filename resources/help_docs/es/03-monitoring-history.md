@@ -25,7 +25,7 @@ Cabecera: ID de ejecución, hora de inicio, duración, paso aproximado, LLM acti
 
 Si hay conocimiento en un agente, el inicio ya muestra la ejecución mientras se indexa: el nodo de conocimiento corre con motivo de espera **índice**, el registro nombra la lectura y los embeddings, y el encabezado y el panel muestran el mismo nombre. Un índice ya actual se omite y solo se anota como actual.
 
-**Actividad:** nodos actuales, progreso «paso x de y», tokens entrada/salida, ventana de contexto opcional.
+**Actividad:** Arriba los valores en vivo: tokens por segundo del modelo que está escribiendo; cuánto ocupa su ventana de contexto (barra, amarilla desde el 75 %, roja desde el 90 %); tokens de salida de toda la ejecución. Debajo, en una línea, quién está trabajando, y el encargo completo del agente que trabaja, listo para copiar. Si la ejecución te espera, una línea destacada lo indica.
 
 Chat y registro están encima de la red y la actividad. Las tres tarjetas mantienen su altura al agrandar la ventana; se arrastra el borde para cambiar el tamaño. Los tamaños se conservan al cerrar la aplicación.
 
@@ -33,7 +33,7 @@ Chat y registro están encima de la red y la actividad. Las tres tarjetas mantie
 
 ## Chat de red (supervisión)
 
-Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano. **Detener la generación** corta la respuesta en curso. Con orquestador la ejecución sigue abierta y espera tu siguiente mensaje; en una cadena sin orquestador termina como cancelada.
+Pestaña **Chat** (al iniciar una ejecución, si el grafo tiene entrada de chat): conversación del grafo en ejecución. Solo activa mientras corre. Sin orquestador el chat espera la primera línea y la pasa a la cadena. Con orquestador hablas solo con él. Antes del primer mensaje puedes elegir en **Continuar una ejecución anterior** una ejecución anterior de esta red (hora, resultado, inicio del encargo). Antes de su primera decisión el orquestador lee su registro: encargos, llamadas a agentes, cómo terminó, archivos cambiados y, si esa ejecución continuaba otra, su contexto. Con ello escribe un contexto de como mucho 3000 caracteres, que aparece en el chat. Describe solo la ejecución anterior tal como terminó; tu mensaje nuevo no entra en él, y lo que los agentes informan en la nueva ejecución cuenta como más reciente. Solo el orquestador lo recibe y pasa a los agentes lo que necesitan. Si el análisis falla, recibe el registro abreviado. La ejecución espera solo ante una pregunta. Los textos de los agentes y las órdenes internas no se ven aquí. Una pregunta aparece en la campana y en la cabecera; el icono de la barra de tareas parpadea si la ventana está en segundo plano. **Detener la generación** corta la respuesta en curso. Con orquestador la ejecución sigue abierta y espera tu siguiente mensaje; en una cadena sin orquestador termina como cancelada.
 
 Esto **no** es la burbuja de ayuda. Historial y herramientas son los de la red.
 
@@ -53,7 +53,9 @@ Pestaña **Registro**: una línea por evento como frase, lo más nuevo arriba. D
 
 **Detalle:** clic en una línea. Las herramientas muestran ruta o comando, resultado, error y la indicación para el modelo; los agentes, encargo y resultado; las llamadas al modelo, tokens, duración, respuesta y razonamiento. Los datos sin procesar (JSON) se pueden desplegar.
 
-**Resumen:** Al final de una ejecución, una tarjeta arriba muestra resultado, duración, llamadas a agentes por agente, llamadas al modelo y tokens, llamadas a herramientas, archivos modificados y límites alcanzados.
+**Resumen:** Al final de una ejecución, una tarjeta arriba muestra resultado, duración, llamadas a agentes por agente (con la mayor parte usada de la ventana de contexto), llamadas al modelo y tokens, llamadas a herramientas, archivos modificados y límites alcanzados.
+
+**Contexto:** La línea final de cada encargo de agente indica la solicitud mayor frente a la ventana (por ejemplo «solicitud mayor 30.896 de 202.752 tokens (15 %)») y cuántas veces se compactó. Si el modelo informa claramente menos tokens de entrada que en el paso anterior dentro de un encargo sin compactar, o muchos menos de lo estimado en el borde de la ventana, el registro avisa: **historial probablemente recortado**. Entonces probablemente le falta al modelo el inicio del historial; casi siempre la ventana del nodo LLM es demasiado pequeña.
 
 **Exportar:** «Exportar como texto» guarda las líneas mostradas como Markdown, «JSON» como JSON Lines. El contenido de archivos se recorta a 2 KB en el registro, las respuestas del modelo a 8 KB.
 

@@ -57,6 +57,7 @@
       "loadedYes": "Ja",
       "loadedNo": "Nein",
       "family": "Familie",
+      "publisher": "Herausgeber",
       "parameters": "Parameter",
       "quant": "Quantisierung",
       "format": "Format",
@@ -111,6 +112,12 @@
       "quants": "Quantisierung",
       "install": "Installieren",
       "installed": "Installiert",
+      "state": {
+        "installed": "Installiert",
+        "installedMany": "{{count}} installiert",
+        "running": "Lädt {{percent}} %",
+        "busy": "Diese Quantisierung ist schon in der Download-Liste."
+      },
       "gated": "Dieses Modell braucht eine Freigabe auf Hugging Face.",
       "noGguf": "Keine ladbare GGUF-Datei.",
       "vramHint": "Die Datei ist größer als der Grafikspeicher.",
@@ -1536,6 +1543,9 @@
       "current": "Aktuelle Knoten",
       "now": "Jetzt",
       "task": "Auftrag",
+      "taskFor": "Auftrag an {{name}}",
+      "noTask": "Gerade kein Auftrag.",
+      "contextLabel": "Kontext",
       "agents": "Agenten",
       "agentsDone": "{{completed}} von {{total}} fertig",
       "none": "Kein Knoten aktiv",
@@ -1546,7 +1556,9 @@
       "tokensOut": "Ausgabe",
       "perSecond": "{{value}} Token/s",
       "rate": "Token/s",
-      "runTotal": "Lauf gesamt",
+      "runTotal": "Ausgabe gesamt",
+      "runTotalOut": "Ausgabe-Token",
+      "runTotalIn": "Eingabe {{value}}",
       "context": "Kontext {{used}} / {{max}}"
     },
     "tabs": {
@@ -1570,7 +1582,15 @@
       "disabled": "Chat nur während eines Laufs.",
       "agentDone": "{{name}} ist fertig.",
       "agentDoneFiles": "{{name}} ist fertig. Dateien: {{files}}.",
-      "aborted": "Gestoppt. Schreib eine Nachricht, um weiterzumachen."
+      "aborted": "Gestoppt. Schreib eine Nachricht, um weiterzumachen.",
+      "briefing": "**Vorwissen aus dem gewählten Vorlauf** (nur für den Orchestrator):\n\n{{text}}",
+      "previous": {
+        "label": "An Vorlauf anknüpfen",
+        "none": "Kein Vorlauf",
+        "option": "{{when}} · {{outcome}} · {{request}}",
+        "noRequest": "ohne Auftrag",
+        "hint": "Vor seiner ersten Entscheidung wertet der Orchestrator den gewählten Lauf aus und bekommt das Ergebnis als Vorwissen. Die Agenten sehen es nicht; er gibt ihnen weiter, was sie brauchen."
+      }
     },
     "log": {
       "pause": "Halten",
@@ -1844,6 +1864,9 @@
     }
   },
   "runLog": {
+    "limitShort": {
+      "run_llm_contextCut": "Verlauf vermutlich abgeschnitten"
+    },
     "view": {
       "file": {
         "read": "liest {{path}}",
@@ -1919,6 +1942,9 @@
       "filesCount_one": "{{count}} Datei geändert",
       "filesCount_other": "{{count}} Dateien geändert",
       "capped": "Werkzeuggrenze erreicht",
+      "agentContext": "größte Anfrage {{prompt}} von {{window}} Token ({{share}} %)",
+      "agentContextCuts": "vermutlich abgeschnitten: {{count}}×",
+      "agentCompacted": "verdichtet: {{count}}×",
       "step_one": "Werkzeugrunde: {{count}} Aufruf",
       "step_other": "Werkzeugrunde: {{count}} Aufrufe",
       "stepWithFailed_one": "Werkzeugrunde: {{count}} Aufruf, {{failed}} fehlgeschlagen",
@@ -2076,10 +2102,17 @@
       "error": "Fehler",
       "agent": "{{name}} ×{{count}}",
       "agentFailed": "{{name}} ×{{count}} ({{failed}} fehlgeschlagen)",
+      "contextShare": "Kontext bis {{share}} %",
       "fileList_one": "{{count}} geänderte Datei anzeigen",
       "fileList_other": "{{count}} geänderte Dateien anzeigen"
     },
     "run": {
+      "briefing": {
+        "done": "Vorlauf gelesen: {{chars}} Zeichen Vorwissen.",
+        "failed": "Vorlauf nicht ausgewertet ({{error}}); der Orchestrator bekommt den gekürzten Laufbericht.",
+        "window": "Laufbericht passt nicht ins Kontextfenster; der Orchestrator bekommt ihn gekürzt.",
+        "missing": "Gewählter Vorlauf nicht gefunden."
+      },
       "llmBudget": "Budget an Modellaufrufen für diesen Lauf aufgebraucht.",
       "start": "Lauf gestartet ({{networkName}})",
       "wait": {
@@ -2101,6 +2134,7 @@
         "start": "Agent gestartet",
         "done": "Agent fertig",
         "toolFailures": "Agent nach {{failed}} fehlgeschlagenen Werkzeugaufrufen hintereinander beendet",
+        "terminalLesson": "Abgelehnter Terminalbefehl gemerkt ({{kind}}); steht jetzt im Systemprompt dieses Agenten ({{lessons}} insgesamt).",
         "toolJson": "Werkzeugaufruf {{name}} verworfen: JSON-Argumente unvollständig (Versuch {{attempt}}/{{max}}).",
         "think": "Agent denkt (kein Ergebnis).",
         "thinkLimit": "Zu viele Denkschritte ohne Ergebnis.",
@@ -2124,6 +2158,7 @@
         "toolCallsRepaired": "{{count}} fehlende Werkzeugantworten ergänzt.",
         "start": "LLM {{model}}",
         "done": "LLM fertig ({{durationMs}} ms)",
+        "contextCut": "Verlauf vermutlich abgeschnitten: Das Modell hat {{reported, number}} Eingabe-Tokens verarbeitet, erwartet waren etwa {{expected, number}} (Fenster {{contextMax, number}}). Der Anfang des Verlaufs fehlt ihm wahrscheinlich.",
         "release": "Andere Modelle entladen ({{dropped}}); {{keep}} bleibt geladen",
         "modelInfo": "Modelldaten von {{model}} fehlen. Der Lauf wurde abgebrochen.",
         "moeUnsplit": "Die Expertenaufteilung für {{model}} ist unbekannt. num_gpu wird nicht gesetzt."
@@ -2155,7 +2190,9 @@
         "takeoverUnavailable": "Übernahme nicht möglich: Orchestrator fehlen die Werkzeuge ({{count}}/{{max}}).",
         "toolCap": "Orchestrator: {{calls}} Werkzeugaufrufe in diesem Schritt, Grenze erreicht.",
         "compact": "Orchestrator-Kontext verdichtet (Stufe {{level}}).",
+        "trimmed": "Orchestrator-Prompt gekürzt, damit er ins Fenster passt: {{results}} ältere Ergebnisse entfernt, {{starts}} auf ihren Anfang gekürzt, {{other}} weitere Kürzungen (bisher {{total}} Schritte). Aufträge und geänderte Dateien bleiben.",
         "privateReasoning": "Interne Überlegung des Modells nicht im Chat gezeigt.",
+        "replyAsAsk": "Die Antwort enthielt eine Frage an dich und wurde als Rückfrage gestellt; der Lauf wartet auf deine Antwort.",
         "llmPause": "Orchestrator-Modell nicht erreichbar ({{error}}); wartet auf eine Nachricht.",
         "emptyTask": "Leerer Auftrag; letzte Nutzernachricht wird verwendet.",
         "action": "Orchestrator: {{action}} {{agent}}",

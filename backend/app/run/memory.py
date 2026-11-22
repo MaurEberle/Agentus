@@ -15,7 +15,7 @@ from app.runtime.models import ChatMessage as LlmMessage
 _ANOMALY_TEXT_CAP = 400
 # Agent output reaches prompts as data, never as instructions (O6, prompt injection).
 # A tag inside the text is defused so a payload cannot close the block and speak as the runtime.
-_DATA_TAG_RE = re.compile(r"<\s*(/?)\s*(agent_result|source_text|tool_result)\b", re.IGNORECASE)
+_DATA_TAG_RE = re.compile(r"<\s*(/?)\s*(agent_result|source_text|tool_result|previous_run)\b", re.IGNORECASE)
 # O9: latest own tool results stay visible to the next decision.
 _OWN_RESULTS_SHOWN = 3
 _OWN_RESULT_CHARS = 1_500
@@ -38,20 +38,35 @@ _THINKS_KEPT = 4
 _NUDGE_KIND = "nudge"
 _CLOSING_NOTE = "Decide the next step now with one JSON object."
 
-# O7: prompt budget for the orchestrator. Level 0 is always on and only bounds growth;
-# levels 1-3 apply when the prompt does not fit the context window. The stored course is
+# O7: prompt budget for the orchestrator. The caps below always apply and only bound
+# growth. When the prompt does not fit the context window, ``compact_step`` cuts it one
+# step at a time in a fixed order, oldest results first; what is cut stays cut. The task
+# and the changed files of every call are never removed (run bd3cfb0f, 2026-11-22: the
+# old level 2 dropped all tasks, the failure that run had shown). The stored course is
 # never trimmed: full agent texts stay in memory and still travel as ``source``.
-MAX_COMPACT_LEVEL = 3
-_RESULT_CHARS = (20_000, 8_000, 3_000, 1_200)  # per agent result in the prompt
+_RESULT_CHARS = 20_000  # latest result of each agent in the prompt
+_HEAD_CHARS = 400  # start of a result that is no longer shown in full
+_NEWEST_CHARS = (20_000, 3_000, 1_200)  # the newest result, cut last
 _NOTES_SHOWN = (8, 4, 2, 1)  # runtime notes (repairs, "status shown", ...)
 _THINKS_SHOWN = (4, 3, 2, 1)
 _SPOKEN_SHOWN = (None, None, 6, 3)  # reply / ask / finish texts; None = all
-_STATUS_FULL = (None, 12, 6, 3)  # status lines in full; older calls become one summary
-_USER_CHARS = (None, None, 4_000, 2_000)
+_TASK_CHARS = (240, 120)  # start of each call's task; shortened, never removed
+_USER_CHARS = (None, 4_000, 2_000)
 _SPOKEN_KINDS = frozenset({"reply", "ask", "finish"})
+# Trim state of one agent result in the prompt (AgentRecord.trim).
+_TRIM_START = 1  # only its start is shown
+_TRIM_GONE = 2  # removed; the status line says so and how to pass it on
 _FILES_SHOWN = 8
 _FILES_KEPT = 48
 _FILE_CHANGES = frozenset({"write", "delete", "edit", "move"})
+# Status lines per agent call (run bd3cfb0f, 2026-11-21): the orchestrator saw only the
+# newest result per agent, the last eight file lines (reads included) and no task. The
+# SCSS writes of the call that did the work were cut off behind node_modules reads, its
+# report was replaced by "nothing missing", and five calls repeated work already done.
+_STATUS_CHANGES = _FILE_CHANGES | {"mkdir"}
+_CHANGES_SHOWN = 12  # changed files per call, each path once
+_STATUS_INTRO = "Agent calls in this run, oldest first:"
+_ACTION_NAME = re.compile(r"[a-z_]{1,24}")
 
 
 @dataclass
@@ -90,6 +105,10 @@ class AgentRecord:
     text_only: bool = False
     # This call was a retry of a text-only answer ("retry": true).
     retry: bool = False
+    # Largest prompt, window, share, compactions and likely cuts of this call (ContextWatch).
+    context: dict = field(default_factory=dict)
+    # Its result in the orchestrator prompt: 0 as usual, 1 start only, 2 removed (compact_step).
+    trim: int = 0
 
 
 @dataclass
@@ -146,7 +165,13 @@ class RunMemory:
         self.takeover_unarmed = False
         self.orch_failed_tools = 0
         self.orch_failed_thinks = 0
-        self.compact_level = 0
+        # O7: steps cut so far (compact_step); each part below only ever grows.
+        self.compact_steps = 0
+        self.turn_trim = 0  # index into _NOTES_SHOWN, _THINKS_SHOWN, _SPOKEN_SHOWN
+        self.newest_trim = 0  # index into _NEWEST_CHARS
+        self.task_trim = 0  # index into _TASK_CHARS
+        self.user_trim = 0  # index into _USER_CHARS
+        self.clip_tools = False  # tool results of the current decision shortened
         self.takeover_finish_warned = False
         self.text_retry_fails: dict[str, int] = {}
         self.takeover_unavailable = 0
@@ -163,6 +188,19 @@ class RunMemory:
         cleaned = (text or "").strip()
         if cleaned:
             self.turns.append(Turn("user", "user", cleaned))
+
+    def add_briefing(self, head: str, text: str, *, started: str = "", outcome: str = "") -> None:
+        """The briefing on a chosen earlier run, in front of the first user message.
+
+        A turn kind of its own: like user turns it stays in every prompt, also when the
+        course is condensed.
+        """
+        cleaned = (text or "").strip()
+        if not cleaned:
+            return
+        body = head.strip() + "\n" + as_data("previous_run", cleaned, started=started, outcome=outcome)
+        first_user = next((index for index, turn in enumerate(self.turns) if turn.kind == "user"), len(self.turns))
+        self.turns.insert(first_user, Turn("user", "briefing", body))
 
     def add_spoken(self, kind: str, text: str) -> None:
         cleaned = (text or "").strip()
@@ -282,20 +320,20 @@ class RunMemory:
         )
 
     def orchestrator_messages(self, system: str) -> list[LlmMessage]:
-        level = min(max(self.compact_level, 0), MAX_COMPACT_LEVEL)
         messages = [LlmMessage(role="system", content=system)]
-        for turn in self._shown_turns(level):
+        user_chars = _USER_CHARS[self.user_trim]
+        for turn in self._shown_turns(self.turn_trim):
             role = "assistant" if turn.role == "assistant" else "user"
             content = turn.text
             if turn.kind == "think":
                 # Shown in protocol form so the model sees its own earlier decision.
                 content = json.dumps({"action": "think", "text": turn.text}, ensure_ascii=False)
-            elif turn.kind == "user" and _USER_CHARS[level]:
-                content = _clip(content, _USER_CHARS[level], "user message")
+            elif turn.kind == "user" and user_chars:
+                content = _clip(content, user_chars, "user message")
             messages.append(LlmMessage(role=role, content=content))
         if self.records:
-            messages.append(LlmMessage(role="user", content=self._status_block(level)))
-        results = self._results_block(level)
+            messages.append(LlmMessage(role="user", content=self._status_block()))
+        results = self._results_block()
         if results:
             messages.append(LlmMessage(role="user", content=results))
         own = self._own_block()
@@ -330,25 +368,75 @@ class RunMemory:
             if index in keep or turn.kind not in {"note", "think", *_SPOKEN_KINDS}
         ]
 
-    def _status_block(self, level: int) -> str:
-        full = _STATUS_FULL[level]
-        records = self.records
-        if full is None or len(records) <= full:
-            return "\n".join(self._status(rec) for rec in records)
-        older, recent = records[:-full], records[-full:]
-        counts: dict[str, list[int]] = {}
-        names: dict[str, str] = {}
-        for rec in older:
-            names[rec.agent_id] = rec.name
-            done = rec.finished and not rec.error
-            pair = counts.setdefault(rec.agent_id, [0, 0])
-            pair[0 if done else 1] += 1
-        parts = []
-        for agent_id, (done, failed) in counts.items():
-            label = f"{names[agent_id]} ({agent_id}) {done + failed}x"
-            parts.append(label + (f", {failed} not finished" if failed else ""))
-        summary = f"Earlier calls, summarized: {'; '.join(parts)}."
-        return "\n".join([summary, *(self._status(rec) for rec in recent)])
+    def _status_block(self) -> str:
+        """One line per call, oldest first. Every call keeps its task and changed files."""
+        shown = {id(rec) for _number, rec in self._latest_results().values()}
+        lines = [_STATUS_INTRO]
+        for number, rec in enumerate(self.records, start=1):
+            lines.append(self._status(rec, number, earlier=id(rec) not in shown))
+        return "\n".join(lines)
+
+    def compact_step(self) -> str | None:
+        """Make the orchestrator prompt smaller by one step. Returns what was cut, None when nothing is left.
+
+        The order, each step stays cut for the rest of the run:
+        1. starts of results a later call of the same agent replaced, oldest first;
+        2. the latest result of each agent except the newest result, oldest first:
+           first to its start, then, in a second round, away;
+        3. runtime notes, earlier plans and spoken texts (three steps);
+        4. the newest result (two steps);
+        5. the task lines, to 120 characters; never removed;
+        6. the user's messages (two steps);
+        7. the tool results of the current decision.
+        Every call keeps its line with task and changed files; the briefing stays.
+        """
+        cut = self._next_cut()
+        if cut is not None:
+            self.compact_steps += 1
+        return cut
+
+    def _next_cut(self) -> str | None:
+        latest = sorted(self._latest_results().values(), key=lambda item: item[0])
+        latest_ids = {id(rec) for _number, rec in latest}
+        newest = latest[-1][1] if latest else None
+        for rec in self.records:
+            if rec.finished and rec.text and id(rec) not in latest_ids and rec.trim < _TRIM_GONE:
+                rec.trim = _TRIM_GONE
+                return "olderResult"
+        for trim, cut in ((_TRIM_START, "resultStart"), (_TRIM_GONE, "result")):
+            for _number, rec in latest:
+                if rec is not newest and rec.trim < trim:
+                    rec.trim = trim
+                    return cut
+        if self.turn_trim < len(_NOTES_SHOWN) - 1:
+            self.turn_trim += 1
+            return "course"
+        if newest is not None and self.newest_trim < len(_NEWEST_CHARS) - 1:
+            self.newest_trim += 1
+            return "newestResult"
+        if self.records and self.task_trim < len(_TASK_CHARS) - 1:
+            self.task_trim += 1
+            return "tasks"
+        if self.user_trim < len(_USER_CHARS) - 1:
+            self.user_trim += 1
+            return "user"
+        if not self.clip_tools:
+            self.clip_tools = True
+            return "toolResults"
+        return None
+
+    def trim_payload(self, cuts: list[str]) -> dict[str, object]:
+        """For run.orchestrator.trimmed: what this decision cut, and the steps so far."""
+        results = sum(1 for cut in cuts if cut in {"olderResult", "result"})
+        starts = cuts.count("resultStart")
+        return {
+            "steps": len(cuts),
+            "total": self.compact_steps,
+            "results": results,
+            "starts": starts,
+            "other": len(cuts) - results - starts,
+            "cuts": cuts,
+        }
 
     def note_file_attempt(self, *, agent_id: str, name: str, task: str, wrote: bool) -> bool:
         """Count one file-agent call. True when this miss opens takeover."""
@@ -512,7 +600,7 @@ class RunMemory:
             "windows": list(self.windows[-_PERSIST_LIST_MAX:]),
             "raised": dict(self.raised),
             "misses": dict(self.misses),
-            "compactLevel": self.compact_level,
+            "compactSteps": self.compact_steps,
             "textRetryFails": dict(self.text_retry_fails),
             "failedCalls": dict(self.failed_calls),
             "takeoverUnavailable": self.takeover_unavailable,
@@ -572,34 +660,47 @@ class RunMemory:
     def _last_result(self) -> str:
         return self._results_block()
 
-    def _results_block(self, level: int = 0) -> str:
-        latest: dict[str, AgentRecord] = {}
-        order: list[str] = []
-        for rec in self.records:
+    def _latest_results(self) -> dict[str, tuple[int, AgentRecord]]:
+        """The latest finished call with text per agent, with its call number; agents in order of first result."""
+        latest: dict[str, tuple[int, AgentRecord]] = {}
+        for number, rec in enumerate(self.records, start=1):
             if rec.finished and rec.text:
-                if rec.agent_id not in latest:
-                    order.append(rec.agent_id)
-                latest[rec.agent_id] = rec
+                # A dict keeps the position of the first insert: agents stay in order of first result.
+                latest[rec.agent_id] = (number, rec)
+        return latest
+
+    def _results_block(self) -> str:
+        latest = list(self._latest_results().values())
+        newest = max(latest, key=lambda item: item[0])[1] if latest else None
         parts: list[str] = []
-        for agent_id in order:
-            rec = latest[agent_id]
+        for number, rec in latest:
+            if rec.trim >= _TRIM_GONE:
+                # Removed for space; its status line says so.
+                continue
+            hint = f"set source to {rec.agent_id} to pass the full text"
+            if rec.trim == _TRIM_START:
+                body = _clip_start(rec.text, _HEAD_CHARS, hint)
+            else:
+                limit = _NEWEST_CHARS[self.newest_trim] if rec is newest else _RESULT_CHARS
+                body = _clip(rec.text, limit, f"result; {hint}")
             parts.append(
                 f"Result from {rec.name} ({rec.agent_id}):\n"
-                + as_data(
-                    "agent_result",
-                    _clip(rec.text, _RESULT_CHARS[level], f"result; set source to {rec.agent_id} to pass the full text"),
-                    agent=rec.name,
-                    id=rec.agent_id,
-                )
+                + as_data("agent_result", body, agent=rec.name, id=rec.agent_id, call=str(number))
             )
         if not parts:
             return ""
         return DATA_NOTE + "\n\n" + "\n\n".join(parts)
 
-    def _status(self, rec: AgentRecord) -> str:
+    def _status(self, rec: AgentRecord, number: int, *, earlier: bool = False) -> str:
+        """One agent call: its task, the files it changed, and the start of a result shown no more.
+
+        ``earlier``: a later call of the same agent has the result shown in full.
+        """
         state = "finished" if rec.finished and not rec.error else "not finished"
-        line = f"Agent {rec.name} ({rec.agent_id}) {state}. characters: {len(rec.text)}."
-        block = _file_block(rec.files)
+        line = f"Call {number}: Agent {rec.name} ({rec.agent_id}) {state}. characters: {len(rec.text)}."
+        if (rec.task or "").strip():
+            line = f"{line}\ntask: {_one_line(rec.task, _TASK_CHARS[self.task_trim])}"
+        block = _change_block(rec.files, _CHANGES_SHOWN)
         if block:
             line = f"{line}\n{block}"
         if rec.error:
@@ -611,8 +712,22 @@ class RunMemory:
                 f"{line}\nnote: text only. This agent has tools but used none and changed no file. "
                 "Check the text against its task."
             )
+        # Only finished results, like the result block; an anomaly decides itself what text it shows.
+        if not (rec.finished and rec.text.strip()):
+            return line
+        if rec.trim >= _TRIM_GONE:
+            follow = (
+                "a later call of this agent replaced it"
+                if earlier
+                else f"set source to {rec.agent_id} to pass the full text"
+            )
+            return f"{line}\nresult: removed from this prompt for space; {follow}."
+        if earlier:
+            line = (
+                f"{line}\nstart of its result (a later call of this agent is shown in full):\n"
+                + as_data("agent_result", _one_line(rec.text, _HEAD_CHARS), agent=rec.name, id=rec.agent_id, call=str(number))
+            )
         return line
-
 
 def record_tool(record: AgentRecord, event: ToolEvent, fact: FileFact | None) -> None:
     record.tools.append(event)
@@ -767,6 +882,13 @@ def _clip(text: str, limit: int, what: str) -> str:
     return f"{text[:head]}\n[... {omitted} characters of this {what} omitted ...]\n{text[-tail:]}"
 
 
+def _clip_start(text: str, limit: int, hint: str) -> str:
+    """Only the start of a long text, with a marker of what was left out."""
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}\n[... only the start is shown; {len(text) - limit} characters left out for space; {hint} ...]"
+
+
 def clip_tool_messages(messages: list[LlmMessage], limit: int = 2_000) -> list[LlmMessage]:
     """Shorten tool results of the current decision; keeps ids and order."""
     out: list[LlmMessage] = []
@@ -790,13 +912,46 @@ def visible_text(raw: str) -> str:
     return strip_think(raw or "").strip()
 
 
+def _fact_line(fact: FileFact) -> str:
+    flag = "ok" if fact.ok else "failed"
+    size = f" {fact.size}" if fact.size is not None else ""
+    return f"{fact.path} {fact.action} {flag}{size}".rstrip()
+
+
 def _file_block(files: list[FileFact]) -> str:
+    return "\n".join(_fact_line(fact) for fact in files[-_FILES_SHOWN:])
+
+
+def _change_block(files: list[FileFact], limit: int) -> str:
+    """Changed files first, each path once with its last change; reads, lists and searches as counts."""
+    changes: dict[str, FileFact] = {}
+    counts: dict[str, int] = {}
+    failed = 0
+    for fact in files:
+        if fact.action in _STATUS_CHANGES:
+            # Ordered by the last change: a file written, then deleted, shows as deleted.
+            changes.pop(fact.path, None)
+            changes[fact.path] = fact
+            continue
+        # A malformed call can carry markup as its action ("stat>\n<parameter=path>…").
+        action = fact.action if _ACTION_NAME.fullmatch(fact.action or "") else "other"
+        counts[action] = counts.get(action, 0) + 1
+        failed += 0 if fact.ok else 1
     lines: list[str] = []
-    for fact in files[-_FILES_SHOWN:]:
-        flag = "ok" if fact.ok else "failed"
-        size = f" {fact.size}" if fact.size is not None else ""
-        lines.append(f"{fact.path} {fact.action} {flag}{size}".rstrip())
+    if changes:
+        shown = list(changes.values())[-limit:] if limit else []
+        more = len(changes) - len(shown)
+        lines.append("changed files:" + (f" (the last {len(shown)} of {len(changes)})" if more else ""))
+        lines.extend(_fact_line(fact) for fact in shown)
+    if counts:
+        parts = ", ".join(f"{action} {count}" for action, count in counts.items())
+        lines.append(f"other file actions: {parts}" + (f" ({failed} failed)" if failed else ""))
     return "\n".join(lines)
+
+
+def _one_line(text: str | None, limit: int) -> str:
+    flat = " ".join((text or "").split())
+    return flat if len(flat) <= limit else flat[: limit - 1].rstrip() + "…"
 
 
 def _anomaly_needs_text(record: AgentRecord) -> bool:

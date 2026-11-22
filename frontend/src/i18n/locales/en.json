@@ -57,6 +57,7 @@
       "loadedYes": "Yes",
       "loadedNo": "No",
       "family": "Family",
+      "publisher": "Publisher",
       "parameters": "Parameters",
       "quant": "Quantization",
       "format": "Format",
@@ -111,6 +112,12 @@
       "quants": "Quantization",
       "install": "Install",
       "installed": "Installed",
+      "state": {
+        "installed": "Installed",
+        "installedMany": "{{count}} installed",
+        "running": "Downloading {{percent}} %",
+        "busy": "This quantization is already in the download list."
+      },
       "gated": "This model needs approval on Hugging Face.",
       "noGguf": "No installable GGUF file.",
       "vramHint": "The file is larger than the graphics memory.",
@@ -1536,6 +1543,9 @@
       "current": "Current nodes",
       "now": "Now",
       "task": "Task",
+      "taskFor": "Task for {{name}}",
+      "noTask": "No task right now.",
+      "contextLabel": "Context",
       "agents": "Agents",
       "agentsDone": "{{completed}} of {{total}} done",
       "none": "No node active",
@@ -1546,7 +1556,9 @@
       "tokensOut": "Output",
       "perSecond": "{{value}} tokens/s",
       "rate": "Tokens/s",
-      "runTotal": "Run total",
+      "runTotal": "Output total",
+      "runTotalOut": "output tokens",
+      "runTotalIn": "input {{value}}",
       "context": "Context {{used}} / {{max}}"
     },
     "tabs": {
@@ -1570,7 +1582,15 @@
       "disabled": "Chat is available only while a run is active.",
       "agentDone": "{{name}} is done.",
       "agentDoneFiles": "{{name}} is done. Files: {{files}}.",
-      "aborted": "Stopped. Send a message to continue."
+      "aborted": "Stopped. Send a message to continue.",
+      "briefing": "**Background from the chosen earlier run** (for the orchestrator only):\n\n{{text}}",
+      "previous": {
+        "label": "Continue from an earlier run",
+        "none": "No earlier run",
+        "option": "{{when}} · {{outcome}} · {{request}}",
+        "noRequest": "no request",
+        "hint": "Before its first decision the orchestrator reads the chosen run and keeps its findings as background. The agents do not see them; it passes on what they need."
+      }
     },
     "log": {
       "pause": "Hold",
@@ -1844,6 +1864,9 @@
     }
   },
   "runLog": {
+    "limitShort": {
+      "run_llm_contextCut": "conversation probably cut"
+    },
     "view": {
       "file": {
         "read": "reads {{path}}",
@@ -1919,6 +1942,9 @@
       "filesCount_one": "{{count}} file changed",
       "filesCount_other": "{{count}} files changed",
       "capped": "tool limit reached",
+      "agentContext": "largest request {{prompt}} of {{window}} tokens ({{share}} %)",
+      "agentContextCuts": "probably cut: {{count}}×",
+      "agentCompacted": "compacted: {{count}}×",
       "step_one": "tool round: {{count}} call",
       "step_other": "tool round: {{count}} calls",
       "stepWithFailed_one": "tool round: {{count}} call, {{failed}} failed",
@@ -2076,10 +2102,17 @@
       "error": "Error",
       "agent": "{{name}} ×{{count}}",
       "agentFailed": "{{name}} ×{{count}} ({{failed}} failed)",
+      "contextShare": "context up to {{share}} %",
       "fileList_one": "show {{count}} changed file",
       "fileList_other": "show {{count}} changed files"
     },
     "run": {
+      "briefing": {
+        "done": "Earlier run read: {{chars}} characters of background.",
+        "failed": "Earlier run not analyzed ({{error}}); the orchestrator gets the shortened run record.",
+        "window": "Run record does not fit the context window; the orchestrator gets it shortened.",
+        "missing": "Chosen earlier run not found."
+      },
       "llmBudget": "Model call budget for this run used up.",
       "start": "Run started ({{networkName}})",
       "wait": {
@@ -2101,6 +2134,7 @@
         "start": "Agent started",
         "done": "Agent finished",
         "toolFailures": "Agent stopped after {{failed}} failed tool calls in a row",
+        "terminalLesson": "Rejected terminal command noted ({{kind}}); it is now in this agent's system prompt ({{lessons}} in total).",
         "toolJson": "Discarded tool call {{name}}: incomplete JSON arguments (attempt {{attempt}}/{{max}}).",
         "think": "Agent is thinking (not a result).",
         "thinkLimit": "Too many think turns without a result.",
@@ -2124,6 +2158,7 @@
         "toolCallsRepaired": "Added {{count}} missing tool answers.",
         "start": "LLM {{model}}",
         "done": "LLM finished ({{durationMs}} ms)",
+        "contextCut": "Conversation probably cut: the model processed {{reported, number}} input tokens, about {{expected, number}} were expected (window {{contextMax, number}}). It is likely missing the start of the conversation.",
         "release": "Unloaded other models ({{dropped}}); {{keep}} stays loaded",
         "modelInfo": "Model data for {{model}} is missing. The run was stopped.",
         "moeUnsplit": "Expert split for {{model}} is unknown. num_gpu is not set."
@@ -2155,7 +2190,9 @@
         "takeoverUnavailable": "Takeover not possible: the orchestrator lacks the tools ({{count}}/{{max}}).",
         "toolCap": "Orchestrator: {{calls}} tool calls in this step, limit reached.",
         "compact": "Orchestrator context condensed (level {{level}}).",
+        "trimmed": "Orchestrator prompt shortened to fit the window: {{results}} older results removed, {{starts}} cut to their start, {{other}} other cuts ({{total}} steps so far). Tasks and changed files stay.",
         "privateReasoning": "Model's internal reasoning not shown in the chat.",
+        "replyAsAsk": "The reply contained a question for you and was sent as a question; the run waits for your answer.",
         "llmPause": "Orchestrator model not reachable ({{error}}); waiting for a message.",
         "emptyTask": "Empty task; using the last user message.",
         "action": "Orchestrator: {{action}} {{agent}}",

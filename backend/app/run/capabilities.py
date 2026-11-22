@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from app.run.compile import CompiledGraph
 from app.run.graph_models import is_mcp_node
+from app.run.terminal_lessons import FileReach, alternatives
 from app.tools.file_access_tool import FILE_ACTION_ORDER
 
 _FILE_WRITES = ("write", "mkdir", "edit", "move")
@@ -91,7 +92,8 @@ def orchestrator_capabilities(compiled: CompiledGraph, owner_id: str, offered: l
         if kind == "file_access":
             blocks.append(_file_block(title, node.data, only=file_actions))
         elif kind == "terminal":
-            blocks.append(_terminal_block(title, node.data))
+            reach = file_reach(compiled, owner_id, only=file_actions) if file_actions is not None else None
+            blocks.append(_terminal_block(title, node.data, reach))
         else:
             blocks.append(_simple_block(title, kind))
     if not blocks:
@@ -186,6 +188,30 @@ def _mcp_tool_names(data: dict, server_id: str) -> list[str]:
     return [name for name, _ in _live_tools(server_id)]
 
 
+def file_reach(compiled: CompiledGraph, owner_id: str, only: list[str] | None = None) -> FileReach | None:
+    """The file actions of the first file_access node wired to ``owner_id``; None without one."""
+    for node in _tool_nodes(compiled, owner_id):
+        if is_mcp_node(node) or str(node.data.get("kind") or "") != "file_access":
+            continue
+        actions = _file_actions_of(node.data)
+        if only is not None:
+            actions = [name for name in actions if name in set(only)]
+        return FileReach(
+            actions=actions,
+            write=node.data.get("allowWrite") is not False and any(name in _FILE_WRITES for name in actions),
+            delete=node.data.get("allowDelete") is not False and "delete" in actions,
+        )
+    return None
+
+
+def terminal_facts(compiled: CompiledGraph, owner_id: str) -> tuple[list[str], str]:
+    """Allowed programs and working folder of the terminal wired to ``owner_id``."""
+    for node in _tool_nodes(compiled, owner_id):
+        if not is_mcp_node(node) and str(node.data.get("kind") or "") == "terminal":
+            return _programs_of(node.data), _root_of(node.data)
+    return [], "(no root)"
+
+
 def tool_summary(compiled: CompiledGraph, owner_id: str) -> str:
     """The tools wired to one node in a few words, for the orchestrator's roster.
 
@@ -213,12 +239,15 @@ def tool_summary(compiled: CompiledGraph, owner_id: str) -> str:
     return ", ".join(parts) if parts else "none"
 
 
-def orchestrator_tool_overview(compiled: CompiledGraph, owner_id: str, open_names: list[str]) -> str:
+def orchestrator_tool_overview(
+    compiled: CompiledGraph, owner_id: str, open_names: list[str], *, write_open: bool = False
+) -> str:
     """Every tool wired to the orchestrator: what it does and whether it is open on this turn.
 
     The prompt used to mention only the tools open on a turn. Without file access the
     orchestrator still planned to "check the files myself", eight decisions in a row, and
     the run ended stuck (Coder_Team run, 2026-11-20). Now it reads what it can reach.
+    ``write_open``: after a failed agent call or in a takeover it may change files now.
     """
     from app.run.mcp_bridge import map_openai_tool_name
 
@@ -243,6 +272,11 @@ def orchestrator_tool_overview(compiled: CompiledGraph, owner_id: str, open_name
                 files.append(f"Files: your file access in {root} is not open on this turn.")
             elif not _file_changes_allowed(data):
                 files.append(f"Files: you can read files in {root} yourself; changing them is switched off.")
+            elif write_open:
+                files.append(
+                    f"Files: you can read and change files in {root} on this turn "
+                    "(search with text finds text inside files)."
+                )
             else:
                 files.append(
                     f"Files: you can read files in {root} yourself (search with text finds text inside files); "
@@ -274,6 +308,7 @@ def orchestrator_tool_overview(compiled: CompiledGraph, owner_id: str, open_name
 
 def _blocks(compiled: CompiledGraph, owner_id: str) -> list[str]:
     by_id = {node.id: node for node in compiled.doc.nodes}
+    files = file_reach(compiled, owner_id)
     blocks: list[str] = []
     for edge in compiled.doc.edges:
         if edge.target != owner_id or edge.target_handle != "tool":
@@ -289,7 +324,7 @@ def _blocks(compiled: CompiledGraph, owner_id: str) -> list[str]:
         if kind == "file_access":
             blocks.append(_file_block(title, node.data))
         elif kind == "terminal":
-            blocks.append(_terminal_block(title, node.data))
+            blocks.append(_terminal_block(title, node.data, files))
         elif kind:
             blocks.append(_simple_block(title, kind))
     return blocks
@@ -342,7 +377,7 @@ def _file_block(title: str, data: dict, *, only: list[str] | None = None) -> str
     return "\n".join(lines)
 
 
-def _terminal_block(title: str, data: dict) -> str:
+def _terminal_block(title: str, data: dict, files: FileReach | None = None) -> str:
     from app.tools.terminal_tool import DEFAULT_PROGRAMS
 
     root = str(data.get("rootPath") or "").strip() or "(no root)"
@@ -374,6 +409,8 @@ def _terminal_block(title: str, data: dict) -> str:
         )
         lines.append("Programs: " + ", ".join(programs) + ".")
         lines.append("A program that is not in that list is rejected.")
+        # Before any mistake: what to use instead of the usual shell habits (Coder_Team run, 2026-11-20).
+        lines.extend(alternatives(programs, root, files))
     return "\n".join(lines)
 
 

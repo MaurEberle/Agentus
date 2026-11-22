@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ModelCombobox } from '@/components/ModelCombobox';
-import { modelLabel } from '@/lib/modelName';
+import { modelFactsMap, modelLabel } from '@/lib/modelName';
 import { notify } from '@/lib/notifications';
 import {
   clearHelpChatMessages,
@@ -84,6 +84,7 @@ function ModelField({
           id={id}
           value={value}
           options={models.map((model) => model.name)}
+          facts={modelFactsMap(models)}
           onChange={onChange}
           placeholder={placeholder ?? label}
           emptyLabel={emptyLabel}

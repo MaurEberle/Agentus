@@ -172,8 +172,9 @@ export function createSseHandle(): MonitoringHandle {
     getSnapshot() {
       return { ...snapshot };
     },
-    sendChat(text: string) {
-      return apiFetch('/run/chat', { method: 'POST', body: JSON.stringify({ text }) }).then(
+    sendChat(text: string, previousRunId?: string) {
+      const body = previousRunId ? { text, previousRunId } : { text };
+      return apiFetch('/run/chat', { method: 'POST', body: JSON.stringify(body) }).then(
         () => true,
         () => {
           emit({ type: 'adapterError', messageKey: 'monitoring.empty.errorTitle' });

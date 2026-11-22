@@ -429,6 +429,31 @@ def list_runs(
     return [_run_summary_dict(row) for row in rows], total
 
 
+def list_previous_runs(network_id: str, *, exclude_id: str | None, limit: int) -> list[dict[str, Any]]:
+    """Finished runs of one network, newest first, with their chat (for the request preview)."""
+    with locked("history") as conn:
+        rows = conn.execute(
+            """
+            SELECT id, started_at, ended_at, outcome, error_message, chat FROM runs
+            WHERE network_id = ? AND outcome != 'running' AND id != ?
+            ORDER BY started_at DESC
+            LIMIT ?
+            """,
+            (network_id, exclude_id or "", limit),
+        ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "started_at": row["started_at"],
+            "ended_at": row["ended_at"],
+            "outcome": row["outcome"],
+            "error_message": row["error_message"],
+            "chat": json_loads(row["chat"], default=None) if row["chat"] else None,
+        }
+        for row in rows
+    ]
+
+
 def latest_run_id_by_network() -> dict[str, str]:
     """Newest run that still exists for each network. History may be missing."""
     try:
