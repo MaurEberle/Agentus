@@ -11,6 +11,8 @@ type Block =
   | { type: 'table'; header: string[]; rows: string[][] };
 
 const HEADING = ['text-2xl', 'text-xl', 'text-lg', 'text-base', 'text-sm', 'text-sm'] as const;
+// Narrow places (the help chat) keep headings close to the body text.
+const HEADING_SMALL = ['text-base', 'text-base', 'text-sm', 'text-sm', 'text-sm', 'text-sm'] as const;
 
 function safeHref(value: string): string | null {
   const trimmed = value.trim();
@@ -230,8 +232,8 @@ function linesOf(text: string): ReactNode {
   ));
 }
 
-/** ``bare`` drops the framed box, for text that already sits in a bubble. */
-export function MarkdownView({ text, bare = false }: { text: string; bare?: boolean }) {
+/** ``bare`` drops the framed box, for text that already sits in a bubble; ``small`` shrinks headings. */
+export function MarkdownView({ text, bare = false, small = false }: { text: string; bare?: boolean; small?: boolean }) {
   const blocks = parseBlocks(text);
   return (
     <div
@@ -245,7 +247,7 @@ export function MarkdownView({ text, bare = false }: { text: string; bare?: bool
         if (block.type === 'heading') {
           const Tag = `h${block.level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
           return (
-            <Tag key={index} className={`${HEADING[block.level - 1]} font-semibold tracking-tight`}>
+            <Tag key={index} className={`${(small ? HEADING_SMALL : HEADING)[block.level - 1]} font-semibold tracking-tight`}>
               {renderInline(block.text)}
             </Tag>
           );

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useCopySelection } from '@/lib/copySelection';
 import { useTranslation } from 'react-i18next';
 import { BrandMark } from '@/components/BrandMark';
-import { LightMarkdown } from '@/components/help-chat/markdown';
+import { MarkdownView } from '@/components/MarkdownView';
 import type { HelpMessage, HelpSource } from '@/components/help-chat/model';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getChromeHost } from '@/lib/chromeHost';
@@ -61,6 +61,17 @@ function TypingIndicator() {
   );
 }
 
+/** Time of day; the date too when the message is not from today. */
+function stamp(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const today = new Date().toDateString() === date.toDateString();
+  return date.toLocaleString(
+    locale,
+    today ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' },
+  );
+}
+
 function Bubble({
   message,
   locale,
@@ -72,10 +83,7 @@ function Bubble({
   spinning?: boolean;
   chill?: boolean;
 }) {
-  const time = new Date(message.createdAt).toLocaleTimeString(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const time = stamp(message.createdAt, locale);
   const isUser = message.role === 'user';
   return (
     <article className={cn('flex gap-2', isUser ? 'justify-end' : 'flex-row')}>
@@ -90,7 +98,7 @@ function Bubble({
           {isUser ? (
             <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
           ) : (
-            <LightMarkdown text={message.content} />
+            <MarkdownView text={message.content} bare small />
           )}
           {!isUser && message.sources ? (
             <Sources sources={message.sources.filter((source) => source.kind === 'web')} />
@@ -132,7 +140,9 @@ export function HelpChatMessages({
   }
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
+    // Radix lays the viewport content out as a table, which grows with the longest word
+    // instead of wrapping; as a block it follows the panel width when it is resized.
+    <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
       <div ref={listRef} className="flex flex-col gap-3 p-3">
         {items.map((message) => (
           <Bubble
