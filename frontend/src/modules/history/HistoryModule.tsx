@@ -474,7 +474,7 @@ export function HistoryModule() {
               style={desktop ? paneColStyle(panes.statsShare) : undefined}
             >
               <div className="min-h-0 w-full" style={{ height: panes.chartH }}>
-                <RunsChart buckets={buckets} />
+                <RunsChart buckets={buckets} runs={items} />
               </div>
               <HeightGrip
                 label={t('history.resize.chartHeight')}

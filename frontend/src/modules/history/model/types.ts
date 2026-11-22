@@ -149,6 +149,9 @@ export type HistoryKpis = {
 export type ChartBucket = {
   key: string;
   label: string;
+  /** Short text under the column: "23. Okt.", or "14:00" for hours. */
+  axisLabel: string;
+  unit: 'day' | 'hour';
   succeeded: number;
   failed: number;
   cancelled: number;

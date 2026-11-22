@@ -1,136 +1,112 @@
-import { useMemo } from 'react';
+import { useState } from 'react';
+import { BarChart3, ChartNoAxesGantt, Rows3, Table2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { bucketTotal, OUTCOME_FILL, OUTCOMES } from '@/modules/history/chart/chartModel';
+import { NetworksView } from '@/modules/history/chart/NetworksView';
+import { ShareView } from '@/modules/history/chart/ShareView';
+import { TableView } from '@/modules/history/chart/TableView';
+import { TimelineView } from '@/modules/history/chart/TimelineView';
+import type { ChartBucket, RunSummary } from '@/modules/history/model/types';
 import { moduleCardBodyClass, moduleCardClass } from '@/modules/moduleCard';
-import type { ChartBucket } from '@/modules/history/model/types';
 
-const COLORS = {
-  succeeded: 'hsl(var(--primary))',
-  failed: 'hsl(var(--destructive))',
-  cancelled: 'hsl(var(--muted-foreground) / 0.55)',
-  timeout: 'hsl(var(--warning))',
-};
+type ChartView = 'timeline' | 'share' | 'networks' | 'table';
 
-export function RunsChart({ buckets }: { buckets: ChartBucket[] }) {
+const VIEWS: { id: ChartView; icon: typeof BarChart3 }[] = [
+  { id: 'timeline', icon: BarChart3 },
+  { id: 'share', icon: ChartNoAxesGantt },
+  { id: 'networks', icon: Rows3 },
+  { id: 'table', icon: Table2 },
+];
+const VIEW_KEY = 'agentus.history.chartView';
+
+function loadView(): ChartView {
+  try {
+    const raw = window.localStorage.getItem(VIEW_KEY);
+    if (VIEWS.some((view) => view.id === raw)) return raw as ChartView;
+  } catch {
+    // Storage can be blocked; the timeline is the default.
+  }
+  return 'timeline';
+}
+
+function saveView(view: ChartView): void {
+  try {
+    window.localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Remembering the view is optional.
+  }
+}
+
+/**
+ * Runs of the filtered range in four forms, switched at the top right: the timeline per
+ * day, how they ended as one whole, per network, and the numbers as a table.
+ */
+export function RunsChart({ buckets, runs }: { buckets: ChartBucket[]; runs: RunSummary[] }) {
   const { t } = useTranslation();
-  const reduced =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const max = useMemo(
-    () => Math.max(1, ...buckets.map((item) => item.succeeded + item.failed + item.cancelled + item.timeout)),
-    [buckets],
-  );
-  const width = Math.max(320, buckets.length * 22);
-  const height = 160;
-  const pad = { top: 8, right: 8, bottom: 28, left: 28 };
-  const innerW = width - pad.left - pad.right;
-  const innerH = height - pad.top - pad.bottom;
-  const barW = buckets.length === 0 ? 0 : Math.max(4, (innerW / buckets.length) * 0.7);
-  const hasTimeout = buckets.some((item) => item.timeout > 0);
+  const [view, setView] = useState<ChartView>(loadView);
+  const empty = buckets.every((bucket) => bucketTotal(bucket) === 0);
+  const present = OUTCOMES.filter((key) => buckets.some((bucket) => bucket[key] > 0));
+  // Ranges under two days count per hour.
+  const titleKey = buckets[0]?.unit === 'hour' && (view === 'timeline' || view === 'table') ? `${view}Hours` : view;
+  const choose = (next: ChartView) => {
+    setView(next);
+    saveView(next);
+  };
 
   return (
     <Card className={cn(moduleCardClass, 'h-full min-w-0')}>
       <CardHeader className="shrink-0 pb-2">
-        <CardTitle>{t('history.chart.title')}</CardTitle>
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <CardTitle className="truncate">{t(`history.chart.titles.${titleKey}`)}</CardTitle>
+          <div
+            role="radiogroup"
+            aria-label={t('history.chart.viewLabel')}
+            className="inline-flex h-8 shrink-0 items-stretch rounded-md border border-input p-0.5 shadow-sm"
+          >
+            {VIEWS.map(({ id, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={view === id}
+                title={t(`history.chart.views.${id}`)}
+                onClick={() => choose(id)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded px-2 text-xs transition-colors',
+                  view === id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+                )}
+              >
+                <Icon className="size-3.5" aria-hidden />
+                <span className="hidden xl:inline">{t(`history.chart.views.${id}`)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </CardHeader>
       <CardContent className={cn(moduleCardBodyClass, 'flex flex-col')}>
-        {buckets.every((item) => item.succeeded + item.failed + item.cancelled + item.timeout === 0) ? (
+        {empty ? (
           <p className="text-sm text-muted-foreground">{t('history.chart.empty')}</p>
+        ) : view === 'share' ? (
+          <ShareView buckets={buckets} />
+        ) : view === 'table' ? (
+          <TableView buckets={buckets} />
         ) : (
           <>
-            <div className="min-h-0 flex-1 overflow-x-auto">
-              <svg
-                viewBox={`0 0 ${width} ${height}`}
-                className="h-full min-h-[10rem] w-full min-w-[20rem]"
-                role="img"
-                aria-label={t('history.chart.title')}
-              >
-                {[0, 0.5, 1].map((tick) => {
-                  const y = pad.top + innerH * (1 - tick);
-                  const value = Math.round(max * tick);
-                  return (
-                    <g key={tick}>
-                      <line
-                        x1={pad.left}
-                        x2={width - pad.right}
-                        y1={y}
-                        y2={y}
-                        stroke="hsl(var(--border))"
-                        strokeWidth={1}
-                      />
-                      <text x={pad.left - 6} y={y + 3} textAnchor="end" className="fill-muted-foreground" fontSize={9}>
-                        {value}
-                      </text>
-                    </g>
-                  );
-                })}
-                {buckets.map((bucket, index) => {
-                  const x =
-                    pad.left +
-                    (index + 0.5) * (innerW / Math.max(1, buckets.length)) -
-                    barW / 2;
-                  const parts: Array<{ key: keyof typeof COLORS; value: number }> = [
-                    { key: 'succeeded', value: bucket.succeeded },
-                    { key: 'failed', value: bucket.failed },
-                    { key: 'cancelled', value: bucket.cancelled },
-                    { key: 'timeout', value: bucket.timeout },
-                  ];
-                  let y = pad.top + innerH;
-                  const title = `${bucket.label}: ${bucket.succeeded}/${bucket.failed}/${bucket.cancelled}${hasTimeout ? `/${bucket.timeout}` : ''}`;
-                  return (
-                    <g key={bucket.key}>
-                      <title>{title}</title>
-                      {parts.map((part) => {
-                        if (part.value <= 0) return null;
-                        const h = (part.value / max) * innerH;
-                        y -= h;
-                        const rect = (
-                          <rect
-                            key={part.key}
-                            x={x}
-                            y={y}
-                            width={barW}
-                            height={h}
-                            fill={COLORS[part.key]}
-                            className={reduced ? undefined : 'transition-[y,height] duration-300'}
-                          />
-                        );
-                        return rect;
-                      })}
-                      {index % Math.ceil(buckets.length / 8) === 0 ? (
-                        <text
-                          x={x + barW / 2}
-                          y={height - 8}
-                          textAnchor="middle"
-                          className="fill-muted-foreground"
-                          fontSize={8}
-                        >
-                          {bucket.label}
-                        </text>
-                      ) : null}
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-            <ul className="mt-2 flex flex-wrap gap-3 text-xs">
-              <Legend color={COLORS.succeeded} label={t('history.outcome.succeeded')} />
-              <Legend color={COLORS.failed} label={t('history.outcome.failed')} />
-              <Legend color={COLORS.cancelled} label={t('history.outcome.cancelled')} />
-              {hasTimeout ? <Legend color={COLORS.timeout} label={t('history.outcome.timeout')} /> : null}
+            {view === 'networks' ? <NetworksView runs={runs} /> : <TimelineView buckets={buckets} />}
+            {/* Two or more series: a legend, so identity never rests on colour alone. */}
+            <ul className="mt-2 flex shrink-0 flex-wrap gap-3 text-xs">
+              {present.map((key) => (
+                <li key={key} className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-sm" style={{ background: OUTCOME_FILL[key] }} aria-hidden />
+                  {t(`history.outcome.${key}`)}
+                </li>
+              ))}
             </ul>
           </>
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function Legend({ color, label }: { color: string; label: string }) {
-  return (
-    <li className="flex items-center gap-1.5">
-      <span className="size-2.5 rounded-sm" style={{ background: color }} />
-      {label}
-    </li>
   );
 }

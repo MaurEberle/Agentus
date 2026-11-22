@@ -67,6 +67,8 @@ Cinta: Actualizar, borrar ejecuciones seleccionadas, exportar registros, depurar
 
 **Un filtro** lo controla todo: periodo (hoy, 7/30 días, desde–hasta), red, modelo, búsqueda (ID de ejecución, red, error). KPI, gráfico «ejecuciones por día», errores más frecuentes, pestañas Historial / Por modelo / Por red y la lista usan el mismo filtro.
 
+**Ejecuciones** tiene un selector arriba a la derecha: **Evolución** (ejecuciones por día, por hora en menos de dos días, apiladas por resultado; los días sin ejecuciones se reducen a un «⋯» estrecho), **Proporciones** (cómo terminaron, como una barra dividida con tabla), **Redes** (ejecuciones por red, primero las que más) y **Tabla** (los números por día). Pasar el puntero o el foco muestra los valores de una columna; la vista se recuerda.
+
 **Errores más frecuentes** muestra cada tipo de error de las ejecuciones fallidas como un área: cuanto más frecuente, más grande, con el color según la clase de error (orquestador, LLM, herramienta, timeout …). Las áreas grandes indican también la proporción, los nodos y la última vez; en las pequeñas lo dice el tooltip. Un clic filtra KPI, gráfico y lista por ese tipo de error; un segundo clic o la ✕ de la cabecera quita el filtro. Las áreas se quedan donde están.
 
 El gráfico y la lista de errores, y la lista de ejecuciones y el detalle, se redimensionan arrastrando el borde, igual que en Supervisión. Los tamaños se conservan al cerrar la app.

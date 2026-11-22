@@ -1,7 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { useBoxSize } from '@/hooks/useBoxSize';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/modules/history/model/format';
@@ -42,21 +42,6 @@ const SIZE_STYLE: Record<TileSize, { label: string; lineHeight: number; reserved
   normal: { label: 'text-xs', lineHeight: 16, reserved: 46, count: 'text-xl' },
   roomy: { label: 'text-sm', lineHeight: 19, reserved: 84, count: 'text-3xl' },
 };
-
-function useBoxSize<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return undefined;
-    const update = () => setSize({ width: element.clientWidth, height: element.clientHeight });
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, size] as const;
-}
 
 /**
  * Error map: every error key of the failed runs is a tile, its area the number of runs.

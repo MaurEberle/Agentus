@@ -67,6 +67,8 @@ Ribbon: refresh, delete selected runs, export logs, purge older than retention (
 
 **One filter** drives everything: range (today, 7/30 days, from–to), network, model, search (run id, network, error). KPIs, “runs by day” chart, top errors, tabs History / By model / By network, and the list all use that filter.
 
+**Runs** has a switch at the top right: **Timeline** (runs per day, per hour below two days, stacked by outcome; days without runs shrink to a narrow “⋯”), **Shares** (how runs ended, as one split bar with a table), **Networks** (runs per network, most first) and **Table** (the numbers per day). Hover or focus shows the values of a column; the view is remembered.
+
 **Top errors** shows each kind of error of the failed runs as a tile: the more often, the larger, coloured by error class (orchestrator, LLM, tool, timeout …). Large tiles also name share, nodes and the last time; on small ones the tooltip says so. A click filters KPIs, chart and list to that kind of error; a second click or the ✕ in the head lifts the filter. The tiles stay in place meanwhile.
 
 The chart and error list, and the run list and detail, can be resized by dragging the edges, same as in Monitoring. The sizes you set are kept after you close the app.

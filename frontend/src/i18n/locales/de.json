@@ -1744,7 +1744,40 @@
     },
     "chart": {
       "title": "Läufe nach Tag",
-      "empty": "Keine terminalen Läufe in diesem Zeitraum."
+      "empty": "Keine terminalen Läufe in diesem Zeitraum.",
+      "viewLabel": "Darstellung",
+      "views": {
+        "timeline": "Verlauf",
+        "share": "Anteile",
+        "networks": "Netze",
+        "table": "Tabelle"
+      },
+      "titles": {
+        "timeline": "Läufe nach Tag",
+        "share": "Ausgang der Läufe",
+        "networks": "Läufe nach Netz",
+        "table": "Läufe nach Tag (Tabelle)",
+        "timelineHours": "Läufe nach Stunde",
+        "tableHours": "Läufe nach Stunde (Tabelle)"
+      },
+      "runs_one": "{{formatted}} Lauf",
+      "runs_other": "{{formatted}} Läufe",
+      "gap": {
+        "days_one": "1 Tag ohne Läufe",
+        "days_other": "{{count}} Tage ohne Läufe",
+        "hours_one": "1 Stunde ohne Läufe",
+        "hours_other": "{{count}} Stunden ohne Läufe"
+      },
+      "moreNetworks_one": "{{count}} weiteres Netz",
+      "moreNetworks_other": "{{count}} weitere Netze",
+      "table": {
+        "outcome": "Ergebnis",
+        "runs": "Läufe",
+        "share": "Anteil",
+        "total": "Gesamt",
+        "day": "Tag",
+        "hour": "Stunde"
+      }
     },
     "errors": {
       "title": "Häufigste Fehler",

@@ -1744,7 +1744,40 @@
     },
     "chart": {
       "title": "Runs by day",
-      "empty": "No completed runs in this range."
+      "empty": "No completed runs in this range.",
+      "viewLabel": "View",
+      "views": {
+        "timeline": "Timeline",
+        "share": "Shares",
+        "networks": "Networks",
+        "table": "Table"
+      },
+      "titles": {
+        "timeline": "Runs by day",
+        "share": "How runs ended",
+        "networks": "Runs by network",
+        "table": "Runs by day (table)",
+        "timelineHours": "Runs by hour",
+        "tableHours": "Runs by hour (table)"
+      },
+      "runs_one": "{{formatted}} run",
+      "runs_other": "{{formatted}} runs",
+      "gap": {
+        "days_one": "1 day without runs",
+        "days_other": "{{count}} days without runs",
+        "hours_one": "1 hour without runs",
+        "hours_other": "{{count}} hours without runs"
+      },
+      "moreNetworks_one": "{{count}} more network",
+      "moreNetworks_other": "{{count}} more networks",
+      "table": {
+        "outcome": "Outcome",
+        "runs": "Runs",
+        "share": "Share",
+        "total": "Total",
+        "day": "Day",
+        "hour": "Hour"
+      }
     },
     "errors": {
       "title": "Top errors",

@@ -62,7 +62,8 @@ export function computeChart(runs: RunSummary[], from: Date, to: Date, locale: s
     const label = hourly
       ? `${cursor.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} ${pad(cursor.getHours())}:00`
       : cursor.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-    buckets.set(key, { key, label, succeeded: 0, failed: 0, cancelled: 0, timeout: 0 });
+    const axisLabel = hourly ? `${pad(cursor.getHours())}:00` : label;
+    buckets.set(key, { key, label, axisLabel, unit: hourly ? 'hour' : 'day', succeeded: 0, failed: 0, cancelled: 0, timeout: 0 });
     if (hourly) cursor.setHours(cursor.getHours() + 1);
     else cursor.setDate(cursor.getDate() + 1);
   }

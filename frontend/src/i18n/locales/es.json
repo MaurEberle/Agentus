@@ -1677,7 +1677,40 @@
     },
     "chart": {
       "title": "Ejecuciones por día",
-      "empty": "No hay ejecuciones terminadas en este periodo."
+      "empty": "No hay ejecuciones terminadas en este periodo.",
+      "viewLabel": "Vista",
+      "views": {
+        "timeline": "Evolución",
+        "share": "Proporciones",
+        "networks": "Redes",
+        "table": "Tabla"
+      },
+      "titles": {
+        "timeline": "Ejecuciones por día",
+        "share": "Cómo terminaron las ejecuciones",
+        "networks": "Ejecuciones por red",
+        "table": "Ejecuciones por día (tabla)",
+        "timelineHours": "Ejecuciones por hora",
+        "tableHours": "Ejecuciones por hora (tabla)"
+      },
+      "runs_one": "{{formatted}} ejecución",
+      "runs_other": "{{formatted}} ejecuciones",
+      "gap": {
+        "days_one": "1 día sin ejecuciones",
+        "days_other": "{{count}} días sin ejecuciones",
+        "hours_one": "1 hora sin ejecuciones",
+        "hours_other": "{{count}} horas sin ejecuciones"
+      },
+      "moreNetworks_one": "{{count}} red más",
+      "moreNetworks_other": "{{count}} redes más",
+      "table": {
+        "outcome": "Resultado",
+        "runs": "Ejecuciones",
+        "share": "Proporción",
+        "total": "Total",
+        "day": "Día",
+        "hour": "Hora"
+      }
     },
     "errors": {
       "title": "Errores más frecuentes",
