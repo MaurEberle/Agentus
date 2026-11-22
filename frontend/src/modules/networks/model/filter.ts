@@ -1,6 +1,6 @@
 import type { NetworkListItem } from '@/modules/dashboard/model';
 import { matchesTags, sharedTagList, type TagMatch } from '@/lib/tags';
-import type { NetworksSortDir, NetworksSortKey } from '@/modules/networks/store';
+import type { NetworksKindFilter, NetworksSortDir, NetworksSortKey } from '@/modules/networks/store';
 
 export function uniqueTags(items: NetworkListItem[]): string[] {
   const tags = new Set<string>();
@@ -21,7 +21,7 @@ export function applyNetworkFilters(
     tagFilter: string[];
     tagMode: TagMatch;
     onlyValid: boolean;
-    onlyActive: boolean;
+    kind: NetworksKindFilter;
     sortKey: NetworksSortKey;
     sortDir: NetworksSortDir;
   },
@@ -29,7 +29,8 @@ export function applyNetworkFilters(
   const query = filters.query.trim().toLowerCase();
   let list = items.filter((item) => {
     if (filters.onlyValid && item.validationStatus !== 'valid') return false;
-    if (filters.onlyActive && !item.isActive) return false;
+    // Without a kind (older backend) a network counts as linear, as it has no orchestrator known.
+    if (filters.kind !== 'all' && (item.kind ?? 'linear') !== filters.kind) return false;
     if (!matchesTags(item.tags, filters.tagFilter, filters.tagMode)) return false;
     if (!query) return true;
     const haystack = `${item.name} ${item.description ?? ''} ${(item.tags ?? []).join(' ')}`.toLowerCase();

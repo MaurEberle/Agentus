@@ -1319,6 +1319,10 @@
     }
   },
   "networks": {
+    "kind": {
+      "orchestrator": "Orchestrator",
+      "linear": "Linear"
+    },
     "title": "Verwaltung",
     "copySuffix": "(Kopie)",
     "ribbon": {
@@ -1349,11 +1353,19 @@
       "direction": "Sortierreihenfolge",
       "tags": "Tags",
       "onlyValid": "Nur gültige",
-      "onlyActive": "Nur aktive"
+      "onlyActive": "Nur aktive",
+      "kind": "Art des Netzes",
+      "kinds": {
+        "orchestrator": "Orchestrator",
+        "all": "Alle",
+        "linear": "Linear"
+      }
     },
     "list": {
       "selectAll": "Alle sichtbaren auswählen",
       "name": "Name",
+      "tags": "Tags",
+      "kind": "Art",
       "description": "Beschreibung",
       "status": "Status",
       "graph": "Graph",

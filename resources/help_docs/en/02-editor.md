@@ -7,7 +7,7 @@ The editor under **Network** edits **one** graph document. The **library** is th
 | Place | Role | Typical actions |
 |-------|------|-----------------|
 | Editor | New or one loaded network | Draw, inspector, save, load dialog, duplicate, export the open graph |
-| Library | all networks | Search, tags, set active, import/export several files, delete |
+| Library | all networks | Search, tags (own column), kind of network (orchestrator or linear, switch “Orchestrator – All – Linear”), set active, import/export several files, delete |
 
 **Set active** and **Delete** belong in the library (or quick select for active). The editor load dialog opens **one** network and never deletes.
 

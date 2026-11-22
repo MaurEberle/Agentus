@@ -1252,6 +1252,10 @@
     }
   },
   "networks": {
+    "kind": {
+      "orchestrator": "Orquestador",
+      "linear": "Lineal"
+    },
     "title": "Biblioteca",
     "copySuffix": "(copia)",
     "ribbon": {
@@ -1282,11 +1286,19 @@
       "direction": "Orden",
       "tags": "Etiquetas",
       "onlyValid": "Solo válidas",
-      "onlyActive": "Solo activas"
+      "onlyActive": "Solo activas",
+      "kind": "Tipo de red",
+      "kinds": {
+        "orchestrator": "Orquestador",
+        "all": "Todas",
+        "linear": "Lineal"
+      }
     },
     "list": {
       "selectAll": "Seleccionar todas las visibles",
       "name": "Nombre",
+      "tags": "Etiquetas",
+      "kind": "Tipo",
       "description": "Descripción",
       "status": "Estado",
       "graph": "Grafo",

@@ -1,4 +1,5 @@
 import { useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { GitCommitHorizontal, Waypoints } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -346,14 +347,26 @@ function ColumnHead({
 }
 
 function NetworkCell({ id, item, locale }: { id: NetworkColumnId; item: NetworkListItem; locale: string }) {
-  const { t } = useTranslation();
   if (id === 'name') {
     return (
       <div className="min-w-0 overflow-hidden px-3 py-2">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-medium" title={item.name}>{item.name}</span>
-          <TagRow tags={item.tags} />
         </div>
+      </div>
+    );
+  }
+  if (id === 'tags') {
+    return (
+      <div className="min-w-0 overflow-hidden px-3 py-2">
+        {item.tags?.length ? <TagRow tags={item.tags} /> : <span className="text-muted-foreground">—</span>}
+      </div>
+    );
+  }
+  if (id === 'kind') {
+    return (
+      <div className="min-w-0 overflow-hidden px-3 py-2">
+        <KindBadge item={item} />
       </div>
     );
   }
@@ -369,13 +382,6 @@ function NetworkCell({ id, item, locale }: { id: NetworkColumnId; item: NetworkL
     return (
       <div className="min-w-0 overflow-hidden px-3 py-2">
         <StatusBadges item={item} />
-      </div>
-    );
-  }
-  if (id === 'graph') {
-    return (
-      <div className="min-w-0 truncate px-3 py-2 text-muted-foreground">
-        {t('networks.list.counts', { nodes: item.nodeCount, edges: item.edgeCount })}
       </div>
     );
   }
@@ -426,9 +432,8 @@ function MobileCards({ items, onOpen }: { items: NetworkListItem[]; onOpen: (id:
               <div className="mt-2">
                 <StatusBadges item={item} />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('networks.list.counts', { nodes: item.nodeCount, edges: item.edgeCount })}
-                {' · '}
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <KindBadge item={item} />
                 {formatRelative(Date.parse(item.updatedAt), i18n.language)}
               </p>
               <TagRow tags={item.tags} />
@@ -440,6 +445,24 @@ function MobileCards({ items, onOpen }: { items: NetworkListItem[]; onOpen: (id:
         </li>
       ))}
     </ul>
+  );
+}
+
+/** How the network runs: a chief that delegates (orchestrator) or a chain of steps (linear). */
+function KindBadge({ item }: { item: NetworkListItem }) {
+  const { t } = useTranslation();
+  if (!item.kind) return <span className="text-muted-foreground">—</span>;
+  const Icon = item.kind === 'orchestrator' ? Waypoints : GitCommitHorizontal;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs',
+        item.kind === 'orchestrator' ? 'border-primary/40 bg-primary/10 text-primary' : 'text-foreground',
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden />
+      {t(`networks.kind.${item.kind}`)}
+    </span>
   );
 }
 

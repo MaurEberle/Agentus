@@ -61,6 +61,16 @@ def test_list_last_run_is_the_newest_run_that_still_exists(client: TestClient) -
     assert item["lastRunId"] is None
 
 
+def test_the_list_says_whether_a_network_has_an_orchestrator(client: TestClient) -> None:
+    """The management list shows and filters "orchestrator" or "linear" instead of node counts."""
+    from tests.run.test_validate import _orchestrator_doc
+
+    linear = client.post("/api/networks", json=mini_doc()).json()["id"]
+    chief = client.post("/api/networks", json={**_orchestrator_doc(), "name": "chief"}).json()["id"]
+    kinds = {row["id"]: row["kind"] for row in client.get("/api/networks").json()["items"]}
+    assert kinds[linear] == "linear" and kinds[chief] == "orchestrator"
+
+
 def test_delete_running_network_409(client: TestClient) -> None:
     created = client.post("/api/networks", json=mini_doc(requireInput=True))
     network_id = created.json()["id"]

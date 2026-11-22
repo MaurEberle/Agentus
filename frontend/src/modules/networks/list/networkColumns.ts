@@ -1,24 +1,26 @@
-export type NetworkColumnId = 'name' | 'description' | 'status' | 'graph' | 'updated';
+export type NetworkColumnId = 'name' | 'tags' | 'kind' | 'description' | 'status' | 'updated';
 
 const STORAGE_KEY = 'agentus.networks.listColumns';
 
-export const NETWORK_COLUMN_IDS: NetworkColumnId[] = ['name', 'description', 'status', 'graph', 'updated'];
+export const NETWORK_COLUMN_IDS: NetworkColumnId[] = ['name', 'tags', 'kind', 'description', 'status', 'updated'];
 
 export const DEFAULT_NETWORK_ORDER: NetworkColumnId[] = [...NETWORK_COLUMN_IDS];
 
 const DEFAULT_WIDTH: Record<NetworkColumnId, number> = {
-  name: 240,
-  description: 200,
+  name: 220,
+  tags: 220,
+  kind: 140,
+  description: 220,
   status: 168,
-  graph: 180,
   updated: 140,
 };
 
 const MIN_WIDTH: Record<NetworkColumnId, number> = {
   name: 120,
+  tags: 96,
+  kind: 96,
   description: 80,
   status: 96,
-  graph: 96,
   updated: 88,
 };
 
@@ -41,11 +43,14 @@ export function clampColumnWidth(id: NetworkColumnId, value: number): number {
 export function normalizeNetworkColumns(raw: unknown): NetworkColumnLayout {
   const record = raw && typeof raw === 'object' ? (raw as { order?: unknown; widths?: unknown }) : {};
   const order: NetworkColumnId[] = [];
-  if (Array.isArray(record.order)) {
-    for (const item of record.order) {
-      if (typeof item === 'string' && isColumnId(item) && !order.includes(item)) order.push(item);
-    }
+  const saved = Array.isArray(record.order) ? record.order : [];
+  for (const raw of saved) {
+    // Layouts saved before 2026-11-22: "graph" (node and edge counts) became "kind" at its place.
+    const item = raw === 'graph' ? 'kind' : raw;
+    if (typeof item === 'string' && isColumnId(item) && !order.includes(item)) order.push(item);
   }
+  // Tags had no column of their own: they come second, right after the name.
+  if (saved.length > 0 && !saved.includes('tags')) order.splice(Math.min(1, order.length), 0, 'tags');
   for (const id of DEFAULT_NETWORK_ORDER) {
     if (!order.includes(id)) order.push(id);
   }

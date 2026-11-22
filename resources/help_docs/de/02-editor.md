@@ -7,7 +7,7 @@ Der Editor unter **Netzwerk** bearbeitet **ein** Graph-Dokument. Die **Verwaltun
 | Ort | URL-Sinn | Typische Aktionen |
 |-----|----------|-------------------|
 | Editor | Neu oder ein geladenes Netz | Zeichnen, Inspector, Speichern, Laden-Dialog, Duplizieren, Export des offenen Graphen |
-| Verwaltung | alle Netze | Suche, Tags, als aktiv setzen, Import/Export mehrerer Dateien, Löschen |
+| Verwaltung | alle Netze | Suche, Tags (eigene Spalte), Art des Netzes (Orchestrator oder linear, Umschalter „Orchestrator – Alle – Linear“), als aktiv setzen, Import/Export mehrerer Dateien, Löschen |
 
 **Als aktiv setzen** und **Löschen** gehören in die Verwaltung (oder die Schnellwahl für aktiv). Der Laden-Dialog im Editor öffnet nur **ein** Netz und löscht nichts.
 

@@ -69,7 +69,7 @@ export function NetworksModule() {
   const tagFilter = useNetworksUi((state) => state.tagFilter);
   const tagMode = useNetworksUi((state) => state.tagMode);
   const onlyValid = useNetworksUi((state) => state.onlyValid);
-  const onlyActive = useNetworksUi((state) => state.onlyActive);
+  const kind = useNetworksUi((state) => state.kind);
   const sortKey = useNetworksUi((state) => state.sortKey);
   const sortDir = useNetworksUi((state) => state.sortDir);
   const selectedIds = useNetworksUi((state) => state.selectedIds);
@@ -78,8 +78,8 @@ export function NetworksModule() {
   const pruneSelection = useNetworksUi((state) => state.pruneSelection);
   const setQuery = useNetworksUi((state) => state.setQuery);
   const filtered = useMemo(
-    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, tagMode, onlyValid, onlyActive, sortKey, sortDir }),
-    [filterQuery, items, onlyActive, onlyValid, sortDir, sortKey, tagFilter, tagMode],
+    () => applyNetworkFilters(items, { query: filterQuery, tagFilter, tagMode, onlyValid, kind, sortKey, sortDir }),
+    [filterQuery, items, kind, onlyValid, sortDir, sortKey, tagFilter, tagMode],
   );
   const selected = useMemo(
     () => selectedIds.map((id) => items.find((item) => item.id === id)).filter((item): item is NetworkListItem => Boolean(item)),
@@ -87,7 +87,7 @@ export function NetworksModule() {
   );
   const tags = useMemo(() => uniqueTags(items), [items]);
   const seedTags = useMemo(() => sharedTags(selected), [selected]);
-  const filtersOn = Boolean(filterQuery.trim() || tagFilter.length || onlyValid || onlyActive);
+  const filtersOn = Boolean(filterQuery.trim() || tagFilter.length || onlyValid || kind !== 'all');
   const tagSelectionKey = `${tagMode}\n${tagFilter.join('\n')}`;
   useEffect(() => {
     if (query.isLoading) return;
@@ -268,7 +268,7 @@ export function NetworksModule() {
               variant="outline"
               onClick={() => {
                 setQuery('');
-                useNetworksUi.setState({ tagFilter: [], tagMode: 'or', onlyValid: false, onlyActive: false });
+                useNetworksUi.setState({ tagFilter: [], tagMode: 'or', onlyValid: false, kind: 'all' });
               }}
             >
               {t('networks.empty.clearFilters')}

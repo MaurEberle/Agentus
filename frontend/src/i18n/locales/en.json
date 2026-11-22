@@ -1319,6 +1319,10 @@
     }
   },
   "networks": {
+    "kind": {
+      "orchestrator": "Orchestrator",
+      "linear": "Linear"
+    },
     "title": "Library",
     "copySuffix": "(Copy)",
     "ribbon": {
@@ -1349,11 +1353,19 @@
       "direction": "Sort direction",
       "tags": "Tags",
       "onlyValid": "Valid only",
-      "onlyActive": "Active only"
+      "onlyActive": "Active only",
+      "kind": "Kind of network",
+      "kinds": {
+        "orchestrator": "Orchestrator",
+        "all": "All",
+        "linear": "Linear"
+      }
     },
     "list": {
       "selectAll": "Select all visible",
       "name": "Name",
+      "tags": "Tags",
+      "kind": "Kind",
       "description": "Description",
       "status": "Status",
       "graph": "Graph",

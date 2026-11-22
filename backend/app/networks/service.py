@@ -74,6 +74,8 @@ def _item(
         "lastUsedAt": row.last_used_at,
         "nodeCount": len(doc.nodes) if doc else 0,
         "edgeCount": len(doc.edges) if doc else 0,
+        # How the network runs: a chief that delegates, or a chain of steps (list filter).
+        "kind": "orchestrator" if doc and any(node.type == "orchestrator" for node in doc.nodes) else "linear",
         "validationStatus": status,
         "validationErrors": errors or None,
         "isActive": ctx["active_id"] == row.id,
