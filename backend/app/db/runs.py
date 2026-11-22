@@ -140,6 +140,10 @@ def _step_dict(row: Any) -> dict[str, Any]:
     }
 
 
+# Value of the error filter for failed runs without an error key.
+NO_ERROR_KEY = "none"
+
+
 def _run_filters(
     *,
     since: str | None,
@@ -149,6 +153,7 @@ def _run_filters(
     outcome: list[str] | None,
     model: str | None,
     q: str | None,
+    error: str | None = None,
     alias: str = "runs",
 ) -> tuple[str, list[object]]:
     clauses: list[str] = []
@@ -196,6 +201,15 @@ def _run_filters(
             """
         )
         params.extend([like, like, like])
+    if error == NO_ERROR_KEY:
+        # Failed runs that stored no error key (their own tile in the error map).
+        clauses.append(
+            f"IFNULL({alias}.error_message, '') = '' AND {alias}.outcome IN ('failed', 'timeout')"
+        )
+    elif error:
+        # Exact error key of a failed run ("run.orchestrator.stuck"): a tile of the error map.
+        clauses.append(f"{alias}.error_message = ?")
+        params.append(error)
     sql = (" AND " + " AND ".join(clauses)) if clauses else ""
     return sql, params
 
@@ -403,6 +417,7 @@ def list_runs(
     outcome: list[str] | None = None,
     model: str | None = None,
     q: str | None = None,
+    error: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     where, params = _run_filters(
         since=since,
@@ -412,6 +427,7 @@ def list_runs(
         outcome=outcome,
         model=model,
         q=q,
+        error=error,
     )
     with locked("history") as conn:
         total_row = conn.execute(
@@ -634,6 +650,7 @@ def list_calls(
     outcome: list[str] | None = None,
     model: str | None = None,
     q: str | None = None,
+    error: str | None = None,
     newest_first: bool = False,
 ) -> list[dict[str, Any]]:
     """Calls of one run in the order they happened, or a page across runs.
@@ -650,6 +667,7 @@ def list_calls(
         outcome=outcome,
         model=model,
         q=q,
+        error=error,
     )
     order = "DESC" if newest_first else "ASC"
     with locked("history") as conn:
@@ -676,6 +694,7 @@ def _call_filters(
     outcome: list[str] | None,
     model: str | None,
     q: str | None,
+    error: str | None = None,
 ) -> tuple[str, list[object]]:
     clauses: list[str] = []
     params: list[object] = []
@@ -690,6 +709,7 @@ def _call_filters(
         outcome=outcome,
         model=model,
         q=q,
+        error=error,
         alias="runs",
     )
     params.extend(extra_params)
@@ -721,6 +741,7 @@ def call_stats_by_model(
     outcome: list[str] | None = None,
     model: str | None = None,
     q: str | None = None,
+    error: str | None = None,
 ) -> list[dict[str, Any]]:
     """Per provider and model over every call of the filtered runs, not over one page (H10)."""
     where, params = _call_filters(
@@ -732,6 +753,7 @@ def call_stats_by_model(
         outcome=outcome,
         model=model,
         q=q,
+        error=error,
     )
     with locked("history") as conn:
         rows = conn.execute(

@@ -71,7 +71,12 @@
       "template": "Hay plantilla de chat",
       "size": "Tamaño",
       "modified": "Modificado",
-      "vramNow": "VRAM en uso"
+      "vramNow": "VRAM en uso",
+      "groupArchitecture": "Arquitectura",
+      "groupFile": "Archivo y origen",
+      "loadedVram": "Cargado · {{size}} VRAM",
+      "digest": "Suma de comprobación",
+      "licenseShow": "Mostrar el texto de la licencia"
     },
     "delete": {
       "title": "Borrar modelo",
@@ -141,7 +146,9 @@
         "tools": "Herramientas",
         "thinking": "Pensamiento",
         "vision": "Visión",
-        "moe": "MoE"
+        "moe": "MoE",
+        "groupDetails": "Detalles",
+        "groupSource": "Origen"
       }
     },
     "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." },
@@ -1662,7 +1669,15 @@
     },
     "errors": {
       "title": "Errores más frecuentes",
-      "empty": "Ningún error en este filtro."
+      "empty": "Ningún error en este filtro.",
+      "total_one": "{{count}} ejecución fallida · haz clic para filtrar",
+      "total_other": "{{count}} ejecuciones fallidas · haz clic para filtrar",
+      "runs_one": "{{count}} ejecución",
+      "runs_other": "{{count}} ejecuciones",
+      "last": "última vez {{date}}",
+      "filtered": "Filtrado: {{name}}",
+      "noKey": "Sin mensaje de error",
+      "more": "{{count}} tipos de error más"
     },
     "errorClass": {
       "timeout": "Tiempo agotado",
@@ -1671,7 +1686,8 @@
       "validation": "Validación",
       "service": "Servicio",
       "unknown": "Desconocido",
-      "orchestrator": "Orquestador"
+      "orchestrator": "Orquestador",
+      "budget": "Presupuesto"
     },
     "tab": {
       "history": "Historial",

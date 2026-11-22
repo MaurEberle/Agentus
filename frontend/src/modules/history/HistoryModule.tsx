@@ -15,7 +15,7 @@ import { useSettingsQuery, useStoresQuery } from '@/modules/settings/api';
 import { deleteRuns, deleteRunsOlderThan, getRun, listCalls, listRunLogs, listRuns, toApiFilter } from '@/modules/history/api';
 import { RunsChart } from '@/modules/history/chart/RunsChart';
 import { RunDetailPanel } from '@/modules/history/detail/RunDetailPanel';
-import { ErrorTop } from '@/modules/history/errors/ErrorTop';
+import { ErrorMap } from '@/modules/history/errors/ErrorMap';
 import { FilterBar } from '@/modules/history/filters/FilterBar';
 import { useHistoryFilters } from '@/modules/history/filters/storage';
 import { KpiRow } from '@/modules/history/kpi/KpiRow';
@@ -28,7 +28,7 @@ import {
   aggregateModels,
   aggregateNetworks,
   computeChart,
-  computeErrorTop,
+  computeErrorMap,
   computeKpis,
   modelRowsFromStats,
 } from '@/modules/history/model/stats';
@@ -39,7 +39,7 @@ import {
   resolveBounds,
   sameFilter,
 } from '@/modules/history/model/url';
-import { PAGE_SIZE, STATS_LIMIT, type ErrorTopRow, type HistoryFilter, type HistoryTab, type LogEvent } from '@/modules/history/model/types';
+import { PAGE_SIZE, STATS_LIMIT, type ErrorTile, type HistoryFilter, type HistoryTab, type LogEvent } from '@/modules/history/model/types';
 import { useHistoryPanes } from '@/modules/history/panes';
 import { HistoryRibbon } from '@/modules/history/ribbon/Ribbon';
 import { useHistoryUi } from '@/modules/history/store';
@@ -99,16 +99,26 @@ export function HistoryModule() {
           outcomes: filter.outcomes,
           model: filter.model,
           q: filter.q,
+          error: filter.error,
         },
         { limit: STATS_LIMIT, offset: 0 },
       ),
-    [bounds, filter.model, filter.networkId, filter.q, outcomeKey],
+    [bounds, filter.error, filter.model, filter.networkId, filter.q, outcomeKey],
   );
+  // The error map keeps every tile while one of them filters the list: its runs come
+  // without the error filter (the same query as the unfiltered list, so mostly cached).
+  const mapFilter = useMemo(() => ({ ...apiFilter, error: undefined }), [apiFilter]);
 
   const runsQuery = useQuery({
     queryKey: ['runs', 'history', apiFilter],
     queryFn: () => listRuns(apiFilter),
     enabled: historyOk,
+    placeholderData: keepPreviousData,
+  });
+  const mapQuery = useQuery({
+    queryKey: ['runs', 'history', mapFilter],
+    queryFn: () => listRuns(mapFilter),
+    enabled: historyOk && Boolean(filter.error),
     placeholderData: keepPreviousData,
   });
   const callsQuery = useQuery({
@@ -152,7 +162,8 @@ export function HistoryModule() {
 
   const kpis = useMemo(() => computeKpis(items), [items]);
   const buckets = useMemo(() => computeChart(items, bounds.from, bounds.to, i18n.language), [bounds.from, bounds.to, i18n.language, items]);
-  const errors = useMemo(() => computeErrorTop(items), [items]);
+  const mapRuns = filter.error ? mapQuery.data?.items : items;
+  const errors = useMemo(() => computeErrorMap(mapRuns ?? []), [mapRuns]);
   // H10: the server counts every call of the filtered runs. The page of calls is only a
   // fallback for an older backend; it covers at most STATS_LIMIT calls.
   const modelRows = useMemo(() => {
@@ -355,11 +366,17 @@ export function HistoryModule() {
     }
   }
 
-  function onPickError(row: ErrorTopRow) {
-    patchFilter({ q: row.errorClass, tab: 'history', page: 1 });
+  function onPickError(tile: ErrorTile) {
+    if (!tile.error) return;
+    // A second click on the same tile lifts the filter.
+    patchFilter({ error: filter.error === tile.error ? '' : tile.error, tab: 'history', page: 1 });
   }
 
-  const emptyAll = !runsQuery.isLoading && total === 0 && !filter.q && !filter.networkId && !filter.model && filter.outcomes.length === 0 && filter.range === '7d';
+  function clearErrorFilter() {
+    patchFilter({ error: '', page: 1 });
+  }
+
+  const emptyAll = !runsQuery.isLoading && total === 0 && !filter.q && !filter.networkId && !filter.model && !filter.error && filter.outcomes.length === 0 && filter.range === '7d';
   const emptyFiltered = !runsQuery.isLoading && total === 0 && !emptyAll;
   const showDetail = Boolean(runId);
   const missing = Boolean(runId && detailQuery.isFetched && !detailQuery.data);
@@ -475,7 +492,7 @@ export function HistoryModule() {
               style={desktop ? paneColStyle(1 - panes.statsShare) : undefined}
             >
               <div className="min-h-0 w-full" style={{ height: panes.errorsH }}>
-                <ErrorTop rows={errors} onPick={onPickError} />
+                <ErrorMap tiles={errors} activeError={filter.error} onPick={onPickError} onClear={clearErrorFilter} />
               </div>
               <HeightGrip
                 label={t('history.resize.errorsHeight')}

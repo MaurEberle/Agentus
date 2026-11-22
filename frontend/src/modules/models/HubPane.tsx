@@ -19,9 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ApiError, queryClient } from '@/api/client';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { enqueueDownload, hubFiles, listDownloads, listInstalled, searchHub } from '@/modules/models/api';
-import { modelLabel } from '@/lib/modelName';
+import { formatParameters, modelLabel } from '@/lib/modelName';
+import { DetailHero, DetailSection, ExternalLink, FeatureBadge, KeyFacts } from '@/modules/models/ModelDetailParts';
 import { downloadLabel, hubLocalState, tagKey } from '@/modules/models/hubState';
-import type { HubFiles, QuantFile } from '@/modules/models/model';
+import type { QuantFile } from '@/modules/models/model';
 import { useHostResourcesQuery } from '@/modules/settings/api';
 import { inferenceVramBytes } from '@/modules/network/inspector/vram';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
@@ -44,6 +45,10 @@ function useWideLayout(): boolean {
   return wide;
 }
 
+function compactNumber(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+
 function yesNo(t: (key: string) => string, value: boolean): string {
   return t(value ? 'models.detail.loadedYes' : 'models.detail.loadedNo');
 }
@@ -53,57 +58,6 @@ function pipelineLabel(t: (key: string) => string, pipeline?: string): string | 
   if (pipeline === 'feature-extraction' || pipeline === 'sentence-similarity') return t('models.hub.types.embed');
   if (pipeline === 'image-text-to-text') return t('models.hub.types.vision');
   return pipeline ?? null;
-}
-
-function HubFacts({ data }: { data: HubFiles }) {
-  const { t, i18n } = useTranslation();
-  const rows: [string, string][] = [
-    [t('models.hub.detail.author'), data.author ?? ''],
-    [t('models.hub.detail.pipeline'), pipelineLabel(t, data.pipeline) ?? ''],
-    [t('models.hub.detail.downloads'), data.downloads ? data.downloads.toLocaleString(i18n.language) : ''],
-    [t('models.hub.detail.likes'), data.likes ? data.likes.toLocaleString(i18n.language) : ''],
-    [t('models.hub.detail.updated'), data.updatedAt ? formatDateTime(data.updatedAt, i18n.language) : ''],
-    [t('models.hub.detail.architecture'), data.architecture ?? ''],
-    [t('models.hub.detail.parameters'), data.parameters ?? ''],
-    [t('models.hub.detail.context'), data.contextLength ? String(data.contextLength) : ''],
-    [t('models.hub.detail.repo'), data.repoBytes ? formatBytes(data.repoBytes, i18n.language) : ''],
-    [t('models.hub.detail.languages'), data.languages?.length ? data.languages.join(', ') : ''],
-    [t('models.hub.detail.tools'), yesNo(t, data.tools)],
-    [t('models.hub.detail.thinking'), yesNo(t, data.thinking)],
-    [t('models.hub.detail.vision'), yesNo(t, data.vision)],
-    [t('models.hub.detail.moe'), yesNo(t, data.moe)],
-    [t('models.hub.detail.template'), yesNo(t, data.hasTemplate)],
-  ].filter(([, value]) => value !== '') as [string, string][];
-  return (
-    <dl className="grid gap-2 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd className="min-w-0 break-words">{value}</dd>
-        </div>
-      ))}
-      {data.license ? (
-        <div className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-          <dt className="text-muted-foreground">{t('models.hub.detail.license')}</dt>
-          <dd className="min-w-0 break-words">
-            {data.licenseUrl ? (
-              <a className="text-primary underline" href={data.licenseUrl} target="_blank" rel="noreferrer">{data.license}</a>
-            ) : data.license}
-          </dd>
-        </div>
-      ) : null}
-      {data.baseModel ? (
-        <div className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-          <dt className="text-muted-foreground">{t('models.hub.detail.base')}</dt>
-          <dd className="min-w-0 break-words">
-            {data.baseUrl ? (
-              <a className="text-primary underline" href={data.baseUrl} target="_blank" rel="noreferrer">{data.baseModel}</a>
-            ) : data.baseModel}
-          </dd>
-        </div>
-      ) : null}
-    </dl>
-  );
 }
 
 const PIPELINES = ['text', 'embed', 'vision', 'moe'] as const satisfies readonly HubPipeline[];
@@ -598,63 +552,145 @@ export function HubPane() {
           </div>
         </div>
         <WidthGrip label={t('models.split')} share={listShare} onChange={(next) => patchHub({ share: clampShare(next) })} />
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-3 md:border-l">
-          {!picked ? <p className="text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto md:border-l">
+          {!picked ? <p className="p-4 text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
           {picked && !detail && !filesError ? (
             <div className="flex justify-center py-10">
               <Spinner size="lg" label={t('app.loading')} />
             </div>
           ) : null}
           {filesError && picked && !detail ? (
-            <p className="text-sm text-muted-foreground">{t(filesError, { defaultValue: t('models.hub.failed') })}</p>
+            <p className="p-4 text-sm text-muted-foreground">{t(filesError, { defaultValue: t('models.hub.failed') })}</p>
           ) : null}
-          {detail?.reason === 'gated' ? <p className="text-sm text-destructive">{t('models.hub.gated')}</p> : null}
-          {detail?.reason === 'no-gguf' ? <p className="text-sm text-muted-foreground">{t('models.hub.noGguf')}</p> : null}
           {detail ? (
-            <div className="grid gap-3">
-              <HubFacts data={detail} />
-              <label className="grid gap-1 text-sm">
-                {t('models.hub.quants')}
-                <Select value={quant ?? ''} onValueChange={setQuant} disabled={!detail.quants.length}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {detail.quants.map((item) => {
-                      const job = local.downloadByKey.get(tagKey(item.tag));
-                      const state = isInstalled(item) ? t('models.hub.state.installed') : job ? downloadLabel(t, job) : '';
-                      return (
-                        <SelectItem key={item.tag} value={item.tag}>
-                          {item.quant}
-                          {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes, i18n.language)}` : ''}
-                          {state ? ` · ${state}` : ''}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </label>
-              {chosen?.sizeBytes && vram > 0 && chosen.sizeBytes > vram ? (
-                <p className="text-xs text-muted-foreground">{t('models.hub.vramHint')}</p>
-              ) : null}
-              {/* Locked while this quant is installed or in the download queue (queued, running, paused). */}
-              <Button
-                type="button"
-                disabled={!chosen || chosenInstalled || Boolean(chosenJob) || !detail.installable || queuing}
-                loading={queuing}
-                onClick={() => chosen && !chosenInstalled && !chosenJob && void install(chosen)}
+            <div className="flex min-h-full flex-col">
+              <DetailHero
+                title={modelLabel(detail.id).name}
+                publisher={detail.author ?? modelLabel(detail.id).publisher}
+                badges={
+                  <>
+                    {pipelineLabel(t, detail.pipeline) ? (
+                      <FeatureBadge
+                        kind={detail.moe ? 'moe' : undefined}
+                        label={[pipelineLabel(t, detail.pipeline), detail.moe ? t('models.badges.moe') : '']
+                          .filter(Boolean)
+                          .join(' · ')}
+                        strong
+                      />
+                    ) : detail.moe ? (
+                      <FeatureBadge kind="moe" label={t('models.badges.moe')} strong />
+                    ) : null}
+                    {(local.installedByRepo.get(detail.id.toLowerCase()) ?? []).length > 0 ? (
+                      <FeatureBadge live label={t('models.hub.state.installed')} />
+                    ) : null}
+                    {detail.tools ? <FeatureBadge kind="tools" label={t('models.badges.tools')} /> : null}
+                    {detail.thinking ? <FeatureBadge kind="thinking" label={t('models.badges.thinking')} /> : null}
+                    {detail.vision ? <FeatureBadge kind="vision" label={t('models.badges.vision')} /> : null}
+                  </>
+                }
               >
-                {chosenInstalled
-                  ? t('models.hub.installed')
-                  : chosenJob
-                    ? downloadLabel(t, chosenJob)
-                    : t('models.hub.install')}
-              </Button>
-              {chosenJob && !chosenInstalled ? (
-                <p className="text-xs text-muted-foreground">
-                  {t('models.hub.state.busy')}{' '}
-                  <Link to="/downloads" className="text-primary underline">{t('models.downloads.title')}</Link>
-                </p>
-              ) : null}
-              <a className="text-sm text-primary underline" href={detail.url} target="_blank" rel="noreferrer">{t('models.hub.open')}</a>
+                <KeyFacts
+                  items={[
+                    { label: t('models.hub.detail.parameters'), value: formatParameters(detail.parameters) },
+                    {
+                      label: t('models.hub.detail.context'),
+                      value: detail.contextLength ? new Intl.NumberFormat(i18n.language).format(detail.contextLength) : null,
+                    },
+                    {
+                      label: t('models.hub.detail.downloads'),
+                      value: detail.downloads ? compactNumber(detail.downloads, i18n.language) : null,
+                      hint: detail.downloads ? detail.downloads.toLocaleString(i18n.language) : undefined,
+                    },
+                    {
+                      label: t('models.hub.detail.likes'),
+                      value: detail.likes ? compactNumber(detail.likes, i18n.language) : null,
+                      hint: detail.likes ? detail.likes.toLocaleString(i18n.language) : undefined,
+                    },
+                  ]}
+                />
+              </DetailHero>
+              <div className="grid gap-4 p-4">
+                {/* Installing is the action of this pane: right after the figures. */}
+                <section className="space-y-2 rounded-md border bg-muted/20 p-3">
+                  <h3 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {t('models.hub.install')}
+                  </h3>
+                  {detail.reason === 'gated' ? <p className="text-sm text-destructive">{t('models.hub.gated')}</p> : null}
+                  {detail.reason === 'no-gguf' ? (
+                    <p className="text-sm text-muted-foreground">{t('models.hub.noGguf')}</p>
+                  ) : null}
+                  <label className="grid gap-1 text-sm">
+                    <span className="text-muted-foreground">{t('models.hub.quants')}</span>
+                    <Select value={quant ?? ''} onValueChange={setQuant} disabled={!detail.quants.length}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {detail.quants.map((item) => {
+                          const job = local.downloadByKey.get(tagKey(item.tag));
+                          const state = isInstalled(item) ? t('models.hub.state.installed') : job ? downloadLabel(t, job) : '';
+                          return (
+                            <SelectItem key={item.tag} value={item.tag}>
+                              {item.quant}
+                              {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes, i18n.language)}` : ''}
+                              {state ? ` · ${state}` : ''}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  {chosen?.sizeBytes && vram > 0 && chosen.sizeBytes > vram ? (
+                    <p className="text-xs text-muted-foreground">{t('models.hub.vramHint')}</p>
+                  ) : null}
+                  {/* Locked while this quant is installed or in the download queue (queued, running, paused). */}
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={!chosen || chosenInstalled || Boolean(chosenJob) || !detail.installable || queuing}
+                    loading={queuing}
+                    onClick={() => chosen && !chosenInstalled && !chosenJob && void install(chosen)}
+                  >
+                    {chosenInstalled
+                      ? t('models.hub.installed')
+                      : chosenJob
+                        ? downloadLabel(t, chosenJob)
+                        : t('models.hub.install')}
+                  </Button>
+                  {chosenJob && !chosenInstalled ? (
+                    <p className="text-xs text-muted-foreground">
+                      {t('models.hub.state.busy')}{' '}
+                      <Link to="/downloads" className="text-primary underline">{t('models.downloads.title')}</Link>
+                    </p>
+                  ) : null}
+                </section>
+                <DetailSection
+                  title={t('models.hub.detail.groupDetails')}
+                  rows={[
+                    [t('models.hub.detail.architecture'), detail.architecture],
+                    [t('models.hub.detail.updated'), detail.updatedAt ? formatDateTime(detail.updatedAt, i18n.language) : null],
+                    [t('models.hub.detail.repo'), detail.repoBytes ? formatBytes(detail.repoBytes, i18n.language) : null],
+                    [t('models.hub.detail.languages'), detail.languages?.length ? detail.languages.join(', ') : null],
+                    [t('models.hub.detail.template'), yesNo(t, detail.hasTemplate)],
+                  ]}
+                />
+                <DetailSection
+                  title={t('models.hub.detail.groupSource')}
+                  rows={[
+                    [
+                      t('models.hub.detail.base'),
+                      detail.baseModel ? (
+                        detail.baseUrl ? <ExternalLink href={detail.baseUrl}>{detail.baseModel}</ExternalLink> : detail.baseModel
+                      ) : null,
+                    ],
+                    [
+                      t('models.hub.detail.license'),
+                      detail.license ? (
+                        detail.licenseUrl ? <ExternalLink href={detail.licenseUrl}>{detail.license}</ExternalLink> : detail.license
+                      ) : null,
+                    ],
+                    [t('models.detail.hf'), <ExternalLink key="hf" href={detail.url} />],
+                  ]}
+                />
+              </div>
             </div>
           ) : null}
         </div>

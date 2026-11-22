@@ -6,9 +6,14 @@ import { LOG_VIEWS, type LogView } from '@/modules/monitoring/model/logView';
 export function LogViewSwitch({ value, onChange }: { value: LogView; onChange: (view: LogView) => void }) {
   const { t } = useTranslation();
   return (
-    <div>
-      <p className="text-xs font-medium">{t('runLog.views.label')}</p>
-      <div role="radiogroup" aria-label={t('runLog.views.label')} className="mt-1 inline-flex rounded-md border p-0.5">
+    <div className="grid gap-1.5">
+      {/* Same label and height as the other fields of the log toolbars. */}
+      <p className="text-xs font-medium leading-none">{t('runLog.views.label')}</p>
+      <div
+        role="radiogroup"
+        aria-label={t('runLog.views.label')}
+        className="inline-flex h-8 items-stretch rounded-md border border-input p-0.5 shadow-sm"
+      >
         {LOG_VIEWS.map((view) => (
           <button
             key={view}
@@ -18,7 +23,7 @@ export function LogViewSwitch({ value, onChange }: { value: LogView; onChange: (
             title={t(`runLog.views.${view}Hint`)}
             onClick={() => onChange(view)}
             className={cn(
-              'rounded px-2.5 py-1 text-xs transition-colors',
+              'flex items-center rounded px-2.5 text-sm transition-colors',
               value === view ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
             )}
           >

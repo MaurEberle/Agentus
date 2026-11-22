@@ -74,21 +74,22 @@ export function ArchiveLog({ logs, detail }: { logs: LogEvent[]; detail: RunDeta
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end gap-2">
         <LogViewSwitch value={view} onChange={setLogView} />
-        <div className="min-w-[8rem] flex-1">
+        <div className="grid min-w-[8rem] flex-1 gap-1.5">
           <Label className="text-xs" htmlFor="history-log-q">
             {t('history.log.search')}
           </Label>
           <Input
             id="history-log-q"
+            className="h-8"
             value={query}
             onChange={(event) => setLogQuery(event.target.value)}
             placeholder={t('runLog.views.searchHint')}
           />
         </div>
-        <div className="w-40">
+        <div className="grid w-40 gap-1.5">
           <Label className="text-xs">{t('history.log.node')}</Label>
           <Select value={nodeId ?? 'all'} onValueChange={(value) => setLogNodeId(value === 'all' ? null : value)}>
-            <SelectTrigger>
+            <SelectTrigger className="h-8">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -101,7 +102,7 @@ export function ArchiveLog({ logs, detail }: { logs: LogEvent[]; detail: RunDeta
             </SelectContent>
           </Select>
         </div>
-        <label className="flex items-center gap-2 pb-2 text-sm">
+        <label className="flex h-8 items-center gap-2 text-sm">
           <Checkbox checked={errorsOnly} onCheckedChange={(value) => setLogErrorsOnly(value === true)} />
           {t('history.log.errorsOnly')}
         </label>
@@ -109,7 +110,7 @@ export function ArchiveLog({ logs, detail }: { logs: LogEvent[]; detail: RunDeta
           type="button"
           size="sm"
           variant="outline"
-          className="mb-1"
+          className="text-sm"
           onClick={() => void exportText()}
           disabled={entries.length === 0}
         >

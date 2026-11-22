@@ -19,6 +19,7 @@ function queryString(filter: RunListFilter): string {
   if (filter.outcome?.length) params.set('outcome', filter.outcome.join(','));
   if (filter.model) params.set('model', filter.model);
   if (filter.q) params.set('q', filter.q);
+  if (filter.error) params.set('error', filter.error);
   if (filter.limit != null) params.set('limit', String(filter.limit));
   if (filter.offset != null) params.set('offset', String(filter.offset));
   const text = params.toString();
@@ -80,6 +81,7 @@ export function toApiFilter(
     outcomes: RunSummary['outcome'][];
     model: string;
     q: string;
+    error?: string;
   },
   extra?: { limit?: number; offset?: number },
 ): RunListFilter {
@@ -90,6 +92,7 @@ export function toApiFilter(
     outcome: filter.outcomes.length ? filter.outcomes : undefined,
     model: filter.model || undefined,
     q: filter.q.trim() || undefined,
+    error: filter.error || undefined,
     limit: extra?.limit,
     offset: extra?.offset,
   };

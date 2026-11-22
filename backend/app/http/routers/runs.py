@@ -42,6 +42,7 @@ def get_runs(
     outcome: str | None = None,
     model: str | None = None,
     q: str | None = None,
+    error: str | None = None,
     from_ts: str | None = Query(default=None, alias="from"),
     to_ts: str | None = Query(default=None, alias="to"),
 ) -> dict[str, Any]:
@@ -55,6 +56,7 @@ def get_runs(
         outcome=outcome.split(",") if outcome else None,
         model=model,
         q=q,
+        error=error,
     )
     camel = [_camel_run(item) for item in items]
     return {"items": camel, "total": total}
@@ -69,6 +71,7 @@ def get_calls(
     outcome: str | None = None,
     model: str | None = None,
     q: str | None = None,
+    error: str | None = None,
     from_ts: str | None = Query(default=None, alias="from"),
     to_ts: str | None = Query(default=None, alias="to"),
 ) -> dict[str, Any]:
@@ -81,6 +84,7 @@ def get_calls(
         "outcome": outcome.split(",") if outcome else None,
         "model": model,
         "q": q,
+        "error": error,
     }
     rows = list_calls(None, limit=limit, offset=offset, newest_first=True, **filters)
     return {

@@ -22,11 +22,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 import { formatBytes, formatDateTime } from '@/lib/format';
-import { modelLabel } from '@/lib/modelName';
+import { formatParameters, modelLabel } from '@/lib/modelName';
 import { applyTagEdit, matchesTags, parseTagTokens, sharedTagList, type TagMatch } from '@/lib/tags';
 import { cn } from '@/lib/utils';
 import { listInstalled, saveModelTags } from '@/modules/models/api';
 import { HubPane } from '@/modules/models/HubPane';
+import { DetailHero, DetailSection, ExternalLink, FeatureBadge, KeyFacts } from '@/modules/models/ModelDetailParts';
 import type { InstalledModel, ModelKind } from '@/modules/models/model';
 import { invalidateHubFiles, useModelsUi } from '@/modules/models/store';
 
@@ -312,54 +313,108 @@ function InstalledPane() {
   );
 }
 
+const MODEL_KINDS = ['embedding', 'image', 'moe', 'normal'] as const;
+
+/** "repo:Q4_K_M" without the quantization when the figures show it anyway; "llama3.2:1b" stays. */
+function titleOf(name: string, quantization?: string): string {
+  const colon = name.lastIndexOf(':');
+  if (colon < 0 || !quantization) return name;
+  return name.slice(colon + 1).toLowerCase() === quantization.toLowerCase() ? name.slice(0, colon) : name;
+}
+
+function shortDigest(digest: string): string {
+  const text = digest.replace(/^sha256:/, '');
+  return text.length > 20 ? `${text.slice(0, 10)}…${text.slice(-8)}` : text;
+}
+
+/** Installed model: name, publisher, type and abilities first; then figures; then groups. */
 function DetailPane({ item }: { item: InstalledModel | null }) {
   const { t, i18n } = useTranslation();
   if (!item) return <p className="p-4 text-sm text-muted-foreground">{t('models.detail.empty')}</p>;
-  const rows: [string, string][] = [
-    [t('models.detail.size'), item.sizeBytes ? formatBytes(item.sizeBytes, i18n.language) : '—'],
-    [t('models.detail.modified'), item.modifiedAt ? formatDateTime(item.modifiedAt, i18n.language) : '—'],
-    [t('models.detail.loaded'), item.loaded ? t('models.detail.loadedYes') : t('models.detail.loadedNo')],
-    [t('models.detail.family'), item.family || '—'],
-    [t('models.detail.parameters'), item.parameterSize || '—'],
-    [t('models.detail.quant'), item.quantization || '—'],
-    [t('models.detail.format'), item.format || '—'],
-    [t('models.detail.architecture'), item.architecture || '—'],
-    [t('models.detail.context'), item.contextLength ? String(item.contextLength) : '—'],
-    [t('models.detail.embedding'), item.embeddingLength ? String(item.embeddingLength) : '—'],
-    [t('models.detail.layers'), item.blockCount ? String(item.blockCount) : '—'],
-    [t('models.detail.experts'), item.expertCount ? String(item.expertCount) : '—'],
-    [t('models.detail.capabilities'), item.capabilities.length ? item.capabilities.join(', ') : '—'],
-  ];
-  if (item.loaded && item.vramBytes) rows.push([t('models.detail.vramNow'), formatBytes(item.vramBytes, i18n.language)]);
+  const label = modelLabel(item.name);
+  const number = new Intl.NumberFormat(i18n.language);
+  const kind = (MODEL_KINDS as readonly string[]).includes(item.kind) ? (item.kind as (typeof MODEL_KINDS)[number]) : 'normal';
+  const yes = (value: boolean) => (value ? t('models.detail.loadedYes') : t('models.detail.loadedNo'));
   return (
     <div className="flex min-h-full flex-col">
-      <div className="border-b px-3 py-2">
-        <h2 className="min-w-0 text-sm font-medium">
-          <ModelName value={item.name} variant="tag" className="font-mono text-xs" />
-        </h2>
-      </div>
-      <dl className="grid gap-2 p-3 text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className="min-w-0 break-words">{value}</dd>
-          </div>
-        ))}
-        {item.hfUrl ? (
-          <div className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2">
-            <dt className="text-muted-foreground">{t('models.detail.hf')}</dt>
-            <dd><a className="text-primary underline" href={item.hfUrl} target="_blank" rel="noreferrer">{item.hfUrl.replace('https://', '')}</a></dd>
-          </div>
-        ) : null}
-        {item.hasTemplate ? <p className="text-xs text-muted-foreground">{t('models.detail.template')}</p> : null}
+      <DetailHero
+        title={titleOf(label.name, item.quantization)}
+        publisher={label.publisher}
+        badges={
+          <>
+            <FeatureBadge
+              kind={kind === 'moe' ? 'moe' : kind === 'embedding' ? 'embedding' : undefined}
+              label={t(`models.kind.${kind}`)}
+              strong
+            />
+            {item.loaded ? (
+              <FeatureBadge
+                live
+                label={
+                  item.vramBytes
+                    ? t('models.detail.loadedVram', { size: formatBytes(item.vramBytes, i18n.language) })
+                    : t('models.detail.loaded')
+                }
+              />
+            ) : null}
+            {item.tools ? <FeatureBadge kind="tools" label={t('models.badges.tools')} /> : null}
+            {item.thinking ? <FeatureBadge kind="thinking" label={t('models.badges.thinking')} /> : null}
+            {item.vision ? <FeatureBadge kind="vision" label={t('models.badges.vision')} /> : null}
+            {item.tags.map((tag) => (
+              <FeatureBadge key={tag} kind="tag" label={tag} />
+            ))}
+          </>
+        }
+      >
+        <KeyFacts
+          items={[
+            { label: t('models.detail.parameters'), value: formatParameters(item.parameterSize) },
+            { label: t('models.detail.size'), value: item.sizeBytes ? formatBytes(item.sizeBytes, i18n.language) : null },
+            { label: t('models.detail.context'), value: item.contextLength ? number.format(item.contextLength) : null },
+            { label: t('models.detail.quant'), value: item.quantization },
+          ]}
+        />
+      </DetailHero>
+      <div className="grid gap-4 p-4">
+        <DetailSection
+          title={t('models.detail.groupArchitecture')}
+          rows={[
+            [t('models.detail.architecture'), item.architecture],
+            [t('models.detail.family'), item.family],
+            [t('models.detail.layers'), item.blockCount ? number.format(item.blockCount) : null],
+            [t('models.detail.experts'), item.expertCount ? number.format(item.expertCount) : null],
+            [t('models.detail.embedding'), item.embeddingLength ? number.format(item.embeddingLength) : null],
+            [t('models.detail.format'), item.format],
+          ]}
+        />
+        <DetailSection
+          title={t('models.detail.groupFile')}
+          rows={[
+            [t('models.detail.modified'), item.modifiedAt ? formatDateTime(item.modifiedAt, i18n.language) : null],
+            [t('models.hub.detail.template'), yes(item.hasTemplate)],
+            [t('models.detail.hf'), item.hfUrl ? <ExternalLink href={item.hfUrl} /> : null],
+            [
+              t('models.detail.digest'),
+              item.digest ? (
+                <span className="font-mono text-xs" title={item.digest}>
+                  {shortDigest(item.digest)}
+                </span>
+              ) : null,
+            ],
+          ]}
+        />
         {item.license ? (
-          <details>
-            <summary className="cursor-pointer text-muted-foreground">{t('models.detail.license')}</summary>
-            <p className="mt-1 whitespace-pre-wrap text-xs">{item.license}{item.licenseClipped ? '…' : ''}</p>
-          </details>
+          <DetailSection title={t('models.detail.license')} rows={[]}>
+            <details className="rounded-md border px-3 py-2 text-sm">
+              <summary className="cursor-pointer text-muted-foreground">{t('models.detail.licenseShow')}</summary>
+              <p className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-xs">
+                {item.license}
+                {item.licenseClipped ? '…' : ''}
+              </p>
+            </details>
+          </DetailSection>
         ) : null}
-        {item.digest ? <p className="break-all font-mono text-xs text-muted-foreground">{item.digest}</p> : null}
-      </dl>
+      </div>
     </div>
   );
 }

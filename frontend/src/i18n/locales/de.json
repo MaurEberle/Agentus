@@ -71,7 +71,12 @@
       "template": "Chat-Vorlage vorhanden",
       "size": "Größe",
       "modified": "Geändert",
-      "vramNow": "VRAM belegt"
+      "vramNow": "VRAM belegt",
+      "groupArchitecture": "Architektur",
+      "groupFile": "Datei und Herkunft",
+      "loadedVram": "Geladen · {{size}} VRAM",
+      "digest": "Prüfsumme",
+      "licenseShow": "Lizenztext anzeigen"
     },
     "delete": {
       "title": "Modell löschen",
@@ -141,7 +146,9 @@
         "tools": "Werkzeuge",
         "thinking": "Denken",
         "vision": "Sehen",
-        "moe": "MoE"
+        "moe": "MoE",
+        "groupDetails": "Details",
+        "groupSource": "Herkunft"
       }
     },
     "pull": { "failed": "Der Download ist fehlgeschlagen.", "invalid": "Dieser Modellname kann nicht geladen werden." },
@@ -1729,7 +1736,15 @@
     },
     "errors": {
       "title": "Häufigste Fehler",
-      "empty": "Keine Fehler in diesem Filter."
+      "empty": "Keine Fehler in diesem Filter.",
+      "total_one": "{{count}} fehlgeschlagener Lauf · zum Filtern anklicken",
+      "total_other": "{{count}} fehlgeschlagene Läufe · zum Filtern anklicken",
+      "runs_one": "{{count}} Lauf",
+      "runs_other": "{{count}} Läufe",
+      "last": "zuletzt {{date}}",
+      "filtered": "Gefiltert: {{name}}",
+      "noKey": "Ohne Fehlermeldung",
+      "more": "{{count}} weitere Fehlerarten"
     },
     "errorClass": {
       "timeout": "Timeout",
@@ -1738,7 +1753,8 @@
       "validation": "Validierung",
       "service": "Dienst",
       "unknown": "Unbekannt",
-      "orchestrator": "Orchestrator"
+      "orchestrator": "Orchestrator",
+      "budget": "Budget"
     },
     "tab": {
       "history": "Historie",

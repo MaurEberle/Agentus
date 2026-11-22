@@ -38,6 +38,27 @@ def test_list_runs_query_by_name() -> None:
     assert items[0]["id"] == "run-a"
 
 
+def test_list_runs_and_calls_by_exact_error() -> None:
+    """The error map of the history filters by one error key; similar keys stay out."""
+    init()
+    now = utc_now()
+    for run_id, error in (("run-s1", "run.orchestrator.stuck"), ("run-s2", "run.orchestrator.stuck"),
+                          ("run-c", "run.orchestrator.stuckClose"), ("run-u", "run.orchestrator.unreadable")):
+        insert_run(id=run_id, network_id="n1", network_name="Demo", started_at=now, outcome="running")
+        complete_run(run_id, outcome="failed", ended_at=now, error_message=error)
+        insert_call(run_id=run_id, provider="ollama", model="m", ok=True, tokens_in=10, tokens_out=1)
+    insert_run(id="run-ok", network_id="n1", network_name="Demo", started_at=now, outcome="succeeded")
+    items, total = list_runs(error="run.orchestrator.stuck")
+    assert total == 2 and {item["id"] for item in items} == {"run-s1", "run-s2"}
+    assert {call["run_id"] for call in list_calls(None, error="run.orchestrator.stuck")} == {"run-s1", "run-s2"}
+    assert list_runs(error="run.orchestrator.unreadable", q="Demo")[1] == 1
+    # "none": failed runs that stored no error key.
+    insert_run(id="run-n", network_id="n1", network_name="Demo", started_at=now, outcome="running")
+    complete_run("run-n", outcome="failed", ended_at=now)
+    assert [item["id"] for item in list_runs(error="none")[0]] == ["run-n"]
+    assert list_runs()[1] == 6
+
+
 def test_abandon_orphaned_runs() -> None:
     init()
     now = utc_now()

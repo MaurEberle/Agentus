@@ -67,6 +67,8 @@ Ribbon: Aktualisieren, Löschen ausgewählter Läufe, Logs exportieren, alte Ein
 
 **Ein Filter** steuert alles: Zeitraum (Heute, 7/30 Tage, von–bis), Netz, Modell, Suche (Lauf-ID, Netz, Fehler). KPIs, Diagramm „Läufe nach Tag“, häufigste Fehler, Tabs Historie / Pro Modell / Pro Netz und die Liste verwenden denselben Filter.
 
+**Häufigste Fehler** zeigt jede Fehlerart der fehlgeschlagenen Läufe als Fläche: je häufiger, desto größer, die Farbe nach Fehlerklasse (Orchestrator, LLM, Werkzeug, Timeout …). Große Flächen nennen auch Anteil, Knoten und das letzte Auftreten; bei kleinen steht das im Tooltip. Ein Klick filtert Kennzahlen, Diagramm und Liste auf diese Fehlerart; ein zweiter Klick oder das ✕ im Kopf hebt den Filter auf. Die Flächen bleiben dabei stehen.
+
 Diagramm und Fehlerliste sowie Lauf-Liste und Detail lassen sich wie im Monitoring am Rand ziehen. Die eingestellten Größen bleiben nach dem Schließen der App erhalten.
 
 ## Ergebnisse eines Laufs

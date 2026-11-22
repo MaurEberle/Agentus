@@ -21,6 +21,7 @@ export function defaultHistoryFilter(now = Date.now()): HistoryFilter {
     outcomes: [],
     model: '',
     q: '',
+    error: '',
     tab: 'history',
     page: 1,
   };
@@ -58,6 +59,7 @@ export function parseHistorySearch(params: URLSearchParams, now = Date.now()): H
     outcomes,
     model: params.get('model') ?? '',
     q: params.get('q') ?? '',
+    error: params.get('error') ?? '',
     tab,
     page,
   };
@@ -85,6 +87,7 @@ export function historySearchFrom(filter: HistoryFilter): URLSearchParams {
   if (filter.outcomes.length) params.set('outcome', filter.outcomes.join(','));
   if (filter.model) params.set('model', filter.model);
   if (filter.q.trim()) params.set('q', filter.q.trim());
+  if (filter.error) params.set('error', filter.error);
   if (filter.tab !== 'history') params.set('tab', filter.tab);
   if (filter.page > 1) params.set('page', String(filter.page));
   return params;
@@ -98,6 +101,7 @@ export function sameFilter(a: HistoryFilter, b: HistoryFilter): boolean {
     a.networkId === b.networkId &&
     a.model === b.model &&
     a.q === b.q &&
+    a.error === b.error &&
     a.tab === b.tab &&
     a.page === b.page &&
     a.outcomes.length === b.outcomes.length &&

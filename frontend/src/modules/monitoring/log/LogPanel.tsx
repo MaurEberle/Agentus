@@ -120,21 +120,22 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">
         <LogViewSwitch value={view} onChange={setLogView} />
-        <div className="min-w-[10rem] flex-1">
+        <div className="grid min-w-[10rem] flex-1 gap-1.5">
           <Label className="text-xs" htmlFor="monitoring-log-q">
             {t('monitoring.log.search')}
           </Label>
           <Input
             id="monitoring-log-q"
+            className="h-8"
             value={query}
             onChange={(event) => setLogQuery(event.target.value)}
             placeholder={t('runLog.views.searchHint')}
           />
         </div>
-        <div className="w-44">
+        <div className="grid w-44 gap-1.5">
           <Label className="text-xs">{t('monitoring.log.node')}</Label>
           <Select value={nodeId ?? 'all'} onValueChange={(value) => setLogNodeId(value === 'all' ? null : value)}>
-            <SelectTrigger>
+            <SelectTrigger className="h-8">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -147,23 +148,43 @@ export function LogPanel({ run }: { run: RunSnapshot | null }) {
             </SelectContent>
           </Select>
         </div>
-        <label className="flex items-center gap-2 pb-2 text-sm">
+        <label className="flex h-8 items-center gap-2 text-sm">
           <Checkbox checked={errorsOnly} onCheckedChange={(value) => setLogErrorsOnly(value === true)} />
           {t('monitoring.log.errorsOnly')}
         </label>
-        <div className="flex flex-wrap items-center gap-2 pb-1">
-          <Button type="button" size="sm" variant="outline" onClick={() => (autoscroll ? setAutoscroll(false) : jumpLatest())}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-sm"
+            onClick={() => (autoscroll ? setAutoscroll(false) : jumpLatest())}
+          >
             {autoscroll ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
             {autoscroll ? t('monitoring.log.pause') : t('monitoring.log.jumpLatest')}
           </Button>
           {!autoscroll && unseen > 0 ? (
             <Badge variant="secondary">{t('monitoring.log.newCount', { count: unseen })}</Badge>
           ) : null}
-          <Button type="button" size="sm" variant="outline" onClick={() => void exportText()} disabled={entries.length === 0}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-sm"
+            onClick={() => void exportText()}
+            disabled={entries.length === 0}
+          >
             <FileText className="size-3.5" />
             {t('monitoring.log.exportText')}
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => void exportJson()} disabled={entries.length === 0}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-sm"
+            onClick={() => void exportJson()}
+            disabled={entries.length === 0}
+          >
             <Download className="size-3.5" />
             {t('monitoring.log.export')}
           </Button>
