@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
+import { useCloudMotion } from '@/components/tags/useCloudMotion';
 import { compatibleTags, type TagMatch } from '@/lib/tags';
 import { cn } from '@/lib/utils';
 
@@ -42,15 +43,22 @@ export function TagCloudPanel({
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
-  const visible = needle ? tags.filter((tag) => tag.toLowerCase().includes(needle)) : tags;
   const allowed = compatibleTags(tagSets, selected, mode);
+  // AND narrows the cloud: a tag no item with the current selection carries leaves it.
+  const shown = tags.filter(
+    (tag) => (!needle || tag.toLowerCase().includes(needle)) && (allowed === null || allowed.has(tag)),
+  );
+  const { hostRef, capture } = useCloudMotion<HTMLDivElement>(shown.join('|'));
   return (
     <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', className)}>
       <div className="flex items-center gap-3">
         <Input
           type="search"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            capture();
+            setQuery(event.target.value);
+          }}
           placeholder={t('tagCloud.search')}
           aria-label={t('tagCloud.search')}
           className="h-8 min-w-0 flex-1 px-2.5 text-xs"
@@ -61,7 +69,10 @@ export function TagCloudPanel({
           </span>
           <Switch
             checked={mode === 'or'}
-            onCheckedChange={(value) => onModeChange(value ? 'or' : 'and')}
+            onCheckedChange={(value) => {
+              capture();
+              onModeChange(value ? 'or' : 'and');
+            }}
             aria-label={t('tagCloud.mode')}
             className="h-6 w-11 border-border bg-background p-0.5 data-[state=checked]:bg-background data-[state=unchecked]:bg-background [&>span]:bg-primary [&>span]:data-[state=checked]:translate-x-5"
           />
@@ -72,26 +83,32 @@ export function TagCloudPanel({
       </div>
       {tags.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{t('tagCloud.empty')}</p>
-      ) : visible.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">{t('tagCloud.noMatch')}</p>
       ) : (
-        <div className="mt-2 flex min-h-0 min-w-0 flex-1 flex-wrap content-start justify-start gap-1.5 overflow-auto" role="group" aria-label={label}>
-          {visible.map((tag) => {
+        // Stays mounted while the search finds nothing, so chips can fly out and back in.
+        <div
+          ref={hostRef}
+          className="relative isolate mt-2 flex min-h-0 min-w-0 flex-1 flex-wrap content-start justify-start gap-1.5 overflow-auto"
+          role="group"
+          aria-label={label}
+        >
+          {shown.length === 0 ? <p className="w-full text-sm text-muted-foreground">{t('tagCloud.noMatch')}</p> : null}
+          {shown.map((tag) => {
             const on = selected.includes(tag);
-            const blocked = allowed !== null && !allowed.has(tag);
             return (
               <button
                 key={tag}
                 type="button"
+                data-tag={tag}
                 aria-pressed={on}
-                disabled={blocked}
-                onClick={() => onToggle(tag)}
+                onClick={() => {
+                  capture();
+                  onToggle(tag);
+                }}
                 className={cn(
                   'rounded-full border px-2.5 py-0.5 text-xs font-medium',
                   on
                     ? 'border-transparent bg-primary text-primary-foreground'
                     : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  blocked && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
                 )}
               >
                 {tag}

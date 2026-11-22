@@ -14,6 +14,27 @@ export function sharedTags(items: NetworkListItem[]): string[] {
   return sharedTagList(items);
 }
 
+type NetworkScope = { onlyValid: boolean; kind: NetworksKindFilter };
+
+/** The kind switch and "only valid": the networks every other filter, the tag cloud included, works on. */
+function inScope(item: NetworkListItem, scope: NetworkScope): boolean {
+  if (scope.onlyValid && item.validationStatus !== 'valid') return false;
+  // Without a kind (older backend) a network counts as linear, as it has no orchestrator known.
+  return scope.kind === 'all' || (item.kind ?? 'linear') === scope.kind;
+}
+
+export function scopeNetworks(items: NetworkListItem[], scope: NetworkScope): NetworkListItem[] {
+  return items.filter((item) => inScope(item, scope));
+}
+
+/**
+ * Tags for the tag cloud: those of the networks in scope, plus any still selected, so a
+ * tag chosen before the kind switch moved can still be cleared.
+ */
+export function cloudTags(scoped: NetworkListItem[], selected: string[]): string[] {
+  return [...new Set([...uniqueTags(scoped), ...selected])].sort((a, b) => a.localeCompare(b));
+}
+
 export function applyNetworkFilters(
   items: NetworkListItem[],
   filters: {
@@ -28,9 +49,7 @@ export function applyNetworkFilters(
 ): NetworkListItem[] {
   const query = filters.query.trim().toLowerCase();
   let list = items.filter((item) => {
-    if (filters.onlyValid && item.validationStatus !== 'valid') return false;
-    // Without a kind (older backend) a network counts as linear, as it has no orchestrator known.
-    if (filters.kind !== 'all' && (item.kind ?? 'linear') !== filters.kind) return false;
+    if (!inScope(item, filters)) return false;
     if (!matchesTags(item.tags, filters.tagFilter, filters.tagMode)) return false;
     if (!query) return true;
     const haystack = `${item.name} ${item.description ?? ''} ${(item.tags ?? []).join(' ')}`.toLowerCase();
