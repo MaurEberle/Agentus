@@ -1368,10 +1368,11 @@
       "kind": "Art",
       "description": "Beschreibung",
       "status": "Status",
-      "graph": "Graph",
       "updated": "Geändert",
       "lastUsed": "Zuletzt verwendet",
-      "counts": "{{nodes}} Knoten · {{edges}} Kanten",
+      "allTags": "Alle Tags: {{tags}}",
+      "tagCount_one": "{{count}} Tag",
+      "tagCount_other": "{{count}} Tags",
       "move": "{{column}} verschieben",
       "resize": "Breite von {{column}} ändern"
     },
@@ -1389,6 +1390,9 @@
       "multi": "{{count}} ausgewählt",
       "noDescription": "Keine Beschreibung.",
       "lastRun": "Letzter Lauf",
+      "neverUsed": "Noch nie verwendet",
+      "moreErrors_one": "und {{count}} weiterer Fehler",
+      "moreErrors_other": "und {{count}} weitere Fehler",
       "resize": "Detailbreite ändern",
       "graphLoading": "Graph wird geladen…"
     },

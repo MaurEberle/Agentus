@@ -7,7 +7,7 @@ El editor en **Red** edita **un** documento de grafo. La **Biblioteca** es el ca
 | Lugar | Sentido de la URL | Acciones típicas |
 |-----|----------|-------------------|
 | Editor | Nueva o una red cargada | Dibujar, inspector, guardar, diálogo Abrir, duplicar, exportar el grafo abierto |
-| Biblioteca | todas las redes | Búsqueda, etiquetas (columna propia), tipo de red (orquestador o lineal, selector «Orquestador – Todas – Lineal»), definir como activa, importar/exportar varios archivos, borrar |
+| Biblioteca | todas las redes | Búsqueda, etiquetas (columna propia, como máximo dos líneas; al pasar el puntero sobre «…» se ven todas), detalles a la derecha con tipo, estado con errores, etiquetas, modificada y último uso, tipo de red (orquestador o lineal, selector «Orquestador – Todas – Lineal»), definir como activa, importar/exportar varios archivos, borrar |
 
 **Definir como activa** y **Borrar** pertenecen a la biblioteca (o a la selección rápida para activa). El diálogo Abrir del editor abre solo **una** red y no borra nada.
 

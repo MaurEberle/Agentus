@@ -1301,10 +1301,11 @@
       "kind": "Tipo",
       "description": "Descripción",
       "status": "Estado",
-      "graph": "Grafo",
       "updated": "Modificada",
       "lastUsed": "Último uso",
-      "counts": "{{nodes}} nodos · {{edges}} aristas",
+      "allTags": "Todas las etiquetas: {{tags}}",
+      "tagCount_one": "{{count}} etiqueta",
+      "tagCount_other": "{{count}} etiquetas",
       "move": "Mover {{column}}",
       "resize": "Cambiar el ancho de {{column}}"
     },
@@ -1322,6 +1323,9 @@
       "multi": "{{count}} seleccionadas",
       "noDescription": "Sin descripción.",
       "lastRun": "Última ejecución",
+      "neverUsed": "Nunca usada",
+      "moreErrors_one": "y {{count}} error más",
+      "moreErrors_other": "y {{count}} errores más",
       "resize": "Cambiar el ancho de los detalles",
       "graphLoading": "Cargando el grafo…"
     },

@@ -4,6 +4,7 @@ import { ApiError, apiFetch, queryClient } from '@/api/client';
 import type { NetworkOption, SessionDto, StartRunResponse, StopRunResponse } from '@/api/types';
 import i18n from '@/i18n';
 import { notify } from '@/lib/notifications';
+import { GRAPH_ERROR_TEXT } from '@/lib/validationText';
 import { listNetworkSummaries } from '@/modules/dashboard/api';
 import { useAppStore } from '@/store';
 import type { ServiceStatus } from '@/store/session';
@@ -19,41 +20,8 @@ const START_ERROR_DESC: Record<string, string> = {
   'runtime.timeout': 'settings.runtime.timeout',
   'runtime.unreachable': 'settings.runtime.unreachable',
   'runtime.upstream': 'settings.runtime.unreachable',
-  'graph.knowledge.path': 'network.validation.knowledgePath',
-  'graph.knowledge.helpCorpus': 'network.validation.knowledgeHelpCorpus',
-  'graph.knowledge.dataDir': 'network.validation.knowledgeDataDir',
-  'graph.fileAccess.root': 'network.validation.fileAccessRoot',
-  'graph.terminal.root': 'network.validation.terminalRoot',
-  'graph.zip.root': 'network.validation.zipRoot',
-  'graph.fileAccess.rootMissing': 'network.validation.fileAccessRootMissing',
-  'graph.terminal.rootMissing': 'network.validation.terminalRootMissing',
-  'graph.zip.rootMissing': 'network.validation.zipRootMissing',
-  'graph.terminal.programs': 'network.validation.terminalPrograms',
-  'graph.tool.maxCalls': 'network.validation.toolMaxCalls',
-  'graph.llm.temperature': 'network.validation.llmTemperature',
-  'graph.llm.maxTokens': 'network.validation.llmMaxTokens',
-  'graph.llm.maxTokensContext': 'network.validation.llmMaxTokensContext',
-  'graph.knowledge.topK': 'network.validation.knowledgeTopK',
-  'graph.knowledge.score': 'network.validation.knowledgeScore',
-  'graph.http.credentialUrl': 'network.validation.httpCredentialUrl',
-  'graph.cycle': 'network.validation.cycle',
-  'graph.agent.noLlm': 'network.validation.agentLlm',
-  'graph.agent.noMessage': 'network.validation.agentMessage',
   'run.startFailed': 'notify.runStartFailed.desc',
-  'graph.llm.credential': 'network.validation.modelRequired',
-  'graph.end.missing': 'network.validation.endRequired',
-  'graph.chatInput.duplicate': 'network.validation.tooManyChatInputs',
-  'graph.orchestrator.duplicate': 'network.validation.orchestratorDuplicate',
-  'graph.orchestrator.noChat': 'network.validation.orchestratorChat',
-  'graph.orchestrator.fanout': 'network.validation.orchestratorFanout',
-  'graph.orchestrator.noEnd': 'network.validation.orchestratorEnd',
-  'graph.orchestrator.noLlm': 'network.validation.orchestratorLlm',
-  'graph.orchestrator.looseAgent': 'network.validation.orchestratorLooseAgent',
-  'graph.orchestrator.noAgents': 'network.validation.orchestratorAgents',
-  'graph.chain.noEnd': 'network.validation.chainEnd',
-  'graph.agent.mode': 'network.validation.agentMode',
-  'graph.agent.channel': 'network.validation.agentChannel',
-  'graph.edge.invalid': 'network.validation.edgeType',
+  ...GRAPH_ERROR_TEXT,
 };
 
 function notifyStartError(error: unknown) {

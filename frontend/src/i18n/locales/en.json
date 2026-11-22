@@ -1368,10 +1368,11 @@
       "kind": "Kind",
       "description": "Description",
       "status": "Status",
-      "graph": "Graph",
       "updated": "Updated",
       "lastUsed": "Last used",
-      "counts": "{{nodes}} nodes · {{edges}} edges",
+      "allTags": "All tags: {{tags}}",
+      "tagCount_one": "{{count}} tag",
+      "tagCount_other": "{{count}} tags",
       "move": "Move {{column}}",
       "resize": "Resize {{column}}"
     },
@@ -1389,6 +1390,9 @@
       "multi": "{{count}} selected",
       "noDescription": "No description.",
       "lastRun": "Last run",
+      "neverUsed": "Never used",
+      "moreErrors_one": "and {{count}} more error",
+      "moreErrors_other": "and {{count}} more errors",
       "resize": "Resize details",
       "graphLoading": "Loading graph…"
     },
