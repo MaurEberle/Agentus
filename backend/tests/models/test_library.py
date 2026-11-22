@@ -54,15 +54,18 @@ def test_hub_sort_keys_match_the_api() -> None:
     assert hf_sort_key("trending") == "trendingScore"
     assert hf_sort_key("modified") == "lastModified"
     assert hf_sort_key("name") == "downloads"
+    assert hf_sort_key("new") == "createdAt"
 
 
 def test_pipeline_tags_cover_every_type_when_unset() -> None:
     assert pipeline_tags("") == (
         "text-generation",
+        "image-text-to-text",
         "feature-extraction",
         "sentence-similarity",
-        "image-text-to-text",
     )
+    # Chat models, those that also see included; "Sehen" decides about the latter.
+    assert pipeline_tags("text") == ("text-generation", "image-text-to-text")
     assert pipeline_tags("all") == pipeline_tags("")
     assert pipeline_tags("text,vision") == ("text-generation", "image-text-to-text")
     assert pipeline_tags("embed") == ("feature-extraction", "sentence-similarity")
@@ -108,7 +111,8 @@ def test_vision_is_filtered_by_task() -> None:
     pipes, must, never = narrow_pipelines(every, (), ("vision",))
     assert "image-text-to-text" not in pipes and len(pipes) == 3
     assert (must, never) == ((), ())
-    assert narrow_pipelines(pipeline_tags("text"), ("vision",), ())[0] == ()
+    assert narrow_pipelines(pipeline_tags("text"), (), ("vision",))[0] == ("text-generation",)
+    assert narrow_pipelines(pipeline_tags("embed"), ("vision",), ())[0] == ()
 
 
 def test_page_marks_and_cursor_link() -> None:
@@ -222,10 +226,27 @@ def test_flags_come_from_the_listing_and_the_template_is_dropped() -> None:
         "tags": ["gguf", "reasoning"],
         "gguf": {"architecture": "qwen3moe", "chat_template": "{% if tools %}<tool_call>{% endif %}"},
     }
+    row["gguf"].update({"total": 27_009_346_304, "context_length": 131072})
     slim = slim_row(row)
     assert "gguf" not in slim and "tags" not in slim
     hit = _row_hit(slim)
     assert hit is not None and (hit.tools, hit.thinking, hit.vision, hit.moe) == (True, True, False, True)
+    assert (hit.parameters, hit.parameter_count, hit.context_length) == ("27B", 27_009_346_304, 131072)
+
+
+def test_minimum_context_and_installed_repos_filter(monkeypatch) -> None:
+    from app.llm import hub
+
+    rows = _rows("text-generation", 9, 8, 7)
+    rows[0]["context"] = 131072
+    rows[1]["context"] = 32768  # rows[2] has no known context
+    _fake_hub(monkeypatch, {"text-generation": rows})
+    result = hub.search_hub(search="", pipeline="text", size="any", sort="likes", limit=10, min_context=65536)
+    assert [item.id for item in result.items] == ["text/m9"]
+    monkeypatch.setattr(hub, "_installed_keys", lambda: {"hf.co/text/m9:q4_k_m", "llama3.2:1b"})
+    assert hub.installed_repos() == frozenset({"text/m9"})
+    shown = hub.search_hub(search="", pipeline="text", size="any", sort="likes", limit=10, hide_installed=True)
+    assert [item.id for item in shown.items] == ["text/m8", "text/m7"]
 
 
 def test_a_failing_task_is_left_out_and_tried_on_the_next_page(monkeypatch) -> None:

@@ -48,6 +48,7 @@ _EXPAND = (
     "gguf",
     "trendingScore",
     "lastModified",
+    "createdAt",
     "private",
     "gated",
     "disabled",
@@ -60,6 +61,7 @@ _ROW_KEEP = (
     "likes",
     "trendingScore",
     "lastModified",
+    "createdAt",
     "private",
     "gated",
     "disabled",
@@ -80,8 +82,10 @@ _PULL = re.compile(
     r"^hf\.co/[A-Za-z0-9][A-Za-z0-9._-]{0,80}/[A-Za-z0-9][A-Za-z0-9._-]{0,120}:[A-Za-z0-9][A-Za-z0-9._+-]{0,180}$"
 )
 
+# "text" is every chat model, those that also see images included; the "vision" capability
+# (Sehen) picks or drops those. "vision" stays as a type for older requests.
 PIPELINES = {
-    "text": ("text-generation",),
+    "text": ("text-generation", "image-text-to-text"),
     "embed": ("feature-extraction", "sentence-similarity"),
     "vision": ("image-text-to-text",),
 }
@@ -99,7 +103,7 @@ def pipeline_tags(pipeline: str) -> tuple[str, ...]:
     """UI keys, comma-separated. Empty or ``all`` means every type."""
     keys = [part.strip() for part in pipeline.split(",") if part.strip() and part.strip() != "all" and part.strip() != "moe"]
     if not keys:
-        keys = ["text", "embed", "vision"]
+        keys = ["text", "embed"]
     tags: list[str] = []
     seen: set[str] = set()
     for key in keys:
@@ -155,18 +159,19 @@ SORTS = {
     "likes": "likes",
     "trending": "trendingScore",
     "modified": "lastModified",
+    "new": "createdAt",
 }
 
 
 def hf_sort_key(sort: str) -> str:
-    """Hub names. The Hub sorts these four, and only descending; anything else is downloads."""
+    """Hub names. The Hub sorts these, and only descending; anything else is downloads."""
     return SORTS.get(sort, "downloads")
 
 
 def sort_value(row: dict[str, Any], sort_key: str) -> float | str:
     """The value the Hub sorted a row by, so rows of several tasks merge in the same order."""
     value = row.get(sort_key)
-    if sort_key == "lastModified":
+    if sort_key in ("lastModified", "createdAt"):
         return value if isinstance(value, str) else ""
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0.0
 
@@ -181,6 +186,10 @@ class HubHit(ApiModel):
     thinking: bool = False
     vision: bool = False
     moe: bool = False
+    # From the GGUF header in the listing: "27B", the raw weight count, and the context window.
+    parameters: str | None = None
+    parameter_count: int | None = Field(default=None, alias="parameterCount")
+    context_length: int | None = Field(default=None, alias="contextLength")
 
 
 class HubSearchResponse(ApiModel):
@@ -330,6 +339,13 @@ def slim_row(row: dict[str, Any]) -> dict[str, Any]:
     model_id = row.get("modelId") or row.get("id")
     slim = {key: row[key] for key in _ROW_KEEP if key in row}
     slim["flags"] = flags_from_card(row, model_id if isinstance(model_id, str) else "")
+    gguf = row.get("gguf") if isinstance(row.get("gguf"), dict) else {}
+    total = gguf.get("total")
+    context = gguf.get("context_length")
+    if isinstance(total, int) and not isinstance(total, bool) and total > 0:
+        slim["params"] = total
+    if isinstance(context, int) and not isinstance(context, bool) and context > 0:
+        slim["context"] = context
     return slim
 
 
@@ -521,8 +537,20 @@ def narrow_pipelines(
     return pipes, tuple(key for key in must if key != "vision"), tuple(key for key in never if key != "vision")
 
 
-def _matches(item: HubHit, must: tuple[str, ...], never: tuple[str, ...] = (), moe: bool = False) -> bool:
+def _matches(
+    item: HubHit,
+    must: tuple[str, ...],
+    never: tuple[str, ...] = (),
+    moe: bool = False,
+    min_context: int = 0,
+    skip: frozenset[str] = frozenset(),
+) -> bool:
+    """Capabilities, MoE, a minimum context (unknown counts as too short) and repos to leave out."""
     if moe and not item.moe:
+        return False
+    if min_context and (item.context_length or 0) < min_context:
+        return False
+    if skip and item.id.lower() in skip:
         return False
     return all(getattr(item, key) for key in must) and not any(getattr(item, key) for key in never)
 
@@ -538,6 +566,9 @@ def _row_hit(row: dict[str, Any]) -> HubHit | None:
     if not (isinstance(flags, tuple) and len(flags) == 4):
         flags = (False, False, False, moe_from_name(model_id))
     tools, thinking, vision, moe = flags
+    params = row.get("params")
+    context = row.get("context")
+    count = params if isinstance(params, int) and params > 0 else None
     return HubHit(
         id=model_id,
         pipeline=tag if isinstance(tag, str) else None,
@@ -548,6 +579,9 @@ def _row_hit(row: dict[str, Any]) -> HubHit | None:
         thinking=bool(thinking),
         vision=bool(vision),
         moe=bool(moe),
+        parameters=format_parameter_count(count) if count else None,
+        parameter_count=count,
+        context_length=context if isinstance(context, int) and context > 0 else None,
     )
 
 
@@ -597,6 +631,8 @@ def _search_merged(
     must: tuple[str, ...],
     never: tuple[str, ...],
     moe: bool,
+    min_context: int = 0,
+    skip: frozenset[str] = frozenset(),
 ) -> HubSearchResponse:
     """Read every task's Hub results in the Hub's order and merge them by the sort value.
 
@@ -672,7 +708,7 @@ def _search_merged(
             break
         index, (hit, _) = best
         states[index]["n"] += 1
-        if hit is None or hit.id in seen or not _matches(hit, must, never, moe):
+        if hit is None or hit.id in seen or not _matches(hit, must, never, moe, min_context, skip):
             continue
         seen.add(hit.id)
         collected.append(hit)
@@ -693,6 +729,8 @@ def search_hub(
     cursor: str | None = None,
     capabilities: str = "",
     without: str = "",
+    min_context: int = 0,
+    hide_installed: bool = False,
 ) -> HubSearchResponse:
     """GGUF models of the chosen tasks, merged by the sort value (the Hub sorts descending only)."""
     tasks, moe = type_selection(pipeline)
@@ -711,7 +749,22 @@ def search_hub(
         must=must,
         never=never,
         moe=moe,
+        min_context=max(0, min(int(min_context or 0), 10_000_000)),
+        skip=installed_repos() if hide_installed else frozenset(),
     )
+
+
+_HF_REPO = re.compile(r"^(?:hf\.co|huggingface\.co)/([^/:\s]+/[^/:\s]+)(?::\S*)?$", re.IGNORECASE)
+
+
+def installed_repos() -> frozenset[str]:
+    """Hugging Face repos with at least one quant pulled into Ollama, lower case."""
+    found = set()
+    for key in _installed_keys():
+        match = _HF_REPO.match(key)
+        if match:
+            found.add(match.group(1).lower())
+    return frozenset(found)
 
 
 def _file_size(row: dict[str, Any]) -> int | None:

@@ -15,13 +15,17 @@ import { BrandMark } from '@/components/BrandMark';
 import { ModelName } from '@/components/ModelName';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError, queryClient } from '@/api/client';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { enqueueDownload, hubFiles, listDownloads, listInstalled, searchHub } from '@/modules/models/api';
 import { formatParameters, modelLabel } from '@/lib/modelName';
+import { cn } from '@/lib/utils';
 import { DetailHero, DetailSection, ExternalLink, FeatureBadge, KeyFacts } from '@/modules/models/ModelDetailParts';
 import { HubCapabilityFilter } from '@/modules/models/HubCapabilityFilter';
+import { HubContextFilter } from '@/modules/models/HubContextFilter';
+import { contextLabel, gpuFit, maxFitBillions, q4Bytes, type GpuFit } from '@/modules/models/hubFit';
 import { HubSizeFilter } from '@/modules/models/HubSizeFilter';
 import { sizeQuery } from '@/modules/models/hubSize';
 import { downloadLabel, hubLocalState, tagKey } from '@/modules/models/hubState';
@@ -69,14 +73,20 @@ function yesNo(t: (key: string) => string, value: boolean): string {
 function pipelineLabel(t: (key: string) => string, pipeline?: string): string | null {
   if (pipeline === 'text-generation') return t('models.hub.types.text');
   if (pipeline === 'feature-extraction' || pipeline === 'sentence-similarity') return t('models.hub.types.embed');
-  if (pipeline === 'image-text-to-text') return t('models.hub.types.vision');
+  // A chat model that also sees: the Sehen badge says so.
+  if (pipeline === 'image-text-to-text') return t('models.hub.types.text');
   return pipeline ?? null;
 }
 
-const PIPELINES = ['text', 'embed', 'vision', 'moe'] as const satisfies readonly HubPipeline[];
+const PIPELINES = ['text', 'embed', 'moe'] as const satisfies readonly HubPipeline[];
 type Pipeline = HubPipeline;
 // The Hub sorts these only descending; a name is found with the search field.
-const SORTS = ['downloads', 'likes', 'trending', 'modified'] as const satisfies readonly HubSort[];
+const SORTS = ['downloads', 'likes', 'trending', 'new', 'modified'] as const satisfies readonly HubSort[];
+const FIT_DOT: Record<GpuFit, string> = {
+  fits: 'bg-primary',
+  tight: 'bg-warning',
+  large: 'bg-muted-foreground/50',
+};
 function freshPage(): { page: number; cursors: (string | null)[] } {
   return { page: 0, cursors: [null] };
 }
@@ -104,7 +114,8 @@ export function HubPane() {
   const patchHub = useModelsUi((state) => state.patchHub);
   const resetHubFilters = useModelsUi((state) => state.resetHubFilters);
   const {
-    search, debounced, pipelines, minB, maxB, bounds, sort, capabilities, page, cursors, picked, quant, share,
+    search, debounced, pipelines, minB, maxB, bounds, sort, capabilities, minContext, hideInstalled, fitsGpu,
+    page, cursors, picked, quant, share,
     snapshot, files, filesError, filesNonce,
   } = hub;
   const pageSize: HubPageSize = (HUB_PAGE_SIZES as readonly number[]).includes(hub.pageSize) ? hub.pageSize : 30;
@@ -128,6 +139,9 @@ export function HubPane() {
       current.bounds.min === value.min && current.bounds.max === value.max ? current : { bounds: value, ...freshPage() }
     ));
   const setSort = (value: HubSort) => patchHub({ sort: value, ...freshPage() });
+  const setMinContext = (value: number) => patchHub({ minContext: value, ...freshPage() });
+  const setHideInstalled = (value: boolean) => patchHub({ hideInstalled: value, ...freshPage() });
+  const setFitsGpu = (value: boolean) => patchHub({ fitsGpu: value, ...freshPage() });
   const setPageSize = (value: HubPageSize) => patchHub({ pageSize: value, ...freshPage() });
   const setCapability = (key: HubCapability, choice: HubCapabilityRule | 'any') =>
     patchHub((current) => {
@@ -147,8 +161,23 @@ export function HubPane() {
   const wide = useWideLayout();
   const listShare = clampShare(share);
   const cursor = cursors[page] ?? '';
+  const resources = useHostResourcesQuery({ live: false });
+  const vram = inferenceVramBytes(resources.data?.gpus ?? []);
+  const fitMax = maxFitBillions(vram);
+  const sizeCap = fitsGpu ? fitMax : null;
+  // Installed models and the download queue: same queries as the models list and the
+  // download header (which polls), so the marks follow a running download.
+  const installedQuery = useQuery({ queryKey: ['models'], queryFn: listInstalled, gcTime: Number.POSITIVE_INFINITY });
+  const downloadsQuery = useQuery({ queryKey: ['models', 'downloads'], queryFn: listDownloads });
+  const local = useMemo(
+    () => hubLocalState(installedQuery.data, downloadsQuery.data?.items),
+    [installedQuery.data, downloadsQuery.data],
+  );
+  // While installed repos are hidden, a finished download refreshes the list.
+  const installedKey = hideInstalled ? [...local.installedByRepo.keys()].sort().join(',') : '';
   const requestKey = JSON.stringify([
     debounced, pipelines, bounds.min, bounds.max, sort, pageSize, cursor, capabilities, page,
+    minContext, hideInstalled, sizeCap, installedKey,
   ]);
   const stored = snapshot?.key === requestKey ? snapshot : null;
   const [searching, setSearching] = useState(() => !(stored && !stored.errorKey));
@@ -168,8 +197,6 @@ export function HubPane() {
   useEffect(() => {
     rememberHubPageSize(pageSize);
   }, [pageSize]);
-  const resources = useHostResourcesQuery({ live: false });
-  const vram = inferenceVramBytes(resources.data?.gpus ?? []);
   useEffect(() => {
     const current = useModelsUi.getState().hub.snapshot;
     if (current?.key === requestKey && !current.errorKey) {
@@ -184,12 +211,14 @@ export function HubPane() {
     void searchHub({
       search: debounced,
       pipeline: pipelines.length ? pipelines.join(',') : 'all',
-      size: sizeQuery(bounds.min, bounds.max),
+      size: sizeQuery(bounds.min, bounds.max, sizeCap),
       sort,
       limit: pageSize,
       cursor: activeCursor,
       caps: Object.keys(capabilities).filter((key) => capabilities[key as keyof HubCapabilities] === 'must').join(','),
       without: Object.keys(capabilities).filter((key) => capabilities[key as keyof HubCapabilities] === 'never').join(','),
+      context: minContext,
+      hideInstalled,
     }, controller.signal).then((data) => {
       if (gen !== hubSearchGen) return;
       patchHub({
@@ -254,14 +283,6 @@ export function HubPane() {
     if (next) patchHub({ quant: next.tag });
   }, [detail, patchHub]);
   const chosen = (detail?.quants ?? []).find((item) => item.tag === quant) ?? preferred;
-  // Installed models and the download queue: same queries as the models list and the
-  // download header (which polls), so the marks follow a running download.
-  const installedQuery = useQuery({ queryKey: ['models'], queryFn: listInstalled, gcTime: Number.POSITIVE_INFINITY });
-  const downloadsQuery = useQuery({ queryKey: ['models', 'downloads'], queryFn: listDownloads });
-  const local = useMemo(
-    () => hubLocalState(installedQuery.data, downloadsQuery.data?.items),
-    [installedQuery.data, downloadsQuery.data],
-  );
   const isInstalled = (file: QuantFile) => (local.installedKeys ? local.installedKeys.has(tagKey(file.tag)) : file.installed);
   const chosenInstalled = chosen ? isInstalled(chosen) : false;
   const chosenJob = chosen ? local.downloadByKey.get(tagKey(chosen.tag)) : undefined;
@@ -274,6 +295,9 @@ export function HubPane() {
     Object.keys(capabilities).length > 0 ||
     minB !== '' ||
     maxB !== '' ||
+    minContext !== 0 ||
+    hideInstalled ||
+    fitsGpu ||
     sort !== 'downloads';
   function resetFilters() {
     resetHubFilters();
@@ -350,7 +374,17 @@ export function HubPane() {
             </DropdownMenuContent>
           </DropdownMenu>
           <HubCapabilityFilter value={capabilities} onChoose={setCapability} />
-          <HubSizeFilter min={minB} max={maxB} onChange={setRange} />
+          <HubSizeFilter
+            min={minB}
+            max={maxB}
+            onChange={setRange}
+            gpu={{ maxB: fitMax, vram: formatBytes(vram, i18n.language), on: fitsGpu, onChange: setFitsGpu }}
+          />
+          <HubContextFilter value={minContext} onChange={setMinContext} />
+          <label className="flex h-8 shrink-0 items-center gap-2 px-1 text-xs">
+            <Switch checked={hideInstalled} onCheckedChange={(value) => setHideInstalled(value === true)} />
+            <span>{t('models.hub.hideInstalled')}</span>
+          </label>
           <Button
             type="button"
             size="icon"
@@ -376,6 +410,7 @@ export function HubPane() {
                 const repo = item.id.toLowerCase();
                 const installedTags = local.installedByRepo.get(repo) ?? [];
                 const job = local.downloadByRepo.get(repo);
+                const fit = gpuFit(item.parameterCount, vram);
                 return (
                 <li key={item.id}>
                   <button
@@ -408,15 +443,31 @@ export function HubPane() {
                         </Badge>
                       ) : null}
                     </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {[
-                        t('models.hub.downloads', { count: item.downloads.toLocaleString(i18n.language) }),
-                        t('models.hub.likes', { count: item.likes.toLocaleString(i18n.language) }),
-                        item.vision ? t('models.badges.vision') : '',
-                        item.tools ? t('models.badges.tools') : '',
-                        item.thinking ? t('models.badges.thinking') : '',
-                        item.moe ? t('models.badges.moe') : '',
-                      ].filter(Boolean).join(' · ')}
+                    <span className="flex min-w-0 max-w-full items-center gap-1.5 text-xs text-muted-foreground">
+                      {fit ? (
+                        <span
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 text-[11px] leading-4 text-foreground"
+                          title={t('models.hub.fit.hint', {
+                            size: formatBytes(q4Bytes(item.parameterCount ?? 0), i18n.language),
+                            vram: formatBytes(vram, i18n.language),
+                          })}
+                        >
+                          <span className={cn('size-1.5 rounded-full', FIT_DOT[fit])} aria-hidden />
+                          {t(`models.hub.fit.${fit}`)}
+                        </span>
+                      ) : null}
+                      <span className="truncate">
+                        {[
+                          formatParameters(item.parameters) ?? '',
+                          item.contextLength ? contextLabel(item.contextLength) : '',
+                          t('models.hub.downloads', { count: compactNumber(item.downloads, i18n.language) }),
+                          t('models.hub.likes', { count: item.likes.toLocaleString(i18n.language) }),
+                          item.vision ? t('models.badges.vision') : '',
+                          item.tools ? t('models.badges.tools') : '',
+                          item.thinking ? t('models.badges.thinking') : '',
+                          item.moe ? t('models.badges.moe') : '',
+                        ].filter(Boolean).join(' · ')}
+                      </span>
                     </span>
                   </button>
                 </li>

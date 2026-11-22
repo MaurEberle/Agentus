@@ -5,8 +5,9 @@ import type { HubFiles, HubHit, ModelKind } from '@/modules/models/model';
 export type ModelsTab = 'installed' | 'hub';
 export type InstalledSortKey = 'name' | 'size' | 'modified';
 /** What the Hub sorts by; it sorts descending only. */
-export type HubSort = 'downloads' | 'likes' | 'trending' | 'modified';
-export type HubPipeline = 'text' | 'embed' | 'vision' | 'moe';
+export type HubSort = 'downloads' | 'likes' | 'trending' | 'modified' | 'new';
+/** Text: chat models, with or without vision (the Sehen capability decides). */
+export type HubPipeline = 'text' | 'embed' | 'moe';
 export type HubCapability = 'tools' | 'thinking' | 'vision';
 /** A capability the model must have, or must not have; absent means either is fine. */
 export type HubCapabilityRule = 'must' | 'never';
@@ -73,6 +74,12 @@ type HubUi = {
   sort: HubSort;
   pageSize: HubPageSize;
   capabilities: HubCapabilities;
+  /** Minimum context window in tokens; 0 is any. */
+  minContext: number;
+  /** Leave out repos with a quant already pulled. */
+  hideInstalled: boolean;
+  /** Only models whose Q4_K_M fits the GPU. */
+  fitsGpu: boolean;
   page: number;
   cursors: (string | null)[];
   picked: string | null;
@@ -106,7 +113,10 @@ const installedDefaults: InstalledUi = {
   share: 0.62,
 };
 
-export const hubFilterDefaults: Pick<HubUi, 'search' | 'debounced' | 'pipelines' | 'minB' | 'maxB' | 'bounds' | 'sort' | 'capabilities'> = {
+export const hubFilterDefaults: Pick<
+  HubUi,
+  'search' | 'debounced' | 'pipelines' | 'minB' | 'maxB' | 'bounds' | 'sort' | 'capabilities' | 'minContext' | 'hideInstalled' | 'fitsGpu'
+> = {
   search: '',
   debounced: '',
   pipelines: [],
@@ -115,6 +125,9 @@ export const hubFilterDefaults: Pick<HubUi, 'search' | 'debounced' | 'pipelines'
   bounds: { min: '', max: '' },
   sort: 'downloads',
   capabilities: {},
+  minContext: 0,
+  hideInstalled: false,
+  fitsGpu: false,
 };
 
 export const useModelsUi = create<ModelsUiStore>((set) => ({

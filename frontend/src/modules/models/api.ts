@@ -22,6 +22,9 @@ export async function searchHub(params: {
   /** Capabilities a model must have, and must not have (comma-separated). */
   caps?: string;
   without?: string;
+  /** Minimum context window in tokens. */
+  context?: number;
+  hideInstalled?: boolean;
 }, signal?: AbortSignal): Promise<{
   items: HubHit[];
   messageKey?: string;
@@ -41,6 +44,8 @@ export async function searchHub(params: {
   if (params.cursor) query.set('cursor', params.cursor);
   if (params.caps) query.set('caps', params.caps);
   if (params.without) query.set('without', params.without);
+  if (params.context) query.set('context', String(params.context));
+  if (params.hideInstalled) query.set('hideInstalled', 'true');
   return apiFetch(`/models/hub?${query.toString()}`, { signal });
 }
 

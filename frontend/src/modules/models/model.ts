@@ -38,6 +38,10 @@ export type HubHit = {
   thinking: boolean;
   vision: boolean;
   moe: boolean;
+  /** "27B"; the raw weight count; the context window. From the GGUF header, when known. */
+  parameters?: string;
+  parameterCount?: number;
+  contextLength?: number;
 };
 
 export type QuantFile = {

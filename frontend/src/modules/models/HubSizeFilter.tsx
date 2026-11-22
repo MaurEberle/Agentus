@@ -3,13 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { billions } from '@/modules/models/hubSize';
 
-/** Slider stops in billions, roughly even on a log scale; the ends stand for "no bound". */
-const STOPS = [0.5, 1, 1.5, 2, 3, 4, 6, 8, 11, 14, 20, 32, 48, 70, 100, 150, 235, 400];
+/**
+ * Slider stops in billions; the handles move stop by stop, so the stops decide the room.
+ * Most of the track goes to 14–80B, where local models are usually weighed against each
+ * other; below and above it the steps are coarse. Exact values go in the fields.
+ */
+const STOPS = [1, 3, 4, 8, 12, 14, 20, 24, 27, 30, 32, 35, 40, 50, 60, 70, 80, 120, 235, 400];
 const LAST = STOPS.length + 1; // positions: 0 = no minimum, 1..STOPS.length = stops, LAST = no maximum
-const TICKS = [1, 3, 8, 14, 32, 70, 235];
+const TICKS = [3, 8, 14, 24, 32, 50, 70, 235];
 const THUMB_PX = 16;
 
 const PRESETS: { key: string; min: string; max: string }[] = [
@@ -57,10 +62,13 @@ const RANGE =
 export function HubSizeFilter({
   min,
   max,
+  gpu,
   onChange,
 }: {
   min: string;
   max: string;
+  /** "Only what fits the GPU": the largest model at Q4_K_M (null without a GPU) and the VRAM shown. */
+  gpu: { maxB: number | null; vram: string; on: boolean; onChange: (on: boolean) => void };
   /** `now`: search right away (a preset); otherwise once typing or dragging settles. */
   onChange: (next: { min: string; max: string }, now: boolean) => void;
 }) {
@@ -79,6 +87,8 @@ export function HubSizeFilter({
       : !high
         ? t('models.hub.range.from', { min: shown(low) })
         : t('models.hub.range.between', { min: shown(low), max: shown(high) });
+  const gpuOn = gpu.on && gpu.maxB != null;
+  const pill = [active ? label : '', gpuOn ? t('models.hub.fit.pill') : ''].filter(Boolean).join(' · ');
   const preset = PRESETS.find(
     (item) => (billions(item.min) ?? '') === (low ?? '') && (billions(item.max) ?? '') === (high ?? ''),
   )?.key;
@@ -93,12 +103,12 @@ export function HubSizeFilter({
           variant="outline"
           size="sm"
           className="h-8 w-auto shrink-0 gap-1.5 px-2.5 text-sm font-normal shadow-sm"
-          aria-label={`${t('models.hub.size')}: ${label}`}
+          aria-label={`${t('models.hub.size')}: ${pill || label}`}
         >
           <span>{t('models.hub.size')}</span>
-          {active ? (
+          {pill ? (
             <span className="inline-flex h-5 items-center rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground">
-              {label}
+              {pill}
             </span>
           ) : null}
           <ChevronDown className="size-4 opacity-60" />
@@ -194,6 +204,22 @@ export function HubSizeFilter({
             <span className="text-muted-foreground">B</span>
           </label>
         </div>
+        <label className="mt-3 flex items-start gap-2.5 border-t pt-3">
+          <Switch
+            checked={gpuOn}
+            disabled={gpu.maxB == null}
+            onCheckedChange={(value) => gpu.onChange(value === true)}
+            className="mt-0.5"
+          />
+          <span className="grid gap-0.5">
+            <span className="text-sm">{t('models.hub.fit.only')}</span>
+            <span className="text-xs text-muted-foreground">
+              {gpu.maxB == null
+                ? t('models.hub.fit.noGpu')
+                : t('models.hub.fit.onlyHint', { max: number.format(gpu.maxB), vram: gpu.vram })}
+            </span>
+          </span>
+        </label>
       </PopoverContent>
     </Popover>
   );

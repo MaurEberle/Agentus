@@ -117,6 +117,8 @@ def get_hub(
     cursor: str = "",
     caps: str = "",
     without: str = "",
+    context: int = 0,
+    hide_installed: Annotated[bool, Query(alias="hideInstalled")] = False,
 ) -> HubSearchResponse:
     return search_hub(
         search=search,
@@ -127,6 +129,8 @@ def get_hub(
         cursor=cursor or None,
         capabilities=caps,
         without=without,
+        min_context=context,
+        hide_installed=hide_installed,
     )
 
 

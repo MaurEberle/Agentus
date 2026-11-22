@@ -103,9 +103,9 @@
         "between": "{{min}}–{{max}}B"
       },
       "sort": "Orden",
-      "types": { "text": "Texto", "embed": "Embedding", "vision": "Visión", "moe": "MoE" },
+      "types": { "text": "Texto", "embed": "Embedding", "moe": "MoE" },
       "sizes": { "any": "Todo", "3": "hasta 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "más de 70B", "from": "desde", "to": "hasta" },
-      "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado" },
+      "sorts": { "downloads": "Descargas", "likes": "Me gusta", "trending": "Tendencia", "modified": "Modificado", "new": "Más nuevos" },
       "capabilities": "Capacidades",
       "rule": {
         "must": "Sí",
@@ -118,6 +118,19 @@
         "never": "No debe tenerla"
       },
       "reset": "Restablecer filtros",
+      "context": "Contexto",
+      "contextAny": "Cualquiera",
+      "hideInstalled": "Ocultar instalados",
+      "fit": {
+        "fits": "cabe",
+        "tight": "justo",
+        "large": "demasiado grande",
+        "pill": "GPU",
+        "hint": "≈ {{size}} con Q4_K_M · {{vram}} de VRAM",
+        "only": "Solo lo que cabe en la GPU",
+        "onlyHint": "hasta ≈ {{max}}B con Q4_K_M ({{vram}} de VRAM)",
+        "noGpu": "No se detectó ninguna GPU."
+      },
       "empty": "Ningún modelo coincide.",
       "failed": "La búsqueda falló.",
       "timeout": "Hugging Face no responde en este momento.",

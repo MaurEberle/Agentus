@@ -103,9 +103,9 @@
         "between": "{{min}}–{{max}}B"
       },
       "sort": "Sort",
-      "types": { "text": "Text", "embed": "Embedding", "vision": "Vision", "moe": "MoE" },
+      "types": { "text": "Text", "embed": "Embedding", "moe": "MoE" },
       "sizes": { "any": "All", "3": "up to 3B", "8": "3–8B", "14": "8–14B", "32": "14–32B", "70": "32–70B", "xl": "over 70B", "from": "from", "to": "to" },
-      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated" },
+      "sorts": { "downloads": "Downloads", "likes": "Likes", "trending": "Trending", "modified": "Updated", "new": "Newest" },
       "capabilities": "Capabilities",
       "rule": {
         "must": "Must",
@@ -118,6 +118,19 @@
         "never": "Must not have"
       },
       "reset": "Reset filters",
+      "context": "Context",
+      "contextAny": "Any",
+      "hideInstalled": "Hide installed",
+      "fit": {
+        "fits": "fits",
+        "tight": "tight",
+        "large": "too big",
+        "pill": "GPU",
+        "hint": "≈ {{size}} at Q4_K_M · {{vram}} VRAM",
+        "only": "Only what fits the GPU",
+        "onlyHint": "up to ≈ {{max}}B at Q4_K_M ({{vram}} VRAM)",
+        "noGpu": "No GPU detected."
+      },
       "empty": "No matching models.",
       "failed": "The search failed.",
       "timeout": "Hugging Face is not responding right now.",
