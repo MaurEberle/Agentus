@@ -88,7 +88,7 @@ def test_a_rejected_command_stays_in_the_prompt_for_this_and_the_next_call(monke
     from app.db.runs import list_logs
     from tests.run.test_harness import _drive
 
-    seen: dict = {"agent": [], "orch": 0}
+    seen: dict = {"agent": [], "orch": 0, "requests": []}
 
     def _complete(req: CompletionRequest, should_abort=None, on_progress=None) -> CompletionResult:
         system = req.messages[0].content or ""
@@ -100,6 +100,7 @@ def test_a_rejected_command_stays_in_the_prompt_for_this_and_the_next_call(monke
                 )
             return CompletionResult(content='{"action":"finish","text":"Fertig."}', model="m", finish_reason="stop")
         seen["agent"].append(system)
+        seen["requests"].append(list(req.messages))
         if len(seen["agent"]) == 1:
             # First call, first step: a command the terminal does not allow.
             return CompletionResult(
@@ -112,13 +113,21 @@ def test_a_rejected_command_stays_in_the_prompt_for_this_and_the_next_call(monke
 
     stored = _drive(monkeypatch, _complete, doc=_terminal_doc(tmp_path))
     assert stored["outcome"] == "succeeded", stored.get("error_message")
-    first, after, next_call = seen["agent"][0], seen["agent"][1], seen["agent"][2]
+    first, after = seen["agent"][0], seen["agent"][1]
+    # The next call of the agent starts again with system and task only.
+    starts = [index for index, request in enumerate(seen["requests"]) if len(request) == 2]
+    next_call = seen["agent"][starts[1]]
     # A: before any mistake the prompt says what to use instead.
     assert "- grep, findstr: file_access search with text" in first
     assert "# Rejected earlier in this run" not in first
-    # B: after the rejection the lesson is in the system prompt of the same call.
-    assert "# Rejected earlier in this run" in after
-    assert "`grep -n card src/app.css`: grep is not allowed here. Use file_access search with text" in after
+    # B: within the call the system prompt stays as it was (run 51a45408: a change there made
+    # hybrid models read the whole transcript again); the lesson comes with the tool result.
+    assert after == first
+    tool_result = [message for message in seen["requests"][1] if message.role == "tool"][-1].content or ""
+    assert (
+        "Remember for the rest of this task: `grep -n card src/app.css`: grep is not allowed here. "
+        "Use file_access search with text"
+    ) in tool_result
     # C: the next call of the same agent starts with it.
     assert "`grep -n card src/app.css`: grep is not allowed here." in next_call
     lessons = [row["payload"] for row in list_logs(stored["id"]) if row["message"] == "run.agent.terminalLesson"]

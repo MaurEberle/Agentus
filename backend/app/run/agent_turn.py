@@ -35,7 +35,7 @@ from app.run.limits import (
     MAX_SHORT_THINKS,
     MAX_TOOL_JSON_ATTEMPTS,
     REASONING_CHARS,
-    REASONING_STEPS_KEPT,
+    REASONING_STEPS_DEFAULT,
     STREAM_IDLE_TIMEOUT_SEC,
     SUBSTANTIAL_RESULT_CHARS,
 )
@@ -616,7 +616,7 @@ def _agent_turn(
                         reasoning=_kept_reasoning(result.reasoning),
                     )
                 )
-                _prune_reasoning(messages)
+                _prune_reasoning(messages, agent.reasoning_steps or REASONING_STEPS_DEFAULT)
                 hit_failure_limit = False
                 for call in result.tool_calls:
                     if tool_calls_used >= tool_cap:
@@ -637,13 +637,12 @@ def _agent_turn(
                     if not ok_call:
                         failed_total += 1
                         if call.name == "terminal":
-                            # Keep the mistake in the system prompt; the hint in the tool result scrolls away.
-                            before = terminal_lessons.block_for(ctrl, agent_id)
+                            # The lesson goes with this tool result; the next call of the agent
+                            # has it in its system prompt. Changing the system prompt here made
+                            # hybrid models read the whole transcript again (run 51a45408).
                             learned = terminal_lessons.note(ctrl, compiled, agent_id, call.arguments or "", body)
                             if learned:
-                                terminal_lessons.refresh_system(
-                                    messages, before, terminal_lessons.block_for(ctrl, agent_id)
-                                )
+                                body = terminal_lessons.with_lesson(body, terminal_lessons.line_of(ctrl, agent_id, learned))
                                 emit_log(
                                     "info",
                                     "run.agent.terminalLesson",
@@ -1062,16 +1061,23 @@ def _kept_reasoning(text: str | None) -> str | None:
     return clip_middle(cleaned, REASONING_CHARS) if cleaned else None
 
 
-def _prune_reasoning(messages: list[LlmMessage]) -> None:
-    """Keep reasoning on the latest REASONING_STEPS_KEPT assistant messages only."""
-    kept = 0
-    for index in range(len(messages) - 1, -1, -1):
-        message = messages[index]
-        if message.role != "assistant" or not message.reasoning:
-            continue
-        kept += 1
-        if kept > REASONING_STEPS_KEPT:
-            messages[index] = message.model_copy(update={"reasoning": None})
+def _prune_reasoning(messages: list[LlmMessage], keep: int = REASONING_STEPS_DEFAULT) -> bool:
+    """Keep the reasoning of the latest ``keep`` steps, cut in blocks. True when cut.
+
+    Run 51a45408 (2026-11-22): one old reasoning was dropped at every step. Ollama can only
+    reuse its cache when the new prompt extends the old one; for hybrid models with
+    recurrent layers (qwen35moe: Sage, Qwen 3.6) a change in the middle means reading the
+    whole transcript again: 15-40 s per step from 20k tokens on, against 2-4 s before.
+    Now reasoning is dropped only when 2 x ``keep`` steps carry it, down to ``keep``: one
+    change every ``keep`` steps.
+    """
+    keep = max(1, keep)
+    carrying = [index for index, message in enumerate(messages) if message.role == "assistant" and message.reasoning]
+    if len(carrying) <= 2 * keep:
+        return False
+    for index in carrying[:-keep]:
+        messages[index] = messages[index].model_copy(update={"reasoning": None})
+    return True
 
 
 def _drop_reasoning(messages: list[LlmMessage]) -> bool:

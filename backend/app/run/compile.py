@@ -14,6 +14,8 @@ from app.run.limits import (
     NODE_LLM_CALLS_MIN,
     NODE_TOOL_CALLS_MAX,
     NODE_TOOL_CALLS_MIN,
+    REASONING_STEPS_MAX,
+    REASONING_STEPS_MIN,
 )
 from app.run.router_rules import CompiledRouter, rules_from_data
 
@@ -71,6 +73,8 @@ class CompiledAgent:
     terminal_programs: list[str] | None = None
     # Node override of MAX_AGENT_TOOL_CALLS; None means the default.
     max_tool_calls: int | None = None
+    # Steps whose reasoning goes back to the model (reasoningSteps); None: REASONING_STEPS_DEFAULT.
+    reasoning_steps: int | None = None
 
 
 @dataclass
@@ -374,6 +378,7 @@ def compile_document(
             knowledge_node_ids=knowledge_ids,
             outbound_message=outbound,
             max_tool_calls=_node_count(node.data, "maxToolCalls", NODE_TOOL_CALLS_MIN, NODE_TOOL_CALLS_MAX),
+            reasoning_steps=_node_count(node.data, "reasoningSteps", REASONING_STEPS_MIN, REASONING_STEPS_MAX),
         )
 
     topo = list(agents.keys())

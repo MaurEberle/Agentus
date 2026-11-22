@@ -94,8 +94,11 @@ SUBSTANTIAL_RESULT_CHARS = 400
 LOG_PAYLOAD_MAX = 1_000_000
 # Reasoning sent back inside one agent call: the latest steps only, each clipped.
 # The model planned in its reasoning (771 characters per step on average) and lost it
-# after every step (investigation 2026-11-21).
-REASONING_STEPS_KEPT = 8
+# after every step (investigation 2026-11-21). Agent node setting reasoningSteps sets
+# how many steps keep it; it is cut in blocks (agent_turn._prune_reasoning).
+REASONING_STEPS_DEFAULT = 10
+REASONING_STEPS_MIN = 2
+REASONING_STEPS_MAX = 50
 REASONING_CHARS = 1500
 # Strings in tool arguments (file contents) in the log; the tool gets the full text (B5).
 LOG_ARG_MAX = 2048

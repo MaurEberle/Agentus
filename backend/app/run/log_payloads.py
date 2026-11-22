@@ -25,6 +25,9 @@ _FACT_KEYS = (
     "truncated",
     "exitCode",
     "timedOut",
+    # Terminal: a server or watch command that was stopped after its start window.
+    "running",
+    "stoppedAfterSec",
     "status",
     "statusCode",
     "pattern",

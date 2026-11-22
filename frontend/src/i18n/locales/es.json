@@ -987,7 +987,9 @@
         "channelHint": "Este agente pertenece al orquestador. Los encargos llegan por el canal y el resultado vuelve por él.",
         "systemPrompt": "Prompt de sistema",
         "maxToolCalls": "Llamadas a herramientas por encargo",
-        "maxToolCallsHint": "Después el agente responde con lo que tiene y dice qué queda pendiente. Vacío: 100."
+        "maxToolCallsHint": "Después el agente responde con lo que tiene y dice qué queda pendiente. Vacío: 100.",
+        "reasoningSteps": "Memoria (pasos)",
+        "reasoningStepsHint": "Cuántos pasos de un encargo devuelven su razonamiento al modelo (modelos locales). Se recorta de una vez: al llegar al doble, los más antiguos se quitan juntos, para que el modelo no vuelva a leer todo el historial en cada paso. Vacío: 10."
       },
       "orchestrator": {
         "hint": "Un LLM por una arista. El chat llega aquí. Cada agente tiene su canal. La salida de mensaje sigue siendo el fin. Llama él mismo las herramientas conectadas.",
@@ -1824,6 +1826,7 @@
       "zip": "ZIP {{action}} {{path}}",
       "toolGeneric": "herramienta {{name}}",
       "exit": "código de salida {{code}}",
+      "serverStopped": "detenido tras {{seconds}} s (no termina por sí solo)",
       "lines_one": "{{count}} línea",
       "lines_other": "{{count}} líneas",
       "count": {

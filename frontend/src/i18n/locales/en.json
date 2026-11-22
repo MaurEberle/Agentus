@@ -1054,7 +1054,9 @@
         "channelHint": "This agent belongs to the orchestrator. Tasks arrive on the channel, and the result goes back there.",
         "systemPrompt": "System prompt",
         "maxToolCalls": "Tool calls per task",
-        "maxToolCallsHint": "After that the agent answers with what it has and says what is still open. Empty: 100."
+        "maxToolCallsHint": "After that the agent answers with what it has and says what is still open. Empty: 100.",
+        "reasoningSteps": "Memory (steps)",
+        "reasoningStepsHint": "How many steps of a task give their thinking back to the model (local models). It is cut in one go: at twice as many, the older ones go at once, so the model does not read the whole transcript again at every step. Empty: 10."
       },
       "orchestrator": {
         "hint": "One LLM via an edge. The chat arrives here. Each agent has its own channel. Message out stays the end. It calls tools on the tool port.",
@@ -1891,6 +1893,7 @@
       "zip": "ZIP {{action}} {{path}}",
       "toolGeneric": "tool {{name}}",
       "exit": "exit code {{code}}",
+      "serverStopped": "stopped after {{seconds}} s (would keep running)",
       "lines_one": "{{count}} line",
       "lines_other": "{{count}} lines",
       "count": {

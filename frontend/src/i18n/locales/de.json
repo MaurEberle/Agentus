@@ -1054,7 +1054,9 @@
         "channelHint": "Dieser Agent hängt am Orchestrator. Aufträge kommen über den Kanal, die Antwort geht dorthin zurück.",
         "systemPrompt": "Systemprompt",
         "maxToolCalls": "Werkzeugaufrufe je Auftrag",
-        "maxToolCallsHint": "Danach antwortet der Agent mit dem, was er hat, und nennt, was offen ist. Leer: 100."
+        "maxToolCallsHint": "Danach antwortet der Agent mit dem, was er hat, und nennt, was offen ist. Leer: 100.",
+        "reasoningSteps": "Gedächtnis (Schritte)",
+        "reasoningStepsHint": "Wie viele Schritte eines Auftrags ihr Denken an das Modell zurückgeben (lokale Modelle). Gekürzt wird gesammelt: Sind es doppelt so viele, fallen die älteren auf einmal weg, damit das Modell nicht bei jedem Schritt den ganzen Verlauf neu lesen muss. Leer: 10."
       },
       "orchestrator": {
         "hint": "Ein LLM über eine Kante. Der Chat kommt hier an. Jeder Agent hat einen eigenen Kanal. Das Ende bleibt der Nachrichtenausgang. Angeschlossene Werkzeuge ruft er selbst auf.",
@@ -1891,6 +1893,7 @@
       "zip": "ZIP {{action}} {{path}}",
       "toolGeneric": "Werkzeug {{name}}",
       "exit": "Exit-Code {{code}}",
+      "serverStopped": "nach {{seconds}} s beendet (läuft sonst dauerhaft)",
       "lines_one": "{{count}} Zeile",
       "lines_other": "{{count}} Zeilen",
       "count": {

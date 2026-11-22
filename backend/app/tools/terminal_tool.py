@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -22,6 +23,28 @@ _SHELL_BREAKS = set("|<>&;\n\r")
 # quotes included. These characters would start a second command there.
 _BATCH_SUFFIXES = (".cmd", ".bat")
 _BATCH_METAS = set('&|<>^%!"()\n\r')
+# Commands that start a server or a watcher and do not end on their own. Coder_Team run
+# 2026-11-22: "npm run dev" waited the full timeout (200 s) and came back without output;
+# the agent, who cannot open a browser, then built tests to look at its page. Such a
+# command now runs SERVER_SECONDS, is stopped, and returns what it printed.
+SERVER_SECONDS = 15
+_SERVER_SCRIPTS = frozenset({"dev", "start", "serve", "preview", "watch"})
+_SCRIPT_RUNNERS = frozenset({"npm", "pnpm", "yarn", "bun"})
+_SERVER_TEXT = re.compile(
+    r"(?:^|[\s/])(?:vite(?:\s+(?:dev|serve|preview))?(?=\s|$)(?!\s+build)"
+    r"|next\s+(?:dev|start)|nuxt\s+(?:dev|preview)|astro\s+(?:dev|preview)|ng\s+serve"
+    r"|react-scripts\s+start|webpack-dev-server|webpack\s+serve|http-server|live-server"
+    r"|serve(?=\s|$)|nodemon|runserver|flask\s+run|uvicorn|gunicorn|http\.server"
+    r"|tsc\s+(?:\S+\s+)*-w(?=\s|$))"
+    r"|--watch(?:All)?(?=[\s=]|$)",
+    re.IGNORECASE,
+)
+SERVER_NOTE = (
+    "This command does not end on its own (a server or a watch mode). It ran for {seconds} s and was "
+    "stopped; above is what it printed until then. There is no browser in this run: nobody can open "
+    "the page, you cannot either. Check the work with the build, the tests the project already has, "
+    "or by reading files."
+)
 # PowerShell 5.1 writes to a pipe in the OEM code page; switch it to UTF-8 first.
 _PS_UTF8 = (
     "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
@@ -45,14 +68,17 @@ def run(config: dict[str, Any] | None, args: dict[str, Any] | None) -> ExecuteRe
     timeout = _timeout(cfg)
     unrestricted = str(cfg.get("terminalMode") or "restricted").strip().lower() == "unrestricted"
     if unrestricted:
-        return _run_powershell(root, command, timeout)
+        server = long_running(command, root)
+        return _run_powershell(root, command, min(timeout, SERVER_SECONDS) if server else timeout, server=server)
     programs = _programs(cfg)
     if not programs:
         return _fail("tools.terminal.notGranted")
     command, habits = strip_shell_habits(command, root)
     if not command:
         return _fail("tools.terminal.missingCommand")
-    result = _run_program(root, command, programs, timeout)
+    server = long_running(command, root)
+    limit = min(timeout, SERVER_SECONDS) if server else timeout
+    result = _run_program(root, command, programs, limit, server=server)
     # Only a command that ran gets "ran" and the note. A rejected rest kept them and the
     # note recommended a command that is rejected again (Coder_Team run, 2026-11-20: 44 times).
     if habits.removed and (result.ok or result.error_key == "tools.terminal.timeout"):
@@ -258,7 +284,51 @@ def _split_command(command: str) -> tuple[list[str] | None, str | None]:
     return args, None
 
 
-def _run_program(root: Path, command: str, programs: set[str], timeout: float) -> ExecuteResult:
+def long_running(command: str, root: Path) -> bool:
+    """True for a command that starts a server or a watch mode and does not end on its own."""
+    parts = command.strip().split()
+    if not parts:
+        return False
+    name = _program_name(parts[0])
+    if name in _SCRIPT_RUNNERS:
+        script = _script_name(name, parts[1:])
+        if script is None:
+            return False
+        if script.lower() in _SERVER_SCRIPTS:
+            return True
+        body = _package_script(root, script)
+        return bool(body and _SERVER_TEXT.search(body)) or bool(_SERVER_TEXT.search(" ".join(parts[1:])))
+    return bool(_SERVER_TEXT.search(command))
+
+
+def _script_name(runner: str, args: list[str]) -> str | None:
+    """The package.json script a runner starts: npm run dev, npm start, yarn dev, pnpm run dev."""
+    words = [arg for arg in args if not arg.startswith("-")]
+    if not words:
+        return None
+    first = words[0].lower()
+    if first in {"run", "run-script"}:
+        return words[1] if len(words) > 1 else None
+    if first in {"start", "test"}:
+        return first
+    if runner in {"yarn", "pnpm", "bun"} and first not in {"install", "add", "remove", "i", "exec", "dlx", "x"}:
+        return words[0]
+    return None
+
+
+def _package_script(root: Path, script: str) -> str:
+    try:
+        data = json.loads((root / "package.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    scripts = data.get("scripts") if isinstance(data, dict) else None
+    value = scripts.get(script) if isinstance(scripts, dict) else None
+    return value if isinstance(value, str) else ""
+
+
+def _run_program(
+    root: Path, command: str, programs: set[str], timeout: float, *, server: bool = False
+) -> ExecuteResult:
     parsed, error = _split_command(command)
     if error or not parsed:
         return _fail(error or "tools.terminal.missingCommand")
@@ -279,7 +349,7 @@ def _run_program(root: Path, command: str, programs: set[str], timeout: float) -
         char in _BATCH_METAS for arg in parsed[1:] for char in arg
     ):
         return _fail("tools.terminal.shellSyntax", {"program": name})
-    return _spawn(root, [executable, *parsed[1:]], timeout)
+    return _spawn(root, [executable, *parsed[1:]], timeout, server=server)
 
 
 # Options that turn a granted program into a one-line code runner (python -c, git -c alias.x=!cmd).
@@ -363,7 +433,9 @@ def _inline_code(name: str, args: list[str]) -> bool:
     return False
 
 
-def _run_powershell(root: Path, command: str, timeout: float | None = None) -> ExecuteResult:
+def _run_powershell(
+    root: Path, command: str, timeout: float | None = None, *, server: bool = False
+) -> ExecuteResult:
     executable = shutil.which("powershell") or shutil.which("pwsh")
     if not executable:
         return _fail("tools.terminal.notFound", {"program": "powershell"})
@@ -371,10 +443,11 @@ def _run_powershell(root: Path, command: str, timeout: float | None = None) -> E
         root,
         [executable, "-NoProfile", "-NonInteractive", "-Command", _PS_UTF8 + command],
         timeout,
+        server=server,
     )
 
 
-def _spawn(root: Path, argv: list[str], timeout: float | None = None) -> ExecuteResult:
+def _spawn(root: Path, argv: list[str], timeout: float | None = None, *, server: bool = False) -> ExecuteResult:
     try:
         proc = subprocess.Popen(
             argv,
@@ -387,18 +460,20 @@ def _spawn(root: Path, argv: list[str], timeout: float | None = None) -> Execute
         )
     except OSError:
         return _fail("tools.terminal.notFound", {"program": Path(argv[0]).name})
+    limit = TIMEOUT_SECONDS if timeout is None else timeout
     timed_out = False
     try:
-        stdout_b, stderr_b = proc.communicate(timeout=TIMEOUT_SECONDS if timeout is None else timeout)
+        stdout_b, stderr_b = proc.communicate(timeout=limit)
     except subprocess.TimeoutExpired as exc:
         timed_out = True
         _kill_tree(proc)
-        stdout_b = exc.stdout or b""
-        stderr_b = exc.stderr or b""
+        # On Windows the exception carries no output; a second communicate after the kill
+        # returns all of it (the agent saw nothing of "npm run dev" before, run 51a45408).
         try:
-            proc.wait(timeout=5)
+            stdout_b, stderr_b = proc.communicate(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
+            stdout_b, stderr_b = exc.stdout or b"", exc.stderr or b""
     code = proc.returncode
     stdout, stdout_cut = _clip(_decode(stdout_b))
     stderr, stderr_cut = _clip(_decode(stderr_b))
@@ -409,6 +484,19 @@ def _spawn(root: Path, argv: list[str], timeout: float | None = None) -> Execute
         "truncated": stdout_cut or stderr_cut,
         "timedOut": timed_out,
     }
+    if timed_out and server:
+        # Still running after the start window: it started; this was only a look at it.
+        seconds = int(round(limit))
+        payload.update(
+            {
+                "exitCode": None,
+                "timedOut": False,
+                "running": True,
+                "stoppedAfterSec": seconds,
+                "note": SERVER_NOTE.format(seconds=seconds),
+            }
+        )
+        return ExecuteResult(ok=True, result=payload)
     if timed_out:
         return _fail("tools.terminal.timeout", payload)
     return ExecuteResult(ok=True, result=payload)

@@ -84,6 +84,8 @@ export type AgentNodeData = {
   systemPrompt?: string;
   /** Tool calls per task (1–1000). Unset: 100. */
   maxToolCalls?: number;
+  /** Steps whose reasoning goes back to the model within a task (2–50). Unset: 10. */
+  reasoningSteps?: number;
 };
 
 export type OrchestratorNodeData = {

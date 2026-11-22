@@ -222,13 +222,20 @@ def note(ctrl, compiled, agent_id: str, arguments: str, body: str) -> str | None
     return key
 
 
-def refresh_system(messages: list, old: str, new: str) -> None:
-    """Put the lesson block into the system message: replace the old block or append it."""
-    if not messages or messages[0].role != "system" or not new:
-        return
-    text = messages[0].content or ""
-    if old and old in text:
-        text = text.replace(old, new)
-    else:
-        text = text.rstrip() + "\n\n" + new
-    messages[0] = messages[0].model_copy(update={"content": text})
+def line_of(ctrl, agent_id: str, key: str) -> str:
+    """The current lesson line of one kind ('' when unknown)."""
+    store = getattr(ctrl, "terminal_lessons", None) or {}
+    return str((store.get(agent_id) or {}).get(key) or "")
+
+
+def with_lesson(body: str, line: str) -> str:
+    """The tool result with the lesson after it.
+
+    Within an agent call the transcript only grows: Ollama reuses its cache only when the
+    new prompt extends the old one, and hybrid models (qwen35moe) read everything again
+    after a change in the system prompt (run 51a45408, 2026-11-22). The next call of the
+    agent starts with all lessons in its system prompt (block_for).
+    """
+    if not line:
+        return body
+    return f"{body}\n\nRemember for the rest of this task: {line}"

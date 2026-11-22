@@ -127,17 +127,45 @@ def test_the_agent_gets_its_reasoning_back_and_notes_stay_at_the_tool_result(mon
     assert summary["limits"].get("run.llm.contextCut") == 1
 
 
-def test_only_the_latest_steps_keep_their_reasoning() -> None:
+def test_reasoning_is_cut_in_blocks_so_the_transcript_mostly_only_grows() -> None:
+    """Run 51a45408: one reasoning dropped per step made hybrid models re-read everything (15-40 s a step)."""
     from app.run.agent_turn import _drop_reasoning, _kept_reasoning, _prune_reasoning
-    from app.run.limits import REASONING_CHARS, REASONING_STEPS_KEPT
+    from app.run.limits import REASONING_CHARS
 
+    keep = 4
     messages = [ChatMessage(role="system", content="s")]
-    for index in range(REASONING_STEPS_KEPT + 3):
+    changes = []
+    for index in range(20):
+        before = [message.reasoning for message in messages]
         messages.append(ChatMessage(role="assistant", content="", reasoning=f"r{index}"))
         messages.append(ChatMessage(role="tool", content="ok"))
-    _prune_reasoning(messages)
+        _prune_reasoning(messages, keep)
+        # Did an earlier message change, or did the transcript only grow?
+        changes.append([message.reasoning for message in messages[: len(before)]] != before)
+    # Between keep and 2 x keep steps carry reasoning; earlier messages change only when
+    # 2 x keep is passed, then every keep + 1 steps: at steps 9, 14 and 19 of 20.
+    assert [index for index, changed in enumerate(changes) if changed] == [8, 13, 18]
     kept = [message.reasoning for message in messages if message.reasoning]
-    assert kept == [f"r{index}" for index in range(3, REASONING_STEPS_KEPT + 3)]
+    assert kept == [f"r{index}" for index in range(15, 20)]
     assert len(_kept_reasoning("x" * 5000) or "") <= REASONING_CHARS + 40
     assert _kept_reasoning("  ") is None
     assert _drop_reasoning(messages) is True and not any(message.reasoning for message in messages)
+
+
+def test_the_agent_node_sets_how_many_steps_keep_their_reasoning() -> None:
+    from app.run.compile import compile_document
+    from app.run.graph_models import AgentNetworkDocument
+    from app.run.limits import REASONING_STEPS_MAX, REASONING_STEPS_MIN
+    from tests.run.test_validate import _orchestrator_doc
+
+    def _steps(value):
+        doc = _orchestrator_doc()
+        agent = next(node for node in doc["nodes"] if node["id"] == "ag")
+        if value is not None:
+            agent["data"]["reasoningSteps"] = value
+        compiled = compile_document(AgentNetworkDocument.model_validate(doc), network_id="n", network_name="net")
+        return compiled.agents["ag"].reasoning_steps
+
+    assert _steps(None) is None
+    assert _steps(20) == 20
+    assert _steps(1) == REASONING_STEPS_MIN and _steps(500) == REASONING_STEPS_MAX

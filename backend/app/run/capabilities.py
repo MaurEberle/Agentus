@@ -378,7 +378,7 @@ def _file_block(title: str, data: dict, *, only: list[str] | None = None) -> str
 
 
 def _terminal_block(title: str, data: dict, files: FileReach | None = None) -> str:
-    from app.tools.terminal_tool import DEFAULT_PROGRAMS
+    from app.tools.terminal_tool import DEFAULT_PROGRAMS, SERVER_SECONDS
 
     root = str(data.get("rootPath") or "").strip() or "(no root)"
     unrestricted = str(data.get("terminalMode") or "restricted").strip().lower() == "unrestricted"
@@ -411,6 +411,14 @@ def _terminal_block(title: str, data: dict, files: FileReach | None = None) -> s
         lines.append("A program that is not in that list is rejected.")
         # Before any mistake: what to use instead of the usual shell habits (Coder_Team run, 2026-11-20).
         lines.extend(alternatives(programs, root, files))
+    # Coder_Team run 2026-11-22: the agent started "npm run dev" to look at its page and,
+    # without a browser, built tests instead; the finished app was never handed back.
+    lines.append(
+        "There is no browser and no screen: nobody can open a page in this run, you cannot either. "
+        f"A server or watch command (npm run dev, npm start, vite, --watch) runs {SERVER_SECONDS} s and is "
+        "stopped; it only shows whether it starts. Check your work with the build, the tests the project "
+        "already has, or by reading files, then report."
+    )
     return "\n".join(lines)
 
 

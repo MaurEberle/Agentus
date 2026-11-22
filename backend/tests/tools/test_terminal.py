@@ -124,6 +124,52 @@ def test_timeout_kills_the_command(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert result.result["timedOut"] is True
 
 
+def test_a_timeout_keeps_what_the_command_printed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """On Windows the timeout exception has no output; the agent used to get none."""
+    monkeypatch.setattr("app.tools.terminal_tool.TIMEOUT_SECONDS", 2)
+    program = Path(sys.executable).stem
+    (tmp_path / "slow.py").write_text(
+        "import sys, time\nprint('begin', flush=True)\ntime.sleep(30)\n", encoding="utf-8"
+    )
+    result = execute_first_party(
+        "terminal",
+        config={"rootPath": str(tmp_path), "terminalPrograms": [program]},
+        args={"command": f"{program} slow.py"},
+    )
+    assert result.ok is False and result.error_key == "tools.terminal.timeout"
+    assert "begin" in result.result["stdout"]
+
+
+def test_a_server_runs_briefly_and_returns_what_it_printed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Coder_Team run 2026-11-22: "npm run dev" blocked 200 s; the agent cannot open a browser anyway."""
+    monkeypatch.setattr("app.tools.terminal_tool.SERVER_SECONDS", 3)
+    program = Path(sys.executable).stem
+    result = execute_first_party(
+        "terminal",
+        config={"rootPath": str(tmp_path), "terminalPrograms": [program], "timeoutSec": 300},
+        args={"command": f"{program} -u -m http.server 0 --bind 127.0.0.1"},
+    )
+    assert result.ok is True
+    assert result.result["running"] is True and result.result["stoppedAfterSec"] == 3
+    assert result.result["exitCode"] is None and result.result["timedOut"] is False
+    assert "Serving HTTP" in result.result["stdout"]
+    assert "no browser" in result.result["note"]
+
+
+def test_servers_and_watch_modes_are_recognized(tmp_path: Path) -> None:
+    from app.tools.terminal_tool import long_running
+
+    (tmp_path / "package.json").write_text(
+        '{"scripts": {"go": "vite --port 3000", "check": "tsc --noEmit", "test": "vitest"}}', encoding="utf-8"
+    )
+    running = ["npm run dev", "npm start", "npm run go", "npx vite", "vite preview", "yarn dev", "pnpm run preview",
+               "npx vitest --watch", "jest --watchAll", "tsc -w", "python -m http.server", "uvicorn app:app"]
+    ending = ["npm run build", "npm run check", "npm test", "npm install", "npm i -w pkg", "npx vite build",
+              "npx vitest run", "tsc --noEmit", "yarn install", "node server.js", "git status"]
+    assert [command for command in running if not long_running(command, tmp_path)] == []
+    assert [command for command in ending if long_running(command, tmp_path)] == []
+
+
 def test_catalog_lists_terminal() -> None:
     from app.tools.catalog import list_catalog_groups, openai_tools_for_kinds
 

@@ -243,6 +243,13 @@ export function toolResultText(result: unknown, ctx: LogContext): string {
   const { t, locale } = ctx;
   const facts = result && typeof result === 'object' && !Array.isArray(result) ? (result as Payload) : {};
   const parts: string[] = [];
+  if (facts.running === true) {
+    // A server or watch command, stopped after its start window (terminal SERVER_SECONDS).
+    const output = str(facts.output);
+    parts.push(t('runLog.view.serverStopped', { seconds: num(facts.stoppedAfterSec) ?? 0 }));
+    if (output) parts.push(clip(output, 140));
+    return parts.join(': ');
+  }
   const exit = num(facts.exitCode);
   if (exit !== null) {
     const output = str(facts.output);

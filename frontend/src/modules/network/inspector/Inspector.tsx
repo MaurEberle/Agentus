@@ -1272,6 +1272,16 @@ function AgentFields({ node, readOnly }: { node: GraphNode; readOnly: boolean })
         label={t('network.inspector.agent.maxToolCalls')}
         hint={t('network.inspector.agent.maxToolCallsHint')}
       />
+      <CountField
+        node={node}
+        field="reasoningSteps"
+        fallback={10}
+        min={2}
+        max={50}
+        readOnly={readOnly}
+        label={t('network.inspector.agent.reasoningSteps')}
+        hint={t('network.inspector.agent.reasoningStepsHint')}
+      />
     </>
   );
 }
