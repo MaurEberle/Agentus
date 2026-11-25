@@ -21,6 +21,7 @@ MODULES = [
     "app.http.routers.run",
     "app.http.routers.runs",
     "app.http.routers.help_chat",
+    "app.http.routers.architect",
 ]
 
 

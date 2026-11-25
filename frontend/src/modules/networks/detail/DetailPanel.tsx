@@ -114,6 +114,15 @@ export function DetailPanel({
           <Fact label={t('networks.list.updated')}>
             <span className="flex flex-wrap items-baseline gap-x-2">
               <Stamp iso={item.updatedAt} locale={locale} />
+              {item.version ? (
+                <Link
+                  to={`/network/${item.id}?versions=1`}
+                  className="inline-flex items-center gap-0.5 text-primary underline-offset-4 hover:underline"
+                >
+                  {t('network.versions.version', { version: item.version })}
+                  <ArrowUpRight className="size-3.5" aria-hidden />
+                </Link>
+              ) : null}
             </span>
           </Fact>
           <Fact label={t('networks.list.lastUsed')}>

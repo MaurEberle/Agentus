@@ -48,6 +48,7 @@ export function HelpChatPanel({
   const [draft, setDraft] = useState('');
 
   const configured = Boolean(status?.configured);
+  const paused = Boolean(status?.pausedByArchitect);
   const uiStatus = deriveHelpStatus({
     configured,
     generating,
@@ -56,6 +57,7 @@ export function HelpChatPanel({
   });
   const canSend =
     configured &&
+    !paused &&
     !generating &&
     (uiStatus === 'ready' || uiStatus === 'degraded' || uiStatus === 'error') &&
     draft.trim().length > 0;
@@ -212,6 +214,14 @@ export function HelpChatPanel({
           <X className="size-4" />
         </Button>
       </header>
+      {paused ? (
+        <p className="border-b bg-warning/10 px-3 py-2 text-xs">
+          {t('helpChat.pausedByArchitect')}{' '}
+          <Link to="/architect" className="underline underline-offset-2">
+            {t('nav.architect')}
+          </Link>
+        </p>
+      ) : null}
       {configured && status?.usingFallback ? (
         <p className="border-b px-3 py-2 text-xs text-muted-foreground">
           {t('helpChat.usingFallback')}{' '}
@@ -244,7 +254,7 @@ export function HelpChatPanel({
           <Textarea
             rows={2}
             value={draft}
-            disabled={!configured || generating}
+            disabled={!configured || generating || paused}
             placeholder={t('helpChat.input.placeholder')}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {

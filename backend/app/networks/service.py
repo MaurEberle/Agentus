@@ -7,11 +7,15 @@ from app.db.engine import get_bootstrap, utc_now
 from app.db.network_rag import drop_node as rag_drop_node
 from app.db.networks import (
     NetworkRow,
+    VersionConflict,
     delete_network,
     duplicate_network,
     get_network,
+    get_version,
     list_networks,
-    upsert_network,
+    list_versions,
+    set_version_meta,
+    write_versioned,
 )
 from app.db.runs import latest_run_id_by_network
 from app.http.errors import AppError
@@ -81,6 +85,7 @@ def _item(
         "isActive": ctx["active_id"] == row.id,
         "isRunning": ctx["running"] == row.id,
         "lastRunId": last_run_id,
+        "version": row.version,
     }
 
 
@@ -99,18 +104,32 @@ def get_network_document(network_id: str) -> dict[str, Any]:
     doc.setdefault("id", row.id)
     doc.setdefault("name", row.name)
     doc["knowledge"] = status_for_network(network_id)
+    doc["version"] = row.version
+    doc["revision"] = row.revision
     return doc
 
 
-def create_network(raw: dict[str, Any]) -> dict[str, Any]:
+_SERVER_FIELDS = ("version", "revision", "knowledge")
+
+
+def _keep_versions() -> int:
+    return load_settings().network_versions_keep
+
+
+def _clean(raw: dict[str, Any]) -> dict[str, Any]:
+    """The client sends back what it read; version, revision and index states are the server's."""
+    return {key: value for key, value in raw.items() if key not in _SERVER_FIELDS}
+
+
+def create_network(raw: dict[str, Any], *, source: str = "create", note: str | None = None) -> dict[str, Any]:
     network_id = str(uuid.uuid4())
     now = utc_now()
-    raw = dict(raw)
+    raw = _clean(raw)
     raw["id"] = network_id
     raw["updatedAt"] = now
     raw["schemaVersion"] = raw.get("schemaVersion") or 1
     doc = AgentNetworkDocument.model_validate(raw)
-    upsert_network(
+    write_versioned(
         NetworkRow(
             id=network_id,
             name=doc.name or "Untitled",
@@ -120,18 +139,37 @@ def create_network(raw: dict[str, Any]) -> dict[str, Any]:
             updated_at=now,
             last_used_at=None,
             last_run_id=None,
-        )
+        ),
+        source=source,
+        note=note,
+        keep=_keep_versions(),
     )
     return get_network_document(network_id)
 
 
-def replace_network(network_id: str, raw: dict[str, Any]) -> dict[str, Any]:
+def _conflict(version: int, revision: int) -> AppError:
+    return AppError("networks.conflict", status_code=409, details={"version": version, "revision": revision})
+
+
+def replace_network(
+    network_id: str,
+    raw: dict[str, Any],
+    *,
+    base_revision: int | None = None,
+    new_version: bool = True,
+    note: str | None = None,
+    source: str = "editor",
+    restored_from: int | None = None,
+) -> dict[str, Any]:
+    """Save a network. ``new_version`` False writes into the current version (V-4)."""
     if _running_id() == network_id:
         raise AppError("run.busy", status_code=409)
     existing = get_network(network_id)
     if existing is None:
         raise AppError("networks.notFound", status_code=404)
-    raw = dict(raw)
+    if base_revision is not None and existing.revision != base_revision:
+        raise _conflict(existing.version, existing.revision)
+    raw = _clean(raw)
     raw["id"] = network_id
     raw["updatedAt"] = utc_now()
     doc = AgentNetworkDocument.model_validate(raw)
@@ -139,19 +177,101 @@ def replace_network(network_id: str, raw: dict[str, Any]) -> dict[str, Any]:
     new_ids = {n.id for n in doc.nodes if n.type == "knowledge"}
     for dropped in old_ids - new_ids:
         rag_drop_node(network_id, dropped)
-    upsert_network(
-        NetworkRow(
-            id=network_id,
-            name=doc.name or existing.name,
-            description=doc.description,
-            tags=list(doc.tags or []),
-            document=doc.model_dump(by_alias=True),
-            updated_at=raw["updatedAt"],
-            last_used_at=existing.last_used_at,
-            last_run_id=existing.last_run_id,
+    try:
+        write_versioned(
+            NetworkRow(
+                id=network_id,
+                name=doc.name or existing.name,
+                description=doc.description,
+                tags=list(doc.tags or []),
+                document=doc.model_dump(by_alias=True),
+                updated_at=raw["updatedAt"],
+                last_used_at=existing.last_used_at,
+                last_run_id=existing.last_run_id,
+            ),
+            mode="new" if new_version else "current",
+            source=source,
+            note=note,
+            keep=_keep_versions(),
+            base_revision=base_revision,
+            restored_from=restored_from,
         )
-    )
+    except VersionConflict as exc:
+        raise _conflict(exc.version, exc.revision) from None
     return get_network_document(network_id)
+
+
+def network_versions(network_id: str) -> dict[str, Any]:
+    row = get_network(network_id)
+    if row is None:
+        raise AppError("networks.notFound", status_code=404)
+    return {"version": row.version, "revision": row.revision, "items": list_versions(network_id)}
+
+
+def network_version(network_id: str, version: int) -> dict[str, Any]:
+    found = get_version(network_id, version)
+    if found is None:
+        raise AppError("networks.versionNotFound", status_code=404)
+    return found
+
+
+def patch_version(network_id: str, version: int, *, pinned: bool | None, note: str | None) -> dict[str, Any]:
+    if not set_version_meta(network_id, version, pinned=pinned, note=note):
+        raise AppError("networks.versionNotFound", status_code=404)
+    return network_version(network_id, version)
+
+
+def version_diff(network_id: str, version: int) -> dict[str, Any]:
+    """What restoring ``version`` would change on the current state (entwurf.md, 10)."""
+    from app.networks.diff import diff_documents
+
+    found = network_version(network_id, version)
+    current = get_network_document(network_id)
+    return {"version": version, "current": current.get("version"), "diff": diff_documents(current, found["document"])}
+
+
+def copy_version(network_id: str, version: int, name: str | None = None) -> dict[str, Any]:
+    """A stored version as a network of its own (entwurf.md, 12)."""
+    row = get_network(network_id)
+    if row is None:
+        raise AppError("networks.notFound", status_code=404)
+    found = network_version(network_id, version)
+    document = {key: value for key, value in dict(found["document"]).items() if key not in {"id", "isActive"}}
+    document["name"] = (name or "").strip()[:120] or f"{row.name} ({version})"
+    return create_network(document, source="duplicate", note=f"{row.name} · {version}")
+
+
+def restore_run(network_id: str, run_id: str, *, base_revision: int | None) -> dict[str, Any]:
+    """The network as a run saw it becomes the newest version, matched to a kept one if possible."""
+    from app.db.networks import content_hash, version_for_hash
+    from app.db.runs import get_run
+
+    run = get_run(run_id)
+    snapshot = (run or {}).get("graph_snapshot")
+    if run is None or run.get("network_id") != network_id or not isinstance(snapshot, dict):
+        raise AppError("networks.runSnapshotMissing", status_code=404)
+    return replace_network(
+        network_id,
+        dict(snapshot),
+        base_revision=base_revision,
+        new_version=True,
+        source="restore",
+        restored_from=version_for_hash(network_id, content_hash(snapshot)),
+    )
+
+
+def restore_version(network_id: str, version: int, *, base_revision: int | None) -> dict[str, Any]:
+    """A stored version becomes the newest one again; history stays a line (entwurf.md, 9)."""
+    found = network_version(network_id, version)
+    document = dict(found["document"])
+    return replace_network(
+        network_id,
+        document,
+        base_revision=base_revision,
+        new_version=True,
+        source="restore",
+        restored_from=version,
+    )
 
 
 def patch_network(network_id: str, patch: dict[str, Any]) -> dict[str, Any]:
@@ -167,7 +287,8 @@ def patch_network(network_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         doc["description"] = description
     if tags is not None:
         doc["tags"] = tags
-    upsert_network(
+    # Rename and tags change the current version, no new one (V-4).
+    write_versioned(
         NetworkRow(
             id=row.id,
             name=name,
@@ -177,7 +298,9 @@ def patch_network(network_id: str, patch: dict[str, Any]) -> dict[str, Any]:
             updated_at=utc_now(),
             last_used_at=row.last_used_at,
             last_run_id=row.last_run_id,
-        )
+        ),
+        mode="current",
+        keep=_keep_versions(),
     )
     saved = get_network(network_id)
     if saved is None:
@@ -264,7 +387,7 @@ def export_document(document: dict[str, Any]) -> dict[str, Any]:
 def import_network(document: dict[str, Any]) -> dict[str, Any]:
     payload = to_export(document)
     payload.pop("exportedAt", None)
-    return create_network(payload)
+    return create_network(payload, source="import")
 
 
 def reindex_knowledge(network_id: str, node_id: str) -> dict[str, str]:

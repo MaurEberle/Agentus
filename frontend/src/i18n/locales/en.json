@@ -16,6 +16,7 @@
     "dashboard": "Dashboard",
     "network": "Network",
     "networks": "Library",
+    "architect": "Architect",
     "monitoring": "Monitoring",
     "history": "History",
     "prompts": "Prompts",
@@ -361,6 +362,7 @@
       "credentials": "Credentials",
       "runtime": "Runtime",
       "help-chat": "Help chatbot",
+      "architect": "Architect",
       "mcp": "MCP servers",
       "data": "Data",
       "about": "About"
@@ -396,6 +398,9 @@
       "inUseBody": "“{{name}}” is still assigned and cannot be deleted.",
       "inUseMcpHint": "Assign a different credential on the MCP server, or delete that server. Then you can remove this credential.",
       "usedBy": {
+        "architectLlm": "Architect (chat)",
+        "architectEmbed": "Architect (examples)",
+        "architectSearch": "Architect (web search)",
         "helpChatLlm": "Help chatbot (chat)",
         "helpChatEmbed": "Help chatbot (embeddings)",
         "helpChatSearch": "Help chatbot (web search)",
@@ -663,6 +668,9 @@
       "storeName": "Store",
       "fileName": "File",
       "retentionLabel": "History retention",
+      "versionsLabel": "Versions per network",
+      "versionsHint": "This many versions are kept per network. Version 1, pinned versions and the current one always stay.",
+      "versionsInvalid": "A whole number from {{min}} to {{max}}.",
       "copy": "Copy contents to the new folder",
       "confirmTitle": "Change data folder",
       "confirmBody": "The old folder is kept. Create an empty target or use existing store files.",
@@ -686,6 +694,41 @@
         "90": "90 days",
         "365": "365 days",
         "unlimited": "Unlimited"
+      }
+    },
+    "architect": {
+      "lead": "The architect's own web search, folder paths and limits. You pick its model in the module itself.",
+      "webSearch": "Web search",
+      "webSearchHint": "The architect may look things up on the web, for example tools or new models. Separate from the help chat's web search.",
+      "webSearchIncomplete": "Without an address or credential, web search stays off.",
+      "sendPaths": "Folder paths to cloud models",
+      "sendPathsHint": "Off: a cloud model sees no folder paths when a network is read in; they stay unchanged in the network. Local models always see them.",
+      "limits": "Limits",
+      "limitsHint": "Guard against endless tool loops and save credit and Hugging Face quota. 0 turns web search or Hub search off.",
+      "limit": {
+        "toolCallsPerAnswer": "Tool calls per answer",
+        "webSearchesPerSession": "Web searches per session",
+        "hubCallsPerSession": "Hub calls per session"
+      },
+      "range": "{{min}} to {{max}}",
+      "reset": "Reset",
+      "limitError": "A limit is outside the allowed range.",
+      "examples": {
+        "title": "Examples",
+        "hint": "The architect looks for example networks that match the brief. Shipped examples come with a later update; your own networks only if you allow it.",
+        "own": "Use my own networks as examples",
+        "ownHint": "Valid networks only. Cloud models see no prompts there; those come only when you explicitly read a network in.",
+        "embeddingProvider": "Embedding provider",
+        "keywordsOnly": "None (keyword search)",
+        "embeddingModel": "Embedding model",
+        "count": "{{count}} examples ({{shipped}} shipped, {{own}} own)",
+        "embedded": "Embedding {{model}}: {{done}} of {{count}} indexed",
+        "keywords": "Search by keywords",
+        "loading": "Loading status …",
+        "reindex": "Rebuild index",
+        "reindexDone": "Example index rebuilt",
+        "reindexFailed": "Embedding failed; the search uses keywords.",
+        "saveFirst": "Save first, then rebuild."
       }
     },
     "about": {
@@ -817,6 +860,7 @@
       "cta": "Go to settings"
     },
     "usingFallback": "No chat model set. Answers use the economy model.",
+    "pausedByArchitect": "The architect is working with a local model. The help chat is paused until that session ends.",
     "sources": {
       "rag": "Document",
       "web": "Web"
@@ -946,6 +990,7 @@
       "saveAs": "Save as",
       "load": "Open",
       "duplicate": "Duplicate",
+      "versions": "Versions",
       "import": "Import",
       "export": "Export",
       "validate": "Validate",
@@ -1269,6 +1314,97 @@
       "cancel": "Cancel",
       "nameTitle": "Name the network"
     },
+    "diff": {
+      "none": "No changes.",
+      "added": "New",
+      "changed": "Changed",
+      "removed": "Removed",
+      "head": "Changed: {{fields}}",
+      "edges": "Connections: +{{added}} / −{{removed}}",
+      "field": {
+        "name": "Name",
+        "description": "Description",
+        "tags": "Tags"
+      }
+    },
+    "versions": {
+      "title": "Versions: {{name}}",
+      "lead": "Every save as a new version leaves a state here. Version 1, pinned versions and the current one stay when old versions are cleaned up.",
+      "list": "Versions",
+      "loading": "Loading …",
+      "empty": "No versions yet.",
+      "error": "The versions could not be loaded or changed.",
+      "version": "Version {{version}}",
+      "current": "current",
+      "nodes_one": "{{count}} node",
+      "nodes_other": "{{count}} nodes",
+      "source": {
+        "create": "created",
+        "editor": "editor",
+        "architect": "architect",
+        "restore": "restored",
+        "restoreFrom": "restored from version {{from}}",
+        "import": "imported",
+        "duplicate": "copied",
+        "migration": "existing"
+      },
+      "pin": "Pin: kept when cleaning up",
+      "unpin": "Unpin",
+      "note": "Note",
+      "notePlaceholder": "Add a note",
+      "compare": "Restoring would change this on the current state",
+      "isCurrent": "This is the current state.",
+      "restore": "Restore",
+      "copy": "Copy as new network",
+      "copyName": "{{name}} (version {{version}})",
+      "copied": "“{{name}}” created",
+      "open": "Open",
+      "restored": "Version {{from}} restored as version {{version}}",
+      "dirtyTitle": "Discard unsaved changes?",
+      "dirtyBody": "Restoring replaces the state in the editor. Unsaved changes are lost.",
+      "dirtyConfirm": "Discard and restore",
+      "conflict": "The network changed in the meantime. The list is reloaded; try again.",
+      "busy": "A running network cannot be restored.",
+      "reindexTitle": "Index missing: {{names}}",
+      "reindex": "Rebuild index",
+      "reindexDone": "Index rebuilt",
+      "reindexFailed": "The index could not be rebuilt completely.",
+      "field": "Version",
+      "picker": "Choose version",
+      "previewBadge": "Preview",
+      "pinned": "pinned",
+      "manage": "Manage all versions …",
+      "viewInEditor": "View in editor",
+      "preview": {
+        "title": "Version {{version}}",
+        "readonly": "read-only preview",
+        "same": "Same content as the current version",
+        "changes_one": "{{count}} difference",
+        "changes_other": "{{count}} differences",
+        "older": "Older version (←)",
+        "newer": "Newer version (→)",
+        "exit": "Back to current version",
+        "unsaved": "Your unsaved changes are kept and come back when you return to the current version."
+      }
+    },
+    "save": {
+      "title": "Save: {{name}}",
+      "note": "Note (optional)",
+      "notePlaceholder": "e.g. added a tester",
+      "newVersion": "Save as new version",
+      "sameVersion": "Save without new version",
+      "overwriteHint": "Without a new version, version {{version}} is overwritten."
+    },
+    "conflict": {
+      "title": "Network changed in the meantime",
+      "body": "Since you loaded it, this network was saved elsewhere, for example by the architect or in a second window. Version {{version}} is current. Nothing was saved.",
+      "reloadHint": "Reload discards your changes and shows the current state.",
+      "saveHint": "Save as new version puts your state on top; the other state stays as the version before it.",
+      "reload": "Reload",
+      "saveNew": "Save as new version",
+      "cancel": "Cancel",
+      "reloaded": "Current state loaded"
+    },
     "dirty": {
       "title": "Unsaved changes",
       "body": "The open network has changes. Save, discard, or cancel?",
@@ -1339,6 +1475,8 @@
     },
     "notify": {
       "saved": "Network saved",
+      "savedVersion": "Saved as version {{version}}",
+      "saveBusy": "The network is running. Stop it before saving.",
       "saveError": "Save failed",
       "duplicated": "Copy opened",
       "valid": "Network is valid",
@@ -1462,7 +1600,7 @@
     },
     "delete": {
       "title": "Delete networks",
-      "body": "The workspace index for this network is removed. Source files on disk stay. The help store and history runs are untouched.",
+      "body": "All saved versions and the workspace index of this network are deleted for good; there is no bin. Source files on disk stay. The help store and history runs are untouched.",
       "none": "No network can be deleted.",
       "runningSkipped": "Running and skipped: {{names}}",
       "activeWarning": "An active network is included. Quick select will be cleared."
@@ -1890,6 +2028,10 @@
       "missing": "This run does not exist.",
       "error": "Error",
       "exportLog": "Export log",
+      "ranWithVersion": "ran with version {{version}}",
+      "ranWithoutVersion": "ran with a state that is no longer kept as a version",
+      "restore": "Restore this state",
+      "restored": "State restored as version {{version}}",
       "tabLog": "Log",
       "tabSteps": "Steps",
       "tabChat": "Chat"
@@ -2449,6 +2591,259 @@
       "exported": "Export saved",
       "imported": "Prompts imported",
       "failed": "That did not work"
+    }
+  },
+  "architect": {
+    "load": {
+      "button": "Read in network …",
+      "title": "Read in network",
+      "lead": "The architect then works with this network. Nothing is saved before the closing dialog.",
+      "search": "Search networks",
+      "empty": "No networks found.",
+      "purposeLabel": "What for?",
+      "purpose": {
+        "change": "to change it",
+        "template": "as a template"
+      },
+      "purposeHint": {
+        "change": "The architect changes this network. It is saved only after you confirm, as a new version.",
+        "template": "The architect starts from a copy. The result is a new network; the original stays as it is."
+      },
+      "replaces": "The current draft of this session is replaced.",
+      "cloudNote": "Structure and prompts go to the cloud model; folder paths only if the architect settings allow it.",
+      "confirm": "Read in",
+      "decline": "Don't read in",
+      "ask": "The architect wants to read in “{{name}}” ({{purpose}}).",
+      "sent": "I have read in “{{name}}”.",
+      "done": "“{{name}}” read in",
+      "failed": "The network could not be read in."
+    },
+    "source": {
+      "change": "Changes “{{name}}” · version {{version}}",
+      "template": "Template: “{{name}}”",
+      "hidden": "Folder paths are hidden from the cloud model and stay unchanged."
+    },
+    "proposal": {
+      "create": "The architect suggests creating the network.",
+      "update": "The architect suggests applying the changes.",
+      "open": "Open closing dialog",
+      "dismiss": "Dismiss"
+    },
+    "closing": {
+      "button": "Finish …",
+      "title": "Finish",
+      "titleCreate": "Create network: {{name}}",
+      "titleUpdate": "Apply changes: {{name}}",
+      "lead": "Check structure, changes and risks before you confirm.",
+      "loading": "Preparing …",
+      "loadFailed": "The closing step could not be prepared.",
+      "structure": "Structure",
+      "models": "Models",
+      "tools": "Tools",
+      "changes": "Changes since version {{version}}",
+      "risks": "Risky parts",
+      "invalid_one": "The draft still has one error. The architect has to fix it first.",
+      "invalid_other": "The draft still has {{count}} errors. The architect has to fix them first.",
+      "running": "The network is running. Stop it before applying changes.",
+      "changedSince": "The network was saved elsewhere since it was read in (now version {{version}}).",
+      "conflictHint": "Read in again discards the draft and reads the current state. Apply anyway puts the draft on top as a new version; the other state stays as the version before it.",
+      "reload": "Read in again",
+      "force": "Apply anyway",
+      "editorDirty": "This network is open in the editor with unsaved changes. When the editor saves afterwards, it reports a conflict.",
+      "options": "Options",
+      "setActive": "Set as active",
+      "setActiveBusy": "While a network runs, the active network stays as it is.",
+      "prompts": "Add prompts to the library ({{count}})",
+      "openEditor": "Open in the editor afterwards",
+      "versionNoteCreate": "The network starts at version 1, source “Architect”.",
+      "versionNoteUpdate": "It is saved as a new version with source “Architect”. The previous state stays as a version; “Undo last apply” brings it back.",
+      "nothing": "The draft matches the saved state; there is nothing to apply.",
+      "create": "Create",
+      "update": "Apply changes",
+      "cancel": "Cancel",
+      "created": "“{{name}}” created",
+      "updated": "“{{name}}” saved as version {{version}}",
+      "promptsAdded": "Prompts added to the library: {{count}}",
+      "error": {
+        "architect_apply_invalid": "The draft still has errors.",
+        "architect_apply_noTarget": "No network is read in to change.",
+        "architect_apply_empty": "There is no draft yet.",
+        "architect_busy": "The architect is still answering. Wait until it is done.",
+        "networks_notFound": "The network no longer exists."
+      }
+    },
+    "undo": {
+      "button": "Undo last apply",
+      "done": "Version {{from}} restored as version {{version}}",
+      "conflict": "The network changed since it was applied. Restore earlier states from the versions in the editor."
+    },
+    "diff": {
+      "title": "Changes since version {{version}}"
+    },
+    "risk": {
+      "terminal": "“{{ref}}”: the unrestricted terminal runs any command.",
+      "fileDelete": "“{{ref}}”: file access may delete files.",
+      "httpCredential": "“{{ref}}”: HTTP sends a credential to an address."
+    },
+    "failed": "The architect could not answer.",
+    "notActive": "The session is not running. Start it first.",
+    "busy": "The architect is still answering.",
+    "empty": "The message is empty.",
+    "split": "Resize chat and draft",
+    "catalogChanged": "Agentus was updated since this session began. The architect checks fields again before using them.",
+    "model": {
+      "provider": "Provider",
+      "credential": "Credential",
+      "credentialNone": "No credential",
+      "model": "Chat model",
+      "pick": "Choose a model",
+      "noToolsShort": "no tools",
+      "tooSmallShort": "below 4B",
+      "missing": "Choose a provider and a model.",
+      "noCredential": "This provider needs a credential.",
+      "ollamaDown": "Ollama cannot be reached.",
+      "notInstalled": "This model is not installed.",
+      "noTools": "This model cannot call tools; the architect needs them.",
+      "tooSmall": "Models below 4B parameters are too small for the architect.",
+      "small": "Small model: it may reach its limits with larger networks.",
+      "shortContext": "Short context (below 32k): long sessions are shortened early.",
+      "blocked": "This model is locked for the architect."
+    },
+    "session": {
+      "start": "Start session",
+      "stop": "End session",
+      "running": "running",
+      "slow": "offloaded, slow"
+    },
+    "gpu": {
+      "line": "Needs ≈ {{need}} · {{free}} VRAM free",
+      "short": "Not enough free graphics memory.",
+      "tooLarge": "The model fits neither in graphics nor in system memory."
+    },
+    "networkRunning": "A network is running.",
+    "cloud": {
+      "notice": "Chat, brief and draft go to the cloud provider. Folder paths stay local."
+    },
+    "start": {
+      "slowTitle": "Not enough free graphics memory",
+      "slowBody": "Needs ≈ {{need}}, {{free}} VRAM free. Starting anyway moves parts into system memory ({{ram}} free); answers get much slower.",
+      "slowConfirm": "Start anyway (slow)",
+      "runningTitle": "A network is running",
+      "runningBody": "The running network may slow down or fail when the architect shares the GPU.",
+      "runningConfirm": "Start anyway",
+      "blockedTitle": "Cannot start",
+      "tooLargeBody": "Needs ≈ {{need}}, {{free}} VRAM and {{ram}} system memory free. Choose a smaller model or a cloud provider.",
+      "close": "Close",
+      "cancel": "Cancel"
+    },
+    "chat": {
+      "tools_one": "{{count}} tool call",
+      "tools_other": "{{count}} tool calls",
+      "emptyActive": "Describe what your network should do. Or take one of these examples:",
+      "emptyIdle": "Choose a chat model above and start the session. Then describe what your network should do.",
+      "placeholder": "What should your network do?",
+      "startFirst": "Start the session first.",
+      "stop": "Stop",
+      "send": "Send"
+    },
+    "examples": {
+      "coding": "A local coding team with tests",
+      "research": "Research with web search and sources",
+      "documents": "Questions about my PDFs"
+    },
+    "tools": {
+      "search_examples": "searching example networks …",
+      "web_search": "searching the web …",
+      "search_models": "searching Hugging Face for models …",
+      "model_details": "reading model details …",
+      "load_network": "asking to read in a network …",
+      "propose_create": "preparing the closing step …",
+      "propose_update": "preparing the closing step …",
+      "set_brief": "filling in the brief …",
+      "list_components": "reading the building blocks …",
+      "describe_component": "looking up a building block …",
+      "get_guide": "reading a building guide …",
+      "list_models": "reading the installed models …",
+      "environment": "checking the environment …",
+      "list_prompts": "searching the prompt library …",
+      "get_prompt": "reading a prompt …",
+      "list_networks": "searching your networks …",
+      "draft_set": "building the draft …",
+      "draft_patch": "changing the draft …"
+    },
+    "tool": {
+      "examples_one": "{{count}} example network found",
+      "examples_other": "{{count}} example networks found",
+      "web_one": "Web search “{{query}}”: {{count}} result",
+      "web_other": "Web search “{{query}}”: {{count}} results",
+      "webOff": "Web search is off",
+      "webFailed": "Web search “{{query}}” failed",
+      "limit": "Session quota used up ({{limit}})",
+      "hubWait": "Hugging Face is throttling; again in {{seconds}} s",
+      "hubFailed": "Hugging Face not reachable",
+      "hubSearch_one": "{{count}} model found on Hugging Face",
+      "hubSearch_other": "{{count}} models found on Hugging Face",
+      "hubDetails": "Read details of {{repo}}",
+      "loadAsk": "wants to read in “{{name}}”",
+      "loadMissing": "network “{{name}}” not found",
+      "proposed": "suggests creating",
+      "proposedUpdate": "suggests applying",
+      "proposeBlocked_one": "cannot finish yet ({{count}} error)",
+      "proposeBlocked_other": "cannot finish yet ({{count}} errors)",
+      "brief": "Brief updated",
+      "components": "Building blocks read",
+      "describe": "Looked up {{name}}",
+      "unknown": "{{name}}: unknown",
+      "guide": "Read the “{{name}}” guide",
+      "guideMissing": "No “{{name}}” guide",
+      "models_one": "Read {{count}} installed model",
+      "models_other": "Read {{count}} installed models",
+      "ollamaDown": "Ollama cannot be reached",
+      "environment": "Environment read",
+      "prompts_one": "Found {{count}} prompt",
+      "prompts_other": "Found {{count}} prompts",
+      "prompt": "Read prompt “{{name}}”",
+      "promptMissing": "Prompt not found",
+      "networks_one": "Found {{count}} network",
+      "networks_other": "Found {{count}} networks",
+      "draftValid": "Draft: {{nodes}} nodes, {{edges}} edges, valid",
+      "draftErrors_one": "Draft: {{nodes}} nodes, {{edges}} edges, {{count}} error",
+      "draftErrors_other": "Draft: {{nodes}} nodes, {{edges}} edges, {{count}} errors",
+      "badArgs": "{{name}}: invalid input",
+      "failed": "{{name}}: failed"
+    },
+    "idle": {
+      "warning": "Without input the session ends in {{seconds}} s. Chat and draft are kept.",
+      "keep": "Keep working"
+    },
+    "brief": {
+      "title": "Brief",
+      "empty": "Still empty. The architect fills it in conversation; you can change every field yourself.",
+      "goal": "Goal",
+      "input": "Input",
+      "output": "Result",
+      "sources": "Sources",
+      "deployment": "Local/cloud",
+      "tools": "Tools",
+      "constraints": "Limits"
+    },
+    "draft": {
+      "empty": "No draft yet. It appears here as soon as the architect builds it.",
+      "unnamed": "Untitled draft",
+      "valid": "valid",
+      "errors_one": "{{count}} error",
+      "errors_other": "{{count}} errors",
+      "error": "Error in the draft"
+    },
+    "sessions": {
+      "title": "Sessions",
+      "new": "New",
+      "empty": "No session yet.",
+      "untitled": "New session",
+      "export": "Markdown",
+      "delete": "Delete",
+      "deleteTitle": "Delete session?",
+      "deleteBody": "Chat, brief and draft of this session are deleted. Networks it created stay."
     }
   }
 }

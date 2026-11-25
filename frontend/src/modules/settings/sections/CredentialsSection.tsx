@@ -106,6 +106,9 @@ function usageLabelText(label: string, t: TFunction): string {
   if (label === 'helpChat.llm') return t('settings.credentials.usedBy.helpChatLlm');
   if (label === 'helpChat.embedding') return t('settings.credentials.usedBy.helpChatEmbed');
   if (label === 'helpChat.webSearch') return t('settings.credentials.usedBy.helpChatSearch');
+  if (label === 'architect.llm') return t('settings.credentials.usedBy.architectLlm');
+  if (label === 'architect.embedding') return t('settings.credentials.usedBy.architectEmbed');
+  if (label === 'architect.webSearch') return t('settings.credentials.usedBy.architectSearch');
   if (label.startsWith('mcp:')) {
     const id = label.slice(4);
     const name = t(`mcp.recipe.${id}`, { defaultValue: id });

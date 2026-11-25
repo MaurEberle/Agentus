@@ -89,4 +89,6 @@ The chart and error list, and the run list and detail, can be resized by draggin
 
 Side panel or dedicated view: meta, mini graph, tabs **Log**, **Steps**, **Chat**. The log looks like the one in monitoring: views, groups, summary, export as text. Older runs carry less detail (no task, no caller). Steps: node, role, status, error. Chat: transcript, read-only. Export a single log.
 
+Below the time range you see **ran with version N** when the run's state is still kept as a version. **Restore this state** makes the run's state the newest version of the network, even if no version matches any more.
+
 Deleting history rows does not change saved networks.

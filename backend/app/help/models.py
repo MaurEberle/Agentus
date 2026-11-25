@@ -13,6 +13,8 @@ class HelpChatStatus(ApiModel):
     web_search_enabled: bool = Field(alias="webSearchEnabled")
     degraded: bool = False
     using_fallback: bool = Field(default=False, alias="usingFallback")
+    # E-7/E-16: a local architect session has the GPU; the help chat waits for it.
+    paused_by_architect: bool = Field(default=False, alias="pausedByArchitect")
 
 
 class HelpSource(ApiModel):

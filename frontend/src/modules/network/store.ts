@@ -49,11 +49,11 @@ type EditorStore = {
   isDirty: () => boolean;
 };
 
+/** View, time stamps and the server's bookkeeping (version, revision, index states) are no edit. */
+const NOT_CONTENT = new Set(['viewport', 'updatedAt', 'version', 'revision', 'knowledge']);
+
 function withoutHistory(doc: AgentNetworkDocument): string {
-  const { viewport: _viewport, updatedAt: _updatedAt, ...rest } = doc;
-  void _viewport;
-  void _updatedAt;
-  return JSON.stringify(rest);
+  return JSON.stringify(Object.fromEntries(Object.entries(doc).filter(([key]) => !NOT_CONTENT.has(key))));
 }
 
 export const useNetworkEditor = create<EditorStore>((set, get) => ({
@@ -172,6 +172,8 @@ export const useNetworkEditor = create<EditorStore>((set, get) => ({
         ...current,
         id: doc.id,
         updatedAt: doc.updatedAt,
+        version: doc.version,
+        revision: doc.revision,
         name: current.name === sent.name ? doc.name : current.name,
       },
       saved: cloneDocument(doc),

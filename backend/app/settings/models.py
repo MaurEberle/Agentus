@@ -32,6 +32,27 @@ class HelpChatSettings(ApiModel):
     fallback_model: str | None = Field(default=None, alias="fallbackModel")
 
 
+class ArchitectSettings(ApiModel):
+    """The architect module (fix/netz-architekt/entwurf.md): last model, own web search, limits."""
+
+    provider: HelpProvider = ""
+    model: str = ""
+    credential_id: str | None = Field(default=None, alias="credentialId")
+    # E-14: the architect's own web search, off until the user sets it up.
+    web_search_enabled: bool = Field(default=False, alias="webSearchEnabled")
+    web_search_provider: str = Field(default="brave", alias="webSearchProvider")
+    web_search_base_url: str | None = Field(default=None, alias="webSearchBaseUrl")
+    web_search_credential_id: str | None = Field(default=None, alias="webSearchCredentialId")
+    embedding_provider: EmbeddingProvider = Field(default="", alias="embeddingProvider")
+    embedding_model: str = Field(default="", alias="embeddingModel")
+    embedding_credential_id: str | None = Field(default=None, alias="embeddingCredentialId")
+    own_networks_as_examples: bool = Field(default=False, alias="ownNetworksAsExamples")
+    send_paths_to_cloud: bool = Field(default=False, alias="sendPathsToCloud")
+    tool_calls_per_answer: int = Field(default=25, alias="toolCallsPerAnswer")
+    web_searches_per_session: int = Field(default=20, alias="webSearchesPerSession")
+    hub_calls_per_session: int = Field(default=30, alias="hubCallsPerSession")
+
+
 class AppSettings(ApiModel):
     ollama_base_url: str = Field(alias="ollamaBaseUrl")
     # "own": Agentus runs its private Ollama copy; "external": the address above.
@@ -42,6 +63,9 @@ class AppSettings(ApiModel):
     active_network_id: str | None = Field(default=None, alias="activeNetworkId")
     history_retention_days: int | None = Field(default=90, alias="historyRetentionDays")
     chat_onboarding_seen: bool = Field(default=False, alias="chatOnboardingSeen")
+    architect: ArchitectSettings = Field(default_factory=ArchitectSettings)
+    # V-2: versions kept per network (fix/netz-versionen/entwurf.md, 7).
+    network_versions_keep: int = Field(default=50, alias="networkVersionsKeep")
 
 
 class AppSettingsPatch(ApiModel):
@@ -62,6 +86,8 @@ class AppSettingsPatch(ApiModel):
     active_network_id: str | None = Field(default=None, alias="activeNetworkId")
     history_retention_days: int | None = Field(default=None, alias="historyRetentionDays")
     chat_onboarding_seen: bool | None = Field(default=None, alias="chatOnboardingSeen")
+    architect: dict[str, Any] | None = None
+    network_versions_keep: int | None = Field(default=None, alias="networkVersionsKeep")
 
 
 class CredentialListItem(ApiModel):

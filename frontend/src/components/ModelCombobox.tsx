@@ -23,6 +23,7 @@ export function ModelCombobox({
   emptyLabel,
   restrictToOptions,
   facts,
+  blocked,
 }: {
   id?: string;
   value: string;
@@ -36,6 +37,8 @@ export function ModelCombobox({
   restrictToOptions?: boolean;
   /** Parameters, quantization and size per model name, for the hover card. */
   facts?: ReadonlyMap<string, ModelFacts>;
+  /** Why a model cannot be picked; such entries stay visible but greyed out. */
+  blocked?: (name: string) => string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -57,6 +60,7 @@ export function ModelCombobox({
 
   function commit(next: string) {
     if (restrictToOptions && next && !options.includes(next)) return;
+    if (next && blocked?.(next)) return;
     onChange(next);
     closedAt.current = Date.now();
     setOpen(false);
@@ -145,11 +149,16 @@ export function ModelCombobox({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                    aria-disabled={Boolean(blocked?.(item))}
+                    className={cn(
+                      'flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
+                      blocked?.(item) ? 'cursor-not-allowed text-muted-foreground opacity-60' : 'hover:bg-accent',
+                    )}
                     onClick={() => commit(item)}
                   >
                     <Check className={cn('size-3.5 shrink-0', item === value ? 'opacity-100' : 'opacity-0')} />
                     <span className="min-w-0 flex-1 truncate">{modelLabel(item).name}</span>
+                    {blocked?.(item) ? <span className="shrink-0 text-[11px]">{blocked(item)}</span> : null}
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="left" align="start" className={HOVER_CARD}>

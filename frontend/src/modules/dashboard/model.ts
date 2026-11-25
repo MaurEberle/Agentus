@@ -23,6 +23,8 @@ export type NetworkListItem = {
   isRunning: boolean;
   lastRunId?: string;
   validationErrors?: NetworkValidationError[];
+  /** Current version (fix/netz-versionen); older backends leave it out. */
+  version?: number;
 };
 
 export type NetworkValidationError = {

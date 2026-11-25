@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
@@ -26,7 +27,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ApiError } from '@/api/client';
 import { notify } from '@/lib/notifications';
 import { patchSettings, pickDataDir, setDataDir, useSettingsQuery, useStoresQuery } from '@/modules/settings/api';
-import { isForbiddenDataRoot, type HistoryRetentionDays } from '@/modules/settings/model';
+import {
+  isForbiddenDataRoot,
+  NETWORK_VERSIONS_MAX,
+  NETWORK_VERSIONS_MIN,
+  type HistoryRetentionDays,
+} from '@/modules/settings/model';
 import { SectionHeader } from '@/modules/settings/sections/SectionHeader';
 import { useSettingsDraft } from '@/modules/settings/store';
 import { useAppStore } from '@/store';
@@ -88,11 +94,18 @@ export function DataSection() {
     }
   }
 
+  const versionsKeep = Number(dataDraft?.networkVersionsKeep ?? '');
+  const versionsValid =
+    Number.isInteger(versionsKeep) && versionsKeep >= NETWORK_VERSIONS_MIN && versionsKeep <= NETWORK_VERSIONS_MAX;
+
   async function saveRetention() {
-    if (!dataDraft) return;
+    if (!dataDraft || !versionsValid) return;
     setSaving(true);
     try {
-      const next = await patchSettings({ historyRetentionDays: dataDraft.historyRetentionDays });
+      const next = await patchSettings({
+        historyRetentionDays: dataDraft.historyRetentionDays,
+        networkVersionsKeep: versionsKeep,
+      });
       syncData(next);
     } catch {
       notify({ titleKey: 'settings.notify.saveError', variant: 'error' });
@@ -176,10 +189,39 @@ export function DataSection() {
             </label>
           ))}
         </RadioGroup>
-        <Button type="button" onClick={() => void saveRetention()} disabled={!dirty || saving} loading={saving}>
-          {t('settings.common.save')}
-        </Button>
       </fieldset>
+      <div className="space-y-1.5">
+        <Label htmlFor="network-versions-keep">{t('settings.data.versionsLabel')}</Label>
+        <Input
+          id="network-versions-keep"
+          type="number"
+          inputMode="numeric"
+          min={NETWORK_VERSIONS_MIN}
+          max={NETWORK_VERSIONS_MAX}
+          step={1}
+          className="w-28"
+          value={dataDraft?.networkVersionsKeep ?? ''}
+          aria-invalid={!versionsValid}
+          aria-describedby="network-versions-keep-hint"
+          onChange={(event) => setData({ networkVersionsKeep: event.target.value })}
+        />
+        <p
+          id="network-versions-keep-hint"
+          className={versionsValid ? 'text-xs text-muted-foreground' : 'text-xs text-destructive'}
+        >
+          {versionsValid
+            ? t('settings.data.versionsHint')
+            : t('settings.data.versionsInvalid', { min: NETWORK_VERSIONS_MIN, max: NETWORK_VERSIONS_MAX })}
+        </p>
+      </div>
+      <Button
+        type="button"
+        onClick={() => void saveRetention()}
+        disabled={!dirty || saving || !versionsValid}
+        loading={saving}
+      >
+        {t('settings.common.save')}
+      </Button>
 
       <Dialog open={pendingPath !== null} onOpenChange={(open) => !open && setPendingPath(null)}>
         <DialogContent closeLabel={t('settings.common.close')}>

@@ -100,6 +100,7 @@ def get_one(run_id: str) -> dict[str, Any]:
     if row is None:
         raise AppError("db.notFound", status_code=404)
     body = _camel_run(row)
+    body.update(_network_version(row))
     body["calls"] = [_camel_call(item) for item in list_calls(run_id)]
     body["steps"] = [_camel_step(item) for item in list_steps(run_id)]
     return body
@@ -148,6 +149,16 @@ def purge(body: PurgeBody) -> dict[str, int]:
     if days is None:
         return {"deleted": 0}
     return {"deleted": purge_older_than(int(days))}
+
+
+def _network_version(row: dict[str, Any]) -> dict[str, Any]:
+    """Which kept version the run's snapshot is, if any (fix/netz-versionen/entwurf.md, 12)."""
+    from app.db.networks import content_hash, get_network, version_for_hash
+
+    snapshot = row.get("graph_snapshot")
+    exists = get_network(row["network_id"]) is not None
+    version = version_for_hash(row["network_id"], content_hash(snapshot)) if exists and isinstance(snapshot, dict) else None
+    return {"networkExists": exists, "networkVersion": version}
 
 
 def _camel_run(row: dict[str, Any]) -> dict[str, Any]:

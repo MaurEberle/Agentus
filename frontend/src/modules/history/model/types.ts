@@ -100,6 +100,9 @@ export type RunDetail = RunSummary & {
   calls: LlmCall[];
   graphSnapshot?: GraphSnapshot;
   chat?: RunChatMessage[];
+  /** The network still exists, and which kept version the snapshot is (fix/netz-versionen, 12). */
+  networkExists?: boolean;
+  networkVersion?: number | null;
 };
 
 export type LogFilter = {

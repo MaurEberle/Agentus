@@ -36,6 +36,7 @@ from app.settings.models import (
     CredentialPatch,
     DataLocation,
     DataLocationPost,
+    ArchitectSettings,
     HelpChatSettings,
     SessionOut,
     SessionWaitAsk,
@@ -121,6 +122,26 @@ def _merge_help_chat(current: HelpChatSettings, patch: dict[str, Any]) -> HelpCh
     return HelpChatSettings.model_validate(data)
 
 
+_ARCHITECT_LIMITS = {
+    "toolCallsPerAnswer": (5, 100),
+    "webSearchesPerSession": (0, 200),
+    "hubCallsPerSession": (0, 300),
+}
+
+
+def _merge_architect(current: ArchitectSettings, patch: dict[str, Any]) -> ArchitectSettings:
+    data = current.model_dump(by_alias=True)
+    for key, value in patch.items():
+        if key not in data:
+            continue
+        if key in _ARCHITECT_LIMITS:
+            low, high = _ARCHITECT_LIMITS[key]
+            if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+                raise AppError("settings.architect.limit", status_code=400)
+        data[key] = value
+    return ArchitectSettings.model_validate(data)
+
+
 def _initial_ollama_runtime(base_url: object) -> str:
     """Settings from before the own runtime: a custom Ollama address stays in use."""
     if not isinstance(base_url, str) or not base_url.strip():
@@ -144,7 +165,9 @@ def load_settings() -> AppSettings:
     defaults = default_settings().model_dump(by_alias=True)
     help_raw = raw.get("helpChat") if isinstance(raw.get("helpChat"), dict) else {}
     merged_help = {**defaults["helpChat"], **help_raw}
-    merged = {**defaults, **raw, "helpChat": merged_help}
+    architect_raw = raw.get("architect") if isinstance(raw.get("architect"), dict) else {}
+    merged_architect = {**defaults["architect"], **architect_raw}
+    merged = {**defaults, **raw, "helpChat": merged_help, "architect": merged_architect}
     if "ollamaRuntime" not in raw:
         merged["ollamaRuntime"] = _initial_ollama_runtime(raw.get("ollamaBaseUrl"))
     settings = AppSettings.model_validate(merged)
@@ -183,6 +206,12 @@ def patch_settings(body: AppSettingsPatch) -> AppSettings:
         updates["history_retention_days"] = body.history_retention_days
     if body.chat_onboarding_seen is not None:
         updates["chat_onboarding_seen"] = body.chat_onboarding_seen
+    if body.architect is not None:
+        updates["architect"] = _merge_architect(current.architect, body.architect)
+    if body.network_versions_keep is not None:
+        if not 5 <= body.network_versions_keep <= 500:
+            raise AppError("settings.versions.invalid", status_code=400)
+        updates["network_versions_keep"] = body.network_versions_keep
     settings = current.model_copy(update=updates)
     _persist(settings)
     return settings

@@ -16,6 +16,7 @@
     "dashboard": "Panel",
     "network": "Red",
     "networks": "Biblioteca",
+    "architect": "Arquitecto",
     "monitoring": "Supervisión",
     "history": "Historial",
     "prompts": "Prompts",
@@ -361,6 +362,7 @@
       "credentials": "Credenciales",
       "runtime": "Runtime",
       "help-chat": "Chat de ayuda",
+      "architect": "Arquitecto",
       "mcp": "Servidores MCP",
       "data": "Datos",
       "about": "Acerca de"
@@ -447,6 +449,9 @@
       "customInvalid": "Un acceso propio necesita un Bearer, una cabecera o una variable.",
       "inUseMcpHint": "Asigna otra credencial en Servidores MCP o elimina el servidor. Después podrás quitar esta credencial.",
       "usedBy": {
+        "architectLlm": "Arquitecto (chat)",
+        "architectEmbed": "Arquitecto (ejemplos)",
+        "architectSearch": "Arquitecto (búsqueda web)",
         "helpChatLlm": "Chat de ayuda (chat)",
         "helpChatEmbed": "Chat de ayuda (embeddings)",
         "helpChatSearch": "Chat de ayuda (búsqueda web)",
@@ -663,6 +668,9 @@
       "storeName": "Almacén",
       "fileName": "Archivo",
       "retentionLabel": "Retención del historial",
+      "versionsLabel": "Versiones por red",
+      "versionsHint": "Se guardan tantas versiones por red. La versión 1, las fijadas y la actual se quedan siempre.",
+      "versionsInvalid": "Un número entero de {{min}} a {{max}}.",
       "copy": "Copiar el contenido a la carpeta nueva",
       "confirmTitle": "Cambiar carpeta de datos",
       "confirmBody": "La carpeta anterior se conserva. Crea un destino vacío o usa archivos de almacén existentes.",
@@ -686,6 +694,41 @@
         "90": "90 días",
         "365": "365 días",
         "unlimited": "Ilimitado"
+      }
+    },
+    "architect": {
+      "lead": "Búsqueda web propia del arquitecto, rutas de carpetas y límites. El modelo lo eliges en el propio módulo.",
+      "webSearch": "Búsqueda web",
+      "webSearchHint": "El arquitecto puede consultar la web, por ejemplo sobre herramientas o modelos nuevos. Independiente de la búsqueda web del chat de ayuda.",
+      "webSearchIncomplete": "Sin dirección o acceso, la búsqueda web queda desactivada.",
+      "sendPaths": "Rutas de carpetas a modelos en la nube",
+      "sendPathsHint": "Desactivado: un modelo en la nube no ve rutas de carpetas al cargar una red; en la red no cambian. Los modelos locales siempre las ven.",
+      "limits": "Límites",
+      "limitsHint": "Evitan bucles de herramientas sin fin y ahorran saldo y cuota de Hugging Face. 0 desactiva la búsqueda web o la del Hub.",
+      "limit": {
+        "toolCallsPerAnswer": "Llamadas a herramientas por respuesta",
+        "webSearchesPerSession": "Búsquedas web por sesión",
+        "hubCallsPerSession": "Consultas al Hub por sesión"
+      },
+      "range": "de {{min}} a {{max}}",
+      "reset": "Restablecer",
+      "limitError": "Un límite está fuera del rango permitido.",
+      "examples": {
+        "title": "Ejemplos",
+        "hint": "El arquitecto busca redes de ejemplo que encajen con la ficha. Los ejemplos incluidos llegarán con una actualización posterior; tus propias redes solo si lo permites.",
+        "own": "Usar mis redes como ejemplos",
+        "ownHint": "Solo redes válidas. Los modelos en la nube no ven prompts; solo los reciben cuando cargas una red de forma explícita.",
+        "embeddingProvider": "Proveedor de embeddings",
+        "keywordsOnly": "Ninguno (búsqueda por palabras clave)",
+        "embeddingModel": "Modelo de embeddings",
+        "count": "{{count}} ejemplos ({{shipped}} incluidos, {{own}} propios)",
+        "embedded": "Embedding {{model}}: {{done}} de {{count}} indexados",
+        "keywords": "Búsqueda por palabras clave",
+        "loading": "Cargando estado …",
+        "reindex": "Reconstruir índice",
+        "reindexDone": "Índice de ejemplos reconstruido",
+        "reindexFailed": "Falló el embedding; la búsqueda usa palabras clave.",
+        "saveFirst": "Guarda primero y luego reconstruye."
       }
     },
     "about": {
@@ -750,6 +793,7 @@
       "cta": "Ir a ajustes"
     },
     "usingFallback": "No hay modelo de chat. Las respuestas usan el modelo de ahorro.",
+    "pausedByArchitect": "El arquitecto está trabajando con un modelo local. El chat de ayuda está en pausa hasta que termine la sesión.",
     "sources": {
       "rag": "Documento",
       "web": "Web"
@@ -879,6 +923,7 @@
       "saveAs": "Guardar como",
       "load": "Abrir",
       "duplicate": "Duplicar",
+      "versions": "Versiones",
       "import": "Importar",
       "export": "Exportar",
       "validate": "Validar",
@@ -1202,6 +1247,97 @@
       "cancel": "Cancelar",
       "nameTitle": "Nombrar la red"
     },
+    "diff": {
+      "none": "Sin cambios.",
+      "added": "Nuevo",
+      "changed": "Cambiado",
+      "removed": "Eliminado",
+      "head": "Cambiado: {{fields}}",
+      "edges": "Conexiones: +{{added}} / −{{removed}}",
+      "field": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "tags": "Etiquetas"
+      }
+    },
+    "versions": {
+      "title": "Versiones: {{name}}",
+      "lead": "Cada guardado como versión nueva deja aquí un estado. La versión 1, las fijadas y la actual se conservan al limpiar.",
+      "list": "Versiones",
+      "loading": "Cargando …",
+      "empty": "Aún no hay versiones.",
+      "error": "No se pudieron cargar o cambiar las versiones.",
+      "version": "Versión {{version}}",
+      "current": "actual",
+      "nodes_one": "{{count}} nodo",
+      "nodes_other": "{{count}} nodos",
+      "source": {
+        "create": "creada",
+        "editor": "editor",
+        "architect": "arquitecto",
+        "restore": "restaurada",
+        "restoreFrom": "restaurada desde la versión {{from}}",
+        "import": "importada",
+        "duplicate": "copiada",
+        "migration": "existente"
+      },
+      "pin": "Fijar: se conserva al limpiar",
+      "unpin": "Soltar",
+      "note": "Nota",
+      "notePlaceholder": "Añadir una nota",
+      "compare": "Restaurar cambiaría esto en el estado actual",
+      "isCurrent": "Este es el estado actual.",
+      "restore": "Restaurar",
+      "copy": "Copiar como red nueva",
+      "copyName": "{{name}} (versión {{version}})",
+      "copied": "«{{name}}» creada",
+      "open": "Abrir",
+      "restored": "Versión {{from}} restaurada como versión {{version}}",
+      "dirtyTitle": "¿Descartar cambios sin guardar?",
+      "dirtyBody": "Restaurar reemplaza el estado del editor. Los cambios sin guardar se pierden.",
+      "dirtyConfirm": "Descartar y restaurar",
+      "conflict": "La red cambió entretanto. La lista se ha recargado; inténtalo de nuevo.",
+      "busy": "No se puede restaurar una red en ejecución.",
+      "reindexTitle": "Falta el índice: {{names}}",
+      "reindex": "Reconstruir índice",
+      "reindexDone": "Índice reconstruido",
+      "reindexFailed": "No se pudo reconstruir el índice por completo.",
+      "field": "Versión",
+      "picker": "Elegir versión",
+      "previewBadge": "Vista previa",
+      "pinned": "fijada",
+      "manage": "Gestionar todas las versiones …",
+      "viewInEditor": "Ver en el editor",
+      "preview": {
+        "title": "Versión {{version}}",
+        "readonly": "vista previa de solo lectura",
+        "same": "Mismo contenido que la versión actual",
+        "changes_one": "{{count}} diferencia",
+        "changes_other": "{{count}} diferencias",
+        "older": "Versión anterior (←)",
+        "newer": "Versión más reciente (→)",
+        "exit": "Volver a la versión actual",
+        "unsaved": "Tus cambios sin guardar se conservan y vuelven a aparecer al regresar a la versión actual."
+      }
+    },
+    "save": {
+      "title": "Guardar: {{name}}",
+      "note": "Nota (opcional)",
+      "notePlaceholder": "p. ej. añadido un tester",
+      "newVersion": "Guardar como versión nueva",
+      "sameVersion": "Guardar sin versión nueva",
+      "overwriteHint": "Sin versión nueva se sobrescribe la versión {{version}}."
+    },
+    "conflict": {
+      "title": "La red cambió entretanto",
+      "body": "Desde que la cargaste, esta red se guardó en otro sitio, por ejemplo desde el arquitecto o en una segunda ventana. La versión actual es la {{version}}. No se guardó nada.",
+      "reloadHint": "Recargar descarta tus cambios y muestra el estado actual.",
+      "saveHint": "Guardar como versión nueva pone tu estado encima; el otro estado queda como la versión anterior.",
+      "reload": "Recargar",
+      "saveNew": "Guardar como versión nueva",
+      "cancel": "Cancelar",
+      "reloaded": "Estado actual cargado"
+    },
     "dirty": {
       "title": "Cambios sin guardar",
       "body": "La red abierta tiene cambios. ¿Guardar, descartar o cancelar?",
@@ -1272,6 +1408,8 @@
     },
     "notify": {
       "saved": "Red guardada",
+      "savedVersion": "Guardada como versión {{version}}",
+      "saveBusy": "La red está en ejecución. Detenla antes de guardar.",
       "saveError": "No se pudo guardar",
       "duplicated": "Copia abierta",
       "valid": "La red es válida",
@@ -1395,7 +1533,7 @@
     },
     "delete": {
       "title": "Eliminar redes",
-      "body": "Se elimina el índice del espacio de trabajo de esta red. Los archivos de origen en disco se quedan. El almacén de ayuda y las ejecuciones del historial no se tocan.",
+      "body": "Se eliminan para siempre todas las versiones guardadas y el índice del espacio de trabajo de esta red; no hay papelera. Los archivos de origen en disco se quedan. El almacén de ayuda y las ejecuciones del historial no se tocan.",
       "none": "No se puede eliminar ninguna red.",
       "runningSkipped": "En ejecución y omitida: {{names}}",
       "activeWarning": "Hay al menos una red activa. Se vaciará la selección rápida."
@@ -1823,6 +1961,10 @@
       "missing": "Esta ejecución no existe.",
       "error": "Error",
       "exportLog": "Exportar registro",
+      "ranWithVersion": "se ejecutó con la versión {{version}}",
+      "ranWithoutVersion": "se ejecutó con un estado que ya no se guarda como versión",
+      "restore": "Restaurar este estado",
+      "restored": "Estado restaurado como versión {{version}}",
       "tabLog": "Registro",
       "tabSteps": "Pasos",
       "tabChat": "Chat"
@@ -2449,6 +2591,259 @@
       "exported": "Exportación guardada",
       "imported": "Prompts importados",
       "failed": "No ha funcionado"
+    }
+  },
+  "architect": {
+    "load": {
+      "button": "Cargar red …",
+      "title": "Cargar red",
+      "lead": "El arquitecto trabaja entonces con esta red. No se guarda nada antes del diálogo de cierre.",
+      "search": "Buscar redes",
+      "empty": "No se encontraron redes.",
+      "purposeLabel": "¿Para qué?",
+      "purpose": {
+        "change": "para cambiarla",
+        "template": "como plantilla"
+      },
+      "purposeHint": {
+        "change": "El arquitecto cambia esta red. Se guarda solo cuando confirmes, como versión nueva.",
+        "template": "El arquitecto parte de una copia. Al final surge una red nueva; el original no cambia."
+      },
+      "replaces": "Se reemplaza el borrador actual de esta sesión.",
+      "cloudNote": "La estructura y los prompts van al modelo en la nube; las rutas de carpetas solo si los ajustes del arquitecto lo permiten.",
+      "confirm": "Cargar",
+      "decline": "No cargar",
+      "ask": "El arquitecto quiere cargar «{{name}}» ({{purpose}}).",
+      "sent": "He cargado «{{name}}».",
+      "done": "«{{name}}» cargada",
+      "failed": "No se pudo cargar la red."
+    },
+    "source": {
+      "change": "Cambia «{{name}}» · versión {{version}}",
+      "template": "Plantilla: «{{name}}»",
+      "hidden": "Las rutas de carpetas están ocultas para el modelo en la nube y no cambian."
+    },
+    "proposal": {
+      "create": "El arquitecto propone crear la red.",
+      "update": "El arquitecto propone aplicar los cambios.",
+      "open": "Abrir diálogo de cierre",
+      "dismiss": "Descartar"
+    },
+    "closing": {
+      "button": "Terminar …",
+      "title": "Terminar",
+      "titleCreate": "Crear red: {{name}}",
+      "titleUpdate": "Aplicar cambios: {{name}}",
+      "lead": "Revisa estructura, cambios y riesgos antes de confirmar.",
+      "loading": "Preparando …",
+      "loadFailed": "No se pudo preparar el cierre.",
+      "structure": "Estructura",
+      "models": "Modelos",
+      "tools": "Herramientas",
+      "changes": "Cambios desde la versión {{version}}",
+      "risks": "Piezas de riesgo",
+      "invalid_one": "El borrador aún tiene un error. El arquitecto debe corregirlo primero.",
+      "invalid_other": "El borrador aún tiene {{count}} errores. El arquitecto debe corregirlos primero.",
+      "running": "La red está en ejecución. Detenla antes de aplicar cambios.",
+      "changedSince": "La red se guardó en otro sitio desde que se cargó (ahora versión {{version}}).",
+      "conflictHint": "Volver a cargar descarta el borrador y carga el estado actual. Aplicar de todos modos pone el borrador encima como versión nueva; el otro estado queda como la versión anterior.",
+      "reload": "Volver a cargar",
+      "force": "Aplicar de todos modos",
+      "editorDirty": "Esta red está abierta en el editor con cambios sin guardar. Si el editor guarda después, avisará de un conflicto.",
+      "options": "Opciones",
+      "setActive": "Marcar como activa",
+      "setActiveBusy": "Mientras una red se ejecuta, la red activa no cambia.",
+      "prompts": "Añadir prompts a la biblioteca ({{count}})",
+      "openEditor": "Abrir después en el editor",
+      "versionNoteCreate": "La red empieza en la versión 1, origen «Arquitecto».",
+      "versionNoteUpdate": "Se guarda como versión nueva con origen «Arquitecto». El estado anterior queda como versión; «Deshacer última aplicación» lo recupera.",
+      "nothing": "El borrador coincide con el estado guardado; no hay nada que aplicar.",
+      "create": "Crear",
+      "update": "Aplicar cambios",
+      "cancel": "Cancelar",
+      "created": "«{{name}}» creada",
+      "updated": "«{{name}}» guardada como versión {{version}}",
+      "promptsAdded": "Prompts añadidos a la biblioteca: {{count}}",
+      "error": {
+        "architect_apply_invalid": "El borrador aún tiene errores.",
+        "architect_apply_noTarget": "No hay ninguna red cargada para cambiar.",
+        "architect_apply_empty": "Aún no hay borrador.",
+        "architect_busy": "El arquitecto aún está respondiendo. Espera a que termine.",
+        "networks_notFound": "La red ya no existe."
+      }
+    },
+    "undo": {
+      "button": "Deshacer última aplicación",
+      "done": "Versión {{from}} restaurada como versión {{version}}",
+      "conflict": "La red cambió desde la aplicación. Restaura estados anteriores desde las versiones en el editor."
+    },
+    "diff": {
+      "title": "Cambios desde la versión {{version}}"
+    },
+    "risk": {
+      "terminal": "«{{ref}}»: el terminal sin restricciones ejecuta cualquier comando.",
+      "fileDelete": "«{{ref}}»: el acceso a archivos puede borrar archivos.",
+      "httpCredential": "«{{ref}}»: HTTP envía un acceso a una dirección."
+    },
+    "failed": "El arquitecto no pudo responder.",
+    "notActive": "La sesión no está en marcha. Iníciala primero.",
+    "busy": "El arquitecto todavía está respondiendo.",
+    "empty": "El mensaje está vacío.",
+    "split": "Cambiar el ancho del chat y del borrador",
+    "catalogChanged": "Agentus se actualizó desde que empezó esta sesión. El arquitecto vuelve a comprobar los campos antes de usarlos.",
+    "model": {
+      "provider": "Proveedor",
+      "credential": "Credencial",
+      "credentialNone": "Sin credencial",
+      "model": "Modelo de chat",
+      "pick": "Elegir modelo",
+      "noToolsShort": "sin herramientas",
+      "tooSmallShort": "menos de 4B",
+      "missing": "Elige proveedor y modelo.",
+      "noCredential": "Este proveedor necesita una credencial.",
+      "ollamaDown": "No se puede acceder a Ollama.",
+      "notInstalled": "Este modelo no está instalado.",
+      "noTools": "Este modelo no puede llamar herramientas; el arquitecto las necesita.",
+      "tooSmall": "Los modelos de menos de 4B parámetros son demasiado pequeños para el arquitecto.",
+      "small": "Modelo pequeño: con redes grandes puede llegar a su límite.",
+      "shortContext": "Contexto corto (menos de 32k): las sesiones largas se recortan pronto.",
+      "blocked": "Este modelo está bloqueado para el arquitecto."
+    },
+    "session": {
+      "start": "Iniciar sesión",
+      "stop": "Terminar sesión",
+      "running": "en marcha",
+      "slow": "descargado, lento"
+    },
+    "gpu": {
+      "line": "Necesita ≈ {{need}} · {{free}} de VRAM libres",
+      "short": "No hay suficiente memoria gráfica libre.",
+      "tooLarge": "El modelo no cabe ni en la memoria gráfica ni en la del sistema."
+    },
+    "networkRunning": "Hay una red en ejecución.",
+    "cloud": {
+      "notice": "El chat, la ficha y el borrador van al proveedor en la nube. Las rutas de carpetas se quedan en local."
+    },
+    "start": {
+      "slowTitle": "No hay suficiente memoria gráfica libre",
+      "slowBody": "Necesita ≈ {{need}}, {{free}} de VRAM libres. Iniciar de todos modos pasa partes a la memoria del sistema ({{ram}} libres); las respuestas serán mucho más lentas.",
+      "slowConfirm": "Iniciar de todos modos (lento)",
+      "runningTitle": "Hay una red en ejecución",
+      "runningBody": "La red en ejecución puede ir más lenta o fallar si el arquitecto comparte la GPU.",
+      "runningConfirm": "Iniciar de todos modos",
+      "blockedTitle": "No se puede iniciar",
+      "tooLargeBody": "Necesita ≈ {{need}}; hay {{free}} de VRAM y {{ram}} de memoria del sistema libres. Elige un modelo más pequeño o un proveedor en la nube.",
+      "close": "Cerrar",
+      "cancel": "Cancelar"
+    },
+    "chat": {
+      "tools_one": "{{count}} llamada a herramienta",
+      "tools_other": "{{count}} llamadas a herramientas",
+      "emptyActive": "Describe qué debe hacer tu red. O toma uno de estos ejemplos:",
+      "emptyIdle": "Elige arriba un modelo de chat e inicia la sesión. Después describe qué debe hacer tu red.",
+      "placeholder": "¿Qué debe hacer tu red?",
+      "startFirst": "Primero inicia la sesión.",
+      "stop": "Detener",
+      "send": "Enviar"
+    },
+    "examples": {
+      "coding": "Un equipo de programación local con pruebas",
+      "research": "Investigación con búsqueda web y fuentes",
+      "documents": "Preguntas sobre mis PDF"
+    },
+    "tools": {
+      "search_examples": "buscando redes de ejemplo …",
+      "web_search": "buscando en la web …",
+      "search_models": "buscando modelos en Hugging Face …",
+      "model_details": "leyendo detalles del modelo …",
+      "load_network": "pide permiso para cargar una red …",
+      "propose_create": "preparando el cierre …",
+      "propose_update": "preparando el cierre …",
+      "set_brief": "rellenando la ficha …",
+      "list_components": "leyendo los componentes …",
+      "describe_component": "consultando un componente …",
+      "get_guide": "leyendo una guía de construcción …",
+      "list_models": "leyendo los modelos instalados …",
+      "environment": "comprobando el entorno …",
+      "list_prompts": "buscando en la biblioteca de prompts …",
+      "get_prompt": "leyendo un prompt …",
+      "list_networks": "buscando en tus redes …",
+      "draft_set": "construyendo el borrador …",
+      "draft_patch": "cambiando el borrador …"
+    },
+    "tool": {
+      "examples_one": "{{count}} red de ejemplo encontrada",
+      "examples_other": "{{count}} redes de ejemplo encontradas",
+      "web_one": "Búsqueda web «{{query}}»: {{count}} resultado",
+      "web_other": "Búsqueda web «{{query}}»: {{count}} resultados",
+      "webOff": "La búsqueda web está desactivada",
+      "webFailed": "Falló la búsqueda web «{{query}}»",
+      "limit": "Cuota de la sesión agotada ({{limit}})",
+      "hubWait": "Hugging Face está limitando; de nuevo en {{seconds}} s",
+      "hubFailed": "Hugging Face no disponible",
+      "hubSearch_one": "{{count}} modelo encontrado en Hugging Face",
+      "hubSearch_other": "{{count}} modelos encontrados en Hugging Face",
+      "hubDetails": "Detalles de {{repo}} leídos",
+      "loadAsk": "quiere cargar «{{name}}»",
+      "loadMissing": "red «{{name}}» no encontrada",
+      "proposed": "propone crear",
+      "proposedUpdate": "propone aplicar",
+      "proposeBlocked_one": "aún no se puede terminar ({{count}} error)",
+      "proposeBlocked_other": "aún no se puede terminar ({{count}} errores)",
+      "brief": "Ficha actualizada",
+      "components": "Componentes leídos",
+      "describe": "{{name}} consultado",
+      "unknown": "{{name}}: desconocido",
+      "guide": "Guía «{{name}}» leída",
+      "guideMissing": "No existe la guía «{{name}}»",
+      "models_one": "{{count}} modelo instalado leído",
+      "models_other": "{{count}} modelos instalados leídos",
+      "ollamaDown": "No se puede acceder a Ollama",
+      "environment": "Entorno leído",
+      "prompts_one": "{{count}} prompt encontrado",
+      "prompts_other": "{{count}} prompts encontrados",
+      "prompt": "Prompt «{{name}}» leído",
+      "promptMissing": "Prompt no encontrado",
+      "networks_one": "{{count}} red encontrada",
+      "networks_other": "{{count}} redes encontradas",
+      "draftValid": "Borrador: {{nodes}} nodos, {{edges}} aristas, válido",
+      "draftErrors_one": "Borrador: {{nodes}} nodos, {{edges}} aristas, {{count}} error",
+      "draftErrors_other": "Borrador: {{nodes}} nodos, {{edges}} aristas, {{count}} errores",
+      "badArgs": "{{name}}: datos no válidos",
+      "failed": "{{name}}: error"
+    },
+    "idle": {
+      "warning": "Sin entradas, la sesión termina en {{seconds}} s. El chat y el borrador se conservan.",
+      "keep": "Seguir trabajando"
+    },
+    "brief": {
+      "title": "Ficha",
+      "empty": "Todavía vacía. El arquitecto la rellena en la conversación; puedes cambiar cualquier campo.",
+      "goal": "Objetivo",
+      "input": "Entrada",
+      "output": "Resultado",
+      "sources": "Fuentes",
+      "deployment": "Local/nube",
+      "tools": "Herramientas",
+      "constraints": "Límites"
+    },
+    "draft": {
+      "empty": "Todavía no hay borrador. Aparece aquí en cuanto el arquitecto lo construye.",
+      "unnamed": "Borrador sin nombre",
+      "valid": "válido",
+      "errors_one": "{{count}} error",
+      "errors_other": "{{count}} errores",
+      "error": "Error en el borrador"
+    },
+    "sessions": {
+      "title": "Sesiones",
+      "new": "Nueva",
+      "empty": "Todavía no hay sesiones.",
+      "untitled": "Sesión nueva",
+      "export": "Markdown",
+      "delete": "Eliminar",
+      "deleteTitle": "¿Eliminar la sesión?",
+      "deleteBody": "Se eliminan el chat, la ficha y el borrador de esta sesión. Las redes creadas se quedan."
     }
   }
 }

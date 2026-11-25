@@ -1,30 +1,17 @@
 import type { GraphNode, NodeType } from '@/modules/network/model/document';
 import { newId, snapPosition } from '@/modules/network/model/document';
+import { nodeSpec } from '@/modules/network/schema/catalog';
 
+/** Data a new node starts with: the catalog's `initial` values; router branches get ids. */
 export function defaultData(type: NodeType): Record<string, unknown> {
-  switch (type) {
-    case 'chat_input':
-      return { displayName: '', placeholder: '', startMessage: '', requireInput: false };
-    case 'orchestrator':
-      return { displayName: '', systemPrompt: '', agentMissLimit: 2 };
-    case 'llm':
-      return { displayName: '', provider: 'ollama', model: '' };
-    case 'agent':
-      return { displayName: '', systemPrompt: '' };
-    case 'tool':
-      return { displayName: '', kind: 'datetime' };
-    case 'mcp':
-      return { displayName: '', mcpServerId: undefined, mcpToolNames: undefined };
-    case 'knowledge':
-      return { displayName: '', sourcePath: '', topK: 5, embeddingProvider: 'ollama', embeddingModel: '' };
-    case 'router':
-      return {
-        displayName: '',
-        branches: [{ id: newId('br'), name: 'A', match: 'contains', pattern: '' }],
-      };
-    case 'end':
-      return { displayName: '' };
+  const data: Record<string, unknown> = {};
+  for (const field of nodeSpec(type).fields) {
+    if ('initial' in field) data[field.key] = structuredClone(field.initial);
   }
+  if (type === 'router' && Array.isArray(data.branches)) {
+    data.branches = data.branches.map((branch) => ({ id: newId('br'), ...(branch as object) }));
+  }
+  return data;
 }
 
 export function createNode(type: NodeType, position: { x: number; y: number }, snap: boolean): GraphNode {

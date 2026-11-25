@@ -3,6 +3,7 @@ export const SETTINGS_SECTIONS = [
   'credentials',
   'runtime',
   'help-chat',
+  'architect',
   'mcp',
   'data',
   'about',
@@ -157,6 +158,32 @@ export type AppSettings = {
   activeNetworkId?: string | null;
   historyRetentionDays: HistoryRetentionDays;
   chatOnboardingSeen?: boolean;
+  architect?: ArchitectSettings;
+  /** Versions kept per network, 5 to 500 (fix/netz-versionen, V-2). */
+  networkVersionsKeep?: number;
+};
+
+export const NETWORK_VERSIONS_MIN = 5;
+export const NETWORK_VERSIONS_MAX = 500;
+export const NETWORK_VERSIONS_DEFAULT = 50;
+
+/** The architect module: last model choice, own web search, examples, cloud rules, limits. */
+export type ArchitectSettings = {
+  provider: HelpProvider;
+  model: string;
+  credentialId?: string | null;
+  webSearchEnabled?: boolean;
+  webSearchProvider: string;
+  webSearchBaseUrl?: string | null;
+  webSearchCredentialId?: string | null;
+  embeddingProvider: EmbeddingProvider | '';
+  embeddingModel: string;
+  embeddingCredentialId?: string | null;
+  ownNetworksAsExamples: boolean;
+  sendPathsToCloud: boolean;
+  toolCallsPerAnswer: number;
+  webSearchesPerSession: number;
+  hubCallsPerSession: number;
 };
 
 export type StoreId = 'settings' | 'help' | 'workspace' | 'history';
@@ -368,5 +395,6 @@ export function defaultSettings(): AppSettings {
     activeNetworkId: null,
     historyRetentionDays: 90,
     chatOnboardingSeen: false,
+    networkVersionsKeep: 50,
   };
 }

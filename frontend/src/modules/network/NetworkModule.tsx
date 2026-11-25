@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react';
-import { Link, useBlocker, useNavigate, useParams } from 'react-router-dom';
+import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
@@ -21,15 +21,22 @@ import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { notify } from '@/lib/notifications';
 import { useAppStore } from '@/store';
+import { ApiError, queryClient } from '@/api/client';
 import {
   createNetwork,
   duplicateNetwork,
+  getNetwork,
+  reindexNetworkKnowledge,
   updateNetwork,
   useEditorNetworkQuery,
   useEditorNetworksQuery,
   validateNetwork,
 } from '@/modules/network/api';
 import { FlowCanvas } from '@/modules/network/canvas/FlowCanvas';
+import { knowledgeWithoutIndex, useNetworkVersionsQuery } from '@/modules/network/versions/api';
+import { useVersionPreview } from '@/modules/network/versions/previewStore';
+import { VersionPreview } from '@/modules/network/versions/VersionPreview';
+import { VersionsSheet } from '@/modules/network/versions/VersionsSheet';
 import { Inspector } from '@/modules/network/inspector/Inspector';
 import { LoadDialog } from '@/modules/network/library/LoadDialog';
 import type { AgentNetworkDocument } from '@/modules/network/model/document';
@@ -52,6 +59,15 @@ import {
 } from '@/modules/network/store';
 
 type DirtyAction = 'new' | 'load' | 'library' | 'leave';
+
+/** How a save writes (fix/netz-versionen/entwurf.md, 6 and 8). */
+type SaveOptions = {
+  /** False writes into the current version. */
+  newVersion?: boolean;
+  note?: string;
+  /** Skip the revision check: the user chose to save over another writer's change. */
+  force?: boolean;
+};
 
 const INSPECTOR_MIN = 320;
 
@@ -129,6 +145,13 @@ function NetworkEditor() {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const versionsOpen = useVersionPreview((state) => state.sheetOpen);
+  const setVersionsOpen = useVersionPreview((state) => state.setSheetOpen);
+  const preview = useVersionPreview((state) => state.preview);
+  const setPreview = useVersionPreview((state) => state.setPreview);
+  const clearPreview = useVersionPreview((state) => state.clearPreview);
+  const savedRevision = useNetworkEditor((state) => state.saved?.revision ?? 0);
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const { screenToFlowPosition } = useReactFlow();
   const activeNetworkId = useAppStore((state) => state.activeNetworkId);
@@ -172,6 +195,12 @@ function NetworkEditor() {
   const [nameMode, setNameMode] = useState<'save' | 'saveAs'>('save');
   const [dirtyAction, setDirtyAction] = useState<DirtyAction | null>(null);
   const [saving, setSaving] = useState(false);
+  const [versionOpen, setVersionOpen] = useState(false);
+  const [versionNote, setVersionNote] = useState('');
+  const [savingMode, setSavingMode] = useState<'new' | 'current' | null>(null);
+  const [conflict, setConflict] = useState<{ version: number; note?: string } | null>(null);
+  const [reloading, setReloading] = useState(false);
+  const savedVersion = useNetworkEditor((state) => state.saved?.version);
   const [duplicating, setDuplicating] = useState(false);
   const pendingLoadId = useRef<string | null>(null);
   const pendingActionRef = useRef<DirtyAction | null>(null);
@@ -198,6 +227,13 @@ function NetworkEditor() {
   );
   const isActive = Boolean(document.id && document.id === activeNetworkId);
   const isRunning = readOnly;
+  // A stored version shown read-only instead of the working document (the inspector's picker).
+  const previewVersion = preview && document.id && preview.networkId === document.id ? preview.version : null;
+  const previewing = previewVersion !== null;
+  const versionList = useNetworkVersionsQuery(document.id, previewing);
+  useEffect(() => {
+    if (previewing) useNetworkEditor.getState().select([]);
+  }, [previewing]);
 
   useEffect(() => {
     if (!id) {
@@ -212,6 +248,24 @@ function NetworkEditor() {
       loadedRoute.current = id;
     }
   }, [hydrate, id, query.data, resetNew]);
+
+  // A version preview and the sheet belong to the open network only.
+  useEffect(
+    () => () => {
+      clearPreview();
+      setVersionsOpen(false);
+    },
+    [id, clearPreview, setVersionsOpen],
+  );
+
+  // The Verwaltung links here with ?versions=1 (fix/netz-versionen/entwurf.md, 12).
+  useEffect(() => {
+    if (!id || searchParams.get('versions') !== '1') return;
+    setVersionsOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('versions');
+    setSearchParams(next, { replace: true });
+  }, [id, searchParams, setSearchParams, setVersionsOpen]);
 
   const shouldBlock = useCallback(
     ({ currentLocation, nextLocation }: { currentLocation: { pathname: string }; nextLocation: { pathname: string; search: string; hash: string } }) => {
@@ -293,9 +347,12 @@ function NetworkEditor() {
       const mod = event.metaKey || event.ctrlKey;
       if (mod && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        if (!readOnly) void save();
+        // V-6: Ctrl+S saves straight as a new version; an open save or conflict dialog owns it.
+        if (!readOnly && !previewing && !versionOpen && !nameOpen && conflict === null) void save();
         return;
       }
+      // The version preview owns the keyboard (arrows step, Esc returns); nothing edits the hidden graph.
+      if (previewing) return;
       // M23: inside a text field Ctrl+Z is the field's own undo, not the graph's.
       if (typing) return;
       // M23: dropdowns, menus and dialogs own their keys (arrows, Escape, Delete).
@@ -342,8 +399,9 @@ function NetworkEditor() {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const save = useCallback(async (explicitName?: string): Promise<boolean> => {
-    const current = useNetworkEditor.getState().document;
+  const save = useCallback(async (explicitName?: string, options: SaveOptions = {}): Promise<boolean> => {
+    const state = useNetworkEditor.getState();
+    const current = state.document;
     const name = (explicitName ?? current.name).trim();
     if (!current.id && !name) {
       setNameMode('save');
@@ -351,15 +409,27 @@ function NetworkEditor() {
       setNameOpen(true);
       return false;
     }
+    const newVersion = options.newVersion ?? true;
+    const before = state.saved?.version;
     setSaving(true);
+    setSavingMode(newVersion ? 'new' : 'current');
     try {
       const payload = { ...current, name: name || current.name };
+      // The saved copy holds the server's revision; an undo step must not move it back.
       const saved = current.id
-        ? await updateNetwork(current.id, payload)
+        ? await updateNetwork(current.id, payload, {
+            baseRevision: options.force ? undefined : state.saved?.revision,
+            newVersion,
+            note: options.note,
+          })
         : await createNetwork(payload);
       // M24: typing during the request must not be replaced by the server copy.
       useNetworkEditor.getState().markSaved(saved, current);
-      notify({ titleKey: 'network.notify.saved', variant: 'success' });
+      notify(
+        current.id && saved.version && before && saved.version !== before
+          ? { titleKey: 'network.notify.savedVersion', values: { version: String(saved.version) }, variant: 'success' }
+          : { titleKey: 'network.notify.saved', variant: 'success' },
+      );
       if (!pendingActionRef.current && (!id || id !== saved.id)) {
         allowLeaveRef.current = true;
         navigate(`/network/${saved.id}`, { replace: !id });
@@ -368,13 +438,69 @@ function NetworkEditor() {
         });
       }
       return true;
-    } catch {
-      notify({ titleKey: 'network.notify.saveError', variant: 'error' });
+    } catch (error) {
+      if (error instanceof ApiError && error.messageKey === 'networks.conflict') {
+        // Section 8: someone else saved in between; nothing was written, the user decides.
+        setVersionOpen(false);
+        setConflict({ version: Number(error.details.version) || 0, note: options.note });
+        return false;
+      }
+      notify({
+        titleKey: error instanceof ApiError && error.messageKey === 'run.busy' ? 'network.notify.saveBusy' : 'network.notify.saveError',
+        variant: 'error',
+      });
       return false;
     } finally {
       setSaving(false);
+      setSavingMode(null);
     }
   }, [id, navigate]);
+
+  function requestSave() {
+    // Section 6: an existing network asks how to save; a new one saves as before.
+    if (!useNetworkEditor.getState().document.id) {
+      void save();
+      return;
+    }
+    setVersionNote('');
+    setVersionOpen(true);
+  }
+
+  async function confirmVersion(newVersion: boolean) {
+    const ok = await save(undefined, { newVersion, note: versionNote });
+    if (ok) setVersionOpen(false);
+  }
+
+  function continuePending() {
+    const action = pendingActionRef.current;
+    if (action) runPending(action);
+  }
+
+  async function reloadAfterConflict() {
+    const networkId = useNetworkEditor.getState().document.id;
+    if (!networkId) return;
+    setReloading(true);
+    try {
+      const fresh = await getNetwork(networkId);
+      queryClient.setQueryData(['networks', networkId, 'document'], fresh);
+      useNetworkEditor.getState().hydrate(fresh, true);
+      setConflict(null);
+      notify({ titleKey: 'network.conflict.reloaded', variant: 'success' });
+      continuePending();
+    } catch {
+      notify({ titleKey: 'network.notify.saveError', variant: 'error' });
+    } finally {
+      setReloading(false);
+    }
+  }
+
+  async function saveOverConflict() {
+    // The other state stays as the version before this one (section 8).
+    const ok = await save(undefined, { newVersion: true, note: conflict?.note, force: true });
+    if (!ok) return;
+    setConflict(null);
+    continuePending();
+  }
 
   async function saveAsConfirmed(name: string): Promise<boolean> {
     setSaving(true);
@@ -398,6 +524,53 @@ function NetworkEditor() {
       return false;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function rebuildIndexes(networkId: string, nodes: { id: string; name: string }[]) {
+    let failed = 0;
+    for (const node of nodes) {
+      try {
+        const result = await reindexNetworkKnowledge(networkId, node.id);
+        if (result.state === 'error') failed += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    notify({
+      titleKey: failed ? 'network.versions.reindexFailed' : 'network.versions.reindexDone',
+      variant: failed ? 'error' : 'success',
+    });
+  }
+
+  function notifyCopied(copy: AgentNetworkDocument) {
+    notify({
+      titleKey: 'network.versions.copied',
+      values: { name: copy.name },
+      variant: 'success',
+      toastAction: copy.id ? { labelKey: 'network.versions.open', onClick: () => navigate(`/network/${copy.id}`) } : undefined,
+    });
+  }
+
+  /** V-3: a restored knowledge node may have lost its index; offer to rebuild it. */
+  function afterRestore(restored: AgentNetworkDocument, from: number) {
+    clearPreview();
+    useNetworkEditor.getState().hydrate(restored, true);
+    notify({
+      titleKey: 'network.versions.restored',
+      values: { from: String(from), version: String(restored.version ?? '') },
+      variant: 'success',
+    });
+    const missing = knowledgeWithoutIndex(restored);
+    if (restored.id && missing.length > 0) {
+      const networkId = restored.id;
+      notify({
+        titleKey: 'network.versions.reindexTitle',
+        values: { names: missing.map((node) => node.name).join(', ') },
+        variant: 'warning',
+        duration: 20_000,
+        toastAction: { labelKey: 'network.versions.reindex', onClick: () => void rebuildIndexes(networkId, missing) },
+      });
     }
   }
 
@@ -549,9 +722,9 @@ function NetworkEditor() {
     );
   }
 
-  const palette = <Palette disabled={readOnly} insertAt={insertPosition} />;
+  const palette = <Palette disabled={readOnly || previewing} insertAt={insertPosition} />;
   const inspector = (
-    <Inspector issues={issues} readOnly={readOnly} isActive={isActive} isRunning={isRunning} />
+    <Inspector issues={issues} readOnly={readOnly || previewing} isActive={isActive} isRunning={isRunning} />
   );
 
   return (
@@ -567,11 +740,11 @@ function NetworkEditor() {
         valid={issues.length === 0 && Boolean(document.name.trim())}
         isActive={isActive}
         isRunning={isRunning}
-        readOnly={readOnly}
+        readOnly={readOnly || previewing}
         saving={saving}
         duplicating={duplicating}
         onNew={requestNew}
-        onSave={() => void save()}
+        onSave={requestSave}
         onSaveAs={() => {
           setNameMode('saveAs');
           setNameValue(`${document.name} ${t('network.copySuffix')}`.trim());
@@ -583,6 +756,7 @@ function NetworkEditor() {
         onExport={() => setExportOpen(true)}
         onValidate={() => void runValidate()}
         onLibrary={requestLibrary}
+        onVersions={() => setVersionsOpen(true)}
       />
       {!isDesktop ? (
         <div className="flex gap-2 border-b px-2 py-1">
@@ -619,19 +793,33 @@ function NetworkEditor() {
               </Button>
             </div>
             <div className={cn('min-h-0 flex-1', paletteCollapsed ? 'px-1 pb-2' : 'p-2 pt-0')}>
-              <Palette disabled={readOnly} insertAt={insertPosition} compact={paletteCollapsed} />
+              <Palette disabled={readOnly || previewing} insertAt={insertPosition} compact={paletteCollapsed} />
             </div>
           </aside>
         ) : null}
         <div className="min-h-0 min-w-0 flex-1">
-          <FlowCanvas
-            readOnly={readOnly}
-            onRequestInsert={() => setPaletteOpen(true)}
-            onOpenInspector={() => {
-              setInspectorCollapsed(false);
-              if (!isDesktop) setInspectorOpen(true);
-            }}
-          />
+          {previewVersion !== null && document.id ? (
+            <VersionPreview
+              networkId={document.id}
+              networkName={document.name}
+              version={previewVersion}
+              versions={versionList.data}
+              dirty={dirty}
+              running={readOnly}
+              onSelect={(version) => setPreview(document.id as string, version)}
+              onRestored={afterRestore}
+              onCopied={notifyCopied}
+            />
+          ) : (
+            <FlowCanvas
+              readOnly={readOnly}
+              onRequestInsert={() => setPaletteOpen(true)}
+              onOpenInspector={() => {
+                setInspectorCollapsed(false);
+                if (!isDesktop) setInspectorOpen(true);
+              }}
+            />
+          )}
         </div>
         {isDesktop && !inspectorCollapsed ? (
           <div
@@ -764,8 +952,114 @@ function NetworkEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <VersionsSheet
+        open={versionsOpen}
+        onOpenChange={setVersionsOpen}
+        networkId={document.id}
+        networkName={document.name}
+        savedRevision={savedRevision}
+        dirty={dirty}
+        readOnly={readOnly}
+        onRestored={(restored, from) => {
+          setVersionsOpen(false);
+          afterRestore(restored, from);
+        }}
+        onCopied={notifyCopied}
+        onViewInEditor={(version) => {
+          setVersionsOpen(false);
+          if (document.id) setPreview(document.id, version);
+        }}
+      />
+      <Dialog open={versionOpen} onOpenChange={setVersionOpen}>
+        {/* Three buttons side by side need more than the default 32rem. */}
+        <DialogContent className="sm:max-w-[38rem]" closeLabel={t('network.dialog.close')}>
+          <DialogHeader>
+            <DialogTitle>{t('network.save.title', { name: document.name })}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-1.5">
+            <Label htmlFor="network-version-note">{t('network.save.note')}</Label>
+            <Input
+              id="network-version-note"
+              value={versionNote}
+              autoFocus
+              maxLength={200}
+              placeholder={t('network.save.notePlaceholder')}
+              onChange={(event) => setVersionNote(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  if (!saving) void confirmVersion(true);
+                }
+              }}
+            />
+            {savedVersion ? (
+              <p className="text-xs text-muted-foreground">
+                {t('network.save.overwriteHint', { version: savedVersion })}
+              </p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setVersionOpen(false)}>
+              {t('network.dialog.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving && savingMode !== 'current'}
+              loading={savingMode === 'current'}
+              onClick={() => void confirmVersion(false)}
+            >
+              {t('network.save.sameVersion')}
+            </Button>
+            <Button
+              type="button"
+              disabled={saving && savingMode !== 'new'}
+              loading={savingMode === 'new'}
+              onClick={() => void confirmVersion(true)}
+            >
+              {t('network.save.newVersion')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AlertDialog
-        open={(dirtyAction !== null || blocker.state === 'blocked') && !nameOpen}
+        open={conflict !== null}
+        onOpenChange={(open) => {
+          if (!open) setConflict(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('network.conflict.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('network.conflict.body', { version: conflict?.version ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>{t('network.conflict.reloadHint')}</li>
+            <li>{t('network.conflict.saveHint')}</li>
+          </ul>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConflict(null)}>
+              {t('network.conflict.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              loading={reloading}
+              disabled={saving}
+              onClick={() => void reloadAfterConflict()}
+            >
+              {t('network.conflict.reload')}
+            </Button>
+            <Button type="button" loading={saving} disabled={reloading} onClick={() => void saveOverConflict()}>
+              {t('network.conflict.saveNew')}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={(dirtyAction !== null || blocker.state === 'blocked') && !nameOpen && conflict === null}
         onOpenChange={(open) => {
           if (!open) cancelDirtyPrompt();
         }}

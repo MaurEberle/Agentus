@@ -39,6 +39,15 @@ Nach Wechsel des Embedding-Modells oder nach neuen Dateien im Hilfe-Korpus: **In
 
 Die Hilfe antwortet in der Oberflächensprache. Kann das Modell die Sprache nicht, antwortet es auf Englisch. Sie nennt keine Dokumenttitel aus den Anleitungen. Nur eine Websuche zeigt Quellen, und zwar Titel und Adresse. Interne Denkblöcke des Modells erscheinen nicht. Die Hilfe nutzt **keine** MCP-Server und **kein** Knowledge der Graphen.
 
+## Architekt
+
+Eigene Einstellungen des Architekten; das Chat-Modell wählst du im Modul selbst.
+
+- **Websuche:** an/aus, Anbieter und Zugang bzw. SearXNG-Adresse, getrennt vom Hilfe-Chat.
+- **Ordnerpfade an Cloud-Modelle:** aus per Vorgabe. Dann sieht ein Cloud-Modell beim Einlesen keine Ordnerpfade; sie bleiben im Netz unverändert.
+- **Beispiele:** eigene Netze als Beispiele (nur gültige), Embedding-Anbieter und -Modell (ohne Vorgabe; ohne Modell Stichwortsuche), Status und **Index neu aufbauen**.
+- **Begrenzungen:** Werkzeugaufrufe pro Antwort (5–100), Websuchen (0–200) und Hub-Abfragen (0–300) pro Sitzung.
+
 ## MCP-Server
 
 Vorlagen (**Rezepte**) für externe Tools. Rezepte sind keine mitgelieferten Programme. Viele brauchen Node/`npx`, Docker oder `uvx` auf dem PC plus einen **Zugang**.
@@ -78,6 +87,8 @@ Zeigt den **Datenordner** und den Zustand der Stores: Einstellungen, Hilfe, Work
 Ordner **wechseln** nur, wenn kein Netz startet, läuft oder stoppt. Laufwerks- oder Systemwurzeln sind ungültig. Optional Inhalt in den neuen Ordner kopieren; der alte Ordner bleibt liegen. Liegen im Zielordner schon Daten, kopiert die App nicht darüber, sondern meldet das. Scheitert der Wechsel, bleibt der bisherige Ordner aktiv.
 
 **Portabel** oder ein von außen vorgegebener Ordner: Pfad **schreibgeschützt**.
+
+**Versionen pro Netz:** 5 bis 500 (Default 50). Wird die Zahl gesenkt, räumt das nächste Speichern eines Netzes auf; Version 1, angeheftete und die aktuelle Version bleiben.
 
 **Aufbewahrung der Historie:** 30 / 90 / 365 Tage oder unbegrenzt (Default 90). Die Historie-Seite kann ältere Einträge passend bereinigen.
 

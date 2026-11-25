@@ -16,6 +16,8 @@ type RawRun = {
   errorNodeName?: string | null;
   models?: RawModel[];
   graphSnapshot?: RunDetail['graphSnapshot'];
+  networkExists?: boolean;
+  networkVersion?: number | null;
   chat?: RunDetail['chat'] | { messages?: RunDetail['chat'] };
   calls?: RunDetail['calls'];
   steps?: RunDetail['steps'];
@@ -75,6 +77,8 @@ export function normalizeRunDetail(raw: RawRun): RunDetail {
   return {
     ...normalizeRun(raw),
     graphSnapshot: raw.graphSnapshot,
+    networkExists: raw.networkExists,
+    networkVersion: raw.networkVersion ?? null,
     chat: normalizeChat(raw.chat),
     calls: raw.calls ?? [],
     steps: raw.steps ?? [],

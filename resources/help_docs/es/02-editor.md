@@ -88,7 +88,9 @@ Válido/Inválido se ve como insignia. Las redes inválidas se pueden guardar, p
 
 ## Guardar, abrir, exportar
 
-- **Guardar** (Ctrl+S): la primera vez diálogo de nombre, después actualización. La URL pasa a `/network/…`.
+- **Guardar:** la primera vez diálogo de nombre, la URL pasa a `/network/…`. Después un pequeño diálogo pregunta: **Guardar como versión nueva** (por defecto, Intro), **Guardar sin versión nueva** (sobrescribe la versión actual) o Cancelar; la nota es opcional.
+- **Ctrl+S** guarda sin diálogo como versión nueva. Si el contenido no cambió, no se crea ninguna.
+- **Conflicto:** si otro guardó la red entretanto (arquitecto, segunda ventana), el editor pregunta: **Recargar** (descartar tus cambios), **Guardar como versión nueva** (el otro estado queda como versión anterior) o Cancelar.
 - **Guardar como:** documento nuevo, se convierte en el abierto.
 - **Abrir:** una red guardada; búsqueda y orden. Acciones masivas y borrar solo en la biblioteca.
 - **Duplicar:** solo con documento ya guardado; abre la copia.
@@ -97,12 +99,24 @@ Válido/Inválido se ve como insignia. Las redes inválidas se pueden guardar, p
 
 Salir sin guardar: diálogo Guardar / Descartar / Cancelar.
 
+## Versiones
+
+El inspector muestra la **versión** bajo **Red**. Al pulsarla se listan todos los estados guardados: número, hora, origen (editor, arquitecto, restaurada …) y nota. Una versión anterior aparece como **vista previa de solo lectura** en el lienzo; con ‹ › o las flechas pasas de una a otra, Esc o **Volver a la versión actual** regresa. Los cambios sin guardar se conservan. **Gestionar todas las versiones …** (o el icono de reloj en la cinta) abre la lista detallada.
+
+- Al elegir una versión se muestra como grafo y lo que **Restaurar** cambiaría en el estado actual (nuevo en verde, cambiado en amarillo, eliminado en rojo).
+- **Restaurar** crea una versión nueva; no se sobrescribe nada. Los cambios sin guardar del editor se pierden; el editor pregunta antes. Si después falta el índice de un nodo de conocimiento, la aplicación ofrece **Reconstruir índice**.
+- **Copiar como red nueva** convierte una versión en una red propia.
+- **Fijar** protege una versión al limpiar. Cada red conserva sus últimas 50 versiones (ajustable en Ajustes → Datos), y siempre la versión 1, las fijadas y la actual.
+- Renombrar y las etiquetas cambian la versión actual sin crear una nueva.
+
 ## Biblioteca
 
 Lista con búsqueda (nombre, descripción, etiquetas), orden, filtros «solo válidas» / «solo activas». Selección múltiple.
 
 Acciones: Nuevo (editor), Abrir, Duplicar, Renombrar, Poner etiquetas, **Definir como activa** (solo una red válida), Borrar, Importar, Exportar. Poner etiquetas carga las etiquetas existentes de la selección como chips.
 
-Borrar quita la entrada del espacio de trabajo, no tus archivos de conocimiento en disco, ni el corpus de ayuda ni las ejecuciones del historial. Una red **en ejecución** se omite. Borrar la red activa vacía la selección rápida.
+Junto a «Modificada» aparece la **versión** actual con enlace a las versiones en el editor.
+
+Borrar quita la entrada del espacio de trabajo con **todas sus versiones** para siempre (sin papelera), no tus archivos de conocimiento en disco, ni el corpus de ayuda ni las ejecuciones del historial. Una red **en ejecución** se omite. Borrar la red activa vacía la selección rápida.
 
 Importar: diálogo con vista previa. Mismo nombre: renombrar u omitir. Otra schemaVersion se rechaza. Los secretos se descartan.

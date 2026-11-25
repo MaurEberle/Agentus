@@ -13,31 +13,20 @@ import {
   channelHandle,
   channelLabel,
 } from '@/modules/network/schema/channels';
+import { nodeSpec } from '@/modules/network/schema/catalog';
 
-const STATIC_PORTS: Record<NodeType, PortDef[]> = {
-  chat_input: [{ id: 'message', kind: 'message', direction: 'out' }],
-  orchestrator: [
-    { id: 'message', kind: 'message', direction: 'in', required: true },
-    { id: 'llm', kind: 'llm', direction: 'in', required: true },
-    { id: 'tool', kind: 'tool', direction: 'in' },
-    { id: 'message', kind: 'message', direction: 'out' },
-  ],
-  llm: [{ id: 'llm', kind: 'llm', direction: 'out' }],
-  agent: [
-    { id: 'message', kind: 'message', direction: 'in', required: true },
-    { id: 'llm', kind: 'llm', direction: 'in', required: true },
-    { id: 'tool', kind: 'tool', direction: 'in' },
-    { id: 'knowledge', kind: 'knowledge', direction: 'in' },
-    { id: 'channel', kind: 'channel', direction: 'in' },
-    { id: 'message', kind: 'message', direction: 'out' },
-    { id: 'handoff', kind: 'handoff', direction: 'out' },
-  ],
-  tool: [{ id: 'tool', kind: 'tool', direction: 'out' }],
-  mcp: [{ id: 'tool', kind: 'tool', direction: 'out' }],
-  knowledge: [{ id: 'knowledge', kind: 'knowledge', direction: 'out' }],
-  router: [{ id: 'message', kind: 'message', direction: 'in', required: true }],
-  end: [{ id: 'message', kind: 'message', direction: 'in', required: true }],
-};
+/** Ports that do not depend on the graph, from the component catalog. */
+const STATIC_PORTS = Object.fromEntries(
+  NODE_TYPES.map((type) => [
+    type,
+    nodeSpec(type).ports.map((port): PortDef => ({
+      id: port.id,
+      kind: port.kind,
+      direction: port.direction,
+      ...(port.required ? { required: true } : {}),
+    })),
+  ]),
+) as Record<NodeType, PortDef[]>;
 
 export type PortEdge = {
   source: string;

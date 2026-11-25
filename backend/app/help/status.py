@@ -42,7 +42,17 @@ def get_status() -> HelpChatStatus:
         web_search_enabled=help_chat.web_search_enabled,
         degraded=get_degraded(),
         using_fallback=bool(help_chat.provider and not primary and fallback),
+        paused_by_architect=_architect_pauses_help(),
     )
+
+
+def _architect_pauses_help() -> bool:
+    try:
+        from app.architect.session import help_paused
+
+        return help_paused()
+    except Exception:
+        return False
 
 
 def ping_help_llm():

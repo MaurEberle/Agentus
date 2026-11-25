@@ -39,6 +39,15 @@ After changing the embedding model or adding files to the help corpus: **rebuild
 
 Help answers in the UI language. If the model cannot use that language, it answers in English. It does not name document titles from the guides. Only a web search shows sources, as title and address. Internal thinking blocks from the model are hidden. Help uses **no** MCP servers and **no** graph knowledge nodes.
 
+## Architect
+
+The architect's own settings; you pick its chat model in the module itself.
+
+- **Web search:** on/off, provider and credential or SearXNG address, separate from the help chat.
+- **Folder paths to cloud models:** off by default. A cloud model then sees no folder paths when a network is read in; they stay unchanged in the network.
+- **Examples:** own networks as examples (valid ones only), embedding provider and model (no default; without a model keyword search), status and **Rebuild index**.
+- **Limits:** tool calls per answer (5–100), web searches (0–200) and Hub calls (0–300) per session.
+
 ## MCP servers
 
 **Recipes** for external tools. Recipes are not bundled binaries. Many need Node/`npx`, Docker, or `uvx` on the PC plus a **credential**.
@@ -79,6 +88,8 @@ Shows the **data folder** and store health: settings, help, workspace, history �
 **Change folder** only when no network is starting, running, or stopping. Drive or system roots are invalid. Optionally copy contents into the new folder; the old folder stays. If the target already holds data, the app does not copy over it and says so. If the switch fails, the previous folder stays active.
 
 **Portable** or an externally fixed folder: path is **read-only**.
+
+**Versions per network:** 5 to 500 (default 50). Lowering it cleans up on the next save of a network; version 1, pinned ones and the current version stay.
 
 **History retention:** 30 / 90 / 365 days or unlimited (default 90). The History page can purge older rows to match.
 

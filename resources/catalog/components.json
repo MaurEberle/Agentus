@@ -1,0 +1,275 @@
+{
+  "catalogVersion": 1,
+  "note": "Single source of node types, fields, ports and rules. The editor derives initial node data and ports from it, the backend its port check, the architect its knowledge. Tests in backend/tests/catalog keep it in step with the code.",
+  "nodeTypes": [
+    {
+      "type": "chat_input",
+      "label": "Chat",
+      "purpose": "Entry point: the user's chat message starts the run here.",
+      "use": "Every network that talks to the user. With an orchestrator the chat stays open for follow-up questions.",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor, logs and chat." },
+        { "key": "placeholder", "type": "string", "initial": "", "description": "Hint text shown in the empty chat input." },
+        { "key": "startMessage", "type": "text", "initial": "", "description": "Text shown at the start of the run chat." },
+        { "key": "requireInput", "type": "boolean", "initial": false, "default": false, "description": "Start only with a user message." }
+      ],
+      "ports": [{ "id": "message", "kind": "message", "direction": "out" }],
+      "rules": [
+        "At most one chat per network.",
+        "With an orchestrator the chat connects only to the orchestrator."
+      ],
+      "tips": ["A placeholder that names the expected input (\"Which topic?\") helps the user."]
+    },
+    {
+      "type": "orchestrator",
+      "label": "Orchestrator",
+      "purpose": "Chief of a team: talks to the user in the run chat, gives tasks to agents over channels, reviews their results and decides when the work is done.",
+      "use": "Tasks with several steps or roles that need planning, review or follow-up questions. Linear chains suit fixed pipelines better.",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor, logs and chat." },
+        { "key": "systemPrompt", "type": "text", "initial": "", "description": "Role and working rules of the chief. The run adds the agents, tools and limits itself; the prompt describes goal, standards and how to judge results." },
+        { "key": "agentMissLimit", "type": "integer", "initial": 2, "default": 2, "min": 1, "max": 8, "description": "Failed agent calls in a row (or file tasks without a change) before the orchestrator does the task itself." },
+        { "key": "maxToolCalls", "type": "integer", "default": 50, "min": 1, "max": 1000, "description": "Own tool calls per decision." },
+        { "key": "maxReadCalls", "type": "integer", "default": 15, "min": 1, "max": 1000, "description": "File reads per decision while the orchestrator may only read." },
+        { "key": "maxLlmCalls", "type": "integer", "default": 1000, "min": 10, "max": 10000, "description": "Model calls per run, orchestrator and agents together." },
+        { "key": "maxAgentCalls", "type": "integer", "default": 50, "min": 1, "max": 500, "description": "Agent calls per run. At the limit the orchestrator sums up and the run ends." }
+      ],
+      "ports": [
+        { "id": "message", "kind": "message", "direction": "in", "required": true },
+        { "id": "llm", "kind": "llm", "direction": "in", "required": true },
+        { "id": "tool", "kind": "tool", "direction": "in" },
+        { "id": "message", "kind": "message", "direction": "out" }
+      ],
+      "dynamicOut": "One channel output per agent (handle channel:<agentId>), plus the message output to an end.",
+      "rules": [
+        "At most one orchestrator per network.",
+        "Exactly one LLM edge.",
+        "The chat goes only to the orchestrator.",
+        "A channel to at least one agent; every agent of the network hangs on a channel.",
+        "Its message output leads only to an end, or to a router whose outputs lead only to ends.",
+        "Its own tools: reading files at any time; changing files, the terminal and other tools only after an agent call failed."
+      ],
+      "tips": [
+        "Write the chief's prompt as a briefing: goal, quality bar, which agent does what, when to ask the user.",
+        "Give agents distinct roles (for example coder, tester, reviewer) rather than several generalists."
+      ]
+    },
+    {
+      "type": "llm",
+      "label": "LLM",
+      "purpose": "A language model that agents and the orchestrator think with.",
+      "use": "One per model setting. One LLM node may serve several agents and the orchestrator.",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor." },
+        { "key": "provider", "type": "enum", "values": ["ollama", "xai", "openai", "anthropic", "gemini", "openai_compat"], "initial": "ollama", "required": true, "description": "Model provider. Ollama runs locally; the others are cloud services or your own OpenAI-compatible server." },
+        { "key": "model", "type": "string", "initial": "", "required": true, "description": "Model name as the provider lists it (Ollama: an installed tag such as qwen3:14b or hf.co/owner/repo:Q4_K_M)." },
+        { "key": "baseUrl", "type": "string", "description": "Address of an OpenAI-compatible server (provider openai_compat)." },
+        { "key": "credentialId", "type": "string", "description": "Credential from Settings for cloud providers. Required for xai, openai, anthropic and gemini." },
+        { "key": "temperature", "type": "number", "min": 0, "max": 2, "description": "Sampling temperature; Anthropic allows 0 to 1. Unset: provider default." },
+        { "key": "maxTokens", "type": "integer", "min": 64, "max": 262144, "description": "Output token limit; below the context length when one is set. Unset: automatic." },
+        { "key": "numCtx", "type": "integer", "description": "Context length (Ollama: num_ctx). Larger contexts need more GPU memory." },
+        { "key": "numThread", "type": "integer", "min": 1, "advanced": true, "description": "CPU threads (Ollama). Unset: physical cores." },
+        { "key": "kvCacheType", "type": "enum", "values": ["f16", "q8_0"], "advanced": true, "description": "Ollama KV cache type. q8_0 halves the context memory. Unset: f16." },
+        { "key": "numGpuPercent", "type": "integer", "min": 10, "max": 100, "advanced": true, "description": "Share of layers on the GPU in steps of 10 (Ollama). Unset: all layers, automatic fallback." },
+        { "key": "numGpuLayers", "type": "integer", "min": 1, "advanced": true, "description": "Exact number of layers on the GPU (Ollama)." },
+        { "key": "numCpuMoe", "type": "integer", "min": 0, "advanced": true, "description": "MoE models: expert layers whose tensors stay in system memory. 0: all experts on the GPU." },
+        { "key": "gpuPlacement", "type": "enum", "values": ["auto", "layers"], "advanced": true, "description": "MoE models: auto stores the calculated fit, layers offloads whole layers." }
+      ],
+      "ports": [{ "id": "llm", "kind": "llm", "direction": "out" }],
+      "rules": [
+        "Model must be set.",
+        "Cloud providers need a credential.",
+        "Connects only to the llm input of an agent or the orchestrator."
+      ],
+      "tips": [
+        "Leave the advanced GPU fields unset; the editor fits them to the card.",
+        "Agents with tools need a model that supports tool calling (Ollama capability \"tools\")."
+      ]
+    },
+    {
+      "type": "agent",
+      "label": "Agent",
+      "purpose": "A worker with its own system prompt, model, tools and knowledge.",
+      "use": "Each role in a team, or each step of a linear chain.",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Name of the role; the orchestrator addresses the agent by it." },
+        { "key": "systemPrompt", "type": "text", "initial": "", "description": "Role, task, standards and output format of the agent. Tools are described to the agent automatically." },
+        { "key": "maxToolCalls", "type": "integer", "default": 100, "min": 1, "max": 1000, "description": "Tool calls per task; after that the agent answers with what it has." },
+        { "key": "reasoningSteps", "type": "integer", "default": 10, "min": 2, "max": 50, "description": "Steps whose reasoning local models get back within a task (memory)." }
+      ],
+      "ports": [
+        { "id": "message", "kind": "message", "direction": "in", "required": true },
+        { "id": "llm", "kind": "llm", "direction": "in", "required": true },
+        { "id": "tool", "kind": "tool", "direction": "in" },
+        { "id": "knowledge", "kind": "knowledge", "direction": "in" },
+        { "id": "channel", "kind": "channel", "direction": "in" },
+        { "id": "message", "kind": "message", "direction": "out" },
+        { "id": "handoff", "kind": "handoff", "direction": "out" }
+      ],
+      "rules": [
+        "Exactly one LLM edge.",
+        "Without an orchestrator: one incoming message edge; the chain runs from the chat (or the first agent) to an end.",
+        "With an orchestrator: exactly one channel from it and no message chain on the same agent.",
+        "The handoff output works like the message output."
+      ],
+      "tips": [
+        "State the expected output format in the prompt (for example a list, a file, a verdict).",
+        "Give each agent only the tools its role needs."
+      ]
+    },
+    {
+      "type": "tool",
+      "label": "Tool",
+      "purpose": "A built-in tool for agents and the orchestrator. The kind decides what it does.",
+      "use": "Web search, HTTP calls, files, terminal, archives, date and time, arithmetic.",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor." },
+        { "key": "kind", "type": "enum", "values": ["http", "web_search", "datetime", "calculator", "file_access", "terminal", "zip"], "initial": "datetime", "required": true, "description": "What the tool does; see toolKinds." },
+        { "key": "credentialId", "type": "string", "kinds": ["http", "web_search"], "description": "Credential from Settings. HTTP sends it only to the address of its URL; web search needs one except for SearXNG." },
+        { "key": "searchProvider", "type": "enum", "values": ["brave", "tavily", "exa", "searxng"], "kinds": ["web_search"], "description": "Search service. Unset: brave." },
+        { "key": "searchBaseUrl", "type": "string", "kinds": ["web_search"], "description": "Address of your SearXNG instance." },
+        { "key": "maxResults", "type": "integer", "default": 5, "min": 1, "max": 10, "kinds": ["web_search"], "description": "Results per search." },
+        { "key": "method", "type": "enum", "values": ["GET", "POST", "PUT", "PATCH", "DELETE"], "kinds": ["http"], "description": "Default HTTP method. Unset: GET." },
+        { "key": "url", "type": "string", "kinds": ["http"], "description": "Fixed URL; required together with a credential." },
+        { "key": "timeoutSec", "type": "integer", "kinds": ["http", "terminal"], "description": "Seconds before a call gives up. HTTP 1 to 60 (unset 15), terminal 5 to 600 (unset 30)." },
+        { "key": "rootPath", "type": "string", "kinds": ["file_access", "terminal", "zip"], "description": "Folder the tool works in; not a drive root. It must exist." },
+        { "key": "allowWrite", "type": "boolean", "kinds": ["file_access"], "description": "Allow write, mkdir, edit and move." },
+        { "key": "allowDelete", "type": "boolean", "kinds": ["file_access"], "description": "Allow delete." },
+        { "key": "fileActions", "type": "string[]", "values": ["list", "stat", "read", "read_many", "write", "mkdir", "delete", "edit", "move", "search", "tree"], "kinds": ["file_access"], "description": "Subset of file actions the agent may call. Unset: all actions the switches allow." },
+        { "key": "terminalMode", "type": "enum", "values": ["restricted", "unrestricted"], "kinds": ["terminal"], "description": "restricted runs only the listed programs without a shell; unrestricted runs PowerShell as the app user. Unset: restricted." },
+        { "key": "terminalPrograms", "type": "string[]", "default": ["git"], "kinds": ["terminal"], "description": "Programs allowed in restricted mode, for example git, python, py, dotnet, node, npm, pnpm, cargo, go." },
+        { "key": "maxCalls", "type": "integer", "min": 1, "description": "Calls allowed per run. Unset: unlimited." }
+      ],
+      "ports": [{ "id": "tool", "kind": "tool", "direction": "out" }],
+      "rules": [
+        "Connects to the tool input of agents or the orchestrator; one tool node may serve several of them.",
+        "File access, terminal and zip need an existing folder that is not a drive root.",
+        "HTTP with a credential needs a full URL."
+      ],
+      "tips": ["Prefer restricted terminals and file access without delete; explain to the user when more is needed."]
+    },
+    {
+      "type": "mcp",
+      "label": "MCP",
+      "purpose": "Tools of an MCP server configured and enabled in Settings.",
+      "use": "Capabilities the built-in tools lack, for example Git, Excel or a database server.",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor." },
+        { "key": "mcpServerId", "type": "string", "required": true, "description": "Id of an enabled MCP server from Settings." },
+        { "key": "mcpToolNames", "type": "string[]", "description": "Subset of the server's tools. Unset: all tools." },
+        { "key": "credentialId", "type": "string", "description": "Credential the server recipe asks for, if any." },
+        { "key": "rootPath", "type": "string", "description": "Root folder for recipes that need one (Filesystem, Excel)." }
+      ],
+      "ports": [{ "id": "tool", "kind": "tool", "direction": "out" }],
+      "rules": ["The server must exist and be enabled.", "Recipes that need a root folder need rootPath."],
+      "tips": ["Pick only the server tools the agent needs."]
+    },
+    {
+      "type": "knowledge",
+      "label": "Knowledge",
+      "purpose": "A folder of documents that an agent searches (retrieval).",
+      "use": "Questions about your own files: Markdown, text, PDF, Word, Excel, HTML, JSON, CSV, source code.",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor." },
+        { "key": "sourcePath", "type": "string", "initial": "", "required": true, "description": "Folder with the documents; not a drive or system root, not the help corpus." },
+        { "key": "topK", "type": "integer", "initial": 5, "default": 4, "min": 1, "max": 20, "description": "Passages per search." },
+        { "key": "scoreThreshold", "type": "number", "default": 0, "min": 0, "max": 1, "description": "Minimum relevance of a passage." },
+        { "key": "embeddingProvider", "type": "enum", "values": ["ollama", "openai", "gemini"], "initial": "ollama", "description": "Who computes the embeddings." },
+        { "key": "embeddingModel", "type": "string", "initial": "", "description": "Embedding model, for example nomic-embed-text with Ollama." },
+        { "key": "embeddingCredentialId", "type": "string", "description": "Credential for cloud embeddings." }
+      ],
+      "ports": [{ "id": "knowledge", "kind": "knowledge", "direction": "out" }],
+      "rules": ["Connects only to the knowledge input of an agent.", "Cloud embeddings need a credential."],
+      "tips": ["The index is built in the editor (Reindex) before the first run."]
+    },
+    {
+      "type": "router",
+      "label": "Router",
+      "purpose": "Sends a message to exactly one output by rules checked in order.",
+      "use": "Triage: different follow-up paths depending on the text (contains, starts with, first line, regular expression).",
+      "fields": [
+        { "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor." },
+        {
+          "key": "branches",
+          "type": "object[]",
+          "initial": [{ "name": "A", "match": "contains", "pattern": "" }],
+          "required": true,
+          "description": "Named branches checked in order; each has id, name, match (contains, startsWith, firstLine, regex) and pattern (at most 200 characters). The default output catches the rest."
+        }
+      ],
+      "ports": [{ "id": "message", "kind": "message", "direction": "in", "required": true }],
+      "dynamicOut": "One message output per branch (handle = branch id), plus the output default.",
+      "rules": [
+        "Branch names are set and unique; each branch has a pattern; regular expressions must be valid.",
+        "Every branch and the default need exactly one edge.",
+        "Outputs lead to an agent, a router or an end; after the orchestrator only to ends."
+      ],
+      "tips": ["Ask the upstream agent to put a clear keyword in the first line; route on firstLine."]
+    },
+    {
+      "type": "end",
+      "label": "End",
+      "purpose": "Finishes the run; its input is the final answer.",
+      "use": "At least one per network.",
+      "fields": [{ "key": "displayName", "type": "string", "initial": "", "description": "Label in the editor." }],
+      "ports": [{ "id": "message", "kind": "message", "direction": "in", "required": true }],
+      "rules": ["At least one end per network."],
+      "tips": []
+    }
+  ],
+  "toolKinds": [
+    { "kind": "web_search", "label": "Web search", "purpose": "Searches the web and returns titles, links and snippets.", "risk": "Costs search credits; results are untrusted text." },
+    { "kind": "http", "label": "HTTP", "purpose": "Calls a web API (GET, POST, PUT, PATCH, DELETE).", "risk": "Can change data on remote services; a credential goes only to the URL's address." },
+    { "kind": "datetime", "label": "Date and time", "purpose": "Current date, time and time zones." },
+    { "kind": "calculator", "label": "Calculator", "purpose": "Exact arithmetic." },
+    { "kind": "file_access", "label": "File access", "purpose": "Lists, reads, searches and (when allowed) writes, edits, moves and deletes files under one folder.", "risk": "Write and delete change files on disk." },
+    { "kind": "terminal", "label": "Terminal", "purpose": "Runs programs in a folder: restricted to listed programs without a shell, or unrestricted PowerShell.", "risk": "Unrestricted runs any command as the app user." },
+    { "kind": "zip", "label": "ZIP", "purpose": "Lists and extracts archives under one folder." }
+  ],
+  "errors": {
+    "graph.agent.channel": "An agent has at most one channel.",
+    "graph.agent.mode": "An agent is either in the chain or on the orchestrator, not both.",
+    "graph.agent.noLlm": "Every agent needs exactly one LLM edge.",
+    "graph.agent.noMessage": "Every agent needs an incoming message.",
+    "graph.chain.noEnd": "Without an orchestrator the chain must lead from its start (chat or first agent) to an end.",
+    "graph.chatInput.duplicate": "At most one chat input.",
+    "graph.cycle": "Cycles are not allowed.",
+    "graph.edge.invalid": "This connection joins ports of different kinds.",
+    "graph.end.missing": "At least one end node is needed.",
+    "graph.http.credentialUrl": "HTTP with a credential needs a full http or https URL.",
+    "graph.knowledge.dataDir": "The app data folder cannot be network knowledge.",
+    "graph.knowledge.helpCorpus": "The help corpus cannot be network knowledge.",
+    "graph.knowledge.path": "The knowledge source folder is missing.",
+    "graph.knowledge.score": "The score threshold must be between 0 and 1.",
+    "graph.knowledge.topK": "topK must be a whole number from 1 to 20.",
+    "graph.llm.credential": "The LLM needs a model, and cloud providers a credential.",
+    "graph.llm.maxTokens": "Max tokens must be a whole number from 64 to 262144.",
+    "graph.llm.maxTokensContext": "Max tokens must be below the context length of the LLM node.",
+    "graph.llm.temperature": "Temperature must be between 0 and 2, for Anthropic between 0 and 1.",
+    "graph.mcp.disabled": "This MCP server is disabled in Settings.",
+    "graph.mcp.root": "This MCP server needs a root folder.",
+    "graph.mcp.server": "Choose an enabled MCP server.",
+    "graph.mcp.unavailable": "MCP is not available in this installation.",
+    "graph.orchestrator.duplicate": "At most one orchestrator.",
+    "graph.orchestrator.fanout": "With an orchestrator the chat goes only to the orchestrator.",
+    "graph.orchestrator.looseAgent": "With an orchestrator every agent needs a channel from it.",
+    "graph.orchestrator.noAgents": "The orchestrator needs a channel to at least one agent.",
+    "graph.orchestrator.noChat": "The chat must be connected to the orchestrator.",
+    "graph.orchestrator.noEnd": "The orchestrator needs a message to an end, directly or through a router that leads only to ends.",
+    "graph.orchestrator.noLlm": "The orchestrator needs exactly one LLM edge.",
+    "graph.router.edge": "Every router branch and the default need exactly one edge.",
+    "graph.router.name": "Router branch names must be set and unique.",
+    "graph.router.orchestrator": "A router after the orchestrator leads only to ends.",
+    "graph.router.pattern": "Every router branch needs a pattern of at most 200 characters.",
+    "graph.router.regex": "The router pattern is not a valid regular expression.",
+    "graph.router.target": "A router leads to an agent, a router or an end.",
+    "graph.terminal.programs": "Restricted terminal mode needs at least one program.",
+    "graph.tool.maxCalls": "Max calls must be a whole number from 1.",
+    "graph.fileAccess.root": "File access needs a folder that is not a drive root.",
+    "graph.fileAccess.rootMissing": "The file access folder does not exist.",
+    "graph.terminal.root": "The terminal needs a folder that is not a drive root.",
+    "graph.terminal.rootMissing": "The terminal folder does not exist.",
+    "graph.zip.root": "ZIP needs a folder that is not a drive root.",
+    "graph.zip.rootMissing": "The ZIP folder does not exist."
+  }
+}

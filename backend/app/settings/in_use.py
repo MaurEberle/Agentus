@@ -47,6 +47,7 @@ def usage_index(credential_ids: list[str]) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for credential_id in credential_ids:
         labels = _help_chat_labels(raw, credential_id)
+        labels.extend(_architect_labels(raw, credential_id))
         labels.extend(f"network:{nid}:{name}" for nid, name, refs in networks if credential_id in refs)
         if _mcp_usage_provider is not None:
             labels.extend(_mcp_usage_provider(credential_id))
@@ -74,6 +75,13 @@ def _help_chat_labels(raw: dict[str, Any], credential_id: str) -> list[str]:
     if isinstance(web, str) and web == credential_id:
         labels.append("helpChat.webSearch")
     return labels
+
+
+def _architect_labels(raw: dict[str, Any], credential_id: str) -> list[str]:
+    """The architect's model, examples embedding and web search (fix/netz-architekt/entwurf.md, 13)."""
+    architect = raw.get("architect") if isinstance(raw.get("architect"), dict) else {}
+    pairs = (("credentialId", "architect.llm"), ("embeddingCredentialId", "architect.embedding"), ("webSearchCredentialId", "architect.webSearch"))
+    return [label for key, label in pairs if architect.get(key) == credential_id]
 
 
 def is_in_use(credential_id: str) -> bool:

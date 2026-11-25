@@ -19,12 +19,14 @@ export class ApiError extends Error {
   messageKey?: string;
   usages?: ApiUsage[];
   loaded?: boolean;
+  /** The rest of the error body, e.g. `version` and `revision` of a `networks.conflict`. */
+  details: Record<string, unknown>;
 
   constructor(
     status: number,
     messageKey?: string,
     message?: string,
-    extra?: { usages?: ApiUsage[]; loaded?: boolean },
+    extra?: { usages?: ApiUsage[]; loaded?: boolean; details?: Record<string, unknown> },
   ) {
     super(message ?? messageKey ?? `HTTP ${status}`);
     this.name = 'ApiError';
@@ -32,6 +34,7 @@ export class ApiError extends Error {
     this.messageKey = messageKey;
     this.usages = extra?.usages;
     this.loaded = extra?.loaded;
+    this.details = extra?.details ?? {};
   }
 }
 
@@ -56,14 +59,13 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   if (!response.ok) {
     let body: ErrorBody | undefined;
     try {
-      body = (await response.json()) as ErrorBody;
+      const parsed: unknown = await response.json();
+      body = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as ErrorBody) : undefined;
     } catch {
       body = undefined;
     }
-    throw new ApiError(response.status, body?.messageKey, body?.message, {
-      usages: body?.usages,
-      loaded: body?.loaded,
-    });
+    const { messageKey, message, usages, loaded, ...details } = body ?? {};
+    throw new ApiError(response.status, messageKey, message, { usages, loaded, details });
   }
 
   if (response.status === 204) {

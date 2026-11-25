@@ -89,4 +89,6 @@ El gráfico y la lista de errores, y la lista de ejecuciones y el detalle, se re
 
 Lado derecho o vista propia: meta, mini-grafo, pestañas **Registro**, **Pasos**, **Chat**. El registro se ve como en la supervisión: vistas, grupos, resumen, exportar como texto. Las ejecuciones antiguas tienen menos datos (sin encargo, sin llamante). Pasos: nodo, rol, estado, error. Chat: transcripción, solo lectura. Exportar un registro suelto.
 
+Bajo el intervalo aparece **se ejecutó con la versión N** si el estado de la ejecución sigue guardado como versión. **Restaurar este estado** convierte el estado de la ejecución en la versión más reciente de la red, aunque ya no coincida ninguna versión.
+
 Borrar entradas del historial no cambia las redes guardadas.

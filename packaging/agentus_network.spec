@@ -13,6 +13,7 @@ repo = spec_root.parent
 backend = repo / "backend"
 frontend_dist = repo / "frontend" / "dist"
 help_docs = repo / "resources" / "help_docs"
+catalog = repo / "resources" / "catalog"
 icon = repo / "resources" / "icons" / "app.ico"
 
 toml = (backend / "pyproject.toml").read_text(encoding="utf-8")
@@ -22,6 +23,7 @@ version = match.group(1) if match else "0.1.0"
 datas = [
     (str(frontend_dist), "frontend/dist"),
     (str(help_docs), "help_docs"),
+    (str(catalog), "catalog"),
 ]
 recipes = backend / "app" / "mcp" / "recipes"
 if recipes.is_dir():

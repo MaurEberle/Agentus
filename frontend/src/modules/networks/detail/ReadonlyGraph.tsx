@@ -13,21 +13,39 @@ import {
 } from '@xyflow/react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 import { useEditorNetworkQuery } from '@/modules/network/api';
+import type { AgentNetworkDocument, ValidationIssue } from '@/modules/network/model/document';
 import { NetworkNode, type NetworkNodeData } from '@/modules/network/canvas/NetworkNode';
 import { connectedPortKeys, toRfHandlePair } from '@/modules/network/canvas/handles';
 import { asPortContext } from '@/modules/network/schema/ports';
 
 const nodeTypes = { network: NetworkNode };
 
-function Canvas({ id, layoutWidth }: { id: string; layoutWidth: number }) {
-  const { t } = useTranslation();
+/** How a node differs from the network read in: new or changed (netz-architekt 7.3). */
+export type NodeMark = 'added' | 'changed';
+
+const MARK_CLASS: Record<NodeMark, string> = {
+  added: 'rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background',
+  changed: 'rounded-lg ring-2 ring-warning ring-offset-2 ring-offset-background',
+};
+
+/** A network document as a graph that cannot be edited; issues mark their nodes. */
+function DocumentCanvas({
+  document,
+  layoutWidth,
+  issues,
+  marks,
+}: {
+  document: AgentNetworkDocument;
+  layoutWidth: number;
+  issues?: ValidationIssue[];
+  marks?: Record<string, NodeMark>;
+}) {
   const { resolvedTheme } = useTheme();
   const { fitView } = useReactFlow();
   const ready = useNodesInitialized();
   const paneRef = useRef<HTMLDivElement>(null);
-  const query = useEditorNetworkQuery(id);
-  const document = query.data;
   const portContext = useMemo(
     () => (document ? asPortContext(document.nodes, document.edges) : undefined),
     [document],
@@ -40,16 +58,16 @@ function Canvas({ id, layoutWidth }: { id: string; layoutWidth: number }) {
       position: node.position,
       draggable: false,
       selectable: false,
-      className: 'overflow-visible',
+      className: cn('overflow-visible', marks?.[node.id] ? MARK_CLASS[marks[node.id]] : undefined),
       data: {
         graph: node,
-        issues: [],
+        issues: (issues ?? []).filter((issue) => issue.nodeId === node.id),
         readOnly: true,
         connected: connectedPortKeys(node.id, document.edges),
         portContext,
       } satisfies NetworkNodeData,
     }));
-  }, [document, portContext]);
+  }, [document, portContext, issues, marks]);
   const edges = useMemo<Edge[]>(() => {
     if (!document || !portContext) return [];
     return document.edges.map((edge) => {
@@ -85,14 +103,7 @@ function Canvas({ id, layoutWidth }: { id: string; layoutWidth: number }) {
       window.cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [fitView, layoutWidth, ready]);
-
-  if (query.isLoading) {
-    return <p className="p-3 text-sm text-muted-foreground">{t('networks.detail.graphLoading')}</p>;
-  }
-  if (query.isError || !document) {
-    return <p className="p-3 text-sm text-muted-foreground">{t('networks.error.missing')}</p>;
-  }
+  }, [fitView, layoutWidth, ready, document]);
 
   return (
     <div ref={paneRef} className="h-full min-h-64 w-full min-w-0 overflow-hidden">
@@ -128,10 +139,41 @@ function Canvas({ id, layoutWidth }: { id: string; layoutWidth: number }) {
   );
 }
 
+function StoredCanvas({ id, layoutWidth }: { id: string; layoutWidth: number }) {
+  const { t } = useTranslation();
+  const query = useEditorNetworkQuery(id);
+  if (query.isLoading) {
+    return <p className="p-3 text-sm text-muted-foreground">{t('networks.detail.graphLoading')}</p>;
+  }
+  if (query.isError || !query.data) {
+    return <p className="p-3 text-sm text-muted-foreground">{t('networks.error.missing')}</p>;
+  }
+  return <DocumentCanvas document={query.data} layoutWidth={layoutWidth} />;
+}
+
 export function ReadonlyGraph({ id, layoutWidth = 0 }: { id: string; layoutWidth?: number }) {
   return (
     <ReactFlowProvider key={id}>
-      <Canvas id={id} layoutWidth={layoutWidth} />
+      <StoredCanvas id={id} layoutWidth={layoutWidth} />
+    </ReactFlowProvider>
+  );
+}
+
+/** A document that is not stored (the architect's draft). */
+export function DocumentGraph({
+  document,
+  layoutWidth = 0,
+  issues,
+  marks,
+}: {
+  document: AgentNetworkDocument;
+  layoutWidth?: number;
+  issues?: ValidationIssue[];
+  marks?: Record<string, NodeMark>;
+}) {
+  return (
+    <ReactFlowProvider>
+      <DocumentCanvas document={document} layoutWidth={layoutWidth} issues={issues} marks={marks} />
     </ReactFlowProvider>
   );
 }

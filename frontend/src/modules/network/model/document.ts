@@ -121,8 +121,10 @@ export type ToolNodeData = {
   fileActions?: string[];
   /** restricted (default) runs only terminalPrograms. unrestricted is PowerShell as the app user. */
   terminalMode?: 'restricted' | 'unrestricted';
-  /** Unset in restricted mode means git, python, py, and dotnet. */
+  /** Unset in restricted mode means git (backend DEFAULT_PROGRAMS). */
   terminalPrograms?: string[];
+  /** Seconds before a call gives up: HTTP 1–60 (unset 15), terminal 5–600 (unset 30). */
+  timeoutSec?: number;
   /** Tool and MCP nodes: calls allowed per run (>= 1). Absent or null = unlimited. */
   maxCalls?: number | null;
 };
@@ -229,6 +231,9 @@ export type AgentNetworkDocument = {
   viewport?: { x: number; y: number; zoom: number };
   nodes: GraphNode[];
   edges: GraphEdge[];
+  /** Set by the server: the current version and the write counter (fix/netz-versionen). */
+  version?: number;
+  revision?: number;
 };
 
 export type ValidationIssue = {

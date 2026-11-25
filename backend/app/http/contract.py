@@ -25,6 +25,7 @@ MCP = "mcp"
 TOOLS = "tools"
 HELP_CHAT = "help_chat"
 RUNS = "runs"
+ARCHITECT = "architect"
 
 
 @dataclass(frozen=True)
@@ -125,6 +126,34 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("GET", "/api/runs/:id/logs", RUNS),
     ContractRoute("DELETE", "/api/runs", RUNS),
     ContractRoute("POST", "/api/runs/purge", RUNS),
+    ContractRoute("GET", "/api/networks/:id/versions", NETWORKS),
+    ContractRoute("GET", "/api/networks/:id/versions/:v", NETWORKS),
+    ContractRoute("PATCH", "/api/networks/:id/versions/:v", NETWORKS),
+    ContractRoute("POST", "/api/networks/:id/versions/:v/restore", NETWORKS),
+    ContractRoute("GET", "/api/networks/:id/versions/:v/diff", NETWORKS),
+    ContractRoute("POST", "/api/networks/:id/versions/:v/copy", NETWORKS),
+    ContractRoute("POST", "/api/networks/:id/restore-run", NETWORKS),
+    ContractRoute("GET", "/api/architect/catalog", ARCHITECT),
+    ContractRoute("GET", "/api/architect/status", ARCHITECT),
+    ContractRoute("GET", "/api/architect/examples", ARCHITECT),
+    ContractRoute("POST", "/api/architect/examples/reindex", ARCHITECT),
+    ContractRoute("POST", "/api/architect/model-check", ARCHITECT),
+    ContractRoute("GET", "/api/architect/sessions", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions", ARCHITECT),
+    ContractRoute("GET", "/api/architect/sessions/:id", ARCHITECT),
+    ContractRoute("PATCH", "/api/architect/sessions/:id", ARCHITECT),
+    ContractRoute("DELETE", "/api/architect/sessions/:id", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/start", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/stop", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/messages", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/abort", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/touch", ARCHITECT),
+    ContractRoute("GET", "/api/architect/sessions/:id/export", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/load", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/proposal/dismiss", ARCHITECT),
+    ContractRoute("GET", "/api/architect/sessions/:id/closing", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/apply", ARCHITECT),
+    ContractRoute("POST", "/api/architect/sessions/:id/undo", ARCHITECT),
 )
 
 # include_all module → owner tag
@@ -143,6 +172,7 @@ OWNER_BY_MODULE = {
     "app.http.routers.run": RUN,
     "app.http.routers.runs": RUNS,
     "app.http.routers.help_chat": HELP_CHAT,
+    "app.http.routers.architect": ARCHITECT,
 }
 
 STORE_IDS = frozenset({"settings", "help", "workspace", "history"})

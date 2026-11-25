@@ -88,7 +88,9 @@ Valid/invalid shows as a badge. Invalid networks can be saved but should not be 
 
 ## Save, load, export
 
-- **Save** (Ctrl+S): first time a name dialog, then update. URL becomes `/network/…`.
+- **Save:** first time a name dialog, URL becomes `/network/…`. After that a small dialog asks: **Save as new version** (default, Enter), **Save without new version** (overwrites the current version) or Cancel; a note is optional.
+- **Ctrl+S** saves without the dialog as a new version. Unchanged content creates none.
+- **Conflict:** if someone else saved the network in the meantime (architect, second window), the editor asks: **Reload** (discard your changes), **Save as new version** (the other state stays as the version before) or Cancel.
 - **Save as:** new document, becomes the open one.
 - **Load:** one saved network; search and sort. Bulk and delete only in the library.
 - **Duplicate:** only when the document is already saved; opens the copy.
@@ -97,12 +99,24 @@ Valid/invalid shows as a badge. Invalid networks can be saved but should not be 
 
 Leaving with unsaved changes: Save / Discard / Cancel.
 
+## Versions
+
+The inspector shows the **version** under **Network**. Clicking it lists all saved states: number, time, origin (editor, architect, restored …) and note. An older version appears as a **read-only preview** in the canvas; ‹ › or the arrow keys step through versions, Esc or **Back to current version** returns. Unsaved changes are kept meanwhile. **Manage all versions …** (or the clock icon in the ribbon) opens the detailed list.
+
+- Selecting a version shows it as a graph and what **Restore** would change on the current state (new green, changed yellow, removed red).
+- **Restore** creates a new version; nothing is overwritten. Unsaved changes in the editor are lost; the editor asks first. If a knowledge node then lacks its index, the app offers **Rebuild index**.
+- **Copy as new network** turns a version into a network of its own.
+- **Pin** protects a version from clean-up. Each network keeps its last 50 versions (configurable under Settings → Data), plus always version 1, pinned ones and the current one.
+- Renaming and tags change the current version without creating a new one.
+
 ## Library
 
 List with search (name, description, tags), sort, filters “valid only” / “active only”. Multi-select.
 
 Actions: New (editor), Open, Duplicate, Rename, Set tags, **Set active** (only one valid network), Delete, Import, Export. Set tags opens the existing tags of the selection as chips.
 
-Delete removes the workspace entry, not your knowledge source files on disk, not the help corpus, and not history runs. A **running** network is skipped. Deleting the active network clears quick select.
+Next to “Updated” the current **version** links to the versions in the editor.
+
+Delete removes the workspace entry with **all its versions** for good (no bin), not your knowledge source files on disk, not the help corpus, and not history runs. A **running** network is skipped. Deleting the active network clears quick select.
 
 Import: dialog with a preview. Same name: rename or skip. Another schemaVersion is rejected. Secrets are discarded.

@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from app.common.components import port_handles
 from app.common.types import NEEDS_CREDENTIAL, PROVIDERS
 from app.run.channels import agent_id_from_channel, normalize_channel_edges
 from app.run.graph_models import (
@@ -19,27 +20,11 @@ from app.run.router_rules import branch_match, branch_pattern, branch_rows, patt
 from app.tools.file_access_tool import is_forbidden_root
 from app.tools.kinds import FIRST_PARTY_KINDS
 
-_OUT_HANDLES = {
-    "chat_input": {"message"},
-    "llm": {"llm"},
-    "agent": {"message", "handoff"},
-    "tool": {"tool"},
-    "mcp": {"tool"},
-    "knowledge": {"knowledge"},
-    "end": set(),
-}
-_IN_HANDLES = {
-    "agent": {"message", "llm", "tool", "knowledge", "channel"},
-    "orchestrator": {"message", "llm", "tool"},
-    "router": {"message"},
-    "end": {"message"},
-    # N13: these only send. An edge into a chat input used to pass.
-    "chat_input": set(),
-    "llm": set(),
-    "tool": set(),
-    "mcp": set(),
-    "knowledge": set(),
-}
+# Allowed handles per node type, from the component catalog (resources/catalog). Orchestrator
+# and router outputs depend on the graph (channels, branches) and are checked further down.
+# N13: types without inputs get an empty set, so an edge into a chat input fails.
+_OUT_HANDLES = port_handles("out", static_only=True)
+_IN_HANDLES = port_handles("in")
 
 
 def _orchestrator_edge_ok(edge: GraphEdge, dst: GraphNode) -> bool:

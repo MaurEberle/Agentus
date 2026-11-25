@@ -3,6 +3,7 @@ import {
   Copy,
   Download,
   FolderOpen,
+  History,
   Library,
   Redo2,
   Save,
@@ -38,6 +39,7 @@ export function Ribbon({
   onExport,
   onValidate,
   onLibrary,
+  onVersions,
 }: {
   dirty: boolean;
   valid: boolean;
@@ -55,6 +57,8 @@ export function Ribbon({
   onExport: () => void;
   onValidate: () => void;
   onLibrary: () => void;
+  /** fix/netz-versionen: the versions of a saved network. */
+  onVersions: () => void;
 }) {
   const { t } = useTranslation();
   const document = useNetworkEditor((state) => state.document);
@@ -98,6 +102,18 @@ export function Ribbon({
         <Button type="button" size="sm" variant="outline" onClick={onDuplicate} disabled={!document.id} loading={duplicating}>
           <Copy />
           {t('network.ribbon.duplicate')}
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="size-8"
+          onClick={onVersions}
+          disabled={!document.id}
+          aria-label={t('network.ribbon.versions')}
+          title={t('network.ribbon.versions')}
+        >
+          <History />
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={onImport}>
           <Upload />

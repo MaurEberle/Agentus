@@ -39,6 +39,15 @@ Tras cambiar el modelo de embeddings o añadir archivos al corpus de ayuda: **re
 
 La ayuda responde en el idioma de la interfaz. Si el modelo no puede usar ese idioma, responde en inglés. No cita títulos de las guías. Solo una búsqueda web muestra fuentes, como título y dirección. Los bloques internos de razonamiento del modelo no se ven. La ayuda **no** usa servidores MCP ni el conocimiento de los grafos.
 
+## Arquitecto
+
+Ajustes propios del arquitecto; el modelo de chat lo eliges en el propio módulo.
+
+- **Búsqueda web:** activar/desactivar, proveedor y credencial o dirección de SearXNG, separada del chat de ayuda.
+- **Rutas de carpetas a modelos en la nube:** desactivado por defecto. Un modelo en la nube no ve rutas de carpetas al cargar una red; en la red no cambian.
+- **Ejemplos:** redes propias como ejemplos (solo válidas), proveedor y modelo de embeddings (sin valor por defecto; sin modelo, búsqueda por palabras clave), estado y **Reconstruir índice**.
+- **Límites:** llamadas a herramientas por respuesta (5–100), búsquedas web (0–200) y consultas al Hub (0–300) por sesión.
+
 ## Servidores MCP
 
 Plantillas (**recetas**) para herramientas externas: GitHub, sistema de archivos, Git, Playwright, Postgres, Slack, Notion, Excel y otras. Las recetas no son programas incluidos. Muchas necesitan Node/`npx`, Docker o `uvx` en el PC más una credencial. GitHub usa el servidor MCP oficial y se descarga al primer uso; no hace falta `npx`.
@@ -56,6 +65,8 @@ Muestra la **carpeta de datos** y el estado de los almacenes: Ajustes, Ayuda, Es
 **Cambiar** carpeta solo si ninguna red inicia, corre o se detiene. Las raíces de unidad o de sistema no valen. Opcional copiar el contenido a la carpeta nueva; la antigua se queda. Si la carpeta de destino ya tiene datos, la app no copia encima y lo avisa. Si el cambio falla, sigue activa la carpeta anterior.
 
 **Portátil** o una carpeta impuesta desde fuera: ruta **de solo lectura**.
+
+**Versiones por red:** de 5 a 500 (predeterminado 50). Al bajarlo, el siguiente guardado de una red limpia; la versión 1, las fijadas y la actual se conservan.
 
 **Retención del historial:** 30 / 90 / 365 días o ilimitado (predeterminado 90). La página de historial puede depurar entradas antiguas acorde.
 

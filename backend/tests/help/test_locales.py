@@ -31,6 +31,7 @@ def test_bundled_help_docs_cover_all_locales() -> None:
         "03-monitoring-history.md",
         "04-settings.md",
         "05-graph-terms.md",
+        "06-architect.md",
     ]
     assert set(HELP_DOC_LOCALES) == {p.name for p in root.iterdir() if p.is_dir()}
     for locale in HELP_DOC_LOCALES:

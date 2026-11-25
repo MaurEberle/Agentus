@@ -88,7 +88,9 @@ Gültig/Ungültig siehst du als Badge. Ungültige Netze lassen sich speichern, a
 
 ## Speichern, Laden, Export
 
-- **Speichern** (Strg+S): erstes Mal Namensdialog, danach Update. URL wird `/network/…`.
+- **Speichern:** erstes Mal Namensdialog, URL wird `/network/…`. Danach fragt ein kleiner Dialog: **Als neue Version speichern** (Vorgabe, Enter), **Ohne neue Version speichern** (überschreibt die aktuelle Version) oder Abbrechen; ein Vermerk ist optional.
+- **Strg+S** speichert ohne Dialog als neue Version. Ist der Inhalt unverändert, entsteht keine.
+- **Konflikt:** Hat jemand anderes das Netz inzwischen gespeichert (Architekt, zweites Fenster), fragt der Editor: **Neu laden** (eigene Änderungen verwerfen), **Als neue Version speichern** (der andere Stand bleibt als Version davor) oder Abbrechen.
 - **Speichern unter:** neues Dokument, wird das geöffnete.
 - **Laden:** ein gespeichertes Netz; Suche und Sortierung. Bulk und Löschen nur in der Verwaltung.
 - **Duplizieren:** nur bei schon gespeichertem Dokument; öffnet die Kopie.
@@ -97,12 +99,24 @@ Gültig/Ungültig siehst du als Badge. Ungültige Netze lassen sich speichern, a
 
 Ungespeichert verlassen: Dialog Speichern / Verwerfen / Abbrechen.
 
+## Versionen
+
+Im Inspector steht unter **Netz** die **Version**. Ein Klick darauf listet alle gespeicherten Stände: Nummer, Zeit, Herkunft (Editor, Architekt, wiederhergestellt …) und Vermerk. Eine ältere Version erscheint als **schreibgeschützte Vorschau** in der Arbeitsfläche; mit ‹ › oder den Pfeiltasten blätterst du, Esc oder **Zur aktuellen Version** kehrt zurück. Ungespeicherte Änderungen bleiben dabei erhalten. **Alle Versionen verwalten …** (oder das Uhr-Symbol im Ribbon) öffnet die ausführliche Liste.
+
+- Eine Version auswählen zeigt sie als Graph und was **Wiederherstellen** gegenüber dem aktuellen Stand ändern würde (neu grün, geändert gelb, entfernt rot).
+- **Wiederherstellen** legt eine neue Version an; nichts wird überschrieben. Ungespeicherte Änderungen im Editor gehen dabei verloren, der Editor fragt vorher. Fehlt danach der Index eines Wissensknotens, bietet die App **Index neu aufbauen** an.
+- **Als neues Netz kopieren** macht aus einer Version ein eigenes Netz.
+- **Anheften** schützt eine Version beim Aufräumen. Pro Netz bleiben die letzten 50 Versionen (einstellbar unter Einstellungen → Daten), dazu immer Version 1, angeheftete und die aktuelle.
+- Umbenennen und Tags ändern die aktuelle Version, ohne eine neue anzulegen.
+
 ## Verwaltung (Bibliothek)
 
 Liste mit Suche (Name, Beschreibung, Tags), Sortierung, Filter „nur gültige“ / „nur aktive“. Mehrfachauswahl.
 
 Aktionen: Neu (Editor), Öffnen, Duplizieren, Umbenennen, Tags setzen, **Als aktiv setzen** (nur ein gültiges Netz), Löschen, Importieren, Exportieren. Tags setzen lädt die vorhandenen Tags der Auswahl als Chips.
 
-Löschen entfernt den Workspace-Eintrag, nicht deine Knowledge-Quelldateien auf der Platte, nicht den Hilfe-Korpus und nicht die Historie-Läufe. Ein **laufendes** Netz wird übersprungen. Aktives Netz löschen leert die Schnellwahl.
+Neben „Geändert“ steht die aktuelle **Version** mit Link auf die Versionen im Editor.
+
+Löschen entfernt den Workspace-Eintrag samt **allen Versionen** endgültig (kein Papierkorb), nicht deine Knowledge-Quelldateien auf der Platte, nicht den Hilfe-Korpus und nicht die Historie-Läufe. Ein **laufendes** Netz wird übersprungen. Aktives Netz löschen leert die Schnellwahl.
 
 Import: Dialog mit Vorschau. Gleicher Name: umbenennen oder überspringen. Andere schemaVersion wird abgelehnt. Geheimnisse werden verworfen.

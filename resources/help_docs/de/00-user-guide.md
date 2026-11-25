@@ -11,6 +11,7 @@ Links (auf dem Telefon: Burger-Menü):
 - **Dashboard** — Startseite, Einrichtung, aktives Netz, letzte Läufe
 - **Netzwerk** — Editor (ein Graph)
 - **Verwaltung** — Bibliothek aller gespeicherten Netze
+- **Architekt** — entwirft mit dir ein Netz und legt es auf Wunsch an
 - **Monitoring** — Live-Lauf
 - **Historie** — abgeschlossene Läufe und Statistik
 

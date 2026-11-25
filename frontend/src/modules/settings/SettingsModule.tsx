@@ -24,6 +24,7 @@ import { AboutSection } from '@/modules/settings/sections/AboutSection';
 import { AppearanceSection } from '@/modules/settings/sections/AppearanceSection';
 import { CredentialsSection } from '@/modules/settings/sections/CredentialsSection';
 import { DataSection } from '@/modules/settings/sections/DataSection';
+import { ArchitectSection } from '@/modules/settings/sections/ArchitectSection';
 import { HelpChatSection } from '@/modules/settings/sections/HelpChatSection';
 import { McpSection } from '@/modules/settings/sections/McpSection';
 import { RuntimeSection } from '@/modules/settings/sections/RuntimeSection';
@@ -36,6 +37,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionId, () => JSX.Element> = {
   credentials: CredentialsSection,
   runtime: RuntimeSection,
   'help-chat': HelpChatSection,
+  architect: ArchitectSection,
   mcp: McpSection,
   data: DataSection,
   about: AboutSection,

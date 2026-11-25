@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 
@@ -196,6 +197,8 @@ _REQUIRED_COLUMNS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("prompts", "created_at", "TEXT"),
         ("model_downloads", "digests", "TEXT NOT NULL DEFAULT '[]'"),
         ("model_downloads", "preinstalled", "INTEGER NOT NULL DEFAULT 0"),
+        ("networks", "version", "INTEGER NOT NULL DEFAULT 1"),
+        ("networks", "revision", "INTEGER NOT NULL DEFAULT 1"),
     ),
 }
 
@@ -214,6 +217,78 @@ def ensure_columns(store: StoreId, conn: sqlite3.Connection) -> list[str]:
         added.append(f"{table}.{column}")
         log.warning("store %s: added missing column %s.%s", store, table, column)
     return added
+
+
+_WORKSPACE_V9 = (
+    """
+    CREATE TABLE IF NOT EXISTS architect_sessions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      provider TEXT NOT NULL,
+      model TEXT NOT NULL,
+      credential_id TEXT,
+      catalog_hash TEXT NOT NULL DEFAULT '',
+      state TEXT NOT NULL DEFAULT 'ended',
+      brief TEXT,
+      draft TEXT,
+      ids TEXT,
+      source TEXT,
+      applied TEXT,
+      proposal TEXT,
+      counters TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_input_at TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS architect_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tools TEXT,
+      created_at TEXT NOT NULL
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS architect_messages_session ON architect_messages (session_id, created_at)",
+)
+
+
+_WORKSPACE_V10 = """
+    CREATE TABLE IF NOT EXISTS network_versions (
+      network_id TEXT NOT NULL,
+      version INTEGER NOT NULL,
+      document TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      source TEXT NOT NULL,
+      note TEXT,
+      pinned INTEGER NOT NULL DEFAULT 0,
+      restored_from INTEGER,
+      PRIMARY KEY (network_id, version)
+    )
+"""
+
+
+# The architect's example index, separate from the help chat's (E-8).
+_WORKSPACE_V11 = """
+    CREATE TABLE IF NOT EXISTS architect_examples (
+      id TEXT PRIMARY KEY,
+      source TEXT NOT NULL,
+      network_id TEXT,
+      content_hash TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      draft TEXT NOT NULL,
+      flags TEXT NOT NULL,
+      catalog_hash TEXT,
+      embedding TEXT,
+      embedding_model TEXT,
+      updated_at TEXT NOT NULL
+    )
+"""
 
 
 def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
@@ -394,4 +469,58 @@ def migrate(store: StoreId, conn: sqlite3.Connection) -> None:
             conn.execute("ROLLBACK")
             raise
         current = 8
+    if store == "workspace" and current < 9:
+        # Architect sessions and their chat (fix/netz-architekt/entwurf.md, 10).
+        conn.execute("BEGIN")
+        try:
+            for statement in _WORKSPACE_V9:
+                conn.execute(statement)
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (9)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        current = 9
+    if store == "workspace" and current < 10:
+        # Network versions (fix/netz-versionen/entwurf.md, 13).
+        conn.execute("BEGIN")
+        try:
+            columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(networks)").fetchall()}
+            for column in ("version", "revision"):
+                if column not in columns:
+                    conn.execute(f"ALTER TABLE networks ADD COLUMN {column} INTEGER NOT NULL DEFAULT 1")
+            conn.execute(_WORKSPACE_V10)
+            from app.db.networks import content_hash
+
+            for row in conn.execute("SELECT id, document, updated_at FROM networks").fetchall():
+                try:
+                    document = json.loads(row["document"] or "{}")
+                except ValueError:
+                    document = {}
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO network_versions (
+                      network_id, version, document, content_hash, created_at, updated_at, source, note, pinned, restored_from
+                    ) VALUES (?, 1, ?, ?, ?, ?, 'migration', NULL, 0, NULL)
+                    """,
+                    (row["id"], row["document"], content_hash(document if isinstance(document, dict) else {}),
+                     row["updated_at"], row["updated_at"]),
+                )
+            conn.execute("UPDATE networks SET version = 1, revision = 1")
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (10)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        current = 10
+    if store == "workspace" and current < 11:
+        conn.execute("BEGIN")
+        try:
+            conn.execute(_WORKSPACE_V11)
+            conn.execute("INSERT INTO schema_migrations (version) VALUES (11)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        current = 11
     ensure_columns(store, conn)

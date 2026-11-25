@@ -16,6 +16,7 @@
     "dashboard": "Dashboard",
     "network": "Netzwerk",
     "networks": "Verwaltung",
+    "architect": "Architekt",
     "monitoring": "Monitoring",
     "history": "Historie",
     "prompts": "Prompts",
@@ -361,6 +362,7 @@
       "credentials": "Zugänge",
       "runtime": "Runtime",
       "help-chat": "Hilfe-Chatbot",
+      "architect": "Architekt",
       "mcp": "MCP-Server",
       "data": "Daten",
       "about": "Über"
@@ -396,6 +398,9 @@
       "inUseBody": "„{{name}}“ ist noch zugeordnet und kann nicht gelöscht werden.",
       "inUseMcpHint": "Weise unter MCP-Server einen anderen Zugang zu oder lösche den Server. Danach lässt sich dieser Zugang entfernen.",
       "usedBy": {
+        "architectLlm": "Architekt (Chat)",
+        "architectEmbed": "Architekt (Beispiele)",
+        "architectSearch": "Architekt (Websuche)",
         "helpChatLlm": "Hilfe-Chatbot (Chat)",
         "helpChatEmbed": "Hilfe-Chatbot (Embeddings)",
         "helpChatSearch": "Hilfe-Chatbot (Websuche)",
@@ -663,6 +668,9 @@
       "storeName": "Store",
       "fileName": "Datei",
       "retentionLabel": "Aufbewahrung der Historie",
+      "versionsLabel": "Versionen pro Netz",
+      "versionsHint": "So viele Versionen bleiben je Netz. Version 1, angeheftete und die aktuelle Version bleiben immer.",
+      "versionsInvalid": "Eine ganze Zahl von {{min}} bis {{max}}.",
       "copy": "Inhalt in den neuen Ordner kopieren",
       "confirmTitle": "Datenordner wechseln",
       "confirmBody": "Der alte Ordner bleibt erhalten. Ziel leer anlegen oder vorhandene Store-Dateien nutzen.",
@@ -686,6 +694,41 @@
         "90": "90 Tage",
         "365": "365 Tage",
         "unlimited": "Unbegrenzt"
+      }
+    },
+    "architect": {
+      "lead": "Eigene Websuche, Umgang mit Ordnerpfaden und Begrenzungen des Architekten. Das Modell wählst du im Modul selbst.",
+      "webSearch": "Websuche",
+      "webSearchHint": "Der Architekt darf im Web nachschlagen, etwa zu Werkzeugen oder neuen Modellen. Getrennt von der Websuche des Hilfe-Chats.",
+      "webSearchIncomplete": "Ohne Adresse bzw. Zugang bleibt die Websuche aus.",
+      "sendPaths": "Ordnerpfade an Cloud-Modelle",
+      "sendPathsHint": "Aus: Ein Cloud-Modell sieht beim Einlesen keine Ordnerpfade; sie bleiben im Netz unverändert. Lokale Modelle sehen sie immer.",
+      "limits": "Begrenzungen",
+      "limitsHint": "Schützen vor endlosen Werkzeugschleifen und schonen Guthaben und Hugging-Face-Kontingent. 0 schaltet Websuche bzw. Hub-Suche ab.",
+      "limit": {
+        "toolCallsPerAnswer": "Werkzeugaufrufe pro Antwort",
+        "webSearchesPerSession": "Websuchen pro Sitzung",
+        "hubCallsPerSession": "Hub-Abfragen pro Sitzung"
+      },
+      "range": "{{min}} bis {{max}}",
+      "reset": "Zurücksetzen",
+      "limitError": "Eine Begrenzung liegt außerhalb des erlaubten Bereichs.",
+      "examples": {
+        "title": "Beispiele",
+        "hint": "Der Architekt sucht Beispielnetze, die zum Steckbrief passen. Mitgelieferte Beispiele kommen mit einem späteren Update; eigene Netze nur, wenn du es erlaubst.",
+        "own": "Eigene Netze als Beispiele nutzen",
+        "ownHint": "Nur gültige Netze. Cloud-Modelle sehen dabei keine Prompts; die gibt es erst, wenn du ein Netz ausdrücklich einliest.",
+        "embeddingProvider": "Embedding-Anbieter",
+        "keywordsOnly": "Keiner (Stichwortsuche)",
+        "embeddingModel": "Embedding-Modell",
+        "count": "{{count}} Beispiele ({{shipped}} mitgeliefert, {{own}} eigene)",
+        "embedded": "Embedding {{model}}: {{done}} von {{count}} indexiert",
+        "keywords": "Suche über Stichworte",
+        "loading": "Status wird geladen …",
+        "reindex": "Index neu aufbauen",
+        "reindexDone": "Beispiel-Index neu aufgebaut",
+        "reindexFailed": "Embedding fehlgeschlagen; die Suche nutzt Stichworte.",
+        "saveFirst": "Erst speichern, dann neu aufbauen."
       }
     },
     "about": {
@@ -817,6 +860,7 @@
       "cta": "Zu den Einstellungen"
     },
     "usingFallback": "Kein Chat-Modell gesetzt. Antworten kommen vom Spar-Modell.",
+    "pausedByArchitect": "Der Architekt arbeitet gerade mit einem lokalen Modell. Der Hilfe-Chat ist pausiert, bis die Sitzung endet.",
     "sources": {
       "rag": "Dokument",
       "web": "Web"
@@ -946,6 +990,7 @@
       "saveAs": "Speichern unter",
       "load": "Laden",
       "duplicate": "Duplizieren",
+      "versions": "Versionen",
       "import": "Import",
       "export": "Export",
       "validate": "Validieren",
@@ -1269,6 +1314,97 @@
       "cancel": "Abbrechen",
       "nameTitle": "Netz benennen"
     },
+    "diff": {
+      "none": "Keine Änderungen.",
+      "added": "Neu",
+      "changed": "Geändert",
+      "removed": "Entfernt",
+      "head": "Geändert: {{fields}}",
+      "edges": "Verbindungen: +{{added}} / −{{removed}}",
+      "field": {
+        "name": "Name",
+        "description": "Beschreibung",
+        "tags": "Tags"
+      }
+    },
+    "versions": {
+      "title": "Versionen: {{name}}",
+      "lead": "Jedes Speichern als neue Version legt hier einen Stand ab. Version 1, angeheftete und die aktuelle Version bleiben beim Aufräumen erhalten.",
+      "list": "Versionen",
+      "loading": "Wird geladen …",
+      "empty": "Noch keine Versionen.",
+      "error": "Die Versionen konnten nicht geladen oder geändert werden.",
+      "version": "Version {{version}}",
+      "current": "aktuell",
+      "nodes_one": "{{count}} Knoten",
+      "nodes_other": "{{count}} Knoten",
+      "source": {
+        "create": "angelegt",
+        "editor": "Editor",
+        "architect": "Architekt",
+        "restore": "wiederhergestellt",
+        "restoreFrom": "wiederhergestellt aus Version {{from}}",
+        "import": "importiert",
+        "duplicate": "kopiert",
+        "migration": "Bestand"
+      },
+      "pin": "Anheften: bleibt beim Aufräumen erhalten",
+      "unpin": "Lösen",
+      "note": "Vermerk",
+      "notePlaceholder": "Vermerk hinzufügen",
+      "compare": "Wiederherstellen würde gegenüber dem aktuellen Stand ändern",
+      "isCurrent": "Das ist der aktuelle Stand.",
+      "restore": "Wiederherstellen",
+      "copy": "Als neues Netz kopieren",
+      "copyName": "{{name}} (Version {{version}})",
+      "copied": "„{{name}}“ angelegt",
+      "open": "Öffnen",
+      "restored": "Version {{from}} wiederhergestellt als Version {{version}}",
+      "dirtyTitle": "Ungespeicherte Änderungen verwerfen?",
+      "dirtyBody": "Wiederherstellen ersetzt den Stand im Editor. Ungespeicherte Änderungen gehen verloren.",
+      "dirtyConfirm": "Verwerfen und wiederherstellen",
+      "conflict": "Das Netz wurde inzwischen geändert. Die Liste ist neu geladen; versuche es noch einmal.",
+      "busy": "Ein laufendes Netz kann nicht wiederhergestellt werden.",
+      "reindexTitle": "Index fehlt: {{names}}",
+      "reindex": "Index neu aufbauen",
+      "reindexDone": "Index neu aufgebaut",
+      "reindexFailed": "Der Index konnte nicht vollständig aufgebaut werden.",
+      "field": "Version",
+      "picker": "Version wählen",
+      "previewBadge": "Vorschau",
+      "pinned": "angeheftet",
+      "manage": "Alle Versionen verwalten …",
+      "viewInEditor": "Im Editor ansehen",
+      "preview": {
+        "title": "Version {{version}}",
+        "readonly": "schreibgeschützte Vorschau",
+        "same": "Gleicher Inhalt wie die aktuelle Version",
+        "changes_one": "{{count}} Unterschied",
+        "changes_other": "{{count}} Unterschiede",
+        "older": "Ältere Version (←)",
+        "newer": "Neuere Version (→)",
+        "exit": "Zur aktuellen Version",
+        "unsaved": "Deine ungespeicherten Änderungen bleiben erhalten und erscheinen wieder, wenn du zur aktuellen Version zurückkehrst."
+      }
+    },
+    "save": {
+      "title": "Speichern: {{name}}",
+      "note": "Vermerk (optional)",
+      "notePlaceholder": "z. B. Tester ergänzt",
+      "newVersion": "Als neue Version speichern",
+      "sameVersion": "Ohne neue Version speichern",
+      "overwriteHint": "Ohne neue Version wird Version {{version}} überschrieben."
+    },
+    "conflict": {
+      "title": "Netz wurde inzwischen geändert",
+      "body": "Seit dem Laden wurde dieses Netz an anderer Stelle gespeichert, etwa vom Architekten oder in einem zweiten Fenster. Aktuell ist Version {{version}}. Gespeichert wurde nichts.",
+      "reloadHint": "Neu laden verwirft deine Änderungen und zeigt den aktuellen Stand.",
+      "saveHint": "Als neue Version speichern legt deinen Stand obenauf; der andere Stand bleibt als Version davor erhalten.",
+      "reload": "Neu laden",
+      "saveNew": "Als neue Version speichern",
+      "cancel": "Abbrechen",
+      "reloaded": "Aktueller Stand geladen"
+    },
     "dirty": {
       "title": "Ungespeicherte Änderungen",
       "body": "Das offene Netz ist geändert. Speichern, verwerfen oder abbrechen?",
@@ -1339,6 +1475,8 @@
     },
     "notify": {
       "saved": "Netz gespeichert",
+      "savedVersion": "Gespeichert als Version {{version}}",
+      "saveBusy": "Das Netz läuft gerade. Stoppe es, bevor du speicherst.",
       "saveError": "Speichern fehlgeschlagen",
       "duplicated": "Kopie geöffnet",
       "valid": "Netz ist gültig",
@@ -1462,7 +1600,7 @@
     },
     "delete": {
       "title": "Netze löschen",
-      "body": "Der Workspace-Index dieses Netzes wird mitgelöscht. Quelldateien auf dem Datenträger bleiben. Der Hilfe-Store und Historie-Läufe bleiben unberührt.",
+      "body": "Alle gespeicherten Versionen und der Workspace-Index dieses Netzes werden endgültig mitgelöscht; es gibt keinen Papierkorb. Quelldateien auf dem Datenträger bleiben. Der Hilfe-Store und Historie-Läufe bleiben unberührt.",
       "none": "Kein Netz kann gelöscht werden.",
       "runningSkipped": "Läuft und wird nicht gelöscht: {{names}}",
       "activeWarning": "Mindestens ein aktives Netz ist dabei. Die Schnellwahl wird geleert."
@@ -1890,6 +2028,10 @@
       "missing": "Dieser Lauf ist nicht vorhanden.",
       "error": "Fehler",
       "exportLog": "Log exportieren",
+      "ranWithVersion": "lief mit Version {{version}}",
+      "ranWithoutVersion": "lief mit einem Stand, der nicht mehr als Version vorliegt",
+      "restore": "Diesen Stand wiederherstellen",
+      "restored": "Stand wiederhergestellt als Version {{version}}",
       "tabLog": "Log",
       "tabSteps": "Schritte",
       "tabChat": "Chat"
@@ -2449,6 +2591,259 @@
       "exported": "Export gespeichert",
       "imported": "Prompts importiert",
       "failed": "Das hat nicht geklappt"
+    }
+  },
+  "architect": {
+    "load": {
+      "button": "Netz einlesen …",
+      "title": "Netz einlesen",
+      "lead": "Der Architekt arbeitet dann mit diesem Netz. Gespeichert wird erst im Abschlussdialog.",
+      "search": "Netze durchsuchen",
+      "empty": "Keine Netze gefunden.",
+      "purposeLabel": "Wozu?",
+      "purpose": {
+        "change": "zum Ändern",
+        "template": "als Vorlage"
+      },
+      "purposeHint": {
+        "change": "Der Architekt ändert dieses Netz. Übernommen wird erst nach deiner Bestätigung, als neue Version.",
+        "template": "Der Architekt beginnt mit einer Kopie. Am Ende entsteht ein neues Netz; das Original bleibt unverändert."
+      },
+      "replaces": "Der bisherige Entwurf dieser Sitzung wird ersetzt.",
+      "cloudNote": "Aufbau und Prompts gehen an das Cloud-Modell; Ordnerpfade nur, wenn die Architekt-Einstellungen es erlauben.",
+      "confirm": "Einlesen",
+      "decline": "Nicht einlesen",
+      "ask": "Der Architekt möchte „{{name}}“ einlesen ({{purpose}}).",
+      "sent": "Ich habe „{{name}}“ eingelesen.",
+      "done": "„{{name}}“ eingelesen",
+      "failed": "Das Netz konnte nicht eingelesen werden."
+    },
+    "source": {
+      "change": "Ändert „{{name}}“ · Version {{version}}",
+      "template": "Vorlage: „{{name}}“",
+      "hidden": "Ordnerpfade sind für das Cloud-Modell ausgeblendet und bleiben unverändert."
+    },
+    "proposal": {
+      "create": "Der Architekt schlägt vor, das Netz anzulegen.",
+      "update": "Der Architekt schlägt vor, die Änderungen zu übernehmen.",
+      "open": "Abschlussdialog öffnen",
+      "dismiss": "Verwerfen"
+    },
+    "closing": {
+      "button": "Abschließen …",
+      "title": "Abschließen",
+      "titleCreate": "Netz anlegen: {{name}}",
+      "titleUpdate": "Änderungen übernehmen: {{name}}",
+      "lead": "Prüfe Aufbau, Änderungen und Risiken, bevor du bestätigst.",
+      "loading": "Abschluss wird vorbereitet …",
+      "loadFailed": "Der Abschluss konnte nicht vorbereitet werden.",
+      "structure": "Aufbau",
+      "models": "Modelle",
+      "tools": "Werkzeuge",
+      "changes": "Änderungen gegenüber Version {{version}}",
+      "risks": "Riskante Bausteine",
+      "invalid_one": "Der Entwurf hat noch einen Fehler. Der Architekt muss ihn zuerst beheben.",
+      "invalid_other": "Der Entwurf hat noch {{count}} Fehler. Der Architekt muss sie zuerst beheben.",
+      "running": "Das Netz läuft gerade. Stoppe es, bevor du Änderungen übernimmst.",
+      "changedSince": "Das Netz wurde seit dem Einlesen an anderer Stelle gespeichert (jetzt Version {{version}}).",
+      "conflictHint": "Neu einlesen verwirft den Entwurf und liest den aktuellen Stand ein. Trotzdem übernehmen legt den Entwurf als neue Version obenauf; der andere Stand bleibt als Version davor erhalten.",
+      "reload": "Neu einlesen",
+      "force": "Trotzdem übernehmen",
+      "editorDirty": "Dieses Netz ist im Editor mit ungespeicherten Änderungen geöffnet. Speichert der Editor danach, meldet er einen Konflikt.",
+      "options": "Optionen",
+      "setActive": "Als aktiv setzen",
+      "setActiveBusy": "Während ein Netz läuft, bleibt das aktive Netz unverändert.",
+      "prompts": "Prompts in die Bibliothek übernehmen ({{count}})",
+      "openEditor": "Danach im Editor öffnen",
+      "versionNoteCreate": "Das Netz beginnt mit Version 1, Quelle „Architekt“.",
+      "versionNoteUpdate": "Gespeichert wird als neue Version mit Quelle „Architekt“. Der bisherige Stand bleibt als Version erhalten; „Letzte Übernahme rückgängig“ holt ihn zurück.",
+      "nothing": "Der Entwurf entspricht dem gespeicherten Stand; es gibt nichts zu übernehmen.",
+      "create": "Anlegen",
+      "update": "Änderungen übernehmen",
+      "cancel": "Abbrechen",
+      "created": "„{{name}}“ angelegt",
+      "updated": "„{{name}}“ gespeichert als Version {{version}}",
+      "promptsAdded": "Prompts in die Bibliothek übernommen: {{count}}",
+      "error": {
+        "architect_apply_invalid": "Der Entwurf hat noch Fehler.",
+        "architect_apply_noTarget": "Es ist kein Netz zum Ändern eingelesen.",
+        "architect_apply_empty": "Es gibt noch keinen Entwurf.",
+        "architect_busy": "Der Architekt antwortet noch. Warte, bis er fertig ist.",
+        "networks_notFound": "Das Netz gibt es nicht mehr."
+      }
+    },
+    "undo": {
+      "button": "Letzte Übernahme rückgängig",
+      "done": "Version {{from}} wiederhergestellt als Version {{version}}",
+      "conflict": "Das Netz wurde seit der Übernahme geändert. Frühere Stände stellst du im Editor über die Versionen wieder her."
+    },
+    "diff": {
+      "title": "Änderungen gegenüber Version {{version}}"
+    },
+    "risk": {
+      "terminal": "„{{ref}}“: Das Terminal ohne Einschränkung führt jeden Befehl aus.",
+      "fileDelete": "„{{ref}}“: Der Dateizugriff darf Dateien löschen.",
+      "httpCredential": "„{{ref}}“: HTTP sendet einen Zugang an eine Adresse."
+    },
+    "failed": "Der Architekt konnte nicht antworten.",
+    "notActive": "Die Sitzung läuft nicht. Starte sie zuerst.",
+    "busy": "Der Architekt antwortet noch.",
+    "empty": "Die Nachricht ist leer.",
+    "split": "Breite von Chat und Entwurf ändern",
+    "catalogChanged": "Agentus wurde seit Beginn dieser Sitzung aktualisiert. Der Architekt prüft Felder neu, bevor er sie nutzt.",
+    "model": {
+      "provider": "Anbieter",
+      "credential": "Zugang",
+      "credentialNone": "Kein Zugang",
+      "model": "Chat-Modell",
+      "pick": "Modell wählen",
+      "noToolsShort": "ohne Werkzeuge",
+      "tooSmallShort": "unter 4B",
+      "missing": "Wähle Anbieter und Modell.",
+      "noCredential": "Dieser Anbieter braucht einen Zugang.",
+      "ollamaDown": "Ollama ist nicht erreichbar.",
+      "notInstalled": "Dieses Modell ist nicht installiert.",
+      "noTools": "Dieses Modell kann keine Werkzeuge aufrufen; der Architekt braucht sie.",
+      "tooSmall": "Modelle unter 4B Parametern sind für den Architekten zu klein.",
+      "small": "Kleines Modell: bei größeren Netzen kann es an seine Grenzen kommen.",
+      "shortContext": "Kurzer Kontext (unter 32k): lange Sitzungen werden früh gekürzt.",
+      "blocked": "Dieses Modell ist für den Architekten gesperrt."
+    },
+    "session": {
+      "start": "Sitzung starten",
+      "stop": "Sitzung beenden",
+      "running": "läuft",
+      "slow": "ausgelagert, langsam"
+    },
+    "gpu": {
+      "line": "Bedarf ≈ {{need}} · frei {{free}} VRAM",
+      "short": "Nicht genug freier Grafikspeicher.",
+      "tooLarge": "Das Modell passt weder in den Grafik- noch in den Arbeitsspeicher."
+    },
+    "networkRunning": "Gerade läuft ein Netz.",
+    "cloud": {
+      "notice": "Chat, Steckbrief und Entwurf gehen an den Cloud-Anbieter. Ordnerpfade bleiben lokal."
+    },
+    "start": {
+      "slowTitle": "Nicht genug freier Grafikspeicher",
+      "slowBody": "Bedarf ≈ {{need}}, frei {{free}} VRAM. Trotzdem starten lagert Teile in den Arbeitsspeicher aus (frei {{ram}}); die Antworten werden deutlich langsamer.",
+      "slowConfirm": "Trotzdem starten (langsam)",
+      "runningTitle": "Gerade läuft ein Netz",
+      "runningBody": "Das laufende Netz kann langsamer werden oder abbrechen, wenn der Architekt die GPU mitbenutzt.",
+      "runningConfirm": "Trotzdem starten",
+      "blockedTitle": "Start nicht möglich",
+      "tooLargeBody": "Bedarf ≈ {{need}}, frei {{free}} VRAM und {{ram}} Arbeitsspeicher. Wähle ein kleineres Modell oder einen Cloud-Anbieter.",
+      "close": "Schließen",
+      "cancel": "Abbrechen"
+    },
+    "chat": {
+      "tools_one": "{{count}} Werkzeugaufruf",
+      "tools_other": "{{count}} Werkzeugaufrufe",
+      "emptyActive": "Beschreibe, was dein Netz tun soll. Oder nimm eines dieser Beispiele:",
+      "emptyIdle": "Wähle oben ein Chat-Modell und starte die Sitzung. Danach beschreibst du, was dein Netz tun soll.",
+      "placeholder": "Was soll dein Netz tun?",
+      "startFirst": "Starte zuerst die Sitzung.",
+      "stop": "Stopp",
+      "send": "Senden"
+    },
+    "examples": {
+      "coding": "Ein lokales Coding-Team mit Tests",
+      "research": "Recherche mit Websuche und Quellen",
+      "documents": "Fragen zu meinen PDFs"
+    },
+    "tools": {
+      "search_examples": "sucht Beispielnetze …",
+      "web_search": "sucht im Web …",
+      "search_models": "sucht Modelle auf Hugging Face …",
+      "model_details": "liest Modelldetails …",
+      "load_network": "fragt, ob er ein Netz einlesen darf …",
+      "propose_create": "bereitet den Abschluss vor …",
+      "propose_update": "bereitet den Abschluss vor …",
+      "set_brief": "füllt den Steckbrief …",
+      "list_components": "liest die Bausteine …",
+      "describe_component": "schlägt einen Baustein nach …",
+      "get_guide": "liest eine Bauanleitung …",
+      "list_models": "liest die installierten Modelle …",
+      "environment": "prüft die Umgebung …",
+      "list_prompts": "durchsucht die Prompt-Bibliothek …",
+      "get_prompt": "liest einen Prompt …",
+      "list_networks": "durchsucht deine Netze …",
+      "draft_set": "baut den Entwurf …",
+      "draft_patch": "ändert den Entwurf …"
+    },
+    "tool": {
+      "examples_one": "{{count}} Beispielnetz gefunden",
+      "examples_other": "{{count}} Beispielnetze gefunden",
+      "web_one": "Websuche „{{query}}“: {{count}} Treffer",
+      "web_other": "Websuche „{{query}}“: {{count}} Treffer",
+      "webOff": "Websuche ist aus",
+      "webFailed": "Websuche „{{query}}“ fehlgeschlagen",
+      "limit": "Kontingent der Sitzung aufgebraucht ({{limit}})",
+      "hubWait": "Hugging Face bremst; wieder in {{seconds}} s",
+      "hubFailed": "Hugging Face nicht erreichbar",
+      "hubSearch_one": "{{count}} Modell auf Hugging Face gefunden",
+      "hubSearch_other": "{{count}} Modelle auf Hugging Face gefunden",
+      "hubDetails": "Details zu {{repo}} gelesen",
+      "loadAsk": "möchte „{{name}}“ einlesen",
+      "loadMissing": "Netz „{{name}}“ nicht gefunden",
+      "proposed": "schlägt das Anlegen vor",
+      "proposedUpdate": "schlägt das Übernehmen vor",
+      "proposeBlocked_one": "Abschluss noch nicht möglich ({{count}} Fehler)",
+      "proposeBlocked_other": "Abschluss noch nicht möglich ({{count}} Fehler)",
+      "brief": "Steckbrief aktualisiert",
+      "components": "Bausteine gelesen",
+      "describe": "{{name}} nachgeschlagen",
+      "unknown": "{{name}}: unbekannt",
+      "guide": "Bauanleitung „{{name}}“ gelesen",
+      "guideMissing": "Bauanleitung „{{name}}“ fehlt",
+      "models_one": "{{count}} installiertes Modell gelesen",
+      "models_other": "{{count}} installierte Modelle gelesen",
+      "ollamaDown": "Ollama nicht erreichbar",
+      "environment": "Umgebung gelesen",
+      "prompts_one": "{{count}} Prompt gefunden",
+      "prompts_other": "{{count}} Prompts gefunden",
+      "prompt": "Prompt „{{name}}“ gelesen",
+      "promptMissing": "Prompt nicht gefunden",
+      "networks_one": "{{count}} Netz gefunden",
+      "networks_other": "{{count}} Netze gefunden",
+      "draftValid": "Entwurf: {{nodes}} Knoten, {{edges}} Kanten, gültig",
+      "draftErrors_one": "Entwurf: {{nodes}} Knoten, {{edges}} Kanten, {{count}} Fehler",
+      "draftErrors_other": "Entwurf: {{nodes}} Knoten, {{edges}} Kanten, {{count}} Fehler",
+      "badArgs": "{{name}}: ungültige Angaben",
+      "failed": "{{name}}: Fehler"
+    },
+    "idle": {
+      "warning": "Ohne Eingabe endet die Sitzung in {{seconds}} s. Verlauf und Entwurf bleiben erhalten.",
+      "keep": "Weiter arbeiten"
+    },
+    "brief": {
+      "title": "Steckbrief",
+      "empty": "Noch leer. Der Architekt füllt ihn im Gespräch; du kannst jedes Feld selbst ändern.",
+      "goal": "Ziel",
+      "input": "Eingabe",
+      "output": "Ergebnis",
+      "sources": "Quellen",
+      "deployment": "Lokal/Cloud",
+      "tools": "Werkzeuge",
+      "constraints": "Rahmen"
+    },
+    "draft": {
+      "empty": "Noch kein Entwurf. Er erscheint hier, sobald der Architekt ihn baut.",
+      "unnamed": "Entwurf ohne Namen",
+      "valid": "gültig",
+      "errors_one": "{{count}} Fehler",
+      "errors_other": "{{count}} Fehler",
+      "error": "Fehler im Entwurf"
+    },
+    "sessions": {
+      "title": "Sitzungen",
+      "new": "Neu",
+      "empty": "Noch keine Sitzung.",
+      "untitled": "Neue Sitzung",
+      "export": "Markdown",
+      "delete": "Löschen",
+      "deleteTitle": "Sitzung löschen?",
+      "deleteBody": "Verlauf, Steckbrief und Entwurf dieser Sitzung werden gelöscht. Angelegte Netze bleiben."
     }
   }
 }

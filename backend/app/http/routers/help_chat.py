@@ -60,8 +60,11 @@ def help_send(body: HelpSendBody):
     stripped = body.text.strip()
     if not stripped:
         raise AppError("help.empty", status_code=400)
-    if not get_status().configured:
+    status = get_status()
+    if not status.configured:
         raise AppError("help.unconfigured", status_code=400)
+    if status.paused_by_architect:
+        raise AppError("help.pausedByArchitect", status_code=409)
     return sse_response(send_stream(stripped, body.locale))
 
 

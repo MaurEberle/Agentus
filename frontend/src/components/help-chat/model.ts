@@ -6,6 +6,8 @@ export type HelpChatStatus = {
   webSearchEnabled?: boolean;
   degraded?: boolean;
   usingFallback?: boolean;
+  /** A local architect session has the GPU; the help chat waits (E-7, E-16). */
+  pausedByArchitect?: boolean;
 };
 
 export type HelpSource = {

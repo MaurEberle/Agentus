@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   helpChatSnapshot,
+  NETWORK_VERSIONS_DEFAULT,
   type AppSettings,
   type HelpChatSettings,
   type HistoryRetentionDays,
@@ -13,6 +14,8 @@ export type RuntimeDraft = {
 
 export type DataDraft = {
   historyRetentionDays: HistoryRetentionDays;
+  /** Kept as typed; checked against 5 to 500 before saving. */
+  networkVersionsKeep: string;
 };
 
 type SettingsDraftState = {
@@ -58,7 +61,10 @@ function helpFrom(settings: AppSettings): HelpChatSettings {
 }
 
 function dataFrom(settings: AppSettings): DataDraft {
-  return { historyRetentionDays: settings.historyRetentionDays };
+  return {
+    historyRetentionDays: settings.historyRetentionDays,
+    networkVersionsKeep: String(settings.networkVersionsKeep ?? NETWORK_VERSIONS_DEFAULT),
+  };
 }
 
 export const useSettingsDraft = create<SettingsDraftState>((set, get) => ({
@@ -88,7 +94,10 @@ export const useSettingsDraft = create<SettingsDraftState>((set, get) => ({
     })),
   setData: (patch) =>
     set((state) => ({
-      data: { ...(state.data ?? { historyRetentionDays: 90 }), ...patch },
+      data: {
+        ...(state.data ?? { historyRetentionDays: 90, networkVersionsKeep: String(NETWORK_VERSIONS_DEFAULT) }),
+        ...patch,
+      },
     })),
   reset: (settings) =>
     set({

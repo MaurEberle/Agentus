@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Copy, Download } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Copy, Download, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ModelName } from '@/components/ModelName';
@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ApiError } from '@/api/client';
 import { useCopySelection } from '@/lib/copySelection';
+import { notify } from '@/lib/notifications';
+import { restoreFromRun } from '@/modules/network/versions/api';
 import { cn } from '@/lib/utils';
 import { ArchiveLog } from '@/modules/history/log/ArchiveLog';
 import { formatChatBody, formatRunLogMessage } from '@/modules/monitoring/model/logMessage';
@@ -37,6 +40,7 @@ export function RunDetailPanel({
   onExport: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const [restoring, setRestoring] = useState(false);
   const tab = useHistoryUi((state) => state.detailTab);
   const setDetailTab = useHistoryUi((state) => state.setDetailTab);
 
@@ -56,6 +60,25 @@ export function RunDetailPanel({
   }
 
   const duration = durationMs(detail.startedAt, detail.endedAt);
+  const canRestore = Boolean(detail.networkExists && detail.graphSnapshot && detail.outcome !== 'running');
+
+  async function restore() {
+    if (!detail) return;
+    setRestoring(true);
+    try {
+      const restored = await restoreFromRun(detail.networkId, detail.runId);
+      notify({
+        titleKey: 'history.detail.restored',
+        values: { version: String(restored.version ?? '') },
+        variant: 'success',
+      });
+    } catch (error) {
+      const key = error instanceof ApiError ? error.messageKey : undefined;
+      notify({ titleKey: key === 'run.busy' ? 'network.versions.busy' : 'network.versions.error', variant: 'error' });
+    } finally {
+      setRestoring(false);
+    }
+  }
   const hasChat = Boolean(detail.chat && detail.chat.length > 0);
   const activeTab: DetailTab = tab === 'chat' && !hasChat ? 'log' : tab;
 
@@ -83,11 +106,24 @@ export function RunDetailPanel({
             {detail.endedAt ? ` – ${formatDateTime(detail.endedAt, i18n.language)}` : ''}
             {duration !== null ? ` · ${formatDuration(duration)}` : ''}
           </p>
+          {detail.networkExists && detail.graphSnapshot ? (
+            <p className="text-xs text-muted-foreground">
+              {detail.networkVersion
+                ? t('history.detail.ranWithVersion', { version: detail.networkVersion })
+                : t('history.detail.ranWithoutVersion')}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {detail.outcome === 'running' ? (
             <Button asChild size="sm">
               <Link to="/monitoring">{t('history.list.live')}</Link>
+            </Button>
+          ) : null}
+          {canRestore ? (
+            <Button type="button" size="sm" variant="outline" loading={restoring} onClick={() => void restore()}>
+              <History className="size-3.5" />
+              {t('history.detail.restore')}
             </Button>
           ) : null}
           <Button type="button" size="sm" variant="outline" onClick={onExport}>

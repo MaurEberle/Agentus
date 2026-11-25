@@ -21,14 +21,31 @@ export async function createNetwork(doc: AgentNetworkDocument): Promise<AgentNet
   return created;
 }
 
-export async function updateNetwork(id: string, doc: AgentNetworkDocument): Promise<AgentNetworkDocument> {
-  const updated = await apiFetch<AgentNetworkDocument>(`/networks/${id}`, {
+/**
+ * `baseRevision`: the revision the edit starts from; a newer one on the server is a
+ * `networks.conflict` (409). `newVersion` false writes into the current version.
+ */
+export type SaveOptions = { baseRevision?: number; newVersion?: boolean; note?: string };
+
+export async function updateNetwork(
+  id: string,
+  doc: AgentNetworkDocument,
+  options: SaveOptions = {},
+): Promise<AgentNetworkDocument> {
+  const query = new URLSearchParams();
+  if (options.baseRevision !== undefined) query.set('baseRevision', String(options.baseRevision));
+  if (options.newVersion === false) query.set('newVersion', 'false');
+  const note = options.note?.trim();
+  if (note) query.set('note', note);
+  const search = query.toString();
+  const updated = await apiFetch<AgentNetworkDocument>(`/networks/${id}${search ? `?${search}` : ''}`, {
     method: 'PUT',
     body: JSON.stringify(doc),
   });
   // M24: the editor reads ['networks', id, 'document']; the list refreshes in the background.
   queryClient.setQueryData(['networks', id, 'document'], updated);
   void queryClient.invalidateQueries({ queryKey: ['networks'], exact: true });
+  void queryClient.invalidateQueries({ queryKey: ['networks', id, 'versions'] });
   return updated;
 }
 

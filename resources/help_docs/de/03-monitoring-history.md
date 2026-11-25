@@ -89,4 +89,6 @@ Diagramm und Fehlerliste sowie Lauf-Liste und Detail lassen sich wie im Monitori
 
 Rechte Seite oder eigene Ansicht: Meta, Mini-Graph, Tabs **Log**, **Schritte**, **Chat**. Das Log sieht aus wie im Monitoring: Ansichten, Gruppen, Zusammenfassung, Export als Text. Ältere Läufe haben weniger Angaben (kein Auftrag, kein Aufrufer). Schritte: Knoten, Rolle, Status, Fehler. Chat: Transkript, read-only. Einzelnes Log exportieren.
 
+Unter dem Zeitraum steht **lief mit Version N**, wenn der Stand des Laufs noch als Version vorliegt. **Diesen Stand wiederherstellen** macht den Stand des Laufs zur neuesten Version des Netzes, auch wenn keine Version mehr dazu passt.
+
 Löschen von Historieneinträgen ändert die gespeicherten Netze nicht.

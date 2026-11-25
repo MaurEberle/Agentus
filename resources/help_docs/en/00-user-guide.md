@@ -11,6 +11,7 @@ Left (on a phone: burger menu):
 - **Dashboard** — home, setup, active network, recent runs
 - **Network** — editor (one graph)
 - **Library** — all saved networks
+- **Architect** — designs a network with you and creates it on request
 - **Monitoring** — live run
 - **History** — finished runs and stats
 

@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { Activity, Cpu, Download, GitBranch, History, LayoutDashboard, Library, ScrollText, Settings } from 'lucide-react';
+import { Activity, Cpu, Download, DraftingCompass, GitBranch, History, LayoutDashboard, Library, ScrollText, Settings } from 'lucide-react';
+import { ArchitectPage } from '@/modules/architect';
 import { DashboardPage } from '@/modules/dashboard';
 import { HistoryPage } from '@/modules/history';
 import { MonitoringPage } from '@/modules/monitoring';
@@ -12,7 +13,17 @@ import { PromptsPage } from '@/modules/prompts';
 import { SettingsPage } from '@/modules/settings';
 
 export interface AppModule {
-  id: 'dashboard' | 'network' | 'networks' | 'prompts' | 'models' | 'monitoring' | 'history' | 'downloads' | 'settings';
+  id:
+    | 'dashboard'
+    | 'network'
+    | 'networks'
+    | 'architect'
+    | 'prompts'
+    | 'models'
+    | 'monitoring'
+    | 'history'
+    | 'downloads'
+    | 'settings';
   titleKey: string;
   path: string;
   icon: LucideIcon;
@@ -40,6 +51,13 @@ export const NAV_MODULES: AppModule[] = [
     path: '/networks',
     icon: Library,
     component: NetworksPage,
+  },
+  {
+    id: 'architect',
+    titleKey: 'nav.architect',
+    path: '/architect',
+    icon: DraftingCompass,
+    component: ArchitectPage,
   },
   {
     id: 'prompts',

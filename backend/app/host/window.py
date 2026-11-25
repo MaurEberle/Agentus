@@ -92,6 +92,13 @@ def on_closing(server: Any, port: int) -> bool:
         get_controller().stop(closing=True)
     except Exception:
         pass
+    try:
+        from app.architect.session import stop as stop_architect
+
+        # E-15: the session ends with the app and can be continued later.
+        stop_architect(reason="closing")
+    except Exception:
+        pass
     return True
 
 

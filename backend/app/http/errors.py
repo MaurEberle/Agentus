@@ -22,10 +22,13 @@ class AppError(Exception):
         *,
         status_code: int = 400,
         message: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.message_key = message_key
         self.status_code = status_code
         self.message = message
+        # Extra fields for the client (for example the architect's GPU check); no secrets.
+        self.details = details
         super().__init__(message_key)
 
 
@@ -102,6 +105,11 @@ def runtime_status(error_key: str) -> int:
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
+        if exc.details:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={**exc.details, **error_payload(exc.message_key, exc.message)},
+            )
         return error_response(exc.status_code, exc.message_key, exc.message)
 
     from app.db.errors import PersistError

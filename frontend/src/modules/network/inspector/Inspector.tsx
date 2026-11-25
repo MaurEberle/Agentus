@@ -52,6 +52,7 @@ import {
   editorUpdateNodeData,
   useNetworkEditor,
 } from '@/modules/network/store';
+import { VersionPicker } from '@/modules/network/versions/VersionPicker';
 import { notify } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { formatBytes, formatPercent, meterTone } from '@/modules/monitoring/model/format';
@@ -129,6 +130,11 @@ export function Inspector({
             {isRunning ? <Badge variant="warning">{t('network.badge.running')}</Badge> : null}
           </div>
         </header>
+        {document.id ? (
+          <Field label={t('network.versions.field')}>
+            <VersionPicker networkId={document.id} />
+          </Field>
+        ) : null}
         <Field label={t('network.inspector.graph.name')}>
           <Input
             value={document.name}

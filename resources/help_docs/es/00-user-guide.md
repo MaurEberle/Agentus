@@ -11,6 +11,7 @@ A la izquierda (en el teléfono: menú hamburguesa):
 - **Dashboard** — inicio, configuración, red activa, últimas ejecuciones
 - **Red** — editor (un grafo)
 - **Biblioteca** — todas las redes guardadas
+- **Arquitecto** — diseña una red contigo y la crea si lo pides
 - **Supervisión** — ejecución en vivo
 - **Historial** — ejecuciones terminadas y estadísticas
 
