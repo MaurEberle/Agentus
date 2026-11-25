@@ -2678,7 +2678,9 @@
       "conflict": "Das Netz wurde seit der Übernahme geändert. Frühere Stände stellst du im Editor über die Versionen wieder her."
     },
     "diff": {
-      "title": "Änderungen gegenüber Version {{version}}"
+      "title": "Änderungen gegenüber Version {{version}}",
+      "count_one": "{{count}} Änderung",
+      "count_other": "{{count}} Änderungen"
     },
     "risk": {
       "terminal": "„{{ref}}“: Das Terminal ohne Einschränkung führt jeden Befehl aus.",
@@ -2825,15 +2827,31 @@
       "sources": "Quellen",
       "deployment": "Lokal/Cloud",
       "tools": "Werkzeuge",
-      "constraints": "Rahmen"
+      "constraints": "Rahmen",
+      "filled": "{{count}} von {{total}}",
+      "none": "Noch leer.",
+      "edit": "{{field}} bearbeiten",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "editHint": "Strg+Enter speichert, Esc bricht ab.",
+      "expandAll": "Alle aufklappen",
+      "collapseAll": "Alle zuklappen",
+      "prompts": "Prompts",
+      "chars_one": "{{count}} Zeichen",
+      "chars_other": "{{count}} Zeichen",
+      "promptHint": "Den Prompt ändert der Architekt im Gespräch; nach dem Abschließen auch der Editor.",
+      "saveFailed": "Der Steckbrief konnte nicht gespeichert werden."
     },
     "draft": {
-      "empty": "Noch kein Entwurf. Er erscheint hier, sobald der Architekt ihn baut.",
+      "empty": "Noch kein Entwurf. Er erscheint hier, sobald der Architekt ihn baut – oder du liest ein vorhandenes Netz ein.",
       "unnamed": "Entwurf ohne Namen",
       "valid": "gültig",
       "errors_one": "{{count}} Fehler",
       "errors_other": "{{count}} Fehler",
-      "error": "Fehler im Entwurf"
+      "error": "Fehler im Entwurf",
+      "details": "{{label}} – Details anzeigen",
+      "hints_one": "{{count}} Hinweis",
+      "hints_other": "{{count}} Hinweise"
     },
     "sessions": {
       "title": "Sitzungen",
@@ -2843,7 +2861,8 @@
       "export": "Markdown",
       "delete": "Löschen",
       "deleteTitle": "Sitzung löschen?",
-      "deleteBody": "Verlauf, Steckbrief und Entwurf dieser Sitzung werden gelöscht. Angelegte Netze bleiben."
+      "deleteBody": "Verlauf, Steckbrief und Entwurf dieser Sitzung werden gelöscht. Angelegte Netze bleiben.",
+      "freshHint": "Modell wählen und starten – oder zuerst ein Netz einlesen."
     }
   }
 }

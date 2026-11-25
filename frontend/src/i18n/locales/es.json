@@ -2678,7 +2678,9 @@
       "conflict": "La red cambió desde la aplicación. Restaura estados anteriores desde las versiones en el editor."
     },
     "diff": {
-      "title": "Cambios desde la versión {{version}}"
+      "title": "Cambios desde la versión {{version}}",
+      "count_one": "{{count}} cambio",
+      "count_other": "{{count}} cambios"
     },
     "risk": {
       "terminal": "«{{ref}}»: el terminal sin restricciones ejecuta cualquier comando.",
@@ -2825,15 +2827,31 @@
       "sources": "Fuentes",
       "deployment": "Local/nube",
       "tools": "Herramientas",
-      "constraints": "Límites"
+      "constraints": "Límites",
+      "filled": "{{count}} de {{total}}",
+      "none": "Todavía vacío.",
+      "edit": "Editar {{field}}",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "editHint": "Ctrl+Intro guarda, Esc cancela.",
+      "expandAll": "Desplegar todo",
+      "collapseAll": "Plegar todo",
+      "prompts": "Prompts",
+      "chars_one": "{{count}} carácter",
+      "chars_other": "{{count}} caracteres",
+      "promptHint": "El arquitecto cambia el prompt en la conversación; tras cerrar, también el editor.",
+      "saveFailed": "No se pudo guardar la ficha."
     },
     "draft": {
-      "empty": "Todavía no hay borrador. Aparece aquí en cuanto el arquitecto lo construye.",
+      "empty": "Todavía no hay borrador. Aparece aquí en cuanto el arquitecto lo construye, o carga una red existente.",
       "unnamed": "Borrador sin nombre",
       "valid": "válido",
       "errors_one": "{{count}} error",
       "errors_other": "{{count}} errores",
-      "error": "Error en el borrador"
+      "error": "Error en el borrador",
+      "details": "{{label}}: ver detalles",
+      "hints_one": "{{count}} aviso",
+      "hints_other": "{{count}} avisos"
     },
     "sessions": {
       "title": "Sesiones",
@@ -2843,7 +2861,8 @@
       "export": "Markdown",
       "delete": "Eliminar",
       "deleteTitle": "¿Eliminar la sesión?",
-      "deleteBody": "Se eliminan el chat, la ficha y el borrador de esta sesión. Las redes creadas se quedan."
+      "deleteBody": "Se eliminan el chat, la ficha y el borrador de esta sesión. Las redes creadas se quedan.",
+      "freshHint": "Elige un modelo e inicia, o carga antes una red."
     }
   }
 }

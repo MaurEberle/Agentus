@@ -25,6 +25,22 @@ function isSpecial(text: string, index: number): boolean {
   return char === '`' || char === '*' || char === '_' || char === '~' || char === '[' || char === '!';
 }
 
+const WORD = /[\p{L}\p{N}]/u;
+
+/**
+ * Where a run of ``mark`` (at ``index``) closes, or -1. Underscores inside a word, as in
+ * ``writer_agent`` or ``file_access``, are text, not emphasis (CommonMark).
+ */
+function closing(text: string, index: number, mark: string): number {
+  const underscore = mark[0] === '_';
+  if (underscore && index > 0 && WORD.test(text[index - 1])) return -1;
+  let end = text.indexOf(mark, index + mark.length);
+  while (underscore && end > 0 && WORD.test(text[end + mark.length] ?? '')) {
+    end = text.indexOf(mark, end + mark.length);
+  }
+  return end;
+}
+
 function renderInline(text: string): ReactNode[] {
   const out: ReactNode[] = [];
   let index = 0;
@@ -32,7 +48,7 @@ function renderInline(text: string): ReactNode[] {
   while (index < text.length) {
     if (text.startsWith('**', index) || text.startsWith('__', index)) {
       const mark = text.slice(index, index + 2);
-      const end = text.indexOf(mark, index + 2);
+      const end = closing(text, index, mark);
       if (end > index + 2) {
         out.push(<strong key={key++}>{renderInline(text.slice(index + 2, end))}</strong>);
         index = end + 2;
@@ -61,7 +77,7 @@ function renderInline(text: string): ReactNode[] {
     }
     if ((text[index] === '*' || text[index] === '_') && text[index + 1] !== text[index]) {
       const mark = text[index];
-      const end = text.indexOf(mark, index + 1);
+      const end = closing(text, index, mark);
       if (end > index + 1) {
         out.push(<em key={key++}>{renderInline(text.slice(index + 1, end))}</em>);
         index = end + 1;

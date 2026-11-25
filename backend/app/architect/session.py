@@ -291,7 +291,9 @@ def start(
     with _lock:
         previous = _active
     if previous is not None and previous.session_id != session_id:
-        stop(previous.session_id, reason="replaced")
+        # A new chat on the same local model takes it over loaded; unloading would only reload it.
+        same = previous.local and checked.local and previous.model == row.model
+        stop(previous.session_id, reason="replaced", unload=not same)
     row.state = "active"
     row.updated_at = utc_now()
     row.last_input_at = row.updated_at
@@ -324,8 +326,8 @@ def _remember_choice(row: store.ArchitectSessionRow) -> None:
         log.debug("remembering the architect model failed", exc_info=True)
 
 
-def stop(session_id: str | None = None, *, reason: str = "user") -> None:
-    """End the active session: abort, unload a local model, free the help chat."""
+def stop(session_id: str | None = None, *, reason: str = "user", unload: bool = True) -> None:
+    """End the active session: abort, unload a local model (unless the next session keeps it), free the help chat."""
     global _active
     with _lock:
         active = _active
@@ -343,7 +345,7 @@ def stop(session_id: str | None = None, *, reason: str = "user") -> None:
         return
     active.abort.set()
     log.info("architect session %s ended (%s)", active.session_id, reason)
-    if active.local:
+    if active.local and unload:
         from app.runtime.ollama import unload
 
         try:

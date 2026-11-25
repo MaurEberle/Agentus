@@ -1,20 +1,57 @@
 import { useMemo } from 'react';
-import { CircleAlert, EyeOff, FileInput, Info, PackageCheck, Undo2 } from 'lucide-react';
+import { ChevronDown, CircleAlert, EyeOff, FileInput, Info, PackageCheck, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { undoable, type ArchitectState } from '@/modules/architect/api';
+import { cn } from '@/lib/utils';
+import { undoable, type ArchitectCheck, type ArchitectState } from '@/modules/architect/api';
 import { DiffList } from '@/modules/network/versions/DiffList';
 import type { ValidationIssue } from '@/modules/network/model/document';
 import { DocumentGraph, type NodeMark } from '@/modules/networks/detail/ReadonlyGraph';
 
-function nodeLine(node: { type: string; data: Record<string, unknown> }): string {
-  const data = node.data ?? {};
-  if (node.type === 'llm') return [data.provider, data.model].filter(Boolean).join(' · ');
-  if (node.type === 'tool') return String(data.kind ?? '');
-  if (node.type === 'mcp') return String(data.mcpServer ?? data.mcpServerId ?? '');
-  return String(data.displayName ?? '');
+/** The check as a badge; errors and hints open from it instead of taking room below the graph. */
+function CheckBadge({ check }: { check: ArchitectCheck }) {
+  const { t, i18n } = useTranslation();
+  // The check speaks to the model in English; a validation key reads in the UI language.
+  const text = (item: ArchitectCheck['errors'][number]) => (item.key && i18n.exists(item.key) ? t(item.key) : item.text);
+  const label = check.ok ? t('architect.draft.valid') : t('architect.draft.errors', { count: check.errors.length });
+  const problems = check.errors.length + check.hints.length;
+  if (problems === 0) return <Badge variant="default">{label}</Badge>;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t('architect.draft.details', { label })}
+        >
+          <Badge variant={check.ok ? 'default' : 'destructive'} className="cursor-pointer gap-1">
+            {label}
+            {check.hints.length > 0 ? <span className="opacity-80">· {t('architect.draft.hints', { count: check.hints.length })}</span> : null}
+            <ChevronDown className="size-3" aria-hidden />
+          </Badge>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-96 max-w-[90vw] p-3">
+        <ul className="grid max-h-72 gap-1.5 overflow-y-auto text-sm">
+          {check.errors.map((item, index) => (
+            <li key={`e${index}`} className="flex gap-1.5 text-destructive">
+              <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>{text(item)}</span>
+            </li>
+          ))}
+          {check.hints.map((item, index) => (
+            <li key={`h${index}`} className="flex gap-1.5 text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>{text(item)}</span>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 type Actions = {
@@ -31,8 +68,10 @@ function SourceLine({ state }: { state: ArchitectState }) {
   const source = state.source;
   if (!source) return null;
   const hidden = Object.keys(source.hidden ?? {}).length > 0;
+  const diff = state.diff && !state.diff.empty ? state.diff : null;
+  const changes = diff ? diff.added.length + diff.changed.length + diff.removed.length + (diff.head.length ? 1 : 0) : 0;
   return (
-    <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+    <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
       <span className="truncate">
         {source.purpose === 'change'
           ? t('architect.source.change', { name: source.name, version: source.version ?? '' })
@@ -48,7 +87,29 @@ function SourceLine({ state }: { state: ArchitectState }) {
           <TooltipContent className="max-w-xs">{t('architect.source.hidden')}</TooltipContent>
         </Tooltip>
       ) : null}
-    </p>
+      {diff ? (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                'ms-1 inline-flex shrink-0 items-center gap-0.5 rounded-sm px-1 font-medium text-foreground underline-offset-2 hover:underline',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              )}
+            >
+              {t('architect.diff.count', { count: changes })}
+              <ChevronDown className="size-3" aria-hidden />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80 max-w-[90vw] p-3">
+            <p className="mb-2 text-xs font-medium">{t('architect.diff.title', { version: source.version ?? '' })}</p>
+            <div className="max-h-72 overflow-y-auto">
+              <DiffList diff={diff} />
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : null}
+    </div>
   );
 }
 
@@ -99,11 +160,7 @@ export function DraftPanel({
       <header className="grid gap-1 border-y px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{state.draft.name || t('architect.draft.unnamed')}</h2>
-          {check ? (
-            <Badge variant={check.ok ? 'default' : 'destructive'}>
-              {check.ok ? t('architect.draft.valid') : t('architect.draft.errors', { count: check.errors.length })}
-            </Badge>
-          ) : null}
+          {check ? <CheckBadge check={check} /> : null}
         </div>
         <SourceLine state={state} />
         <div className="flex flex-wrap gap-2">
@@ -122,39 +179,6 @@ export function DraftPanel({
       </header>
       <div className="min-h-56 flex-1 overflow-hidden">
         <DocumentGraph document={document} layoutWidth={layoutWidth} issues={issues} marks={marks} />
-      </div>
-      <div className="max-h-[40%] min-h-0 overflow-auto border-t p-3 text-sm">
-        {check && (check.errors.length > 0 || check.hints.length > 0) ? (
-          <ul className="mb-3 grid gap-1">
-            {check.errors.map((item, index) => (
-              <li key={`e${index}`} className="flex gap-1.5 text-destructive">
-                <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                <span>{item.text}</span>
-              </li>
-            ))}
-            {check.hints.map((item, index) => (
-              <li key={`h${index}`} className="flex gap-1.5 text-muted-foreground">
-                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                <span>{item.text}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {state.diff && !state.diff.empty ? (
-          <div className="mb-3 grid gap-1">
-            <h3 className="text-xs font-medium">{t('architect.diff.title', { version: state.source?.version ?? '' })}</h3>
-            <DiffList diff={state.diff} />
-          </div>
-        ) : null}
-        <dl className="grid grid-cols-[max-content_max-content_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs">
-          {state.draft.nodes.map((node) => (
-            <div key={node.ref} className="contents">
-              <dt className="font-medium">{node.ref}</dt>
-              <dd className="text-muted-foreground">{t(`network.palette.${node.type}`, { defaultValue: node.type })}</dd>
-              <dd className="truncate text-muted-foreground">{nodeLine(node)}</dd>
-            </div>
-          ))}
-        </dl>
       </div>
     </section>
   );

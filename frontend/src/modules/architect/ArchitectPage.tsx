@@ -20,6 +20,7 @@ import {
   dismissProposal,
   exportSession,
   loadNetwork,
+  patchSession,
   refreshArchitect,
   sendMessage,
   startSession,
@@ -31,6 +32,7 @@ import {
   useSessionsQuery,
   type ArchitectMessage,
   type ArchitectState,
+  type BriefField,
   type LoadPurpose,
   type SessionDetail,
 } from '@/modules/architect/api';
@@ -51,9 +53,12 @@ type Refusal = { refused: StartRefused; pick: ModelPick; sessionId: string };
 export function ArchitectPage() {
   const { t } = useTranslation();
   const selectedId = useArchitectUi((state) => state.selectedId);
+  const fresh = useArchitectUi((state) => state.fresh);
   const select = useArchitectUi((state) => state.select);
+  const startNew = useArchitectUi((state) => state.startNew);
   const share = useArchitectUi((state) => state.share);
   const setShare = useArchitectUi((state) => state.setShare);
+  const pick = useArchitectUi((state) => state.pick);
   const setPick = useArchitectUi((state) => state.setPick);
   const status = useArchitectStatusQuery();
   const sessions = useSessionsQuery();
@@ -74,12 +79,12 @@ export function ArchitectPage() {
   const [workBusy, setWorkBusy] = useState<'load' | 'undo' | 'dismiss' | null>(null);
   const handle = useRef<{ abort: () => void } | null>(null);
 
-  // Open the running session, else the latest one.
+  // Open the running session, else the latest one; an empty chat from "Neu" stays empty.
   useEffect(() => {
-    if (selectedId || !sessions.data) return;
+    if (selectedId || fresh || !sessions.data) return;
     const next = activeId ?? sessions.data[0]?.id ?? null;
     if (next) select(next);
-  }, [selectedId, activeId, sessions.data, select]);
+  }, [selectedId, fresh, activeId, sessions.data, select]);
 
   // A picked session brings its model into the bar.
   const picked = detail.data;
@@ -88,24 +93,65 @@ export function ArchitectPage() {
     setPick({ provider: picked.provider, model: picked.model, credentialId: picked.credentialId ?? null });
   }, [picked?.id, setPick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function start(pick: ModelPick, options: { forceSlow?: boolean; confirmRunning?: boolean } = {}) {
+  /** The picked session, or a new one for the empty chat (read in or brief before the start). */
+  async function ensureSession(model: ModelPick | null = pick): Promise<string> {
+    if (selectedId) return selectedId;
+    const created = await createSession({
+      provider: model?.provider || 'ollama',
+      model: model?.model ?? '',
+      credentialId: model?.credentialId ?? null,
+    });
+    select(created.id);
+    return created.id;
+  }
+
+  /** ``target`` null starts a new session; "Neu" passes it because the selection has not caught up yet. */
+  async function start(
+    model: ModelPick,
+    options: { forceSlow?: boolean; confirmRunning?: boolean } = {},
+    target: string | null = selectedId,
+  ) {
     setBusy(true);
     setError(null);
-    let id = selectedId;
+    let id = target;
     try {
       if (!id) {
-        const created = await createSession({ provider: pick.provider, model: pick.model, credentialId: pick.credentialId });
+        const created = await createSession({ provider: model.provider, model: model.model, credentialId: model.credentialId });
         id = created.id;
         select(id);
       }
-      await startSession(id, { provider: pick.provider, model: pick.model, credentialId: pick.credentialId, ...options });
+      await startSession(id, { provider: model.provider, model: model.model, credentialId: model.credentialId, ...options });
       setRefusal(null);
     } catch (caught) {
-      if (caught instanceof StartRefused && id) setRefusal({ refused: caught, pick, sessionId: id });
+      if (caught instanceof StartRefused && id) setRefusal({ refused: caught, pick: model, sessionId: id });
       else setError('architect.failed');
     } finally {
       setBusy(false);
     }
+  }
+
+  /**
+   * "Neu": an empty chat. While a session runs, the new one starts right away on the same model,
+   * which stays loaded; otherwise the user picks a model and starts (or reads a network in first).
+   */
+  function newChat() {
+    if (sending || busy) return;
+    const current = picked;
+    const untouched =
+      current && current.messages.length === 0 && !current.draft && !current.source && Object.keys(current.brief ?? {}).length === 0;
+    if (fresh || (untouched && (!activeId || activeId === current.id))) return;
+    setError(null);
+    startNew();
+    const running = activeId ? (sessions.data ?? []).find((item) => item.id === activeId) : undefined;
+    if (running?.model) {
+      void start({ provider: running.provider, model: running.model, credentialId: running.credentialId ?? null }, {}, null);
+    }
+  }
+
+  async function saveBrief(field: BriefField, value: string) {
+    const id = await ensureSession();
+    const brief = queryClient.getQueryData<SessionDetail>(architectKeys.session(id))?.brief ?? picked?.brief ?? {};
+    await patchSession(id, { brief: { ...brief, [field]: value } });
   }
 
   async function stop() {
@@ -186,10 +232,10 @@ export function ArchitectPage() {
 
   /** E-6, E-10, E-12: read a network in. When the architect asked for it, it goes on by itself. */
   async function readIn(networkId: string, purpose: LoadPurpose, name: string, asked: boolean) {
-    if (!selectedId) return;
     setWorkBusy('load');
     try {
-      await loadNetwork(selectedId, networkId, purpose);
+      // An empty chat gets its session here; the model follows with the start.
+      await loadNetwork(await ensureSession(), networkId, purpose);
       setLoadOpen(false);
       notify({ titleKey: 'architect.load.done', values: { name }, variant: 'success' });
       if (asked && sessionActive && !sending) send(t('architect.load.sent', { name }));
@@ -273,9 +319,8 @@ export function ArchitectPage() {
         onSelect={(id) => {
           if (!sending) select(id);
         }}
-        onNew={() => {
-          if (!sending) select(null);
-        }}
+        fresh={fresh}
+        onNew={newChat}
         onDelete={setConfirmDelete}
         onExport={(id) => void exportMarkdown(id)}
       />
@@ -301,12 +346,18 @@ export function ArchitectPage() {
           </div>
           <WidthGrip label={t('architect.split')} share={share} onChange={setShare} />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l">
-            <BriefPanel sessionId={selectedId} brief={state?.brief ?? {}} />
+            <BriefPanel
+              key={selectedId ?? 'new'}
+              brief={state?.brief ?? {}}
+              draft={state?.draft ?? null}
+              editable={!sending && workBusy === null}
+              onSave={saveBrief}
+            />
             <DraftPanel
               state={state}
               layoutWidth={share}
               actions={{
-                disabled: !selectedId || sending || workBusy !== null,
+                disabled: sending || workBusy !== null,
                 undoBusy: workBusy === 'undo',
                 onLoad: () => setLoadOpen(true),
                 onClose: () => setClosingOpen(true),
@@ -329,7 +380,7 @@ export function ArchitectPage() {
         refusal={refusal?.refused ?? null}
         onCancel={() => setRefusal(null)}
         onConfirm={(options) => {
-          if (refusal) void start(refusal.pick, options);
+          if (refusal) void start(refusal.pick, options, refusal.sessionId);
         }}
       />
       <AlertDialog open={confirmDelete !== null} onOpenChange={(open) => (open ? undefined : setConfirmDelete(null))}>

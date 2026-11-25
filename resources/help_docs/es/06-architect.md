@@ -14,15 +14,15 @@ El arquitecto nunca arranca solo. En el módulo **Arquitecto** eliges proveedor,
 
 ## Ficha y borrador
 
-- **Ficha:** objetivo, entrada, resultado, fuentes, local o nube, herramientas, límites. El arquitecto la rellena en la conversación; puedes cambiar cada campo.
-- **Borrador:** a la derecha como grafo, con la comprobación (errores, avisos) y la lista de nodos. El arquitecto corrige los errores; tras tres intentos fallidos te pregunta.
+- **Ficha:** objetivo, entrada, resultado, fuentes, local o nube, herramientas, límites, cada campo como entrada desplegable. El arquitecto la rellena en la conversación; con el lápiz cambias un campo (Ctrl+Intro guarda). Debajo, **Prompts** muestra los prompts de los agentes del borrador, con formato para leer.
+- **Borrador:** a la derecha como grafo. La insignia **válido** o **N errores** muestra la comprobación; al pulsarla se listan errores y avisos. El arquitecto corrige los errores; tras tres intentos fallidos te pregunta.
 - **Guías:** lineal, orquestador, chat de conocimiento, triaje con router. El arquitecto lee la adecuada antes de diseñar.
 
 ## Cargar redes
 
-**Cargar red …** elige una red guardada, **para cambiarla** o **como plantilla** (al final surge una red nueva). Si el arquitecto lo pide, aparece una tarjeta sobre la entrada; no se carga nada antes de tu clic.
+**Cargar red …** elige una red guardada, **para cambiarla** o **como plantilla** (al final surge una red nueva). También funciona en un chat vacío, antes de iniciar la sesión. Si el arquitecto lo pide, aparece una tarjeta sobre la entrada; no se carga nada antes de tu clic.
 
-Al cambiar, la vista previa marca en verde los nodos nuevos y en amarillo los cambiados, con la lista de cambios debajo.
+Al cambiar, la vista previa marca en verde los nodos nuevos y en amarillo los cambiados; **N cambios** bajo el nombre de la red los enumera.
 
 **Modelos en la nube:** ven la estructura y los prompts de una red solo cuando la cargas expresamente. Las rutas de carpetas quedan ocultas salvo que lo permitas en **Ajustes → Arquitecto**.
 
@@ -48,4 +48,4 @@ El arquitecto busca redes de ejemplo que encajen con la ficha. Los ejemplos incl
 
 ## Sesiones
 
-A la izquierda están las sesiones con chat, ficha y borrador. **Markdown** exporta una sesión, **Borrar** la elimina; las redes creadas se conservan.
+A la izquierda están las sesiones con chat, ficha y borrador. **Nueva** abre un chat vacío: si hay una sesión en marcha, la nueva arranca enseguida con el mismo modelo, que sigue cargado; si no, eliges un modelo e inicias. **Markdown** exporta una sesión, **Borrar** la elimina; las redes creadas se conservan.

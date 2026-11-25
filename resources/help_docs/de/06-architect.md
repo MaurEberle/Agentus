@@ -14,15 +14,15 @@ Der Architekt startet nie von selbst. Im Modul **Architekt** wählst du Anbieter
 
 ## Steckbrief und Entwurf
 
-- **Steckbrief:** Ziel, Eingabe, Ergebnis, Quellen, lokal oder Cloud, Werkzeuge, Rahmen. Der Architekt füllt ihn im Gespräch; du kannst jedes Feld selbst ändern.
-- **Entwurf:** rechts als Graph, mit Prüfergebnis (Fehler, Hinweise) und Knotenliste. Fehler korrigiert der Architekt selbst; nach drei vergeblichen Versuchen fragt er dich.
+- **Steckbrief:** Ziel, Eingabe, Ergebnis, Quellen, lokal oder Cloud, Werkzeuge, Rahmen, jedes Feld als eigener Eintrag zum Aufklappen. Der Architekt füllt ihn im Gespräch; mit dem Stift änderst du ein Feld selbst (Strg+Enter speichert). Darunter stehen unter **Prompts** die Prompts der Agenten aus dem Entwurf, formatiert zum Lesen.
+- **Entwurf:** rechts als Graph. Das Abzeichen **gültig** oder **N Fehler** zeigt die Prüfung; ein Klick darauf listet Fehler und Hinweise. Fehler korrigiert der Architekt selbst; nach drei vergeblichen Versuchen fragt er dich.
 - **Bauanleitungen:** linear, Orchestrator, Wissens-Chat, Router-Triage. Der Architekt liest die passende, bevor er entwirft.
 
 ## Netze einlesen
 
-**Netz einlesen …** wählt ein gespeichertes Netz, **zum Ändern** oder **als Vorlage** (dann entsteht am Ende ein neues Netz). Bittet der Architekt selbst darum, erscheint über der Eingabe eine Karte; eingelesen wird erst nach deinem Klick.
+**Netz einlesen …** wählt ein gespeichertes Netz, **zum Ändern** oder **als Vorlage** (dann entsteht am Ende ein neues Netz). Das geht auch in einem leeren Chat, bevor die Sitzung läuft. Bittet der Architekt selbst darum, erscheint über der Eingabe eine Karte; eingelesen wird erst nach deinem Klick.
 
-Beim Ändern zeigt die Vorschau neue Knoten grün und geänderte gelb, darunter die Liste der Änderungen.
+Beim Ändern zeigt die Vorschau neue Knoten grün und geänderte gelb; **N Änderungen** unter dem Netznamen listet sie auf.
 
 **Cloud-Modelle:** Sie sehen Aufbau und Prompts eines Netzes nur, wenn du es ausdrücklich einliest. Ordnerpfade bleiben ihnen verborgen, außer du erlaubst es unter **Einstellungen → Architekt**.
 
@@ -48,4 +48,4 @@ Der Architekt sucht Beispielnetze, die zum Steckbrief passen. Mitgelieferte Beis
 
 ## Sitzungen
 
-Links stehen die Sitzungen mit Verlauf, Steckbrief und Entwurf. **Markdown** exportiert eine Sitzung, **Löschen** entfernt sie; angelegte Netze bleiben.
+Links stehen die Sitzungen mit Verlauf, Steckbrief und Entwurf. **Neu** öffnet einen leeren Chat: Läuft gerade eine Sitzung, startet die neue sofort mit demselben Modell, das geladen bleibt; sonst wählst du ein Modell und startest. **Markdown** exportiert eine Sitzung, **Löschen** entfernt sie; angelegte Netze bleiben.

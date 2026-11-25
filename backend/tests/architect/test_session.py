@@ -179,3 +179,46 @@ def test_tool_budget_ends_the_turn(client, monkeypatch, limit) -> None:
     events = _events(client.post(f"/api/architect/sessions/{row.id}/messages", json={"text": "x"}).text)
     assert sum(1 for name, p in events if name == "tool" and p["status"] == "done") == limit
     assert calls[-1].tools is None and events[-1][0] == "done"
+
+
+def test_a_chat_can_exist_before_a_model_is_picked(client, monkeypatch) -> None:
+    """A network can be read into an empty chat; the start brings the model."""
+    _installed(monkeypatch, _model("big:27b", "27.0B"))
+    _gpu(monkeypatch, fits=True)
+    created = client.post("/api/architect/sessions", json={"provider": "ollama"})
+    assert created.status_code == 201 and created.json()["model"] == ""
+    assert client.post("/api/architect/sessions", json={"provider": "nope"}).status_code == 400
+    session_id = created.json()["id"]
+    started = client.post(f"/api/architect/sessions/{session_id}/start", json={"provider": "ollama", "model": "big:27b"})
+    assert started.status_code == 200 and started.json()["session"]["model"] == "big:27b"
+
+
+def test_a_new_chat_on_the_same_local_model_keeps_it_loaded(client, monkeypatch) -> None:
+    _installed(monkeypatch, _model("big:27b", "27.0B"), _model("other:14b", "14.0B"))
+    _gpu(monkeypatch, fits=True)
+    unloaded: list[str] = []
+    monkeypatch.setattr("app.runtime.ollama.unload", lambda model, **kwargs: unloaded.append(model))
+    first = sessions.create("ollama", "big:27b", None)
+    second = sessions.create("ollama", "big:27b", None)
+    third = sessions.create("ollama", "other:14b", None)
+    sessions.start(first.id)
+    sessions.start(second.id)
+    # The help chat model may be paused; the architect model stays.
+    assert "big:27b" not in unloaded and sessions.active().session_id == second.id
+    assert client.get(f"/api/architect/sessions/{first.id}").json()["state"] == "ended"
+    sessions.start(third.id)
+    assert "big:27b" in unloaded
+    sessions.stop(third.id)
+
+
+def test_brief_edits_wait_for_a_streaming_turn(client) -> None:
+    row = sessions.create("anthropic", "claude", "cred")
+    sessions.start(row.id)
+    current = sessions.active()
+    current.generating = True
+    busy = client.patch(f"/api/architect/sessions/{row.id}", json={"brief": {"goal": "Texte"}})
+    assert busy.status_code == 409 and busy.json()["messageKey"] == "architect.busy"
+    current.generating = False
+    saved = client.patch(f"/api/architect/sessions/{row.id}", json={"brief": {"goal": "Texte"}})
+    assert saved.status_code == 200 and saved.json()["brief"] == {"goal": "Texte"}
+    sessions.stop(row.id)

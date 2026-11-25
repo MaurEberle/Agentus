@@ -14,15 +14,15 @@ The architect never starts by itself. In the **Architect** module, pick provider
 
 ## Brief and draft
 
-- **Brief:** goal, input, output, sources, local or cloud, tools, constraints. The architect fills it in during the conversation; you can edit every field.
-- **Draft:** shown on the right as a graph, with the check (errors, hints) and a node list. The architect fixes errors itself; after three failed tries it asks you.
+- **Brief:** goal, input, output, sources, local or cloud, tools, constraints, each field an entry of its own to expand. The architect fills it in during the conversation; the pencil lets you edit a field (Ctrl+Enter saves). Below, **Prompts** shows the agents' prompts from the draft, formatted for reading.
+- **Draft:** shown on the right as a graph. The badge **valid** or **N errors** shows the check; clicking it lists errors and hints. The architect fixes errors itself; after three failed tries it asks you.
 - **Building guides:** linear, orchestrator, knowledge chat, router triage. The architect reads the matching one before drafting.
 
 ## Reading networks in
 
-**Read in network …** picks a saved network, **to change it** or **as a template** (then a new network is created at the end). If the architect asks for it, a card appears above the input; nothing is read in before your click.
+**Read in network …** picks a saved network, **to change it** or **as a template** (then a new network is created at the end). This also works in an empty chat, before the session runs. If the architect asks for it, a card appears above the input; nothing is read in before your click.
 
-When changing, the preview marks new nodes green and changed ones yellow, with the list of changes below.
+When changing, the preview marks new nodes green and changed ones yellow; **N changes** below the network name lists them.
 
 **Cloud models** see the structure and prompts of a network only when you explicitly read it in. Folder paths stay hidden from them unless you allow it under **Settings → Architect**.
 
@@ -48,4 +48,4 @@ The architect looks for example networks that match the brief. Shipped examples 
 
 ## Sessions
 
-Sessions are listed on the left with chat, brief and draft. **Markdown** exports a session, **Delete** removes it; networks it created stay.
+Sessions are listed on the left with chat, brief and draft. **New** opens an empty chat: if a session is running, the new one starts right away on the same model, which stays loaded; otherwise you pick a model and start. **Markdown** exports a session, **Delete** removes it; networks it created stay.

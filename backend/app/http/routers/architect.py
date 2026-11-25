@@ -31,7 +31,8 @@ def _recover() -> None:
 
 class CreateBody(ApiModel):
     provider: str
-    model: str
+    # Empty for a chat that reads a network in before a model is picked; the start sets it.
+    model: str = ""
     credential_id: str | None = Field(default=None, alias="credentialId")
 
 
@@ -147,7 +148,7 @@ def get_sessions() -> dict[str, Any]:
 @router.post("/architect/sessions", status_code=201)
 def post_session(body: CreateBody) -> dict[str, Any]:
     _recover()
-    if not body.provider or not body.model.strip():
+    if body.provider not in sessions.PROVIDERS:
         raise AppError("architect.model.missing", status_code=400)
     return _summary(sessions.create(body.provider, body.model, body.credential_id))
 
@@ -160,7 +161,8 @@ def get_session(session_id: str) -> dict[str, Any]:
 
 @router.patch("/architect/sessions/{session_id}")
 def patch_session(session_id: str, body: PatchBody) -> dict[str, Any]:
-    row = sessions.require(session_id)
+    # A streaming turn holds the row and would overwrite the edit when it saves.
+    row = closing.idle_session(session_id)
     if body.title is not None:
         row.title = body.title.strip()[:120]
     if body.brief is not None:

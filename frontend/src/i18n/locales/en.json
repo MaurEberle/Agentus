@@ -2678,7 +2678,9 @@
       "conflict": "The network changed since it was applied. Restore earlier states from the versions in the editor."
     },
     "diff": {
-      "title": "Changes since version {{version}}"
+      "title": "Changes since version {{version}}",
+      "count_one": "{{count}} change",
+      "count_other": "{{count}} changes"
     },
     "risk": {
       "terminal": "“{{ref}}”: the unrestricted terminal runs any command.",
@@ -2825,15 +2827,31 @@
       "sources": "Sources",
       "deployment": "Local/cloud",
       "tools": "Tools",
-      "constraints": "Limits"
+      "constraints": "Limits",
+      "filled": "{{count}} of {{total}}",
+      "none": "Still empty.",
+      "edit": "Edit {{field}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "editHint": "Ctrl+Enter saves, Esc cancels.",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "prompts": "Prompts",
+      "chars_one": "{{count}} character",
+      "chars_other": "{{count}} characters",
+      "promptHint": "The architect changes the prompt in conversation; after closing, the editor can too.",
+      "saveFailed": "The brief could not be saved."
     },
     "draft": {
-      "empty": "No draft yet. It appears here as soon as the architect builds it.",
+      "empty": "No draft yet. It appears here as soon as the architect builds it – or read an existing network in.",
       "unnamed": "Untitled draft",
       "valid": "valid",
       "errors_one": "{{count}} error",
       "errors_other": "{{count}} errors",
-      "error": "Error in the draft"
+      "error": "Error in the draft",
+      "details": "{{label}} – show details",
+      "hints_one": "{{count}} hint",
+      "hints_other": "{{count}} hints"
     },
     "sessions": {
       "title": "Sessions",
@@ -2843,7 +2861,8 @@
       "export": "Markdown",
       "delete": "Delete",
       "deleteTitle": "Delete session?",
-      "deleteBody": "Chat, brief and draft of this session are deleted. Networks it created stay."
+      "deleteBody": "Chat, brief and draft of this session are deleted. Networks it created stay.",
+      "freshHint": "Pick a model and start – or read a network in first."
     }
   }
 }

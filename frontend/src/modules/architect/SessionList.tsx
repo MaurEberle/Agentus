@@ -10,6 +10,7 @@ export function SessionList({
   sessions,
   selectedId,
   activeId,
+  fresh,
   onSelect,
   onNew,
   onDelete,
@@ -18,6 +19,8 @@ export function SessionList({
   sessions: SessionSummary[];
   selectedId: string | null;
   activeId: string | null;
+  /** An empty chat from "Neu" that has no session yet; it heads the list. */
+  fresh: boolean;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
@@ -34,7 +37,13 @@ export function SessionList({
         </Button>
       </div>
       <ul className="min-h-0 flex-1 overflow-auto">
-        {sessions.length === 0 ? <li className="p-3 text-xs text-muted-foreground">{t('architect.sessions.empty')}</li> : null}
+        {fresh ? (
+          <li className="border-b bg-accent px-3 py-2" aria-current="true">
+            <span className="block text-sm font-medium">{t('architect.sessions.untitled')}</span>
+            <span className="block text-xs text-muted-foreground">{t('architect.sessions.freshHint')}</span>
+          </li>
+        ) : null}
+        {sessions.length === 0 && !fresh ? <li className="p-3 text-xs text-muted-foreground">{t('architect.sessions.empty')}</li> : null}
         {sessions.map((item) => (
           <li key={item.id} className={cn('group border-b', item.id === selectedId && 'bg-accent')}>
             <button type="button" className="grid w-full gap-0.5 px-3 py-2 text-left" onClick={() => onSelect(item.id)}>
@@ -43,7 +52,8 @@ export function SessionList({
                 <span className="truncate">{item.title || t('architect.sessions.untitled')}</span>
               </span>
               <span className="truncate text-xs text-muted-foreground">
-                {formatDateTime(item.updatedAt, i18n.language)} · {item.model}
+                {formatDateTime(item.updatedAt, i18n.language)}
+                {item.model ? ` · ${item.model}` : ''}
               </span>
             </button>
             {item.id === selectedId ? (
