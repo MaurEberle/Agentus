@@ -61,6 +61,13 @@ export async function patchNetworkVersion(id: string, version: number, patch: { 
   return updated;
 }
 
+/** Removes a stored version; the current one and pinned ones are refused (409). */
+export async function deleteNetworkVersion(id: string, version: number) {
+  await apiFetch<void>(`/networks/${id}/versions/${version}`, { method: 'DELETE' });
+  // Only the list: the removed version's own query must not refetch into a 404 while still shown.
+  await queryClient.invalidateQueries({ queryKey: versionKeys.list(id), exact: true });
+}
+
 async function afterWrite(id: string, document: AgentNetworkDocument) {
   queryClient.setQueryData(['networks', id, 'document'], document);
   await Promise.all([

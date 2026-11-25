@@ -1385,7 +1385,14 @@
         "newer": "Newer version (→)",
         "exit": "Back to current version",
         "unsaved": "Your unsaved changes are kept and come back when you return to the current version."
-      }
+      },
+      "delete": "Delete version {{version}}",
+      "deletePinned": "Pinned. Unpin it to delete it.",
+      "deleteCurrent": "The current version cannot be deleted.",
+      "deleteTitle": "Delete version {{version}}?",
+      "deleteBody": "This state is removed for good and can no longer be restored or copied. The network and its current version stay as they are.",
+      "deleteConfirm": "Delete",
+      "deleted": "Version {{version}} deleted"
     },
     "save": {
       "title": "Save: {{name}}",
@@ -2675,7 +2682,8 @@
     "undo": {
       "button": "Undo last apply",
       "done": "Version {{from}} restored as version {{version}}",
-      "conflict": "The network changed since it was applied. Restore earlier states from the versions in the editor."
+      "conflict": "The network changed since it was applied. Restore earlier states from the versions in the editor.",
+      "gone": "The version before the change was deleted, so it can no longer be undone. Earlier states are in the editor under versions."
     },
     "diff": {
       "title": "Changes since version {{version}}",

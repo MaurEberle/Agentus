@@ -101,7 +101,7 @@ Salir sin guardar: diálogo Guardar / Descartar / Cancelar.
 
 ## Versiones
 
-El inspector muestra la **versión** bajo **Red**. Al pulsarla se listan todos los estados guardados: número, hora, origen (editor, arquitecto, restaurada …) y nota. Una versión anterior aparece como **vista previa de solo lectura** en el lienzo; con ‹ › o las flechas pasas de una a otra, Esc o **Volver a la versión actual** regresa. Los cambios sin guardar se conservan. **Gestionar todas las versiones …** (o el icono de reloj en la cinta) abre la lista detallada.
+El inspector muestra la **versión** bajo **Red**. Al pulsarla se listan todos los estados guardados: número, hora, origen (editor, arquitecto, restaurada …) y nota. Una versión anterior aparece como **vista previa de solo lectura** en el lienzo; con ‹ › o las flechas pasas de una a otra, Esc o **Volver a la versión actual** regresa. Los cambios sin guardar se conservan. **Gestionar todas las versiones …** (o el icono de reloj en la cinta) abre la lista detallada. Allí la papelera elimina una versión anterior; la versión actual está protegida, y una fijada solo se elimina tras desfijarla.
 
 - Al elegir una versión se muestra como grafo y lo que **Restaurar** cambiaría en el estado actual (nuevo en verde, cambiado en amarillo, eliminado en rojo).
 - **Restaurar** crea una versión nueva; no se sobrescribe nada. Los cambios sin guardar del editor se pierden; el editor pregunta antes. Si después falta el índice de un nodo de conocimiento, la aplicación ofrece **Reconstruir índice**.

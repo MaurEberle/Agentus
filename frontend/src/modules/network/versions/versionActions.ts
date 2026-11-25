@@ -13,7 +13,7 @@ export function versionStamp(iso: string, locale: string): string {
   }
 }
 
-/** Restore and copy, shared by the versions sheet and the preview in the editor. */
+/** Restore and copy, shared by the versions dialog and the preview in the editor. */
 export function useVersionActions({
   networkId,
   networkName,

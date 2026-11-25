@@ -249,6 +249,27 @@ def set_version_meta(network_id: str, version: int, *, pinned: bool | None = Non
         return cur.rowcount > 0
 
 
+def delete_version(network_id: str, version: int) -> str:
+    """Remove one stored version: "deleted", or why not ("missing", "current", "pinned").
+
+    Checked in the same transaction as the delete, so a save in between cannot make it hit the
+    version that just became current.
+    """
+    with transaction("workspace") as conn:
+        found = conn.execute(
+            "SELECT pinned FROM network_versions WHERE network_id = ? AND version = ?", (network_id, version)
+        ).fetchone()
+        if found is None:
+            return "missing"
+        head = conn.execute("SELECT version FROM networks WHERE id = ?", (network_id,)).fetchone()
+        if head is not None and int(head["version"]) == version:
+            return "current"
+        if found["pinned"]:
+            return "pinned"
+        conn.execute("DELETE FROM network_versions WHERE network_id = ? AND version = ?", (network_id, version))
+        return "deleted"
+
+
 def _fetch(conn: Any, network_id: str) -> NetworkRow | None:
     row = conn.execute("SELECT * FROM networks WHERE id = ?", (network_id,)).fetchone()
     return None if row is None else _from_row(row)

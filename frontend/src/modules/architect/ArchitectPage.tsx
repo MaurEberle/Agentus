@@ -270,7 +270,14 @@ export function ArchitectPage() {
     } catch (caught) {
       const key = caught instanceof ApiError ? caught.messageKey : undefined;
       notify({
-        titleKey: key === 'networks.conflict' ? 'architect.undo.conflict' : key === 'run.busy' ? 'architect.closing.running' : 'architect.failed',
+        titleKey:
+          key === 'networks.conflict'
+            ? 'architect.undo.conflict'
+            : key === 'networks.versionNotFound'
+              ? 'architect.undo.gone'
+              : key === 'run.busy'
+                ? 'architect.closing.running'
+                : 'architect.failed',
         variant: 'error',
       });
     } finally {

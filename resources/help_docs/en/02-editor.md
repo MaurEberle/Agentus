@@ -101,7 +101,7 @@ Leaving with unsaved changes: Save / Discard / Cancel.
 
 ## Versions
 
-The inspector shows the **version** under **Network**. Clicking it lists all saved states: number, time, origin (editor, architect, restored …) and note. An older version appears as a **read-only preview** in the canvas; ‹ › or the arrow keys step through versions, Esc or **Back to current version** returns. Unsaved changes are kept meanwhile. **Manage all versions …** (or the clock icon in the ribbon) opens the detailed list.
+The inspector shows the **version** under **Network**. Clicking it lists all saved states: number, time, origin (editor, architect, restored …) and note. An older version appears as a **read-only preview** in the canvas; ‹ › or the arrow keys step through versions, Esc or **Back to current version** returns. Unsaved changes are kept meanwhile. **Manage all versions …** (or the clock icon in the ribbon) opens the detailed list. There the bin deletes an older version; the current version is protected, a pinned one only after unpinning it.
 
 - Selecting a version shows it as a graph and what **Restore** would change on the current state (new green, changed yellow, removed red).
 - **Restore** creates a new version; nothing is overwritten. Unsaved changes in the editor are lost; the editor asks first. If a knowledge node then lacks its index, the app offers **Rebuild index**.

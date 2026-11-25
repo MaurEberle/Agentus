@@ -19,7 +19,7 @@ export function VersionPicker({ networkId }: { networkId: string }) {
   const list = useNetworkVersionsQuery(networkId, true);
   const preview = useVersionPreview((state) => state.preview);
   const setPreview = useVersionPreview((state) => state.setPreview);
-  const setSheetOpen = useVersionPreview((state) => state.setSheetOpen);
+  const setDialogOpen = useVersionPreview((state) => state.setDialogOpen);
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
   const current = list.data?.version ?? null;
@@ -111,7 +111,7 @@ export function VersionPicker({ networkId }: { networkId: string }) {
             className="w-full justify-start"
             onClick={() => {
               setOpen(false);
-              setSheetOpen(true);
+              setDialogOpen(true);
             }}
           >
             <History className="size-3.5" aria-hidden />

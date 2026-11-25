@@ -36,7 +36,7 @@ import { FlowCanvas } from '@/modules/network/canvas/FlowCanvas';
 import { knowledgeWithoutIndex, useNetworkVersionsQuery } from '@/modules/network/versions/api';
 import { useVersionPreview } from '@/modules/network/versions/previewStore';
 import { VersionPreview } from '@/modules/network/versions/VersionPreview';
-import { VersionsSheet } from '@/modules/network/versions/VersionsSheet';
+import { VersionsDialog } from '@/modules/network/versions/VersionsDialog';
 import { Inspector } from '@/modules/network/inspector/Inspector';
 import { LoadDialog } from '@/modules/network/library/LoadDialog';
 import type { AgentNetworkDocument } from '@/modules/network/model/document';
@@ -146,8 +146,8 @@ function NetworkEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const versionsOpen = useVersionPreview((state) => state.sheetOpen);
-  const setVersionsOpen = useVersionPreview((state) => state.setSheetOpen);
+  const versionsOpen = useVersionPreview((state) => state.dialogOpen);
+  const setVersionsOpen = useVersionPreview((state) => state.setDialogOpen);
   const preview = useVersionPreview((state) => state.preview);
   const setPreview = useVersionPreview((state) => state.setPreview);
   const clearPreview = useVersionPreview((state) => state.clearPreview);
@@ -249,7 +249,7 @@ function NetworkEditor() {
     }
   }, [hydrate, id, query.data, resetNew]);
 
-  // A version preview and the sheet belong to the open network only.
+  // A version preview and the versions dialog belong to the open network only.
   useEffect(
     () => () => {
       clearPreview();
@@ -952,7 +952,7 @@ function NetworkEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <VersionsSheet
+      <VersionsDialog
         open={versionsOpen}
         onOpenChange={setVersionsOpen}
         networkId={document.id}

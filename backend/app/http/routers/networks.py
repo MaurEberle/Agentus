@@ -93,6 +93,12 @@ def patch_version(network_id: str, version: int, body: VersionPatchBody) -> dict
     return service.patch_version(network_id, version, pinned=body.pinned, note=note)
 
 
+@router.delete("/networks/{network_id}/versions/{version}", status_code=204)
+def delete_version(network_id: str, version: int) -> Response:
+    service.delete_version(network_id, version)
+    return Response(status_code=204)
+
+
 @router.post("/networks/{network_id}/versions/{version}/restore")
 def post_restore(network_id: str, version: int, body: RestoreBody) -> dict[str, Any]:
     return service.restore_version(network_id, version, base_revision=body.base_revision)

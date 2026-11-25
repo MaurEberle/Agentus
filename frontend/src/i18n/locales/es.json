@@ -1318,7 +1318,14 @@
         "newer": "Versión más reciente (→)",
         "exit": "Volver a la versión actual",
         "unsaved": "Tus cambios sin guardar se conservan y vuelven a aparecer al regresar a la versión actual."
-      }
+      },
+      "delete": "Eliminar la versión {{version}}",
+      "deletePinned": "Fijada. Desfíjala para eliminarla.",
+      "deleteCurrent": "La versión actual no se puede eliminar.",
+      "deleteTitle": "¿Eliminar la versión {{version}}?",
+      "deleteBody": "Este estado se elimina definitivamente y ya no se puede restaurar ni copiar. La red y su versión actual no cambian.",
+      "deleteConfirm": "Eliminar",
+      "deleted": "Versión {{version}} eliminada"
     },
     "save": {
       "title": "Guardar: {{name}}",
@@ -2675,7 +2682,8 @@
     "undo": {
       "button": "Deshacer última aplicación",
       "done": "Versión {{from}} restaurada como versión {{version}}",
-      "conflict": "La red cambió desde la aplicación. Restaura estados anteriores desde las versiones en el editor."
+      "conflict": "La red cambió desde la aplicación. Restaura estados anteriores desde las versiones en el editor.",
+      "gone": "La versión anterior al cambio se eliminó, así que ya no se puede deshacer. Los estados anteriores están en el editor, en las versiones."
     },
     "diff": {
       "title": "Cambios desde la versión {{version}}",

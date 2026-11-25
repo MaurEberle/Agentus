@@ -19,6 +19,40 @@ export function VersionSource({ item }: { item: NetworkVersionItem }) {
   return <>{t(`network.versions.source.${item.source}`, { defaultValue: item.source })}</>;
 }
 
+/** Deleting a stored version cannot be undone; asked once more. */
+export function DeleteVersionConfirm({
+  version,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  /** The version to delete; null keeps the question closed. */
+  version: number | null;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <AlertDialog open={version !== null} onOpenChange={(next) => (next || busy ? undefined : onCancel())}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('network.versions.deleteTitle', { version: version ?? '' })}</AlertDialogTitle>
+          <AlertDialogDescription>{t('network.versions.deleteBody')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
+            {t('network.dialog.cancel')}
+          </Button>
+          <Button type="button" variant="destructive" loading={busy} onClick={onConfirm}>
+            {t('network.versions.deleteConfirm')}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 /** Restoring replaces the editor's state; unsaved changes are asked about first. */
 export function DiscardConfirm({ open, onCancel, onConfirm }: { open: boolean; onCancel: () => void; onConfirm: () => void }) {
   const { t } = useTranslation();

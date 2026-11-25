@@ -129,6 +129,7 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("GET", "/api/networks/:id/versions", NETWORKS),
     ContractRoute("GET", "/api/networks/:id/versions/:v", NETWORKS),
     ContractRoute("PATCH", "/api/networks/:id/versions/:v", NETWORKS),
+    ContractRoute("DELETE", "/api/networks/:id/versions/:v", NETWORKS),
     ContractRoute("POST", "/api/networks/:id/versions/:v/restore", NETWORKS),
     ContractRoute("GET", "/api/networks/:id/versions/:v/diff", NETWORKS),
     ContractRoute("POST", "/api/networks/:id/versions/:v/copy", NETWORKS),

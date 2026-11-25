@@ -145,3 +145,29 @@ def test_a_run_knows_its_version_and_can_be_restored(client: TestClient) -> None
     assert (newest["source"], newest["restoredFrom"]) == ("restore", 1)
     missing = client.post(f"/api/networks/{network_id}/restore-run", json={"runId": "gibt-es-nicht"})
     assert missing.status_code == 404
+
+
+def test_a_version_can_be_deleted_but_not_the_current_or_a_pinned_one(client: TestClient) -> None:
+    created = _create(client)
+    network_id = created["id"]
+    doc = created
+    for index in range(2, 5):
+        doc = client.put(f"/api/networks/{network_id}", json={**doc, **_doc(prompt=f"V{index}")}).json()
+    client.patch(f"/api/networks/{network_id}/versions/2", json={"pinned": True})
+
+    current = client.delete(f"/api/networks/{network_id}/versions/4")
+    assert current.status_code == 409 and current.json()["messageKey"] == "networks.versionCurrent"
+    pinned = client.delete(f"/api/networks/{network_id}/versions/2")
+    assert pinned.status_code == 409 and pinned.json()["messageKey"] == "networks.versionPinned"
+    assert client.delete(f"/api/networks/{network_id}/versions/3").status_code == 204
+    assert client.delete(f"/api/networks/{network_id}/versions/1").status_code == 204
+    missing = client.delete(f"/api/networks/{network_id}/versions/3")
+    assert missing.status_code == 404 and missing.json()["messageKey"] == "networks.versionNotFound"
+    assert client.delete("/api/networks/nope/versions/1").status_code == 404
+
+    listed = _versions(client, network_id)
+    assert [item["version"] for item in listed["items"]] == [4, 2]
+    # The network itself is untouched; the next save goes on numbering.
+    assert (listed["version"], listed["revision"]) == (4, 4)
+    saved = client.put(f"/api/networks/{network_id}", json={**doc, **_doc(prompt="V5")}).json()
+    assert saved["version"] == 5

@@ -9,6 +9,7 @@ from app.db.networks import (
     NetworkRow,
     VersionConflict,
     delete_network,
+    delete_version as delete_version_row,
     duplicate_network,
     get_network,
     get_version,
@@ -219,6 +220,19 @@ def patch_version(network_id: str, version: int, *, pinned: bool | None, note: s
     if not set_version_meta(network_id, version, pinned=pinned, note=note):
         raise AppError("networks.versionNotFound", status_code=404)
     return network_version(network_id, version)
+
+
+def delete_version(network_id: str, version: int) -> None:
+    """The user removes a stored version. The current one stays, and a pinned one until it is unpinned."""
+    if get_network(network_id) is None:
+        raise AppError("networks.notFound", status_code=404)
+    outcome = delete_version_row(network_id, version)
+    if outcome == "missing":
+        raise AppError("networks.versionNotFound", status_code=404)
+    if outcome == "current":
+        raise AppError("networks.versionCurrent", status_code=409)
+    if outcome == "pinned":
+        raise AppError("networks.versionPinned", status_code=409)
 
 
 def version_diff(network_id: str, version: int) -> dict[str, Any]:

@@ -1385,7 +1385,14 @@
         "newer": "Neuere Version (→)",
         "exit": "Zur aktuellen Version",
         "unsaved": "Deine ungespeicherten Änderungen bleiben erhalten und erscheinen wieder, wenn du zur aktuellen Version zurückkehrst."
-      }
+      },
+      "delete": "Version {{version}} löschen",
+      "deletePinned": "Angeheftet. Zum Löschen erst lösen.",
+      "deleteCurrent": "Die aktuelle Version lässt sich nicht löschen.",
+      "deleteTitle": "Version {{version}} löschen?",
+      "deleteBody": "Dieser Stand wird endgültig entfernt und lässt sich danach weder wiederherstellen noch kopieren. Das Netz und seine aktuelle Version bleiben unverändert.",
+      "deleteConfirm": "Löschen",
+      "deleted": "Version {{version}} gelöscht"
     },
     "save": {
       "title": "Speichern: {{name}}",
@@ -2675,7 +2682,8 @@
     "undo": {
       "button": "Letzte Übernahme rückgängig",
       "done": "Version {{from}} wiederhergestellt als Version {{version}}",
-      "conflict": "Das Netz wurde seit der Übernahme geändert. Frühere Stände stellst du im Editor über die Versionen wieder her."
+      "conflict": "Das Netz wurde seit der Übernahme geändert. Frühere Stände stellst du im Editor über die Versionen wieder her.",
+      "gone": "Die Version vor der Übernahme wurde gelöscht; rückgängig machen geht nicht mehr. Frühere Stände findest du im Editor unter den Versionen."
     },
     "diff": {
       "title": "Änderungen gegenüber Version {{version}}",

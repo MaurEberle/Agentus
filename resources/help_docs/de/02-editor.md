@@ -101,7 +101,7 @@ Ungespeichert verlassen: Dialog Speichern / Verwerfen / Abbrechen.
 
 ## Versionen
 
-Im Inspector steht unter **Netz** die **Version**. Ein Klick darauf listet alle gespeicherten Stände: Nummer, Zeit, Herkunft (Editor, Architekt, wiederhergestellt …) und Vermerk. Eine ältere Version erscheint als **schreibgeschützte Vorschau** in der Arbeitsfläche; mit ‹ › oder den Pfeiltasten blätterst du, Esc oder **Zur aktuellen Version** kehrt zurück. Ungespeicherte Änderungen bleiben dabei erhalten. **Alle Versionen verwalten …** (oder das Uhr-Symbol im Ribbon) öffnet die ausführliche Liste.
+Im Inspector steht unter **Netz** die **Version**. Ein Klick darauf listet alle gespeicherten Stände: Nummer, Zeit, Herkunft (Editor, Architekt, wiederhergestellt …) und Vermerk. Eine ältere Version erscheint als **schreibgeschützte Vorschau** in der Arbeitsfläche; mit ‹ › oder den Pfeiltasten blätterst du, Esc oder **Zur aktuellen Version** kehrt zurück. Ungespeicherte Änderungen bleiben dabei erhalten. **Alle Versionen verwalten …** (oder das Uhr-Symbol im Ribbon) öffnet die ausführliche Liste. Dort löschst du eine ältere Version mit dem Papierkorb; die aktuelle Version ist davor geschützt, eine angeheftete erst nach dem Lösen.
 
 - Eine Version auswählen zeigt sie als Graph und was **Wiederherstellen** gegenüber dem aktuellen Stand ändern würde (neu grün, geändert gelb, entfernt rot).
 - **Wiederherstellen** legt eine neue Version an; nichts wird überschrieben. Ungespeicherte Änderungen im Editor gehen dabei verloren, der Editor fragt vorher. Fehlt danach der Index eines Wissensknotens, bietet die App **Index neu aufbauen** an.
