@@ -1,4 +1,7 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type MouseEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { getChromeHost } from '@/lib/chromeHost';
+import { cn } from '@/lib/utils';
 
 type Block =
   | { type: 'heading'; level: number; text: string }
@@ -26,6 +29,54 @@ function isSpecial(text: string, index: number): boolean {
 }
 
 const WORD = /[\p{L}\p{N}]/u;
+const BARE_URL = /https?:\/\/[^\s<>"'`]+/y;
+
+/** A bare https URL starting at ``index`` (not inside a word), without the sentence's punctuation. */
+function urlAt(text: string, index: number): string | null {
+  if (text[index] !== 'h' || (index > 0 && WORD.test(text[index - 1]))) return null;
+  BARE_URL.lastIndex = index;
+  const found = BARE_URL.exec(text);
+  if (!found) return null;
+  let url = found[0];
+  while (/[.,;:!?)\]]$/.test(url)) {
+    // A closing bracket stays when the URL opened one, as in Wikipedia links.
+    if (url.endsWith(')') && (url.match(/\(/g)?.length ?? 0) >= (url.match(/\)/g)?.length ?? 0)) break;
+    url = url.slice(0, -1);
+  }
+  return /^https?:\/\/[^/]/.test(url) ? url : null;
+}
+
+/** In the desktop window links open in the system browser; in a browser tab, in a new tab. */
+function openLink(event: MouseEvent<HTMLAnchorElement>, href: string) {
+  const openExternal = getChromeHost()?.openExternal;
+  if (!openExternal) return;
+  event.preventDefault();
+  void openExternal(href);
+}
+
+function Anchor({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="break-words underline underline-offset-2"
+      onClick={(event) => openLink(event, href)}
+    >
+      {children}
+    </a>
+  );
+}
+
+/** GitHub's note boxes ("> [!IMPORTANT]"), as model cards and READMEs use them. */
+const CALLOUT = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(?:\n|$)/i;
+const CALLOUT_TONE: Record<string, string> = {
+  note: 'border-primary/60 bg-primary/5',
+  tip: 'border-primary/60 bg-primary/5',
+  important: 'border-primary bg-primary/10',
+  warning: 'border-warning bg-warning/10',
+  caution: 'border-destructive bg-destructive/10',
+};
 
 /**
  * Where a run of ``mark`` (at ``index``) closes, or -1. Underscores inside a word, as in
@@ -41,7 +92,8 @@ function closing(text: string, index: number, mark: string): number {
   return end;
 }
 
-function renderInline(text: string): ReactNode[] {
+/** ``inLink``: text inside a link's label, where a bare URL must not become a second link. */
+function renderInline(text: string, inLink = false): ReactNode[] {
   const out: ReactNode[] = [];
   let index = 0;
   let key = 0;
@@ -50,7 +102,7 @@ function renderInline(text: string): ReactNode[] {
       const mark = text.slice(index, index + 2);
       const end = closing(text, index, mark);
       if (end > index + 2) {
-        out.push(<strong key={key++}>{renderInline(text.slice(index + 2, end))}</strong>);
+        out.push(<strong key={key++}>{renderInline(text.slice(index + 2, end), inLink)}</strong>);
         index = end + 2;
         continue;
       }
@@ -58,7 +110,7 @@ function renderInline(text: string): ReactNode[] {
     if (text.startsWith('~~', index)) {
       const end = text.indexOf('~~', index + 2);
       if (end > index + 2) {
-        out.push(<del key={key++}>{renderInline(text.slice(index + 2, end))}</del>);
+        out.push(<del key={key++}>{renderInline(text.slice(index + 2, end), inLink)}</del>);
         index = end + 2;
         continue;
       }
@@ -79,7 +131,7 @@ function renderInline(text: string): ReactNode[] {
       const mark = text[index];
       const end = closing(text, index, mark);
       if (end > index + 1) {
-        out.push(<em key={key++}>{renderInline(text.slice(index + 1, end))}</em>);
+        out.push(<em key={key++}>{renderInline(text.slice(index + 1, end), inLink)}</em>);
         index = end + 1;
         continue;
       }
@@ -91,7 +143,9 @@ function renderInline(text: string): ReactNode[] {
         const href = urlEnd > close + 2 ? safeHref(text.slice(close + 2, urlEnd)) : null;
         if (href) {
           const alt = text.slice(index + 2, close);
-          out.push(<img key={key++} src={href} alt={alt} className="my-2 max-w-full rounded-md" />);
+          out.push(
+            <img key={key++} src={href} alt={alt} loading="lazy" referrerPolicy="no-referrer" className="my-2 inline-block max-w-full rounded-md" />,
+          );
           index = urlEnd + 1;
           continue;
         }
@@ -104,18 +158,28 @@ function renderInline(text: string): ReactNode[] {
         const href = urlEnd > close + 2 ? safeHref(text.slice(close + 2, urlEnd)) : null;
         if (href) {
           out.push(
-            <a key={key++} href={href} target="_blank" rel="noreferrer noopener" className="underline underline-offset-2">
-              {renderInline(text.slice(index + 1, close))}
-            </a>,
+            <Anchor key={key++} href={href}>
+              {renderInline(text.slice(index + 1, close), true)}
+            </Anchor>,
           );
           index = urlEnd + 1;
           continue;
         }
       }
     }
+    const bare = inLink ? null : urlAt(text, index);
+    if (bare) {
+      out.push(
+        <Anchor key={key++} href={bare}>
+          {bare}
+        </Anchor>,
+      );
+      index += bare.length;
+      continue;
+    }
     const start = index;
     index += 1;
-    while (index < text.length && !isSpecial(text, index)) index += 1;
+    while (index < text.length && !isSpecial(text, index) && (inLink || !urlAt(text, index))) index += 1;
     out.push(<Fragment key={key++}>{text.slice(start, index)}</Fragment>);
   }
   return out;
@@ -145,12 +209,13 @@ function blockStart(lines: string[], index: number): boolean {
 }
 
 function cells(line: string): string[] {
+  // "\|" is a pipe inside a cell, not a border.
   return line
     .trim()
     .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
+    .replace(/(?<!\\)\|$/, '')
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim().replace(/\\\|/g, '|'));
 }
 
 function parseBlocks(source: string): Block[] {
@@ -250,6 +315,7 @@ function linesOf(text: string): ReactNode {
 
 /** ``bare`` drops the framed box, for text that already sits in a bubble; ``small`` shrinks headings. */
 export function MarkdownView({ text, bare = false, small = false }: { text: string; bare?: boolean; small?: boolean }) {
+  const { t } = useTranslation();
   const blocks = parseBlocks(text);
   return (
     <div
@@ -276,6 +342,16 @@ export function MarkdownView({ text, bare = false, small = false }: { text: stri
           );
         }
         if (block.type === 'quote') {
+          const callout = CALLOUT.exec(block.text);
+          if (callout) {
+            const kind = callout[1].toLowerCase();
+            return (
+              <div key={index} role="note" className={cn('rounded-md border-s-4 px-3 py-2', CALLOUT_TONE[kind])}>
+                <p className="text-xs font-semibold uppercase tracking-wide">{t(`markdown.callout.${kind}`)}</p>
+                <div>{linesOf(block.text.slice(callout[0].length))}</div>
+              </div>
+            );
+          }
           return (
             <blockquote key={index} className="border-s-2 ps-3 text-muted-foreground">
               {linesOf(block.text)}

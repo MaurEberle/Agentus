@@ -79,6 +79,7 @@ ROUTES: tuple[ContractRoute, ...] = (
     ContractRoute("POST", "/api/models/delete", MODELS),
     ContractRoute("GET", "/api/models/hub", MODELS),
     ContractRoute("GET", "/api/models/hub/files", MODELS),
+    ContractRoute("GET", "/api/models/hub/card", MODELS),
     ContractRoute("GET", "/api/models/downloads", MODELS),
     ContractRoute("POST", "/api/models/downloads", MODELS),
     ContractRoute("POST", "/api/models/downloads/pause", MODELS),

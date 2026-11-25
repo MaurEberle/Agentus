@@ -73,11 +73,12 @@ class ApplyBody(ApiModel):
     force: bool = False
 
 
-def _summary(row: store.ArchitectSessionRow) -> dict[str, Any]:
+def _summary(row: store.ArchitectSessionRow, messages: int | None = None) -> dict[str, Any]:
     applied = row.applied[-1] if row.applied else None
     source = row.source or {}
     changing = source.get("networkId") if source.get("purpose") == "change" else None
-    return {
+    draft = row.draft or {}
+    out: dict[str, Any] = {
         "id": row.id,
         "title": row.title,
         "provider": row.provider,
@@ -87,7 +88,29 @@ def _summary(row: store.ArchitectSessionRow) -> dict[str, Any]:
         "createdAt": row.created_at,
         "updatedAt": row.updated_at,
         "networkId": changing or (applied or {}).get("networkId"),
+        # What the session list's hover card shows, without loading the whole session.
+        "goal": str((row.brief or {}).get("goal") or "").strip()[:300] or None,
+        "draftName": str(draft.get("name") or "").strip() or None,
+        "draftNodes": len(draft.get("nodes") or []) if row.draft else None,
+        "readIn": (
+            {"name": source.get("name"), "purpose": source.get("purpose"), "version": source.get("version")}
+            if source.get("networkId")
+            else None
+        ),
+        "lastApplied": (
+            {
+                "name": applied.get("name"),
+                "mode": applied.get("mode"),
+                "version": applied.get("version"),
+                "undone": bool(applied.get("undone")),
+            }
+            if applied
+            else None
+        ),
     }
+    if messages is not None:
+        out["messageCount"] = messages
+    return out
 
 
 def _detail(row: store.ArchitectSessionRow) -> dict[str, Any]:
@@ -142,7 +165,8 @@ def post_model_check(body: ModelCheckBody) -> dict[str, Any]:
 @router.get("/architect/sessions")
 def get_sessions() -> dict[str, Any]:
     _recover()
-    return {"items": [_summary(row) for row in store.list_sessions()]}
+    counts = store.message_counts()
+    return {"items": [_summary(row, counts.get(row.id, 0)) for row in store.list_sessions()]}
 
 
 @router.post("/architect/sessions", status_code=201)

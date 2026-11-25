@@ -183,6 +183,18 @@
         "moe": "MoE",
         "groupDetails": "Detalles",
         "groupSource": "Origen"
+      },
+      "invalid": "No es un ID de modelo válido.",
+      "card": {
+        "title": "Descripción",
+        "baseTitle": "Descripción del modelo base",
+        "none": "Este modelo no tiene descripción en Hugging Face.",
+        "locked": "La descripción solo es visible tras iniciar sesión en Hugging Face.",
+        "failed": "No se pudo cargar la descripción.",
+        "more": "Mostrar todo",
+        "less": "Mostrar menos",
+        "truncated": "Muy larga y acortada aquí; Hugging Face muestra el resto.",
+        "library": "Este modelo procede de la biblioteca de Ollama; su descripción está allí:"
       }
     },
     "pull": { "failed": "La descarga falló.", "invalid": "Este nombre de modelo no se puede descargar." },
@@ -2870,7 +2882,35 @@
       "delete": "Eliminar",
       "deleteTitle": "¿Eliminar la sesión?",
       "deleteBody": "Se eliminan el chat, la ficha y el borrador de esta sesión. Las redes creadas se quedan.",
-      "freshHint": "Elige un modelo e inicia, o carga antes una red."
+      "freshHint": "Elige un modelo e inicia, o carga antes una red.",
+      "resize": "Ancho de la lista de sesiones",
+      "card": {
+        "state": "Estado",
+        "ended": "terminada",
+        "model": "Modelo",
+        "noModel": "ninguno todavía",
+        "started": "Iniciada",
+        "active": "Última actividad",
+        "messages": "Mensajes",
+        "goal": "Objetivo",
+        "draft": "Borrador",
+        "nodes_one": "{{count}} nodo",
+        "nodes_other": "{{count}} nodos",
+        "readIn": "Cargada",
+        "applied": "Aplicado",
+        "created": "creada como «{{name}}» (versión {{version}})",
+        "updated": "«{{name}}» cambiada (versión {{version}})",
+        "undone": "deshecho"
+      }
+    }
+  },
+  "markdown": {
+    "callout": {
+      "note": "Nota",
+      "tip": "Consejo",
+      "important": "Importante",
+      "warning": "Advertencia",
+      "caution": "Precaución"
     }
   }
 }

@@ -23,6 +23,8 @@ export type InstalledModel = {
   license?: string;
   licenseClipped?: boolean;
   hfUrl?: string;
+  /** Hugging Face repo whose card describes the model; absent for most Ollama library models. */
+  cardRepo?: string;
   loaded: boolean;
   vramBytes?: number;
   tags: string[];
@@ -78,6 +80,19 @@ export type HubFiles = {
   reason?: string;
   quants: QuantFile[];
   messageKey?: string;
+};
+
+/** A repo's model card as cleaned Markdown, or why there is none (models.hub.card.*). */
+export type HubCard = {
+  id: string;
+  url: string;
+  markdown: string;
+  /** Longer than the backend keeps; the rest is on the Hub. */
+  truncated: boolean;
+  /** From the card's header, when it names another repo. */
+  baseModel?: string;
+  messageKey?: string;
+  retryAfter?: number;
 };
 
 export type DownloadStatus = 'queued' | 'running' | 'paused' | 'stopped' | 'done' | 'error';

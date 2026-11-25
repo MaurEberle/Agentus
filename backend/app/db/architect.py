@@ -163,6 +163,13 @@ def insert_message(row: ArchitectMessageRow) -> None:
         )
 
 
+def message_counts() -> dict[str, int]:
+    """Messages per session, in one query for the session list."""
+    with locked("workspace") as conn:
+        rows = conn.execute("SELECT session_id, COUNT(*) AS n FROM architect_messages GROUP BY session_id").fetchall()
+        return {str(row["session_id"]): int(row["n"]) for row in rows}
+
+
 def list_messages(session_id: str) -> list[ArchitectMessageRow]:
     with locked("workspace") as conn:
         rows = conn.execute(

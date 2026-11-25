@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import Field
@@ -42,6 +43,9 @@ class InstalledModel(ApiModel):
     license: str | None = None
     license_clipped: bool = Field(default=False, alias="licenseClipped")
     hf_url: str | None = Field(default=None, alias="hfUrl")
+    # The Hugging Face repo whose model card describes this model: the repo it was pulled from,
+    # else the one its GGUF metadata names. None for most Ollama library models.
+    card_repo: str | None = Field(default=None, alias="cardRepo")
     loaded: bool = False
     vram_bytes: int | None = Field(default=None, alias="vramBytes")
     tags: list[str] = Field(default_factory=list)
@@ -69,6 +73,28 @@ def huggingface_url(name: str) -> str | None:
     if not owner or not repo:
         return None
     return f"https://huggingface.co/{owner}/{repo}"
+
+
+_HF_REPO_URL = re.compile(r"^https?://(?:www\.)?(?:huggingface\.co|hf\.co)/([A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*)/?$")
+_HF_REPO_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}/[A-Za-z0-9][A-Za-z0-9._-]{0,120}$")
+
+
+def card_repo(name: str, payload: dict[str, Any] | None) -> str | None:
+    """The repo whose card describes a model: where it was pulled from, else what its GGUF names."""
+    url = huggingface_url(name)
+    if url:
+        return url.removeprefix("https://huggingface.co/")
+    info = payload.get("model_info") if isinstance(payload, dict) else None
+    if not isinstance(info, dict):
+        return None
+    named = _text(info.get("general.source.huggingface.repository"))
+    if named and _HF_REPO_ID.fullmatch(named):
+        return named
+    for key in ("general.source.url", "general.base_model.0.repo_url"):
+        found = _HF_REPO_URL.match(_text(info.get(key)) or "")
+        if found:
+            return found.group(1)
+    return None
 
 
 def _text(value: object) -> str | None:
@@ -208,7 +234,8 @@ def list_installed() -> InstalledResponse:
     stored = all_model_tags()
     items: list[InstalledModel] = []
     for model in models:
-        shown = describe_show(model.name, cached_show(model.name), moe=model.moe)
+        payload = cached_show(model.name)
+        shown = describe_show(model.name, payload, moe=model.moe)
         size, vram = resident.get(tag_key(model.name), (None, None))
         items.append(
             InstalledModel(
@@ -217,6 +244,7 @@ def list_installed() -> InstalledResponse:
                 digest=model.digest,
                 modified_at=model.modified_at,
                 hf_url=huggingface_url(model.name),
+                card_repo=card_repo(model.name, payload),
                 loaded=tag_key(model.name) in resident,
                 vram_bytes=vram,
                 tags=stored.get(tag_key(model.name), []),

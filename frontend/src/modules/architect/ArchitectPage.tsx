@@ -45,7 +45,7 @@ import { ProposalCard } from '@/modules/architect/ProposalCard';
 import { ModelBar } from '@/modules/architect/ModelBar';
 import { SessionList } from '@/modules/architect/SessionList';
 import { StartDialog } from '@/modules/architect/StartDialog';
-import { useArchitectUi, type ModelPick } from '@/modules/architect/store';
+import { SESSIONS_WIDTH, useArchitectUi, type ModelPick } from '@/modules/architect/store';
 import { WidthGrip } from '@/modules/monitoring/PaneGrips';
 
 type Refusal = { refused: StartRefused; pick: ModelPick; sessionId: string };
@@ -58,6 +58,21 @@ export function ArchitectPage() {
   const startNew = useArchitectUi((state) => state.startNew);
   const share = useArchitectUi((state) => state.share);
   const setShare = useArchitectUi((state) => state.setShare);
+  const sessionsWidth = useArchitectUi((state) => state.sessionsWidth);
+  const setSessionsWidth = useArchitectUi((state) => state.setSessionsWidth);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [pageWidth, setPageWidth] = useState(1200);
+
+  // The session list's grip turns its share of the page into px.
+  useEffect(() => {
+    const element = pageRef.current;
+    if (!element) return undefined;
+    const measure = () => setPageWidth(Math.max(1, element.clientWidth));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const pick = useArchitectUi((state) => state.pick);
   const setPick = useArchitectUi((state) => state.setPick);
   const status = useArchitectStatusQuery();
@@ -318,8 +333,9 @@ export function ArchitectPage() {
     ) : null;
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden">
+    <div ref={pageRef} data-split-row className="flex h-full min-h-0 overflow-hidden">
       <SessionList
+        width={sessionsWidth}
         sessions={sessions.data ?? []}
         selectedId={selectedId}
         activeId={activeId}
@@ -330,6 +346,15 @@ export function ArchitectPage() {
         onNew={newChat}
         onDelete={setConfirmDelete}
         onExport={(id) => void exportMarkdown(id)}
+      />
+      {/* The grip works in shares of the page; the list keeps a width in px. */}
+      <WidthGrip
+        label={t('architect.sessions.resize')}
+        share={sessionsWidth / pageWidth}
+        min={Math.round((SESSIONS_WIDTH.min / pageWidth) * 100)}
+        max={Math.round((SESSIONS_WIDTH.max / pageWidth) * 100)}
+        marker={false}
+        onChange={(next) => setSessionsWidth(next * pageWidth)}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <ModelBar status={status.data} sessionActive={sessionActive} busy={busy || sending} onStart={(pick) => void start(pick)} onStop={() => void stop()} />

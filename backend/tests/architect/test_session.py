@@ -222,3 +222,30 @@ def test_brief_edits_wait_for_a_streaming_turn(client) -> None:
     saved = client.patch(f"/api/architect/sessions/{row.id}", json={"brief": {"goal": "Texte"}})
     assert saved.status_code == 200 and saved.json()["brief"] == {"goal": "Texte"}
     sessions.stop(row.id)
+
+
+def test_the_session_list_carries_what_the_hover_card_shows(client) -> None:
+    from app.architect.session import utc_now
+    from app.db import architect as store
+
+    row = sessions.create("anthropic", "claude", "cred")
+    row.title = "Geschichten"
+    row.brief = {"goal": "Kindergeschichten im Stil von Wilhelm Busch"}
+    row.draft = {"name": "Max und Moritz", "nodes": [{"ref": "a"}, {"ref": "b"}], "links": []}
+    row.source = {"networkId": "net-1", "name": "Vorlage", "purpose": "template", "version": 3, "base": {}}
+    row.applied = [{"networkId": "net-2", "name": "Max und Moritz", "mode": "create", "version": 1, "revision": 1}]
+    store.save_session(row)
+    for index, role in enumerate(("user", "assistant", "user")):
+        store.insert_message(store.ArchitectMessageRow(id=f"m{index}", session_id=row.id, role=role, content="x", created_at=utc_now()))
+    empty = sessions.create("ollama", "", None)
+
+    items = {item["id"]: item for item in client.get("/api/architect/sessions").json()["items"]}
+    full = items[row.id]
+    assert full["messageCount"] == 3
+    assert full["goal"] == "Kindergeschichten im Stil von Wilhelm Busch"
+    assert (full["draftName"], full["draftNodes"]) == ("Max und Moritz", 2)
+    assert full["readIn"] == {"name": "Vorlage", "purpose": "template", "version": 3}
+    assert full["lastApplied"] == {"name": "Max und Moritz", "mode": "create", "version": 1, "undone": False}
+    bare = items[empty.id]
+    assert bare["messageCount"] == 0 and bare["goal"] is None and bare["draftName"] is None
+    assert bare["readIn"] is None and bare["lastApplied"] is None

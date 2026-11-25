@@ -26,6 +26,7 @@ import { formatParameters, modelLabel } from '@/lib/modelName';
 import { applyTagEdit, matchesTags, parseTagTokens, sharedTagList, type TagMatch } from '@/lib/tags';
 import { cn } from '@/lib/utils';
 import { listInstalled, saveModelTags } from '@/modules/models/api';
+import { ModelCards } from '@/modules/models/HubCardSection';
 import { HubPane } from '@/modules/models/HubPane';
 import { DetailHero, DetailSection, ExternalLink, FeatureBadge, KeyFacts } from '@/modules/models/ModelDetailParts';
 import type { InstalledModel, ModelKind } from '@/modules/models/model';
@@ -288,7 +289,7 @@ function InstalledPane() {
           ) : null}
         </div>
         </div>
-        <WidthGrip label={t('models.split')} share={share} onChange={(next) => setShare(clampShare(next))} />
+        <WidthGrip label={t('models.split')} share={share} min={40} max={75} onChange={(next) => setShare(clampShare(next))} />
         <div className="min-h-0 min-w-0 overflow-auto border-l" style={{ width: `${(1 - share) * 100}%` }}>
           {selectedItems.length > 1 ? (
             <p className="p-4 text-sm text-muted-foreground">{t('models.detail.many', { count: selectedItems.length })}</p>
@@ -327,9 +328,20 @@ function shortDigest(digest: string): string {
   return text.length > 20 ? `${text.slice(0, 10)}…${text.slice(-8)}` : text;
 }
 
+/** The model's page on ollama.com, for names from the Ollama library ("qwen3:14b", "user/model:tag"). */
+function ollamaLibraryUrl(name: string): string | null {
+  const full = name.trim();
+  if (/^(hf\.co|huggingface\.co)\//i.test(full)) return null;
+  const path = full.split(':')[0].replace(/^registry\.ollama\.ai\//i, '').replace(/^library\//i, '');
+  if (!path || path.split('/').length > 2 || !/^[\w./-]+$/.test(path)) return null;
+  return path.includes('/') ? `https://ollama.com/${path}` : `https://ollama.com/library/${path}`;
+}
+
 /** Installed model: name, publisher, type and abilities first; then figures; then groups. */
 function DetailPane({ item }: { item: InstalledModel | null }) {
   const { t, i18n } = useTranslation();
+  const cardOpen = useModelsUi((state) => state.installed.cardOpen);
+  const patchInstalled = useModelsUi((state) => state.patchInstalled);
   if (!item) return <p className="p-4 text-sm text-muted-foreground">{t('models.detail.empty')}</p>;
   const label = modelLabel(item.name);
   const number = new Intl.NumberFormat(i18n.language);
@@ -414,6 +426,12 @@ function DetailPane({ item }: { item: InstalledModel | null }) {
             </details>
           </DetailSection>
         ) : null}
+        <ModelCards
+          repo={item.cardRepo}
+          libraryUrl={item.cardRepo ? null : ollamaLibraryUrl(item.name)}
+          open={cardOpen}
+          onToggle={(which) => patchInstalled((current) => ({ cardOpen: { ...current.cardOpen, [which]: !current.cardOpen[which] } }))}
+        />
       </div>
     </div>
   );

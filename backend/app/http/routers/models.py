@@ -12,7 +12,7 @@ from app.common.http import client
 from app.db.model_tags import save_model_tags
 from app.http.app import ApiModel
 from app.llm.catalog import InstalledResponse, list_installed
-from app.llm.hub import HubFilesResponse, HubSearchResponse, repo_files, search_hub
+from app.llm.hub import HubCardResponse, HubFilesResponse, HubSearchResponse, repo_card, repo_files, search_hub
 from app.llm.downloads import (
     DownloadCreate,
     DownloadIds,
@@ -137,6 +137,11 @@ def get_hub(
 @router.get("/models/hub/files", response_model=HubFilesResponse, response_model_exclude_none=True)
 def get_hub_files(repo_id: Annotated[str, Query(alias="id")]) -> HubFilesResponse:
     return repo_files(repo_id)
+
+
+@router.get("/models/hub/card", response_model=HubCardResponse, response_model_exclude_none=True)
+def get_hub_card(repo_id: Annotated[str, Query(alias="id")]) -> HubCardResponse:
+    return repo_card(repo_id)
 
 
 @router.get("/models/downloads", response_model=DownloadList, response_model_exclude_none=True)

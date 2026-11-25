@@ -24,6 +24,7 @@ import { formatParameters, modelLabel } from '@/lib/modelName';
 import { cn } from '@/lib/utils';
 import { DetailHero, DetailSection, ExternalLink, FeatureBadge, KeyFacts } from '@/modules/models/ModelDetailParts';
 import { HubCapabilityFilter } from '@/modules/models/HubCapabilityFilter';
+import { ModelCards } from '@/modules/models/HubCardSection';
 import { HubContextFilter } from '@/modules/models/HubContextFilter';
 import { contextLabel, gpuFit, maxFitBillions, q4Bytes, type GpuFit } from '@/modules/models/hubFit';
 import { HubSizeFilter } from '@/modules/models/HubSizeFilter';
@@ -45,9 +46,10 @@ import {
   type HubSort,
 } from '@/modules/models/store';
 
+/** The list's share: the detail column may take up to 60 % (as on the installed tab). */
 function clampShare(value: number): number {
   if (!Number.isFinite(value)) return 0.68;
-  return Math.min(0.75, Math.max(0.6, value));
+  return Math.min(0.75, Math.max(0.4, value));
 }
 
 function useWideLayout(): boolean {
@@ -116,7 +118,7 @@ export function HubPane() {
   const {
     search, debounced, pipelines, minB, maxB, bounds, sort, capabilities, minContext, hideInstalled, fitsGpu,
     page, cursors, picked, quant, share,
-    snapshot, files, filesError, filesNonce,
+    snapshot, files, filesError, filesNonce, cardOpen,
   } = hub;
   const pageSize: HubPageSize = (HUB_PAGE_SIZES as readonly number[]).includes(hub.pageSize) ? hub.pageSize : 30;
   const setSearch = (value: string) => patchHub({ search: value });
@@ -402,7 +404,7 @@ export function HubPane() {
       <div data-split-row className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div
           className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b md:border-b-0"
-          style={wide ? { width: `${listShare * 100}%`, flex: 'none', minWidth: '60%' } : undefined}
+          style={wide ? { width: `${listShare * 100}%`, flex: 'none', minWidth: '40%' } : undefined}
         >
           {stored && !stored.errorKey && stored.items.length > 0 ? (
             <ul className="min-h-0 flex-1 overflow-auto">
@@ -553,7 +555,7 @@ export function HubPane() {
             </Select>
           </div>
         </div>
-        <WidthGrip label={t('models.split')} share={listShare} onChange={(next) => patchHub({ share: clampShare(next) })} />
+        <WidthGrip label={t('models.split')} share={listShare} min={40} max={75} onChange={(next) => patchHub({ share: clampShare(next) })} />
         <div className="min-h-0 min-w-0 flex-1 overflow-auto md:border-l">
           {!picked ? <p className="p-4 text-sm text-muted-foreground">{t('models.hub.pick')}</p> : null}
           {picked && !detail && !filesError ? (
@@ -691,6 +693,12 @@ export function HubPane() {
                     ],
                     [t('models.detail.hf'), <ExternalLink key="hf" href={detail.url} />],
                   ]}
+                />
+                <ModelCards
+                  repo={detail.id}
+                  baseModel={detail.baseModel}
+                  open={cardOpen}
+                  onToggle={(which) => patchHub((current) => ({ cardOpen: { ...current.cardOpen, [which]: !current.cardOpen[which] } }))}
                 />
               </div>
             </div>

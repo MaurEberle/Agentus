@@ -239,6 +239,27 @@ class HubFilesResponse(ApiModel):
     retry_after: int | None = Field(default=None, alias="retryAfter")
 
 
+class HubCardResponse(ApiModel):
+    """A repo's model card as Markdown (``card_markdown``), or why there is none."""
+
+    id: str
+    url: str
+    markdown: str = ""
+    # The card was longer than CARD_MAX_BYTES; the rest is on the Hub.
+    truncated: bool = False
+    # From the card's header: where a GGUF repo's real description usually lives.
+    base_model: str | None = Field(default=None, alias="baseModel")
+    message_key: str | None = Field(default=None, alias="messageKey")
+    retry_after: int | None = Field(default=None, alias="retryAfter")
+
+
+CARD_MAX_BYTES = 300_000
+_CARD_CACHE: dict[str, tuple[float, HubCardResponse]] = {}
+_CARD_SEC = 3600.0
+_CARD_MAX = 64
+_CARD_LOCK = threading.Lock()
+
+
 def valid_repo_id(repo_id: str) -> bool:
     return bool(_REPO_ID.fullmatch((repo_id or "").strip()))
 
@@ -780,6 +801,50 @@ def _installed_keys() -> set[str]:
         return {tag_key(item.name) for item in list_ollama_models()}
     except RuntimeApiError:
         return set()
+
+
+def repo_card(repo_id: str) -> HubCardResponse:
+    """The model card (README.md) of a public repo, cleaned for the viewer. One Hub call per repo
+    and hour; a missing card is remembered too, a failed call is not."""
+    from app.llm.card_markdown import card_base_model, card_markdown
+
+    repo = repo_id.strip()
+    if not valid_repo_id(repo):
+        return HubCardResponse(id=repo, url="", message_key="models.hub.invalid")
+    url = f"{HUB}/{repo}"
+    now = time.monotonic()
+    with _CARD_LOCK:
+        cached = _CARD_CACHE.get(repo.lower())
+        if cached and now - cached[0] < _CARD_SEC:
+            return cached[1]
+    try:
+        response = _hub_get(f"{HUB}/{repo}/raw/main/README.md", timeout=20.0)
+    except RuntimeApiError as exc:
+        if exc.status == 404:
+            result = HubCardResponse(id=repo, url=url, message_key="models.hub.card.none")
+        elif exc.status in (401, 403):
+            result = HubCardResponse(id=repo, url=url, message_key="models.hub.card.locked")
+        else:
+            key, wait = hub_error(exc)
+            return HubCardResponse(id=repo, url=url, message_key=key, retry_after=wait)
+    else:
+        body = response.content
+        text = body[:CARD_MAX_BYTES].decode("utf-8", errors="replace")
+        markdown = card_markdown(text, repo)
+        base = card_base_model(text)
+        result = HubCardResponse(
+            id=repo,
+            url=url,
+            markdown=markdown,
+            truncated=len(body) > CARD_MAX_BYTES,
+            base_model=base if base and base.lower() != repo.lower() else None,
+            message_key=None if markdown else "models.hub.card.none",
+        )
+    with _CARD_LOCK:
+        if len(_CARD_CACHE) >= _CARD_MAX:
+            del _CARD_CACHE[min(_CARD_CACHE, key=lambda key: _CARD_CACHE[key][0])]
+        _CARD_CACHE[repo.lower()] = (now, result)
+    return result
 
 
 def repo_files(repo_id: str) -> HubFilesResponse:

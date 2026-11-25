@@ -183,6 +183,18 @@
         "moe": "MoE",
         "groupDetails": "Details",
         "groupSource": "Origin"
+      },
+      "invalid": "That is not a valid model ID.",
+      "card": {
+        "title": "Description",
+        "baseTitle": "Description of the base model",
+        "none": "This model has no description on Hugging Face.",
+        "locked": "The description is only visible after signing in to Hugging Face.",
+        "failed": "The description could not be loaded.",
+        "more": "Show all",
+        "less": "Show less",
+        "truncated": "Very long and shortened here; Hugging Face shows the rest.",
+        "library": "This model comes from the Ollama library; its description is there:"
       }
     },
     "pull": { "failed": "The download failed.", "invalid": "This model name cannot be downloaded." },
@@ -2870,7 +2882,35 @@
       "delete": "Delete",
       "deleteTitle": "Delete session?",
       "deleteBody": "Chat, brief and draft of this session are deleted. Networks it created stay.",
-      "freshHint": "Pick a model and start – or read a network in first."
+      "freshHint": "Pick a model and start – or read a network in first.",
+      "resize": "Width of the session list",
+      "card": {
+        "state": "Status",
+        "ended": "ended",
+        "model": "Model",
+        "noModel": "none yet",
+        "started": "Started",
+        "active": "Last active",
+        "messages": "Messages",
+        "goal": "Goal",
+        "draft": "Draft",
+        "nodes_one": "{{count}} node",
+        "nodes_other": "{{count}} nodes",
+        "readIn": "Read in",
+        "applied": "Applied",
+        "created": "created as “{{name}}” (version {{version}})",
+        "updated": "changed “{{name}}” (version {{version}})",
+        "undone": "undone"
+      }
+    }
+  },
+  "markdown": {
+    "callout": {
+      "note": "Note",
+      "tip": "Tip",
+      "important": "Important",
+      "warning": "Warning",
+      "caution": "Caution"
     }
   }
 }

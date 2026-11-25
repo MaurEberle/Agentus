@@ -183,6 +183,18 @@
         "moe": "MoE",
         "groupDetails": "Details",
         "groupSource": "Herkunft"
+      },
+      "invalid": "Das ist keine gültige Modell-ID.",
+      "card": {
+        "title": "Beschreibung",
+        "baseTitle": "Beschreibung des Basismodells",
+        "none": "Dieses Modell hat auf Hugging Face keine Beschreibung.",
+        "locked": "Die Beschreibung ist nur nach Anmeldung auf Hugging Face sichtbar.",
+        "failed": "Die Beschreibung konnte nicht geladen werden.",
+        "more": "Ganz anzeigen",
+        "less": "Weniger anzeigen",
+        "truncated": "Sehr lang und hier gekürzt; den Rest zeigt Hugging Face.",
+        "library": "Dieses Modell stammt aus der Ollama-Bibliothek; seine Beschreibung steht dort:"
       }
     },
     "pull": { "failed": "Der Download ist fehlgeschlagen.", "invalid": "Dieser Modellname kann nicht geladen werden." },
@@ -2870,7 +2882,35 @@
       "delete": "Löschen",
       "deleteTitle": "Sitzung löschen?",
       "deleteBody": "Verlauf, Steckbrief und Entwurf dieser Sitzung werden gelöscht. Angelegte Netze bleiben.",
-      "freshHint": "Modell wählen und starten – oder zuerst ein Netz einlesen."
+      "freshHint": "Modell wählen und starten – oder zuerst ein Netz einlesen.",
+      "resize": "Breite der Sitzungsliste",
+      "card": {
+        "state": "Status",
+        "ended": "beendet",
+        "model": "Modell",
+        "noModel": "noch keines",
+        "started": "Begonnen",
+        "active": "Zuletzt aktiv",
+        "messages": "Nachrichten",
+        "goal": "Ziel",
+        "draft": "Entwurf",
+        "nodes_one": "{{count}} Knoten",
+        "nodes_other": "{{count}} Knoten",
+        "readIn": "Eingelesen",
+        "applied": "Übernommen",
+        "created": "angelegt als „{{name}}“ (Version {{version}})",
+        "updated": "„{{name}}“ geändert (Version {{version}})",
+        "undone": "rückgängig gemacht"
+      }
+    }
+  },
+  "markdown": {
+    "callout": {
+      "note": "Hinweis",
+      "tip": "Tipp",
+      "important": "Wichtig",
+      "warning": "Warnung",
+      "caution": "Vorsicht"
     }
   }
 }

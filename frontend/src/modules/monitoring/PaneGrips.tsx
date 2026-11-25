@@ -105,11 +105,16 @@ export function WidthGrip({
   share,
   onChange,
   marker = true,
+  min = 28,
+  max = 72,
 }: {
   label: string;
   share: number;
   onChange: (next: number) => void;
   marker?: boolean;
+  /** Range the caller clamps the share to, in percent (for assistive technology). */
+  min?: number;
+  max?: number;
 }) {
   const origin = useRef({ x: 0, share: 0, width: 1 });
   return (
@@ -118,8 +123,8 @@ export function WidthGrip({
       aria-orientation="vertical"
       aria-label={label}
       aria-valuenow={Math.round(share * 100)}
-      aria-valuemin={28}
-      aria-valuemax={72}
+      aria-valuemin={min}
+      aria-valuemax={max}
       className="group hidden w-4 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-sm hover:bg-muted/50 md:flex"
       onPointerDown={(event) => {
         const row =

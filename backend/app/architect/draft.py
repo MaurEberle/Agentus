@@ -17,9 +17,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.common.components import error_texts, node_spec, node_types
+from app.architect.layout import FLOW_TYPES, SUPPORT_TYPES, layout
 
-FLOW_TYPES = frozenset({"chat_input", "orchestrator", "agent", "router", "end"})
-SUPPORT_TYPES = frozenset({"llm", "tool", "mcp", "knowledge"})
 DRAFT_KEYS = ("name", "description", "tags", "nodes", "links")
 # Names the model may use instead of ids; resolved to the id field.
 NAME_ALIASES = {
@@ -34,10 +33,6 @@ PATH_FIELDS = frozenset({"rootPath", "sourcePath"})
 _ALWAYS_SHOWN = frozenset({"kind", "provider", "model"})
 # Server bookkeeping that is no part of a base document.
 _SERVER_KEYS = ("knowledge", "version", "revision")
-GRID = 16
-COLUMN = 320
-ROW = 160
-SUPPORT_ROW = 112
 _REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,40}$")
 
 
@@ -94,10 +89,6 @@ def _new_id(prefix: str) -> str:
 def _slug(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.strip().lower()).strip("-")
     return slug or "branch"
-
-
-def _snap(value: float) -> int:
-    return int(round(value / GRID) * GRID)
 
 
 # --- normalizing what the model wrote -------------------------------------------------------
@@ -352,75 +343,6 @@ def _handles(src: dict[str, Any], dst: dict[str, Any], kind: str | None) -> tupl
     return f"{s} cannot connect to {d}"
 
 
-def _layout(nodes: list[dict[str, Any]], edges: list[dict[str, Any]], keep: dict[str, dict[str, float]]) -> None:
-    """Columns from left to right along the flow; models, tools and knowledge below their user."""
-    flow =[node for node in nodes if node["type"] in FLOW_TYPES]
-    incoming: dict[str, list[str]] = {node["id"]: [] for node in flow}
-    for edge in edges:
-        if edge["source"] in incoming and edge["target"] in incoming:
-            incoming[edge["target"]].append(edge["source"])
-    depth: dict[str, int] = {node["id"]: 0 for node in flow}
-    for _ in range(len(flow)):
-        changed = False
-        for node_id, sources in incoming.items():
-            want = max((depth[item] + 1 for item in sources), default=0)
-            if want > depth[node_id] and want <= len(flow):
-                depth[node_id] = want
-                changed = True
-        if not changed:
-            break
-    # Ends close the flow: always the last column, whatever leads to them.
-    last = max((depth[node["id"]] for node in flow if node["type"] != "end"), default=-1) + 1
-    for node in flow:
-        if node["type"] == "end":
-            depth[node["id"]] = max(depth[node["id"]], last)
-    columns: dict[int, list[str]] = {}
-    for node in flow:
-        columns.setdefault(depth[node["id"]], []).append(node["id"])
-    placed: dict[str, dict[str, float]] = {}
-    for column, ids in columns.items():
-        for row, node_id in enumerate(ids):
-            placed[node_id] = {"x": _snap(64 + column * COLUMN), "y": _snap(64 + row * ROW)}
-    bottom = max((pos["y"] for pos in placed.values()), default=64) + ROW + SUPPORT_ROW
-    stacked: dict[int, int] = {}
-    for node in nodes:
-        if node["type"] not in SUPPORT_TYPES:
-            continue
-        user = next((edge["target"] for edge in edges if edge["source"] == node["id"] and edge["target"] in placed), None)
-        x = placed[user]["x"] if user else 64
-        row = stacked.get(x, 0)
-        stacked[x] = row + 1
-        placed[node["id"]] = {"x": x, "y": _snap(bottom + row * SUPPORT_ROW)}
-    # Kept nodes stay where the user put them; new ones go to a free spot nearby (entwurf.md, 7.3).
-    taken = [keep[node["id"]] for node in nodes if node["id"] in keep]
-    for node in nodes:
-        if node["id"] in keep:
-            node["position"] = dict(keep[node["id"]])
-            continue
-        spot = dict(placed.get(node["id"]) or {"x": 64, "y": 64})
-        if taken:
-            spot = _free_spot(spot, taken)
-        taken.append(spot)
-        node["position"] = spot
-
-
-def _free_spot(spot: dict[str, float], taken: list[dict[str, float]]) -> dict[str, float]:
-    """Move a new node down until it overlaps no other node."""
-    x, y = float(spot.get("x", 64)), float(spot.get("y", 64))
-
-    def clashes(top: float) -> bool:
-        return any(
-            abs(float(other.get("x", 0)) - x) < COLUMN * 0.8 and abs(float(other.get("y", 0)) - top) < ROW * 0.75
-            for other in taken
-        )
-
-    for _ in range(200):
-        if not clashes(y):
-            break
-        y += ROW / 2
-    return {"x": _snap(x), "y": _snap(y)}
-
-
 def compile_draft(
     draft: dict[str, Any],
     lookup: Lookup,
@@ -480,7 +402,7 @@ def compile_draft(
                 "targetHandle": handles[1],
             }
         )
-    _layout(nodes, edges, keep)
+    layout(nodes, edges, keep)
     document = {key: value for key, value in (base or {}).items() if key not in _SERVER_KEYS}
     document.update(
         {

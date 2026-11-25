@@ -1,5 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
 import { API_BASE, ApiError, apiFetch, queryClient } from '@/api/client';
-import type { DownloadList, HubFiles, HubHit, InstalledModel, PullEvent } from '@/modules/models/model';
+import type { DownloadList, HubCard, HubFiles, HubHit, InstalledModel, PullEvent } from '@/modules/models/model';
 
 export async function listInstalled(): Promise<{ items: InstalledModel[]; messageKey?: string }> {
   return apiFetch('/models');
@@ -52,6 +53,26 @@ export async function searchHub(params: {
 export async function hubFiles(id: string): Promise<HubFiles> {
   const query = new URLSearchParams({ id });
   return apiFetch(`/models/hub/files?${query.toString()}`);
+}
+
+export async function hubCard(id: string): Promise<HubCard> {
+  const query = new URLSearchParams({ id });
+  return apiFetch(`/models/hub/card?${query.toString()}`);
+}
+
+/** Worth asking again: the Hub was busy or slow, not "there is no card". */
+export const PASSING_CARD_KEYS = new Set(['models.hub.rateLimited', 'models.hub.timeout', 'models.hub.unreachable', 'models.hub.failed']);
+
+/** A repo's model card; shared by the hub and the installed tab, so each repo is asked once. */
+export function useHubCardQuery(repo: string | null | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['models', 'hub', 'card', (repo ?? '').toLowerCase()],
+    queryFn: () => hubCard(repo as string),
+    enabled: enabled && Boolean(repo),
+    retry: false,
+    // A busy Hub is asked again on the next opening; a card or "no card" holds for an hour.
+    staleTime: (state) => (PASSING_CARD_KEYS.has(state.state.data?.messageKey ?? '') ? 0 : 60 * 60 * 1000),
+  });
 }
 
 function rememberDownloads(data: DownloadList): DownloadList {

@@ -35,6 +35,14 @@ export type SessionSummary = {
   createdAt: string;
   updatedAt: string;
   networkId?: string | null;
+  /** For the session list's hover card. */
+  goal?: string | null;
+  draftName?: string | null;
+  draftNodes?: number | null;
+  readIn?: { name?: string | null; purpose?: LoadPurpose | null; version?: number | null } | null;
+  lastApplied?: { name?: string | null; mode?: 'create' | 'update' | null; version?: number | null; undone?: boolean } | null;
+  /** Only in the list. */
+  messageCount?: number;
 };
 
 export type LoadPurpose = 'change' | 'template';

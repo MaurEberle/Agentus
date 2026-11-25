@@ -22,6 +22,8 @@ type InstalledUi = {
   tagMode: TagMatch;
   selectedNames: string[];
   share: number;
+  /** Which model cards are unfolded; kept while the user moves from model to model. */
+  cardOpen: { own: boolean; base: boolean };
 };
 
 export const HUB_PAGE_SIZES = [10, 20, 30, 50, 100] as const;
@@ -90,6 +92,8 @@ type HubUi = {
   filesError: string | null;
   /** Bumped when installed models change (download done, delete) so the picked files refetch. */
   filesNonce: number;
+  /** Which model cards are unfolded; kept while the user moves from model to model. */
+  cardOpen: { own: boolean; base: boolean };
 };
 
 type ModelsUiStore = {
@@ -111,6 +115,7 @@ const installedDefaults: InstalledUi = {
   tagMode: 'or',
   selectedNames: [],
   share: 0.62,
+  cardOpen: { own: true, base: false },
 };
 
 export const hubFilterDefaults: Pick<
@@ -145,6 +150,7 @@ export const useModelsUi = create<ModelsUiStore>((set) => ({
     files: null,
     filesError: null,
     filesNonce: 0,
+    cardOpen: { own: true, base: false },
   },
   setTab: (tab) => set({ tab }),
   patchInstalled: (patch) =>

@@ -7,6 +7,7 @@ import json
 
 from app.architect import session as sessions
 from app.architect.draft import compile_draft, decompile
+from app.architect.layout import node_sizes
 from app.architect.loop import available_tools
 from app.architect.tools import ToolContext, app_lookup, run_tool
 from app.db import architect as store
@@ -215,8 +216,13 @@ def test_new_nodes_in_a_read_in_network_do_not_overlap(client, monkeypatch) -> N
     positions = {node["id"]: node["position"] for node in detail["document"]["nodes"]}
     new_id = detail["ids"]["pruefer"]
     assert detail["diff"]["added"] == [new_id]
+    sizes = node_sizes(detail["document"]["nodes"], detail["document"]["edges"])
+    new_pos, (new_w, new_h) = positions[new_id], sizes[new_id]
     for node_id, position in positions.items():
         if node_id == new_id:
             continue
         assert position == next(n["position"] for n in stored["nodes"] if n["id"] == node_id)
-        assert not (abs(position["x"] - positions[new_id]["x"]) < 256 and abs(position["y"] - positions[new_id]["y"]) < 120)
+        width, height = sizes[node_id]
+        apart_x = position["x"] + width <= new_pos["x"] or new_pos["x"] + new_w <= position["x"]
+        apart_y = position["y"] + height <= new_pos["y"] or new_pos["y"] + new_h <= position["y"]
+        assert apart_x or apart_y, (node_id, position, new_pos)

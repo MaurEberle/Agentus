@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
+import { HOVER_CARD } from '@/components/hoverCard';
 import { ModelHoverCard } from '@/components/ModelHoverCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { modelLabel, type ModelFacts } from '@/lib/modelName';
 import { cn } from '@/lib/utils';
 
-// A card, not the dark one-line tooltip; above the open list (z-[80]).
-const HOVER_CARD = 'z-[90] max-w-80 border bg-popover p-2 text-xs text-popover-foreground shadow-md';
-
+// Hover cards (HOVER_CARD): a card, not the dark one-line tooltip; above the open list (z-[80]).
 export function ModelCombobox({
   id,
   value,
